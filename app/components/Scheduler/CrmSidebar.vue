@@ -122,7 +122,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 					<UIcon name="i-heroicons-funnel" class="w-4 h-4 text-primary" />
 					<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Pipeline</h3>
 				</div>
-				<NuxtLink to="/leads" class="text-[10px] text-primary hover:underline">View &rarr;</NuxtLink>
+				<NuxtLink to="/apps/clients?view=leads" class="text-[10px] text-primary hover:underline">View &rarr;</NuxtLink>
 			</div>
 
 			<div class="grid grid-cols-2 gap-2">

@@ -277,7 +277,7 @@ onUnmounted(() => clearEntity());
 		<template v-else-if="lead">
 			<!-- Back + Header -->
 			<div class="mb-6">
-				<BackButton to="/leads" label="Back to leads" class="mb-3" />
+				<BackButton to="/apps/clients?view=leads" label="Back to leads" class="mb-3" />
 				<div class="flex items-start justify-between">
 					<div>
 						<h1 class="text-xl font-bold t-text">

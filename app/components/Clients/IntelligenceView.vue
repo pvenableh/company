@@ -108,7 +108,7 @@
 				<div class="ios-card p-5">
 					<div class="flex items-center justify-between mb-3">
 						<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pipeline Stage Aging</h3>
-						<NuxtLink to="/leads" class="text-[10px] text-primary hover:underline">View pipeline →</NuxtLink>
+						<NuxtLink to="/apps/clients?view=leads" class="text-[10px] text-primary hover:underline">View pipeline →</NuxtLink>
 					</div>
 					<div v-if="stageRows.length" class="space-y-2.5">
 						<div v-for="row in stageRows" :key="row.stage" class="flex items-center gap-3">

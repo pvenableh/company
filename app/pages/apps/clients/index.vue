@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Client } from '~~/shared/directus';
 import type { Contact } from '~~/shared/email/contacts';
+import type { LeadStage } from '~~/shared/leads';
 import { Button } from '~/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu';
 import { useDebounceFn } from '@vueuse/core';
@@ -8,7 +9,7 @@ import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 import VueDraggable from 'vuedraggable';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
-useHead({ title: 'Clients | Earnest' });
+useHead({ title: 'People | Earnest' });
 
 const router = useRouter();
 const route = useRoute();
@@ -19,8 +20,8 @@ const config = useRuntimeConfig();
 // simple list/table for clients/contacts/partners, dashboard-shaped for
 // Card Desk and Intelligence. The page wrapper stays the same; the body
 // switches via v-if/v-else-if blocks below.
-type ViewKey = 'clients' | 'contacts' | 'partners' | 'carddesk' | 'intelligence';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'carddesk', 'intelligence'];
+type ViewKey = 'clients' | 'contacts' | 'partners' | 'leads' | 'carddesk' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'leads', 'carddesk', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
@@ -33,15 +34,67 @@ watch(view, (next) => {
 });
 
 const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
-  { key: 'clients', label: 'By Client', icon: 'lucide:building-2' },
+  { key: 'clients', label: 'By Company', icon: 'lucide:building-2' },
   { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
+  { key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
   { key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
   { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
 ];
 
 // ── Intelligence data ──────────────────────────────────────────────────────
 const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntelligence();
+
+// ── Leads data ─────────────────────────────────────────────────────────────
+// Lifted from the standalone /leads page so the Leads tab here is the
+// canonical home. /leads now redirects in.
+const { getLeads, getLeadStats } = useLeads();
+const { isOrgManagerOrAbove } = useOrgRole();
+
+const leadViewCookie = useCookie('leadView', { default: () => 'board' });
+const leadActiveView = ref(leadViewCookie.value || 'board');
+watch(leadActiveView, (val) => { leadViewCookie.value = val; });
+const leadViewOptions = [
+  { value: 'board', label: 'Board', icon: 'lucide:columns-3' },
+  { value: 'grid', label: 'Grid', icon: 'lucide:layout-grid' },
+];
+
+const allLeads = ref<any[]>([]);
+const leadStats = ref({
+  total: 0,
+  by_stage: {} as Record<LeadStage, number>,
+  avg_score: 0,
+  pipeline_value: 0,
+  new_this_week: 0,
+});
+const leadsLoading = ref(true);
+const leadSearch = ref('');
+const leadStageFilter = ref('');
+const leadPriorityFilter = ref('');
+
+async function fetchLeadsData() {
+  leadsLoading.value = true;
+  try {
+    const [leadsResult, statsResult] = await Promise.all([
+      getLeads({
+        search: leadSearch.value || undefined,
+        stage: (leadStageFilter.value || undefined) as LeadStage | undefined,
+        priority: leadPriorityFilter.value || undefined,
+      } as any),
+      getLeadStats(),
+    ]);
+    allLeads.value = leadsResult as any[];
+    leadStats.value = statsResult;
+  } catch (e) {
+    console.error('[apps/clients] Failed to load leads:', e);
+  } finally {
+    leadsLoading.value = false;
+  }
+}
+
+const debouncedLeadSearch = useDebounceFn(() => fetchLeadsData(), 300);
+watch(leadSearch, () => debouncedLeadSearch());
+watch([leadStageFilter, leadPriorityFilter], () => fetchLeadsData());
 
 // ── Clients data ───────────────────────────────────────────────────────────
 const {
@@ -408,6 +461,7 @@ onMounted(() => {
 
 let contactsLoaded = false;
 let partnersLoaded = false;
+let leadsLoaded = false;
 let intelligenceLoaded = false;
 
 watch(view, (next) => {
@@ -421,6 +475,10 @@ watch(view, (next) => {
     partnersLoaded = true;
     fetchPartners();
   }
+  if (next === 'leads' && !leadsLoaded) {
+    leadsLoaded = true;
+    fetchLeadsData();
+  }
   if (next === 'intelligence' && !intelligenceLoaded) {
     intelligenceLoaded = true;
     fetchIntelligence();
@@ -430,7 +488,7 @@ watch(view, (next) => {
 
 <template>
   <div class="apps-page">
-    <AppHeader title="Clients" app-id="clients">
+    <AppHeader title="People" app-id="clients">
       <template #actions>
         <Button v-if="view === 'clients'" size="sm" @click="showCreateClientModal = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
@@ -439,6 +497,17 @@ watch(view, (next) => {
         <Button v-else-if="view === 'contacts'" size="sm" @click="showCreateContactModal = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Contact
+        </Button>
+        <Button
+          v-else-if="view === 'leads' && isOrgManagerOrAbove"
+          as-child
+          variant="outline"
+          size="sm"
+        >
+          <NuxtLink to="/leads/automations">
+            <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
+            Automations
+          </NuxtLink>
         </Button>
       </template>
     </AppHeader>
@@ -808,6 +877,62 @@ watch(view, (next) => {
             </span>
             <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
           </NuxtLink>
+        </div>
+      </template>
+
+      <!-- ── Leads view ───────────────────────────────────────────────── -->
+      <!-- Lifted in from the standalone /leads page. Stats hero + Board/Grid
+           toggle + filters. /leads/[id] and /leads/automations stay as their
+           own routes; this tab is just the list. -->
+      <template v-else-if="view === 'leads'">
+        <p class="text-sm text-muted-foreground mb-4">
+          {{ leadStats.total }} total lead{{ leadStats.total === 1 ? '' : 's' }}
+        </p>
+        <LeadsLeadStats :stats="leadStats" class="mb-6" />
+
+        <!-- Board | Grid toggle (universal pill style) -->
+        <div class="mb-6 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+          <button
+            v-for="opt in leadViewOptions"
+            :key="opt.value"
+            type="button"
+            class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            :class="leadActiveView === opt.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+            @click="leadActiveView = opt.value"
+          >
+            <Icon :name="opt.icon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <div v-show="leadActiveView === 'board'">
+          <LeadsPipelineBoard />
+        </div>
+
+        <div v-show="leadActiveView !== 'board'">
+          <LeadsLeadFilters
+            v-model:search="leadSearch"
+            v-model:stage="leadStageFilter"
+            v-model:priority="leadPriorityFilter"
+            class="mb-4"
+            @clear="fetchLeadsData"
+          />
+          <div v-if="leadsLoading" class="flex items-center justify-center py-20">
+            <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+          <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <LeadsLeadCard
+              v-for="lead in allLeads"
+              :key="lead.id"
+              :lead="lead"
+              @click="navigateTo(`/leads/${lead.id}`)"
+            />
+          </div>
+          <div v-else class="text-center py-20">
+            <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p class="text-muted-foreground">No leads found</p>
+            <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms will appear here</p>
+          </div>
         </div>
       </template>
 

@@ -28,7 +28,7 @@
 			</div>
 
 			<NuxtLink
-				to="/leads"
+				to="/apps/clients?view=leads"
 				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
 			>
 				<div class="flex items-center justify-between">
@@ -182,7 +182,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-3">
 					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Lead Pipeline</h3>
-					<NuxtLink to="/leads" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+					<NuxtLink to="/apps/clients?view=leads" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
 						View all
 						<Icon name="lucide:chevron-right" class="w-3 h-3" />
 					</NuxtLink>

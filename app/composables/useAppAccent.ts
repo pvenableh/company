@@ -90,7 +90,7 @@ type AppMeta = Pick<AppAccent, 'id' | 'name' | 'shortName' | 'icon' | 'to' | 'no
 
 const APP_META: Record<AppId, AppMeta> = {
 	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'ph:compass-tool-duotone',    to: '/' },
-	clients:      { id: 'clients',      name: 'Clients',      shortName: 'Clients', icon: 'ph:users-three-duotone',     to: '/apps/clients' },
+	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'ph:users-three-duotone',     to: '/apps/clients' },
 	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
 		notificationCategories: ['tickets', 'projects'] },
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
