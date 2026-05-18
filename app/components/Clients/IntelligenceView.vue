@@ -167,7 +167,7 @@
 						</NuxtLink>
 					</div>
 					<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-						No partner connections yet. <NuxtLink to="/apps/clients?view=partners" class="text-primary hover:underline">Add a partner →</NuxtLink>
+						No partner connections yet. <NuxtLink to="/apps/clients?view=contacts" class="text-primary hover:underline">Find a contact to link →</NuxtLink>
 					</div>
 				</div>
 

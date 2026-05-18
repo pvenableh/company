@@ -373,15 +373,12 @@ function openMeetingSlideOver(meeting: any) {
             visibleTeams.map((t) => ({ label: t.name, icon: 'i-heroicons-users', click: () => handleSelectTeam(t.id) })),
           ]"
         >
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/40"
-          >
-            <Icon name="lucide:users" class="w-3.5 h-3.5 text-muted-foreground" />
+          <Button variant="outline" size="sm">
+            <Icon name="lucide:users" class="w-4 h-4 mr-1" />
             <span class="hidden sm:inline">{{ currentTeamLabel }}</span>
             <span class="sm:hidden">Team</span>
-            <Icon name="lucide:chevron-down" class="w-3 h-3 text-muted-foreground" />
-          </button>
+            <Icon name="lucide:chevron-down" class="w-3 h-3 ml-1 text-muted-foreground" />
+          </Button>
         </UDropdown>
         <NuxtLink
           v-if="floor === 'projects'"

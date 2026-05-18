@@ -4,8 +4,8 @@ import type { Contact } from '~~/shared/email/contacts';
 import type { LeadStage } from '~~/shared/leads';
 import { Button } from '~/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { useDebounceFn } from '@vueuse/core';
-import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 import VueDraggable from 'vuedraggable';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
@@ -20,8 +20,8 @@ const config = useRuntimeConfig();
 // simple list/table for clients/contacts/partners, dashboard-shaped for
 // Card Desk and Intelligence. The page wrapper stays the same; the body
 // switches via v-if/v-else-if blocks below.
-type ViewKey = 'clients' | 'contacts' | 'partners' | 'leads' | 'carddesk' | 'intelligence';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'leads', 'carddesk', 'intelligence'];
+type ViewKey = 'clients' | 'contacts' | 'leads' | 'carddesk' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'leads', 'carddesk', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
@@ -36,7 +36,6 @@ watch(view, (next) => {
 const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'clients', label: 'By Company', icon: 'lucide:building-2' },
   { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
-  { key: 'partners', label: 'Partners', icon: 'lucide:network' },
   { key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
   { key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
   { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
@@ -397,58 +396,6 @@ const debouncedFetchContacts = useDebounceFn(() => {
 
 watch(contactsFilterStatus, () => { contactsPage.value = 1; fetchContacts(); });
 
-// ── Partners data (contact_connections) ────────────────────────────────────
-const connectionItems = useDirectusItems('contact_connections');
-type PartnerRow = {
-  id: string | number;
-  role: string;
-  introduced_by?: string | null;
-  contact: any;
-  client: any;
-};
-const partners = ref<PartnerRow[]>([]);
-const partnersLoading = ref(true);
-const partnerSearch = ref('');
-
-async function fetchPartners() {
-  partnersLoading.value = true;
-  try {
-    if (!selectedOrg.value) {
-      partners.value = [];
-      return;
-    }
-    const rows = (await connectionItems.list({
-      filter: { client: { organization: { _eq: selectedOrg.value } } },
-      fields: [
-        'id', 'role', 'introduced_by', 'date_created',
-        'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company', 'contact.category',
-        'client.id', 'client.name', 'client.logo',
-      ],
-      sort: ['-date_created'],
-      limit: -1,
-    })) as PartnerRow[];
-    partners.value = rows;
-  } catch (err) {
-    console.error('Failed to fetch partners:', err);
-    partners.value = [];
-  } finally {
-    partnersLoading.value = false;
-  }
-}
-
-const filteredPartners = computed(() => {
-  const q = partnerSearch.value.trim().toLowerCase();
-  if (!q) return partners.value;
-  return partners.value.filter((p) => {
-    const name = `${p.contact?.first_name || ''} ${p.contact?.last_name || ''}`.toLowerCase();
-    const company = (p.contact?.company || '').toLowerCase();
-    const email = (p.contact?.email || '').toLowerCase();
-    const clientName = (p.client?.name || '').toLowerCase();
-    const role = CONNECTION_ROLE_LABELS[p.role as keyof typeof CONNECTION_ROLE_LABELS]?.toLowerCase() || '';
-    return name.includes(q) || company.includes(q) || email.includes(q) || clientName.includes(q) || role.includes(q);
-  });
-});
-
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 onMounted(() => {
   fetchClients();
@@ -460,7 +407,6 @@ onMounted(() => {
 });
 
 let contactsLoaded = false;
-let partnersLoaded = false;
 let leadsLoaded = false;
 let intelligenceLoaded = false;
 
@@ -470,10 +416,6 @@ watch(view, (next) => {
     fetchContacts();
     // Single-field query; empty perms yield an empty Set — fire-and-forget.
     fetchCardDeskPromotedIds().then((set) => { cardDeskContactIds.value = set; });
-  }
-  if (next === 'partners' && !partnersLoaded) {
-    partnersLoaded = true;
-    fetchPartners();
   }
   if (next === 'leads' && !leadsLoaded) {
     leadsLoaded = true;
@@ -498,17 +440,21 @@ watch(view, (next) => {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Contact
         </Button>
-        <Button
-          v-else-if="view === 'leads' && isOrgManagerOrAbove"
-          as-child
-          variant="outline"
-          size="sm"
-        >
-          <NuxtLink to="/leads/automations">
-            <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
-            Automations
-          </NuxtLink>
-        </Button>
+        <TooltipProvider v-if="view === 'leads' && isOrgManagerOrAbove" :delay-duration="200">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button as-child variant="outline" size="sm">
+                <NuxtLink to="/leads/automations">
+                  <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
+                  Automations
+                </NuxtLink>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
+              Set up rules that fire when a lead is created or its stage changes — auto-assign to a teammate, send a follow-up email, create a task, schedule a check-in. Org-manager only.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </template>
     </AppHeader>
 
@@ -815,70 +761,10 @@ watch(view, (next) => {
         </template> <!-- /contacts list subview -->
       </template>
 
-      <!-- ── Partners view ────────────────────────────────────────────── -->
-      <template v-else-if="view === 'partners'">
-        <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <input
-            v-model="partnerSearch"
-            type="search"
-            placeholder="Search partners by name, company, role, or client..."
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div v-if="partnersLoading" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-          <p class="text-sm text-muted-foreground">Loading partners...</p>
-        </div>
-
-        <div v-else-if="!filteredPartners.length" class="flex flex-col items-center justify-center py-24 gap-4">
-          <Icon name="lucide:network" class="w-12 h-12 text-muted-foreground/40" />
-          <p class="text-sm text-muted-foreground">
-            {{ partnerSearch ? 'No partners match your search.' : 'No partner connections yet.' }}
-          </p>
-        </div>
-
-        <div v-else class="ios-card overflow-hidden divide-y divide-border/30">
-          <NuxtLink
-            v-for="row in filteredPartners"
-            :key="row.id"
-            :to="`/contacts/${row.contact?.id || ''}`"
-            class="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors group"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <p class="text-sm font-medium truncate">
-                  {{ row.contact?.first_name }} {{ row.contact?.last_name }}
-                </p>
-                <span class="text-[11px] text-muted-foreground truncate">
-                  · {{ CONNECTION_ROLE_LABELS[row.role as keyof typeof CONNECTION_ROLE_LABELS] || row.role }}
-                </span>
-                <span v-if="row.contact?.company" class="text-[11px] text-muted-foreground truncate hidden sm:inline">
-                  · {{ row.contact.company }}
-                </span>
-              </div>
-            </div>
-            <NuxtLink
-              v-if="row.client?.id"
-              :to="`/apps/clients/${row.client.id}`"
-              class="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground shrink-0"
-              @click.stop
-            >
-              <Icon name="lucide:building-2" class="w-3 h-3" />
-              {{ row.client.name }}
-            </NuxtLink>
-            <span
-              v-if="row.introduced_by"
-              class="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
-              :class="row.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-info/15 text-info'"
-            >
-              {{ row.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
-            </span>
-            <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-          </NuxtLink>
-        </div>
-      </template>
+      <!-- Partners removed as a top-level segment 2026-05-18 — partner-network
+           rollup lives on the Intelligence tab (Partner ROI card) and per-
+           contact connection detail lives on /contacts/[id]. The Contacts
+           tab's category=partner filter is the everyday distinct-people view. -->
 
       <!-- ── Leads view ───────────────────────────────────────────────── -->
       <!-- Lifted in from the standalone /leads page. Stats hero + Board/Grid
