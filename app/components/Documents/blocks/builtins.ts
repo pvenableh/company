@@ -7,7 +7,7 @@
  * As more primitives ship, add a registerBlockType call here.
  */
 import { registerBlockType } from '~~/shared/blocks/registry';
-import type { RichTextPayload } from '~~/shared/blocks/types';
+import type { RichTextPayload, ScopeTreePayload } from '~~/shared/blocks/types';
 
 let registered = false;
 
@@ -24,6 +24,17 @@ export function ensureBuiltinsRegistered() {
 		defaultPayload: () => ({ heading: '', body_markdown: '' }),
 		Editor: () => import('./RichTextEditor.vue').then((m) => m.default),
 		Renderer: () => import('./RichTextRenderer.vue').then((m) => m.default),
+	});
+
+	registerBlockType<ScopeTreePayload>({
+		type: 'scope_tree',
+		name: 'Scope tree',
+		icon: 'lucide:list-tree',
+		appliesTo: ['proposals', 'contracts'],
+		description: 'Phased deliverables — intro, items, optional sub-phases (2 levels max).',
+		defaultPayload: () => ({ numbering_style: 'phase_word', phases: [] }),
+		Editor: () => import('./ScopeTreeEditor.vue').then((m) => m.default),
+		Renderer: () => import('./ScopeTreeRenderer.vue').then((m) => m.default),
 	});
 }
 
