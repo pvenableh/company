@@ -51,6 +51,10 @@ async function directusFetch<T>(
     throw new Error(`Directus request failed: ${response.status} ${error}`)
   }
 
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T
+  }
+
   const json = await response.json()
   return json.data as T
 }
