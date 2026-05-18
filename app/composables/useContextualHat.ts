@@ -27,7 +27,7 @@ interface ContextMapping {
 const CONTEXT_MAP: ContextMapping[] = [
 	{
 		context: 'work',
-		routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/time-tracker'],
+		routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/apps/work?floor=time'],
 	},
 	{
 		context: 'pipeline',

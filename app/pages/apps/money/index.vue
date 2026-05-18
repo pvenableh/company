@@ -1,20 +1,19 @@
 <script setup lang="ts">
 /**
- * Money app — Apps Layout Phase 4.
+ * Money app — Apps Layout Phase 4 (Time floor extracted in retainer/social
+ * Phase 2, 2026-05-18).
  *
  * Single landing page with a pill-segmented floor strip:
- *   Cash flow (default) | Invoices | Payments | Expenses | Time
+ *   Cash flow (default) | Invoices | Payments | Expenses | Insights
  *
  * Same shape as /apps/work: floor switching is in-place via `?floor=` query
  * param so the shell never remounts. Drill-downs from any floor still push
  * to the canonical classic detail routes (`/invoices/detail/[id]`,
- * `/invoices/[id]`, etc.). The classic list pages
- * (`/invoices`, `/invoices/payments`, `/expenses`, `/time-tracker`) stay
- * intact alongside this app — classic-mode users navigate to those
- * pages directly. The Time floor below is the apps-mode home for
- * time tracking; classic users keep `/time-tracker`. Shared modal +
- * floating dock branch on `useAppsMode().isAppsMode` so the "View all
- * entries" link routes to whichever home matches the user's mode.
+ * `/invoices/[id]`, etc.).
+ *
+ * `?floor=time` now redirects to `/apps/work?floor=time` — time tracking
+ * lives under Work because the hours pool absorbs ALL work types, not just
+ * billable invoicing. See retainer plan memory.
  *
  * Decisions documented for Phase 4:
  *   - "Invoice payments" stays inside the invoice detail page (per-invoice
@@ -25,11 +24,10 @@
  *     useful.
  *   - Detail pages are not rebuilt. Drilling reaches existing routes.
  */
-import type { Invoice, TimeEntry } from '~~/shared/directus';
+import type { Invoice } from '~~/shared/directus';
 import { useDebounceFn } from '@vueuse/core';
 import { Button } from '~/components/ui/button';
-import { openTimerDockPanel } from '~/composables/useTimeTrackerModal';
-import { format, startOfWeek, endOfWeek, parseISO, isToday as dateFnsIsToday } from 'date-fns';
+import { format, startOfWeek, parseISO, isToday as dateFnsIsToday } from 'date-fns';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Money | Earnest' });
@@ -38,8 +36,14 @@ const router = useRouter();
 const route = useRoute();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'cashflow' | 'invoices' | 'payments' | 'expenses' | 'time' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['cashflow', 'invoices', 'payments', 'expenses', 'time', 'insights'];
+// Time tracking moved to /apps/work?floor=time in Phase 2 of the retainer
+// plan — any lingering `?floor=time` deep-links bounce out below.
+type FloorKey = 'cashflow' | 'invoices' | 'payments' | 'expenses' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['cashflow', 'invoices', 'payments', 'expenses', 'insights'];
+
+if (route.query.floor === 'time') {
+  await navigateTo({ path: '/apps/work', query: { floor: 'time' } }, { redirectCode: 302, replace: true });
+}
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -56,7 +60,6 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
   { key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
   { key: 'expenses', label: 'Expenses', icon: 'lucide:receipt' },
-  { key: 'time', label: 'Time', icon: 'lucide:clock' },
   { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
 
@@ -365,123 +368,11 @@ async function handleExpenseDelete(expense: any) {
   }
 }
 
-// ── Time floor ──────────────────────────────────────────────────────────────
-const { isOrgManagerOrAbove } = useOrgRole();
-const { user } = useDirectusAuth();
-const { restoreTimer, getTimeEntries, deleteTimeEntry, formatDuration } = useTimeTracker();
-
-const timeEntries = ref<TimeEntry[]>([]);
-const timeTotal = ref(0);
-const timeLoading = ref(false);
-const timeTab = ref<'today' | 'week' | 'all' | 'team' | 'reports'>('week');
-const showTimeManualEntry = ref(false);
-const editingTimeEntry = ref<TimeEntry | null>(null);
-const timePage = ref(1);
-const TIME_PAGE_LIMIT = 50;
-
-const timeTabs = computed(() => {
-  const base: Array<{ key: typeof timeTab.value; label: string }> = [
-    { key: 'today', label: 'Today' },
-    { key: 'week', label: 'This Week' },
-    { key: 'all', label: 'All Entries' },
-  ];
-  if (isOrgManagerOrAbove.value) base.push({ key: 'team', label: 'Team' });
-  base.push({ key: 'reports', label: 'Reports' });
-  return base;
-});
-
-function getTimeDateFilters(): { dateFrom?: string; dateTo?: string } {
-  const now = new Date();
-  if (timeTab.value === 'today') {
-    const todayStr = format(now, 'yyyy-MM-dd');
-    return { dateFrom: todayStr, dateTo: todayStr };
-  }
-  if (timeTab.value === 'week') {
-    return {
-      dateFrom: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
-      dateTo: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
-    };
-  }
-  return {};
-}
-
-async function fetchTimeEntries() {
-  timeLoading.value = true;
-  try {
-    const result = await getTimeEntries({
-      ...getTimeDateFilters(),
-      status: 'completed',
-      sort: ['-date', '-start_time'],
-      limit: timeTab.value === 'all' ? TIME_PAGE_LIMIT : 200,
-      page: timeTab.value === 'all' ? timePage.value : 1,
-    });
-    timeEntries.value = result.data;
-    timeTotal.value = result.total;
-  } catch (err) {
-    console.error('[apps/money] fetchTimeEntries failed', err);
-  } finally {
-    timeLoading.value = false;
-  }
-}
-
-interface TimeDateGroup {
-  date: string;
-  label: string;
-  totalMinutes: number;
-  entries: TimeEntry[];
-}
-const groupedTimeEntries = computed<TimeDateGroup[]>(() => {
-  const groups = new Map<string, TimeEntry[]>();
-  for (const entry of timeEntries.value) {
-    const dateKey = entry.date || format(new Date(entry.start_time), 'yyyy-MM-dd');
-    if (!groups.has(dateKey)) groups.set(dateKey, []);
-    groups.get(dateKey)!.push(entry);
-  }
-  const result: TimeDateGroup[] = [];
-  for (const [dateKey, entries] of groups) {
-    const parsed = parseISO(dateKey);
-    const isEntryToday = dateFnsIsToday(parsed);
-    const dayName = isEntryToday ? 'Today' : format(parsed, 'EEEE');
-    const dateLabel = format(parsed, 'MMM d, yyyy');
-    const totalMinutes = entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-    result.push({ date: dateKey, label: `${dayName}, ${dateLabel}`, totalMinutes, entries });
-  }
-  return result.sort((a, b) => b.date.localeCompare(a.date));
-});
-
-function editTimeEntry(entry: TimeEntry) {
-  editingTimeEntry.value = entry;
-  showTimeManualEntry.value = true;
-}
-function closeTimeForm() {
-  showTimeManualEntry.value = false;
-  editingTimeEntry.value = null;
-}
-async function handleTimeSave() {
-  closeTimeForm();
-  await fetchTimeEntries();
-}
-async function handleTimeDelete(entry: TimeEntry) {
-  if (!confirm('Delete this time entry?')) return;
-  try {
-    await deleteTimeEntry(entry.id);
-    await fetchTimeEntries();
-  } catch (err) {
-    console.error('Failed to delete time entry:', err);
-  }
-}
-function switchTimeTab(tab: typeof timeTab.value) {
-  timeTab.value = tab;
-  timePage.value = 1;
-  if (tab !== 'reports' && tab !== 'team') fetchTimeEntries();
-}
-
 // ── Lazy-load per floor ─────────────────────────────────────────────────────
 const cashflowLoaded = ref(false);
 const invoicesLoaded = ref(false);
 const paymentsLoaded = ref(false);
 const expensesLoaded = ref(false);
-const timeLoaded = ref(false);
 
 watch(
   floor,
@@ -502,11 +393,6 @@ watch(
       expensesLoaded.value = true;
       refreshExpenses();
     }
-    if (next === 'time' && !timeLoaded.value) {
-      timeLoaded.value = true;
-      restoreTimer();
-      fetchTimeEntries();
-    }
   },
   { immediate: true },
 );
@@ -519,9 +405,6 @@ watch([selectedOrg, selectedClient], () => {
   if (cashflowLoaded.value) fetchCashflow();
   if (paymentsLoaded.value) fetchPayments();
 });
-watch(selectedClient, () => {
-  if (timeLoaded.value) fetchTimeEntries();
-});
 
 // ── Header action button ────────────────────────────────────────────────────
 const headerAction = computed(() => {
@@ -530,9 +413,6 @@ const headerAction = computed(() => {
   }
   if (floor.value === 'expenses') {
     return { label: 'Add Expense', icon: 'lucide:plus', onClick: openExpenseCreate };
-  }
-  if (floor.value === 'time') {
-    return { label: 'Start Timer', icon: 'lucide:timer', onClick: () => openTimerDockPanel() };
   }
   return null;
 });
@@ -1054,110 +934,6 @@ const headerAction = computed(() => {
           :expense="editingExpense"
           @saved="onExpenseSaved"
         />
-      </template>
-
-      <!-- ── Time floor ───────────────────────────────────────────────── -->
-      <template v-else-if="floor === 'time'">
-        <TimeTrackerStats :entries="timeEntries" class="mb-5" />
-
-        <div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-5">
-          <button
-            v-for="tab in timeTabs"
-            :key="tab.key"
-            type="button"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all"
-            :class="timeTab === tab.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-            @click="switchTimeTab(tab.key)"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
-
-        <LazyTimeTrackerTeamView v-if="timeTab === 'team'" />
-        <LazyTimeTrackerReport v-else-if="timeTab === 'reports'" :team-mode="isOrgManagerOrAbove" />
-
-        <template v-else>
-          <div v-if="timeLoading && !timeEntries.length" class="flex flex-col items-center justify-center py-24 gap-3">
-            <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-            <p class="text-sm text-muted-foreground">Loading entries…</p>
-          </div>
-
-          <div v-else-if="!timeEntries.length" class="flex flex-col items-center justify-center py-24 gap-4">
-            <Icon name="lucide:clock" class="w-12 h-12 text-muted-foreground/40" />
-            <div class="text-center">
-              <p class="text-sm font-medium text-muted-foreground">No time entries</p>
-              <p class="text-xs text-muted-foreground/70 mt-1">
-                Start a timer or add a manual entry to begin tracking.
-              </p>
-            </div>
-            <Button size="sm" @click="showTimeManualEntry = true">
-              <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-              Manual Entry
-            </Button>
-          </div>
-
-          <div v-else class="min-h-[400px]">
-            <div v-for="group in groupedTimeEntries" :key="group.date" class="mb-6">
-              <div class="flex items-center justify-between mb-3 px-1">
-                <h3 class="text-sm font-medium text-muted-foreground">{{ group.label }}</h3>
-                <span class="text-xs text-muted-foreground">{{ formatDuration(group.totalMinutes) }}</span>
-              </div>
-              <div class="space-y-2">
-                <TimeTrackerEntryCard
-                  v-for="entry in group.entries"
-                  :key="entry.id"
-                  :entry="entry"
-                  :show-user="timeTab === 'all'"
-                  @edit="editTimeEntry"
-                  @delete="handleTimeDelete"
-                />
-              </div>
-            </div>
-
-            <div v-if="timeTab === 'all'" class="flex justify-between items-center mt-4">
-              <p class="text-sm text-muted-foreground">Showing {{ timeEntries.length }} of {{ timeTotal }}</p>
-              <div class="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  :disabled="timePage === 1"
-                  @click="timePage--; fetchTimeEntries()"
-                >
-                  <Icon name="lucide:chevron-left" class="w-4 h-4" />
-                </Button>
-                <span class="text-sm px-3 py-1">{{ timePage }}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  :disabled="timePage * TIME_PAGE_LIMIT >= timeTotal"
-                  @click="timePage++; fetchTimeEntries()"
-                >
-                  <Icon name="lucide:chevron-right" class="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <Teleport to="body">
-            <Transition name="modal-fade">
-              <div
-                v-if="showTimeManualEntry"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-                @click.self="closeTimeForm"
-              >
-                <div class="ios-card shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
-                  <h2 class="font-semibold mb-4">{{ editingTimeEntry ? 'Edit Entry' : 'Manual Entry' }}</h2>
-                  <TimeTrackerEntryForm
-                    :show="showTimeManualEntry"
-                    :entry="editingTimeEntry"
-                    @save="handleTimeSave"
-                    @cancel="closeTimeForm"
-                  />
-                </div>
-              </div>
-            </Transition>
-          </Teleport>
-        </template>
       </template>
 
       <!-- ── Insights floor ────────────────────────────────────────────── -->

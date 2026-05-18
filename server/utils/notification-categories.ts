@@ -44,6 +44,10 @@ export function categoryForCollection(collection: string | null | undefined): No
 		case 'appointments': return 'meetings';
 		case 'messages': return 'conversations';
 		case 'comments': return 'conversations';
+		// Studio posts are project work-items in the retainer model; route
+		// review-time notifications through the projects category so portal
+		// users use a single toggle for "work I'm reviewing".
+		case 'social_posts': return 'projects';
 		default: return null;
 	}
 }

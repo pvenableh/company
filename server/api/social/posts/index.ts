@@ -15,6 +15,16 @@ const platformTargetSchema = z.object({
 	options: z.record(z.unknown()).optional(),
 });
 
+const APPROVAL_STATES = [
+	'draft',
+	'in_review',
+	'requested_changes',
+	'approved',
+	'rejected',
+	'scheduled',
+	'published',
+] as const;
+
 const createPostSchema = z.object({
 	caption: z.string().min(1).max(4000),
 	media_urls: z.array(z.string().url()).max(10).default([]),
@@ -30,6 +40,13 @@ const createPostSchema = z.object({
 	client: z.string().uuid().nullable().optional(),
 	cta_url: z.string().url().max(500).nullable().optional(),
 	cta_label: z.string().max(80).nullable().optional(),
+	// Phase 3 — Studio fields
+	project: z.string().uuid().nullable().optional(),
+	target_client: z.string().uuid().nullable().optional(),
+	approval_state: z.enum(APPROVAL_STATES).default('draft'),
+	design_image_url: z.string().url().max(500).nullable().optional(),
+	figma_frame_url: z.string().url().max(500).nullable().optional(),
+	target_month: z.string().nullable().optional(),
 }).refine(
 	(data) => {
 		if (data.status === 'scheduled') {
@@ -50,11 +67,16 @@ export default defineEventHandler(async (event) => {
 	if (method === 'GET') {
 		const query = getQuery(event);
 		const clientFilter = query.client as string | undefined;
+		const projectFilter = query.project as string | undefined;
+		const targetClientFilter = query.target_client as string | undefined;
 		const posts = await getSocialPosts(organizationId, {
 			status: query.status as string | undefined,
 			scheduled_after: query.scheduled_after as string | undefined,
 			scheduled_before: query.scheduled_before as string | undefined,
 			client: clientFilter === 'null' ? null : clientFilter,
+			project: projectFilter === 'null' ? null : projectFilter,
+			target_client: targetClientFilter === 'null' ? null : targetClientFilter,
+			approval_state: query.approval_state as string | undefined,
 			limit: query.limit ? Number(query.limit) : 50,
 		});
 		return { data: posts };
@@ -93,7 +115,13 @@ export default defineEventHandler(async (event) => {
 			created_by: userId,
 			cta_url: data.cta_url ?? null,
 			cta_label: data.cta_label ?? null,
-		});
+			project: data.project ?? null,
+			target_client: data.target_client ?? null,
+			approval_state: data.approval_state,
+			design_image_url: data.design_image_url ?? null,
+			figma_frame_url: data.figma_frame_url ?? null,
+			target_month: data.target_month ?? null,
+		} as any);
 
 		// Log activity
 		await logSocialActivity({

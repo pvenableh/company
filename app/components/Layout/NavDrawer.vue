@@ -172,8 +172,8 @@ const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('d
 const primaryLinks = computed(() => links.value.filter((l) => l.section === 'primary'));
 const secondaryLinks = computed(() => links.value.filter((l) => l.section === 'secondary'));
 const allAppLinks = computed(() => [...primaryLinks.value, ...secondaryLinks.value]);
-const timeTrackerLink = computed(() => links.value.find((l) => l.to === '/time-tracker'));
-const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools' && l.to !== '/time-tracker'));
+const timeTrackerLink = computed(() => links.value.find((l) => l.to === '/apps/work?floor=time'));
+const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools' && l.to !== '/apps/work?floor=time'));
 const aiChatLink = computed(() => visibleLinks.value.find((l) => l.to === '/command-center/ai'));
 
 const emit = defineEmits(['edit-apps']);

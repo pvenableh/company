@@ -36,6 +36,7 @@ interface ActiveTimerState {
 	project?: string | null;
 	ticket?: string | null;
 	task?: string | null;
+	source_social_post?: string | null;
 	billable: boolean;
 	pausedElapsed?: number | null; // seconds accumulated when paused
 }
@@ -94,6 +95,7 @@ export function useTimeTracker() {
 		project?: string | null;
 		ticket?: string | null;
 		task?: string | null;
+		source_social_post?: string | null;
 		billable?: boolean;
 		hourly_rate?: number | null;
 	}): Promise<TimeEntry> {
@@ -114,6 +116,7 @@ export function useTimeTracker() {
 			project: params.project || null,
 			ticket: params.ticket || null,
 			task: params.task || null,
+			source_social_post: params.source_social_post || null,
 			description: params.description || null,
 			start_time: now,
 			date: now.split('T')[0],
@@ -130,6 +133,7 @@ export function useTimeTracker() {
 			project: params.project || null,
 			ticket: params.ticket || null,
 			task: params.task || null,
+			source_social_post: params.source_social_post || null,
 			billable: params.billable ?? true,
 		};
 
@@ -258,6 +262,7 @@ export function useTimeTracker() {
 		project?: string | null;
 		ticket?: string | null;
 		task?: string | null;
+		source_social_post?: string | null;
 		billable?: boolean;
 		hourly_rate?: number | null;
 	}): Promise<TimeEntry> {
@@ -276,6 +281,7 @@ export function useTimeTracker() {
 			project: params.project || null,
 			ticket: params.ticket || null,
 			task: params.task || null,
+			source_social_post: params.source_social_post || null,
 			description: params.description || null,
 			start_time: startTime,
 			end_time: endTime,
@@ -350,6 +356,7 @@ export function useTimeTracker() {
 				'project.id', 'project.title',
 				'ticket.id', 'ticket.title',
 				'task.id', 'task.title',
+				'source_social_post.id', 'source_social_post.caption',
 				'invoice.id', 'invoice.invoice_code', 'invoice.status',
 				'tags',
 			],
@@ -373,6 +380,7 @@ export function useTimeTracker() {
 				'project.id', 'project.title',
 				'ticket.id', 'ticket.title',
 				'task.id', 'task.title',
+				'source_social_post.id', 'source_social_post.caption',
 				'invoice.id', 'invoice.invoice_code',
 			],
 		});

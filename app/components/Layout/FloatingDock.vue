@@ -155,8 +155,12 @@
 							</div>
 							<p v-if="activeTimer.description" class="text-sm text-muted-foreground">{{ activeTimer.description }}</p>
 							<div class="flex items-center gap-2">
-								<span v-if="activeTimer.client_id" class="text-xs bg-muted/60 px-2 py-0.5 rounded-full">
-									{{ activeTimer.client_name || 'Client' }}
+								<span v-if="activeTimer.client" class="text-xs bg-muted/60 px-2 py-0.5 rounded-full">
+									Client
+								</span>
+								<span v-if="activeTimer.source_social_post" class="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+									<Icon name="lucide:palette" class="w-3 h-3" />
+									Post
 								</span>
 								<span v-if="activeTimer.billable" class="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">Billable</span>
 							</div>
@@ -217,14 +221,10 @@ const { user } = useDirectusAuth();
 // org-scoped and would either 403 or no-op until they finish onboarding.
 const { organizations } = useOrganization();
 const hasOrg = computed(() => organizations.value.length > 0);
-// The dock mounts in both default.vue (classic) and apps.vue (apps). The
-// "View all entries" link below must point at whichever Time Tracker home
-// matches the user's chosen mode — classic /time-tracker page or the
-// apps Money > Time floor.
-const { isAppsMode } = useAppsMode();
-const timeTrackerLink = computed(() =>
-	isAppsMode.value ? '/apps/money?floor=time' : '/time-tracker',
-);
+// The dock mounts in both default.vue (classic) and apps.vue (apps). Time
+// Tracker now lives inline on the Work app at `?floor=time` regardless of
+// layout mode; legacy /time-tracker 301-redirects there.
+const timeTrackerLink = '/apps/work?floor=time';
 const { activeTasks } = useQuickTasks();
 const {
 	activeTimer,
@@ -351,7 +351,7 @@ const DEFAULT_BOTTOM_OFFSET = '1.5rem';
 // height (~38px chip + ~12px padding) + breathing gap (~0.5rem) ≈ 5rem.
 const RAIL_CLEARED_BOTTOM_OFFSET = '5rem';
 
-const { railPosition } = useAppsMode();
+const { isAppsMode, railPosition } = useAppsMode();
 const bottomOffset = computed(() => {
 	if (
 		isAppsMode.value

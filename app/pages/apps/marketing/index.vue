@@ -34,10 +34,11 @@ useHead({ title: 'Marketing | Earnest' });
 
 const router = useRouter();
 const route = useRoute();
+const toast = useToast();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'pulse' | 'campaigns' | 'email' | 'social' | 'audience';
-const FLOOR_KEYS: FloorKey[] = ['pulse', 'campaigns', 'email', 'social', 'audience'];
+type FloorKey = 'pulse' | 'campaigns' | 'email' | 'social' | 'studio' | 'audience';
+const FLOOR_KEYS: FloorKey[] = ['pulse', 'campaigns', 'email', 'social', 'studio', 'audience'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -54,6 +55,7 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'campaigns', label: 'Campaigns', icon: 'lucide:rocket' },
   { key: 'email', label: 'Email', icon: 'lucide:mail' },
   { key: 'social', label: 'Social', icon: 'lucide:share-2' },
+  { key: 'studio', label: 'Studio', icon: 'lucide:palette' },
   { key: 'audience', label: 'Audience', icon: 'lucide:users' },
 ];
 
@@ -353,6 +355,18 @@ const socialAccounts = ref<SocialAccountPublic[]>([]);
 const socialPosts = ref<SocialPost[]>([]);
 const socialPlatformFilter = ref<'all' | SocialPlatform>('all');
 const socialStatusFilter = ref<'all' | 'scheduled' | 'published' | 'failed' | 'draft'>('all');
+const showAIWizard = ref(false);
+
+function handleAICreated(generated: { platform: SocialPlatform; caption: string }[]) {
+  showAIWizard.value = false;
+  toast.add({
+    title: `${generated.length} draft${generated.length !== 1 ? 's' : ''} created`,
+    description: `AI-generated drafts for ${generated.map((p) => p.platform).join(', ')}`,
+    icon: 'i-lucide-check-circle',
+    color: 'green',
+  });
+  fetchSocial();
+}
 
 const socialPlatformItems = computed(() => [
   { key: 'all', label: 'All' },
@@ -396,6 +410,43 @@ const filteredSocialPosts = computed(() => {
   }
   return posts;
 });
+
+// Classic /social parity: 4-stat strip + upcoming-posts list.
+// Follow-up growth + engagement rate are nominal placeholders here —
+// the classic dashboard uses the same hardcoded numbers. We'll wire
+// real values once the analytics pipeline catches them.
+const socialStats = computed(() => {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const scheduled = socialPosts.value.filter((p) => p.status === 'scheduled').length;
+  const publishedToday = socialPosts.value.filter((p) => {
+    const stamp = p.published_at || p.scheduled_at;
+    return p.status === 'published' && !!stamp && stamp.slice(0, 10) === todayISO;
+  }).length;
+  return {
+    scheduled,
+    publishedToday,
+    engagementAvg: 4.7,
+    followerGrowth: 248,
+  };
+});
+
+const upcomingScheduledPosts = computed<SocialPost[]>(() =>
+  [...socialPosts.value]
+    .filter((p) => p.status === 'scheduled' && p.scheduled_at)
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+    .slice(0, 10),
+);
+
+function formatScheduledAt(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 const socialPostsByPlatform = computed(() => {
   const groups = new Map<SocialPlatform, SocialPost[]>();
@@ -893,6 +944,171 @@ const scopeLabel = computed(() => {
 
       <!-- ── Social floor ─────────────────────────────────────────────── -->
       <template v-else-if="floor === 'social'">
+        <!-- Onboarding banner (no accounts connected) -->
+        <div
+          v-if="!socialLoading && socialAccounts.length === 0"
+          class="mb-5 p-5 bg-gradient-to-r from-pink-50 to-violet-50 dark:from-pink-900/20 dark:to-violet-900/20 rounded-2xl border border-pink-100 dark:border-pink-800/30"
+        >
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+            <div class="p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-sm shrink-0">
+              <Icon name="lucide:share-2" class="w-7 h-7 text-pink-500" />
+            </div>
+            <div class="flex-1">
+              <h2 class="font-semibold text-foreground mb-0.5">Get started with Social Media</h2>
+              <p class="text-xs text-muted-foreground">Connect your social accounts to start scheduling and publishing content with AI assistance.</p>
+            </div>
+            <div class="flex gap-2">
+              <Button size="sm" variant="ghost" @click="router.push('/social/settings#setup-guide')">Setup Guide</Button>
+              <Button size="sm" @click="router.push('/social/settings')">
+                <Icon name="lucide:plug" class="w-4 h-4 mr-1" />
+                Connect Accounts
+              </Button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="flex items-start gap-2 text-muted-foreground">
+              <Icon name="lucide:plug" class="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
+              <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
+            </div>
+            <div class="flex items-start gap-2 text-muted-foreground">
+              <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+              <span><strong class="text-foreground">Generate</strong> posts with Earnest tailored to your brand and audience</span>
+            </div>
+            <div class="flex items-start gap-2 text-muted-foreground">
+              <Icon name="lucide:calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <span><strong class="text-foreground">Schedule</strong> content across platforms from one calendar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-stat KPI strip (parity with classic /social) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <div class="ios-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+              <Icon name="lucide:calendar-clock" class="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Scheduled</p>
+              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.scheduled }}</p>
+            </div>
+          </div>
+          <div class="ios-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+              <Icon name="lucide:check-circle" class="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Published Today</p>
+              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.publishedToday }}</p>
+            </div>
+          </div>
+          <div class="ios-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+              <Icon name="lucide:trending-up" class="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Engagement</p>
+              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.engagementAvg }}%</p>
+            </div>
+          </div>
+          <div class="ios-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
+              <Icon name="lucide:users" class="w-5 h-5 text-pink-500" />
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Followers</p>
+              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">+{{ socialStats.followerGrowth }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions row -->
+        <div class="ios-card p-3 mb-5 flex flex-wrap items-center gap-2">
+          <Button size="sm" @click="router.push('/social/compose')">
+            <Icon name="lucide:edit-3" class="w-4 h-4 mr-1" />
+            Compose
+          </Button>
+          <Button size="sm" variant="outline" @click="showAIWizard = true">
+            <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
+            Earnest Generate
+          </Button>
+          <Button size="sm" variant="outline" @click="router.push('/social/calendar')">
+            <Icon name="lucide:calendar" class="w-4 h-4 mr-1" />
+            Calendar
+          </Button>
+          <Button size="sm" variant="outline" @click="router.push('/social/analytics')">
+            <Icon name="lucide:bar-chart-2" class="w-4 h-4 mr-1" />
+            Analytics
+          </Button>
+          <Button size="sm" variant="outline" class="ml-auto" @click="router.push('/social/settings')">
+            <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
+            Settings
+          </Button>
+        </div>
+
+        <!-- Upcoming Posts (next 10 scheduled) -->
+        <div v-if="upcomingScheduledPosts.length" class="ios-card p-5 mb-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Upcoming Posts
+              <span class="text-foreground ml-1">({{ upcomingScheduledPosts.length }})</span>
+            </h3>
+            <button
+              type="button"
+              class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
+              @click="router.push('/social/calendar')"
+            >
+              View Calendar
+              <Icon name="lucide:chevron-right" class="w-3 h-3" />
+            </button>
+          </div>
+          <div class="divide-y divide-border/40">
+            <div
+              v-for="post in upcomingScheduledPosts"
+              :key="post.id"
+              class="flex items-center gap-3 py-2 cursor-pointer hover:bg-muted/30 rounded-md -mx-2 px-2 transition-colors"
+              @click="router.push('/social')"
+            >
+              <div class="w-10 h-10 rounded-lg bg-muted/40 overflow-hidden flex-shrink-0">
+                <img
+                  v-if="post.thumbnail_url"
+                  :src="post.thumbnail_url"
+                  :alt="post.caption"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <Icon
+                    :name="SOCIAL_LOGOS[(post.platforms?.[0]?.platform as SocialPlatform) || 'instagram'] || 'lucide:share-2'"
+                    class="w-4 h-4 text-muted-foreground/50"
+                  />
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-foreground truncate">
+                  {{ post.caption?.slice(0, 60) || 'Untitled' }}{{ post.caption && post.caption.length > 60 ? '…' : '' }}
+                </p>
+                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                  <span>{{ formatScheduledAt(post.scheduled_at) }}</span>
+                  <span class="text-muted-foreground/40">·</span>
+                  <div class="flex items-center gap-1">
+                    <Icon
+                      v-for="(target, i) in (post.platforms || []).slice(0, 4)"
+                      :key="`${post.id}-pl-${i}`"
+                      :name="SOCIAL_LOGOS[target.platform as SocialPlatform] || 'lucide:share-2'"
+                      class="w-3 h-3"
+                    />
+                  </div>
+                </div>
+              </div>
+              <span
+                class="text-[10px] inline-flex items-center rounded-full px-1.5 py-0.5 font-medium capitalize"
+                :class="getStatusBadgeClasses(post.status)"
+              >
+                {{ post.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Account chips -->
         <div v-if="socialAccounts.length" class="flex flex-wrap gap-2 mb-5">
           <div
@@ -928,9 +1144,6 @@ const scopeLabel = computed(() => {
             :items="socialPlatformItems"
             class="w-fit"
           />
-          <NuxtLink to="/social" class="text-xs text-primary hover:underline ml-auto">
-            Open classic Social →
-          </NuxtLink>
         </div>
 
         <div v-if="socialLoading && !socialPosts.length" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -1021,6 +1234,11 @@ const scopeLabel = computed(() => {
             </div>
           </div>
         </div>
+      </template>
+
+      <!-- ── Studio floor (Phase 3 — content design + approvals) ────────── -->
+      <template v-else-if="floor === 'studio'">
+        <AppsMarketingStudioSurface />
       </template>
 
       <!-- ── Audience floor ───────────────────────────────────────────── -->
@@ -1157,6 +1375,13 @@ const scopeLabel = computed(() => {
         </template>
       </template>
     </LayoutPageContainer>
+
+    <!-- AI Social Wizard (Social floor) -->
+    <SocialAISocialWizard
+      v-if="showAIWizard"
+      @close="showAIWizard = false"
+      @created="handleAICreated"
+    />
   </div>
 </template>
 

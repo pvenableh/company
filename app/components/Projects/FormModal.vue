@@ -96,6 +96,64 @@
 			</div>
 		</div>
 
+		<!-- Billing -->
+		<div class="space-y-3 pt-3 border-t border-border/50">
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Billing Type</label>
+				<select
+					v-model="form.billing_type"
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">Not set</option>
+					<option value="fixed_fee">Fixed Fee</option>
+					<option value="hourly_retainer">Hourly Retainer</option>
+					<option value="time_and_materials">Time &amp; Materials</option>
+					<option value="non_billable">Non-billable</option>
+				</select>
+			</div>
+
+			<template v-if="form.billing_type === 'hourly_retainer'">
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="t-label text-muted-foreground">Hours per Period</label>
+						<UInput v-model="form.retainer_hours_per_period" type="number" placeholder="20" step="0.5" />
+					</div>
+					<div class="space-y-1">
+						<label class="t-label text-muted-foreground">Period</label>
+						<select
+							v-model="form.retainer_period"
+							class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+						>
+							<option value="monthly">Monthly</option>
+							<option value="quarterly">Quarterly</option>
+						</select>
+					</div>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="t-label text-muted-foreground">Hourly Rate</label>
+						<UInput v-model="form.retainer_hourly_rate" type="number" placeholder="150.00" step="0.01" />
+					</div>
+					<div class="space-y-1">
+						<label class="t-label text-muted-foreground">Started</label>
+						<UInput v-model="form.retainer_started_at" type="date" />
+					</div>
+				</div>
+				<div class="flex items-start gap-2 pt-1">
+					<input
+						id="show_hours_to_client"
+						v-model="form.show_hours_to_client"
+						type="checkbox"
+						class="mt-0.5"
+					/>
+					<label for="show_hours_to_client" class="text-xs text-muted-foreground cursor-pointer">
+						<span class="text-foreground font-medium">Show hours used to client in portal</span><br>
+						Displays the monthly total only. Per-entry detail is never shown.
+					</label>
+				</div>
+			</template>
+		</div>
+
 		<!-- Assigned Users (edit mode only) -->
 		<div v-if="isEditing" class="space-y-1">
 			<label class="t-label text-muted-foreground">Assigned Users</label>
@@ -176,6 +234,12 @@ const form = reactive({
 	due_date: '',
 	contract_value: null,
 	url: '',
+	billing_type: null,
+	retainer_hours_per_period: null,
+	retainer_period: 'monthly',
+	retainer_hourly_rate: null,
+	retainer_started_at: '',
+	show_hours_to_client: false,
 });
 
 function populateForm() {
@@ -189,6 +253,12 @@ function populateForm() {
 		form.due_date = props.project.due_date?.split('T')[0] || '';
 		form.contract_value = props.project.contract_value || null;
 		form.url = props.project.url || '';
+		form.billing_type = props.project.billing_type || null;
+		form.retainer_hours_per_period = props.project.retainer_hours_per_period ?? null;
+		form.retainer_period = props.project.retainer_period || 'monthly';
+		form.retainer_hourly_rate = props.project.retainer_hourly_rate ?? null;
+		form.retainer_started_at = props.project.retainer_started_at?.split('T')[0] || '';
+		form.show_hours_to_client = !!props.project.show_hours_to_client;
 		currentStatus.value = props.project.status || 'Pending';
 	} else {
 		form.title = '';
@@ -200,6 +270,12 @@ function populateForm() {
 		form.due_date = '';
 		form.contract_value = null;
 		form.url = '';
+		form.billing_type = null;
+		form.retainer_hours_per_period = null;
+		form.retainer_period = 'monthly';
+		form.retainer_hourly_rate = null;
+		form.retainer_started_at = '';
+		form.show_hours_to_client = false;
 		currentStatus.value = 'Pending';
 	}
 }
@@ -294,6 +370,7 @@ async function handleSubmit() {
 	if (!form.title.trim()) return;
 	saving.value = true;
 
+	const isRetainer = form.billing_type === 'hourly_retainer';
 	const payload = {
 		title: form.title.trim(),
 		description: form.description?.trim() || null,
@@ -305,6 +382,16 @@ async function handleSubmit() {
 		due_date: form.due_date || null,
 		contract_value: form.contract_value === '' || form.contract_value == null ? null : Number(form.contract_value),
 		url: form.url?.trim() || null,
+		billing_type: form.billing_type || null,
+		retainer_hours_per_period: isRetainer && form.retainer_hours_per_period !== '' && form.retainer_hours_per_period != null
+			? Number(form.retainer_hours_per_period)
+			: null,
+		retainer_period: isRetainer ? (form.retainer_period || 'monthly') : null,
+		retainer_hourly_rate: isRetainer && form.retainer_hourly_rate !== '' && form.retainer_hourly_rate != null
+			? Number(form.retainer_hourly_rate)
+			: null,
+		retainer_started_at: isRetainer ? (form.retainer_started_at || null) : null,
+		show_hours_to_client: isRetainer ? !!form.show_hours_to_client : false,
 	};
 
 	if (!isEditing.value && selectedOrg.value) {

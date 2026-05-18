@@ -45,6 +45,10 @@
 					<Badge v-if="projectName" variant="outline" class="text-[11px] px-1.5 py-0">
 						{{ projectName }}
 					</Badge>
+					<Badge v-if="postCaption" variant="outline" class="text-[11px] px-1.5 py-0 border-primary/30 text-primary inline-flex items-center gap-1">
+						<Icon name="lucide:palette" class="w-3 h-3" />
+						{{ postCaption }}
+					</Badge>
 					<span
 						v-if="entry.billable"
 						class="inline-flex items-center gap-0.5 text-[11px] font-medium text-success dark:text-success"
@@ -130,6 +134,15 @@ const projectName = computed(() => {
 	if (!project) return null;
 	if (typeof project === 'object' && 'title' in project) return project.title;
 	return null;
+});
+
+const postCaption = computed(() => {
+	const post = (props.entry as any).source_social_post;
+	if (!post) return null;
+	if (typeof post !== 'object' || !('caption' in post)) return null;
+	const raw = (post.caption || '').replace(/\s+/g, ' ').trim();
+	if (!raw) return 'Post';
+	return raw.length > 32 ? `${raw.slice(0, 32)}…` : raw;
 });
 
 const userName = computed(() => {

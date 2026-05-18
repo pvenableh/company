@@ -219,6 +219,7 @@ const navItems: NavItem[] = [
 	{ name: 'Invoices',  to: '/portal/invoices',  icon: 'heroicons:document-text' },
 	{ name: 'Proposals', to: '/portal/proposals', icon: 'heroicons:document-check' },
 	{ name: 'Contracts', to: '/portal/contracts', icon: 'lucide:file-signature' },
+	{ name: 'Content',   to: '/portal/content',   icon: 'lucide:eye' },
 	{ name: 'Social',    to: '/portal/social',    icon: 'lucide:share-2' },
 	{ name: 'Marketing', to: '/portal/marketing', icon: 'lucide:megaphone' },
 	{ name: 'Messages',  to: '/portal/messages',  icon: 'ph:chats-circle-duotone' },

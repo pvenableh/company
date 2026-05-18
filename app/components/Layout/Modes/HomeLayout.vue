@@ -45,7 +45,7 @@ const domainMap: Record<string, { parent?: { label: string; to: string }; label:
 	'/account': { label: 'Account' },
 	'/activity': { label: 'Activity' },
 	'/organization': { label: 'Organization' },
-	'/time-tracker': { label: 'Time Tracker' },
+	'/apps/work?floor=time': { label: 'Time Tracker' },
 }
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {

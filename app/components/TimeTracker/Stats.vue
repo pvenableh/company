@@ -1,30 +1,30 @@
 <template>
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 		<!-- Today -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-			<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Today</p>
-			<p class="text-2xl font-semibold text-foreground tabular-nums">{{ todayFormatted }}</p>
-			<p class="text-xs text-muted-foreground">
+		<div class="cg-card-compact">
+			<p class="cg-text-label mb-1">Today</p>
+			<p class="cg-text-stat tabular-nums text-foreground">{{ todayFormatted }}</p>
+			<p class="cg-text-child text-muted-foreground mt-0.5">
 				{{ todayEntryCount }} {{ todayEntryCount === 1 ? 'entry' : 'entries' }}
 			</p>
 		</div>
 
 		<!-- This Week -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-			<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">This Week</p>
-			<p class="text-2xl font-semibold text-foreground tabular-nums">{{ weekFormatted }}</p>
-			<p class="text-xs text-muted-foreground">
+		<div class="cg-card-compact">
+			<p class="cg-text-label mb-1">This Week</p>
+			<p class="cg-text-stat tabular-nums text-foreground">{{ weekFormatted }}</p>
+			<p class="cg-text-child text-muted-foreground mt-0.5">
 				{{ weekEntryCount }} {{ weekEntryCount === 1 ? 'entry' : 'entries' }}
 			</p>
 		</div>
 
 		<!-- Billable -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-			<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billable</p>
-			<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
+		<div class="cg-card-compact">
+			<p class="cg-text-label mb-1">Billable</p>
+			<p class="cg-text-stat tabular-nums text-success">
 				${{ billableAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
 			</p>
-			<p class="text-xs text-muted-foreground">
+			<p class="cg-text-child text-muted-foreground mt-0.5">
 				{{ billableFormatted }} billable time
 			</p>
 		</div>
@@ -76,7 +76,7 @@ const weekMinutes = computed(() =>
 const weekFormatted = computed(() => formatDuration(weekMinutes.value));
 const weekEntryCount = computed(() => weekEntries.value.length);
 
-// Billable stats (from all entries provided)
+// Billable stats
 const billableEntries = computed(() =>
 	props.entries.filter((e) => e.billable),
 );

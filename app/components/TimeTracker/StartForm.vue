@@ -87,6 +87,24 @@
 				</div>
 			</div>
 
+			<!-- Working on a post (Studio bridge) -->
+			<div v-if="postOptions.length">
+				<label class="block text-xs font-medium text-muted-foreground mb-1">Working on a post</label>
+				<select
+					v-model="form.source_social_post"
+					class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">No post</option>
+					<option
+						v-for="post in postOptions"
+						:key="post.id"
+						:value="post.id"
+					>
+						{{ post.label }}
+					</option>
+				</select>
+			</div>
+
 			<!-- Billable + Rate -->
 			<div class="grid grid-cols-2 gap-3">
 				<div class="flex items-end pb-0.5">
@@ -120,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+import type { SocialPost } from '~~/shared/social';
 import { Button } from '~/components/ui/button';
 import { Switch } from '~/components/ui/switch';
 
@@ -136,6 +155,7 @@ const clients = ref<{ label: string; value: string }[]>([]);
 const projectOptions = ref<{ id: string; title: string }[]>([]);
 const ticketOptions = ref<{ id: string; title: string }[]>([]);
 const taskOptions = ref<{ id: string; title: string }[]>([]);
+const postOptions = ref<{ id: string; label: string }[]>([]);
 
 // Auto-select client from header (skip 'org' sentinel value)
 const initialClient = computed(() => {
@@ -151,6 +171,7 @@ const form = reactive({
 	project: null as string | null,
 	ticket: null as string | null,
 	task: null as string | null,
+	source_social_post: null as string | null,
 	billable: true,
 	hourly_rate: null as number | null,
 });
@@ -246,6 +267,47 @@ watch(
 	{ immediate: true },
 );
 
+// ── Load social posts: by project or target_client. Only when scope set. ──
+async function loadPosts(clientId: string | null, projectId: string | null) {
+	if (!projectId && !clientId) {
+		postOptions.value = [];
+		return;
+	}
+	try {
+		const query: Record<string, string | number> = { limit: 50 };
+		if (projectId) query.project = projectId;
+		else if (clientId) query.target_client = clientId;
+		const r = await $fetch<{ data: SocialPost[] }>('/api/social/posts', { query });
+		// Drop already-published or rejected — those aren't active work
+		const list = (r?.data ?? []).filter((p) => {
+			const state = p.approval_state;
+			return state !== 'published' && state !== 'rejected';
+		});
+		postOptions.value = list.map((p) => ({
+			id: p.id,
+			label: postLabel(p),
+		}));
+	} catch {
+		postOptions.value = [];
+	}
+}
+
+function postLabel(p: SocialPost): string {
+	const caption = (p.caption || '').replace(/\s+/g, ' ').trim();
+	const head = caption.length > 50 ? `${caption.slice(0, 50)}…` : caption || 'Untitled post';
+	const state = p.approval_state ? ` · ${p.approval_state.replace('_', ' ')}` : '';
+	return `${head}${state}`;
+}
+
+watch(
+	[() => form.client, () => form.project],
+	([clientId, projectId]) => {
+		form.source_social_post = null;
+		loadPosts(clientId, projectId);
+	},
+	{ immediate: true },
+);
+
 // ── Load tasks: by ticket, by project, or org-level quick tasks ──
 watch(
 	[() => form.client, () => form.project, () => form.ticket],
@@ -291,6 +353,7 @@ async function handleStart() {
 			project: form.project,
 			ticket: form.ticket,
 			task: form.task,
+			source_social_post: form.source_social_post,
 			billable: form.billable,
 			hourly_rate: form.billable ? form.hourly_rate : null,
 		});
@@ -301,6 +364,7 @@ async function handleStart() {
 		form.project = null;
 		form.ticket = null;
 		form.task = null;
+		form.source_social_post = null;
 		form.billable = true;
 		form.hourly_rate = defaultRate.value;
 
@@ -360,6 +424,8 @@ async function refreshOptions() {
 		}
 		taskOptions.value = await taskItems.list({ fields: ['id', 'title'], filter: taskFilter, sort: ['title'], limit: 50 });
 	} catch { taskOptions.value = []; }
+
+	await loadPosts(clientId, projectId);
 }
 
 // Sync form client when header client changes

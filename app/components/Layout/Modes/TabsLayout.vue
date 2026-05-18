@@ -23,7 +23,7 @@ const tabs = [
     label: 'Work',
     icon: 'lucide:gantt-chart',
     to: '/projects',
-    routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/time-tracker'],
+    routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/apps/work?floor=time'],
   },
   {
     id: 'pipeline',

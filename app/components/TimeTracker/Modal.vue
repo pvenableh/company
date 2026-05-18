@@ -35,6 +35,10 @@
 							<UIcon name="i-heroicons-building-office-2" class="w-3 h-3" />
 							{{ clientName }}
 						</span>
+						<span v-if="activeTimer.source_social_post" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs text-primary">
+							<Icon name="lucide:palette" class="w-3 h-3" />
+							Post
+						</span>
 						<span v-if="activeTimer.billable" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-xs text-success dark:text-success">
 							<UIcon name="i-heroicons-currency-dollar" class="w-3 h-3" />
 							Billable
@@ -72,13 +76,10 @@
 const isOpen = defineModel<boolean>({ default: false });
 const startFormRef = ref<any>(null);
 
-// Modal is global — mounted in both default.vue and apps.vue. The
-// "View all entries" link must route to whichever Time Tracker home
-// matches the user's chosen mode.
-const { isAppsMode } = useAppsMode();
-const timeTrackerLink = computed(() =>
-	isAppsMode.value ? '/apps/money?floor=time' : '/time-tracker',
-);
+// Modal is global — mounted in both default.vue and apps.vue. Time Tracker
+// now lives inline on the Work app at `?floor=time` regardless of layout
+// mode; the legacy /time-tracker route 301-redirects there.
+const timeTrackerLink = '/apps/work?floor=time';
 
 // Refresh form options whenever modal opens
 watch(isOpen, (open) => {

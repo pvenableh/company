@@ -30,6 +30,15 @@ export type SocialAction =
 	| 'comment_deleted'
 	| 'analytics_synced';
 
+export type ApprovalState =
+	| 'draft'
+	| 'in_review'
+	| 'requested_changes'
+	| 'approved'
+	| 'rejected'
+	| 'scheduled'
+	| 'published';
+
 // Frontend-friendly post type (maps Directus fields to what pages expect)
 export interface SocialPost {
 	id: string;
@@ -49,6 +58,16 @@ export interface SocialPost {
 	date_updated: string | null;
 	cta_url?: string | null;
 	cta_label?: string | null;
+	// Phase 3 — Studio fields
+	project?: string | null;
+	target_client?: string | null;
+	approval_state?: ApprovalState;
+	approval_token?: string | null;
+	approved_by?: string | null;
+	approved_at?: string | null;
+	design_image_url?: string | null;
+	figma_frame_url?: string | null;
+	target_month?: string | null;
 }
 
 // Dashboard stats summary

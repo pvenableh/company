@@ -28,7 +28,7 @@ const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageConte
 
 const project = await projectItems.get(params.id, {
 	fields: [
-		'id,status,service.id,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,url,template,organization.id,organization.name,organization.logo,client.id,client.name,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.event_date,events.end_date,events.sort,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
+		'id,status,service.id,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,url,template,billing_type,retainer_hours_per_period,retainer_period,retainer_hourly_rate,retainer_started_at,show_hours_to_client,organization.id,organization.name,organization.logo,client.id,client.name,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.event_date,events.end_date,events.sort,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
 	],
 });
 
@@ -643,7 +643,16 @@ const formatCurrency = (amount) => {
 					</template>
 				</UiStatCard>
 
-				<UiStatCard label="Billed" :value="formatCurrency(stats.invoiceTotal)" :detail="`${formatCurrency(stats.paidTotal)} paid`" />
+				<ProjectsRetainerHoursCard
+					v-if="project?.billing_type === 'hourly_retainer'"
+					:project="project"
+				/>
+				<UiStatCard
+					v-else
+					label="Billed"
+					:value="formatCurrency(stats.invoiceTotal)"
+					:detail="`${formatCurrency(stats.paidTotal)} paid`"
+				/>
 
 				<div class="cg-card-compact">
 					<p class="cg-text-label mb-1">Timeline</p>

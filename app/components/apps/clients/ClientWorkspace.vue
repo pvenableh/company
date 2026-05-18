@@ -128,7 +128,48 @@ watch(activeTab, (next) => {
 	if (next === 'tickets' && !relatedTickets.value.length && !ticketsLoading.value) loadTickets();
 	if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
 	if (next === 'meetings' && !relatedMeetings.value.length && !meetingsLoading.value) loadMeetings();
+	if (next === 'content' && !relatedContent.value.length && !contentLoading.value) loadContent();
 });
+
+const relatedContent = ref<any[]>([]);
+const contentLoading = ref(false);
+
+async function loadContent() {
+	contentLoading.value = true;
+	try {
+		const r = await $fetch<{ data: any[] }>('/api/social/posts', {
+			query: { target_client: props.clientId, limit: 100 },
+		});
+		relatedContent.value = (r?.data ?? []).filter((p) => p.approval_state && p.approval_state !== 'draft');
+	} catch {
+		relatedContent.value = [];
+	} finally {
+		contentLoading.value = false;
+	}
+}
+
+function contentStateTone(s: string | undefined): string {
+	switch (s) {
+		case 'approved':
+		case 'published':
+			return 'bg-success/12 text-success border-success/30';
+		case 'in_review':
+			return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
+		case 'requested_changes':
+		case 'rejected':
+			return 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
+		default:
+			return 'bg-muted/60 text-muted-foreground border-border';
+	}
+}
+
+function contentStateLabel(s: string | undefined): string {
+	switch (s) {
+		case 'in_review': return 'In Review';
+		case 'requested_changes': return 'Changes Requested';
+		default: return (s || 'draft').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+	}
+}
 
 async function loadClient() {
 	loading.value = true;
@@ -274,6 +315,7 @@ const tabCounts = computed(() => ({
 	tickets: relatedTickets.value.length,
 	tasks: relatedTasks.value.length,
 	meetings: relatedMeetings.value.length,
+	content: relatedContent.value.length,
 	invoices: relatedInvoices.value.length,
 	partners: totalPartnerCount.value,
 	messages: relatedChannels.value.length,
@@ -967,6 +1009,63 @@ watch(() => props.clientId, () => {
 							</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
 						</NuxtLink>
+					</div>
+				</div>
+
+				<!-- Content -->
+				<div v-else-if="activeTab === 'content'">
+					<div class="flex items-center justify-end mb-3">
+						<NuxtLink
+							to="/apps/marketing?floor=studio"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+						>
+							<Icon name="lucide:external-link" class="w-3 h-3" />
+							Open in Studio
+						</NuxtLink>
+					</div>
+					<div v-if="contentLoading && !relatedContent.length" class="text-sm text-muted-foreground text-center py-10">
+						Loading content…
+					</div>
+					<div v-else-if="!relatedContent.length" class="text-sm text-muted-foreground text-center py-10">
+						No content in review or approved for this client yet.
+					</div>
+					<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div
+							v-for="post in relatedContent"
+							:key="post.id"
+							class="flex gap-3 p-3 border border-border rounded-lg hover:bg-muted/40 transition-colors"
+						>
+							<div class="w-16 h-16 rounded bg-muted/40 overflow-hidden shrink-0">
+								<img
+									v-if="post.design_image_url"
+									:src="post.design_image_url"
+									:alt="(post.caption || '').slice(0, 60)"
+									class="w-full h-full object-cover"
+									loading="lazy"
+								/>
+								<img
+									v-else-if="post.media_urls?.[0]"
+									:src="post.media_urls[0]"
+									:alt="(post.caption || '').slice(0, 60)"
+									class="w-full h-full object-cover"
+									loading="lazy"
+								/>
+								<div v-else class="w-full h-full flex items-center justify-center">
+									<Icon name="lucide:image" class="w-5 h-5 text-muted-foreground/40" />
+								</div>
+							</div>
+							<div class="flex-1 min-w-0">
+								<span
+									class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border"
+									:class="contentStateTone(post.approval_state)"
+								>
+									{{ contentStateLabel(post.approval_state) }}
+								</span>
+								<p class="text-xs text-foreground line-clamp-2 mt-1.5">
+									{{ post.caption || 'Untitled draft' }}
+								</p>
+							</div>
+						</div>
 					</div>
 				</div>
 

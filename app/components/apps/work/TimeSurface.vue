@@ -1,6 +1,15 @@
 <script setup lang="ts">
+/**
+ * Time floor surface — the Time tracker UI mounted inline on /apps/work
+ * (floor `time`). Modernised in retainer/social Phase 2 (2026-05-18) with
+ * Clean-Gantt fonts, cg-card-compact stat strip, and pill-segmented tabs
+ * that pick up the Work app accent.
+ *
+ * Owns its own data (entries, selection, modals). The floating timer dock
+ * + Start/Manual Entry modals stay globally mounted via the apps layout —
+ * this component only owns the listing UI.
+ */
 import type { TimeEntry } from '~~/shared/directus';
-import { Button } from '~/components/ui/button';
 import { openTimerDockPanel } from '~/composables/useTimeTrackerModal';
 import {
   format,
@@ -10,11 +19,7 @@ import {
   parseISO,
 } from 'date-fns';
 
-definePageMeta({ middleware: ['auth'] });
-useHead({ title: 'Time Tracker | Earnest' });
-
 const {
-  isTimerRunning,
   restoreTimer,
   getTimeEntries,
   deleteTimeEntry,
@@ -29,34 +34,33 @@ const { isOrgManagerOrAbove } = useOrgRole();
 const allEntries = ref<TimeEntry[]>([]);
 const total = ref(0);
 const loading = ref(true);
-const activeTab = ref<'today' | 'week' | 'all' | 'team' | 'reports'>('week');
+const activeTab = ref<'today' | 'week' | 'all' | 'team' | 'reports'>('reports');
 const showManualEntry = ref(false);
 const editingEntry = ref<TimeEntry | null>(null);
 const page = ref(1);
 const limit = 50;
 const hasMore = computed(() => page.value * limit < total.value);
 
-// Client context label
 const clientLabel = computed(() => {
   if (!currentClient.value || currentClient.value.id === 'org') return null;
   return currentClient.value.name || null;
 });
 
 // ── Tabs ────────────────────────────────────────────────────────
-const tabs = computed(() => {
-  const base = [
-    { key: 'today' as const, label: 'Today' },
-    { key: 'week' as const, label: 'This Week' },
-    { key: 'all' as const, label: 'All Entries' },
+type TabKey = 'today' | 'week' | 'all' | 'team' | 'reports';
+const tabs = computed<Array<{ key: TabKey; label: string; icon: string }>>(() => {
+  const base: Array<{ key: TabKey; label: string; icon: string }> = [
+    { key: 'reports', label: 'Reports', icon: 'lucide:bar-chart-3' },
+    { key: 'today', label: 'Today', icon: 'lucide:sun' },
+    { key: 'week', label: 'This Week', icon: 'lucide:calendar-days' },
+    { key: 'all', label: 'All Entries', icon: 'lucide:list' },
   ];
   if (isOrgManagerOrAbove.value) {
-    base.push({ key: 'team' as const, label: 'Team' });
+    base.push({ key: 'team', label: 'Team', icon: 'lucide:users' });
   }
-  base.push({ key: 'reports' as const, label: 'Reports' });
   return base;
 });
 
-// ── Date Filters ────────────────────────────────────────────────
 function getDateFilters(): { dateFrom?: string; dateTo?: string } {
   const now = new Date();
   if (activeTab.value === 'today') {
@@ -74,7 +78,6 @@ function getDateFilters(): { dateFrom?: string; dateTo?: string } {
   return {};
 }
 
-// ── Fetch ───────────────────────────────────────────────────────
 async function fetchEntries() {
   loading.value = true;
   try {
@@ -89,13 +92,13 @@ async function fetchEntries() {
     allEntries.value = result.data;
     total.value = result.total;
   } catch (err) {
-    console.error('Failed to fetch time entries:', err);
+    console.error('[TimeSurface] fetch failed', err);
   } finally {
     loading.value = false;
   }
 }
 
-// ── Grouped Entries ─────────────────────────────────────────────
+// ── Grouped entries ─────────────────────────────────────────────
 interface DateGroup {
   date: string;
   label: string;
@@ -108,9 +111,7 @@ const groupedEntries = computed<DateGroup[]>(() => {
 
   for (const entry of allEntries.value) {
     const dateKey = entry.date || format(new Date(entry.start_time), 'yyyy-MM-dd');
-    if (!groups.has(dateKey)) {
-      groups.set(dateKey, []);
-    }
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
     groups.get(dateKey)!.push(entry);
   }
 
@@ -123,7 +124,7 @@ const groupedEntries = computed<DateGroup[]>(() => {
 
     const totalMinutes = entries.reduce(
       (sum, e) => sum + (e.duration_minutes || 0),
-      0
+      0,
     );
 
     result.push({
@@ -137,7 +138,6 @@ const groupedEntries = computed<DateGroup[]>(() => {
   return result.sort((a, b) => b.date.localeCompare(a.date));
 });
 
-// ── Actions ─────────────────────────────────────────────────────
 function editEntry(entry: TimeEntry) {
   editingEntry.value = entry;
   showManualEntry.value = true;
@@ -159,11 +159,11 @@ async function handleDelete(entry: TimeEntry) {
     await deleteTimeEntry(entry.id);
     await fetchEntries();
   } catch (err) {
-    console.error('Failed to delete time entry:', err);
+    console.error('[TimeSurface] delete failed', err);
   }
 }
 
-function switchTab(tab: typeof activeTab.value) {
+function switchTab(tab: TabKey) {
   activeTab.value = tab;
   page.value = 1;
   selectedIds.clear();
@@ -177,25 +177,20 @@ const selectedIds = reactive(new Set<string | number>());
 const showInvoiceModal = ref(false);
 
 function toggleSelection(entry: TimeEntry) {
-  if (selectedIds.has(entry.id)) {
-    selectedIds.delete(entry.id);
-  } else {
-    selectedIds.add(entry.id);
-  }
+  if (selectedIds.has(entry.id)) selectedIds.delete(entry.id);
+  else selectedIds.add(entry.id);
 }
 
 const unbilledBillableEntries = computed(() =>
-  allEntries.value.filter(e => e.billable && !e.billed),
+  allEntries.value.filter((e) => e.billable && !e.billed),
 );
 
 function selectAllUnbilled() {
-  for (const e of unbilledBillableEntries.value) {
-    selectedIds.add(e.id);
-  }
+  for (const e of unbilledBillableEntries.value) selectedIds.add(e.id);
 }
 
 const selectedEntries = computed(() =>
-  allEntries.value.filter(e => selectedIds.has(e.id)),
+  allEntries.value.filter((e) => selectedIds.has(e.id)),
 );
 
 const selectedTotalMinutes = computed(() =>
@@ -229,12 +224,9 @@ async function handleInvoiceCreated(invoiceId: string) {
   showInvoiceModal.value = false;
   selectedIds.clear();
   await fetchEntries();
-  if (invoiceId) {
-    router.push(`/invoices/detail/${invoiceId}`);
-  }
+  if (invoiceId) router.push(`/invoices/detail/${invoiceId}`);
 }
 
-// ── Lifecycle ───────────────────────────────────────────────────
 onMounted(() => {
   restoreTimer();
   fetchEntries();
@@ -246,130 +238,110 @@ watch(() => selectedClient.value, () => {
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold">
-          Time Tracker
+  <div>
+    <!-- Toolbar: client context + Start Timer / Manual Entry -->
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <p v-if="clientLabel" class="cg-text-child text-muted-foreground">
+        Viewing entries for <span class="font-medium text-foreground">{{ clientLabel }}</span>
+      </p>
+      <span v-else />
+      <div class="flex items-center gap-1.5 ml-auto">
+        <UiActionButton icon="lucide:timer" @click="openTimerDockPanel()">
+          <span class="hidden sm:inline">Start Timer</span>
+        </UiActionButton>
+        <UiActionButton icon="lucide:plus" variant="primary" @click="showManualEntry = true">
+          <span class="hidden sm:inline">Manual Entry</span>
+        </UiActionButton>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <TimeTrackerStats :entries="allEntries" class="mb-5" />
+
+    <!-- Pill tabs -->
+    <div class="time-tabs" role="tablist" aria-label="Time tracker sections">
+      <div class="time-tabs__scroller">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.key"
+          class="time-tabs__item"
+          :class="{ 'time-tabs__item--active': activeTab === tab.key }"
+          @click="switchTab(tab.key)"
+        >
+          <Icon :name="tab.icon" class="time-tabs__icon" />
+          <span class="time-tabs__label">{{ tab.label }}</span>
           <span
-            v-if="total > 0"
-            class="ml-2 text-xs bg-muted/60 px-2 py-0.5 rounded-full font-medium text-muted-foreground"
-          >
-            {{ total }}
-          </span>
-        </h1>
-        <!-- Client context -->
-        <p v-if="clientLabel" class="text-xs text-muted-foreground mt-0.5">
-          Viewing entries for <span class="font-medium text-foreground">{{ clientLabel }}</span>
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" @click="openTimerDockPanel()">
-          <Icon name="lucide:timer" class="w-4 h-4 mr-1" />
-          Start Timer
-        </Button>
-        <Button variant="outline" size="sm" @click="showManualEntry = true">
-          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-          Manual Entry
-        </Button>
+            v-if="tab.key === 'all' && total > 0"
+            class="time-tabs__count"
+          >{{ total }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Stats -->
-    <TimeTrackerStats :entries="allEntries" class="mb-6" />
-
-    <!-- Tab Bar -->
-    <div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-6">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
-        :class="
-          activeTab === tab.key
-            ? 'bg-card text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        "
-        @click="switchTab(tab.key)"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
-
-    <!-- Team Tab (Manager+ only) -->
+    <!-- Team Tab -->
     <LazyTimeTrackerTeamView v-if="activeTab === 'team'" />
 
     <!-- Reports Tab -->
-    <LazyTimeTrackerReport v-if="activeTab === 'reports'" :team-mode="isOrgManagerOrAbove" />
+    <LazyTimeTrackerReport v-else-if="activeTab === 'reports'" :team-mode="isOrgManagerOrAbove" />
 
-    <!-- Loading State -->
+    <!-- Loading -->
     <div
-      v-else-if="loading && activeTab !== 'team' && activeTab !== 'reports'"
+      v-else-if="loading"
       class="flex flex-col items-center justify-center py-24 gap-3"
     >
       <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-      <p class="text-sm text-muted-foreground">Loading entries...</p>
+      <p class="cg-text-child text-muted-foreground">Loading entries…</p>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty -->
     <div
-      v-else-if="!allEntries.length && activeTab !== 'team' && activeTab !== 'reports'"
+      v-else-if="!allEntries.length"
       class="flex flex-col items-center justify-center py-24 gap-4"
     >
       <Icon name="lucide:clock" class="w-12 h-12 text-muted-foreground/40" />
       <div class="text-center">
         <p class="text-sm font-medium text-muted-foreground">No time entries</p>
-        <p class="text-xs text-muted-foreground/70 mt-1">
+        <p class="cg-text-child text-muted-foreground/70 mt-1">
           Start a timer or add a manual entry to begin tracking.
         </p>
       </div>
-      <Button size="sm" @click="showManualEntry = true">
-        <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+      <UiActionButton icon="lucide:plus" variant="primary" @click="showManualEntry = true">
         Manual Entry
-      </Button>
+      </UiActionButton>
     </div>
 
-    <!-- Entries List (Today / This Week / All) -->
-    <div
-      v-else-if="activeTab !== 'team' && activeTab !== 'reports'"
-      class="min-h-[400px]"
-    >
+    <!-- Entries list -->
+    <div v-else class="min-h-[400px]">
       <!-- Selection toolbar -->
       <div
         v-if="unbilledBillableEntries.length > 0 || selectedIds.size > 0"
         class="flex items-center justify-end gap-2 mb-3"
       >
-        <Button
+        <UiActionButton
           v-if="unbilledBillableEntries.length > 0 && selectedIds.size === 0"
-          variant="ghost"
-          size="sm"
-          class="text-xs"
           @click="selectAllUnbilled"
         >
           Select All Unbilled ({{ unbilledBillableEntries.length }})
-        </Button>
-        <Button
+        </UiActionButton>
+        <UiActionButton
           v-if="selectedIds.size > 0"
-          variant="ghost"
-          size="sm"
-          class="text-xs"
           @click="selectedIds.clear()"
         >
           Clear ({{ selectedIds.size }})
-        </Button>
+        </UiActionButton>
       </div>
 
       <TransitionGroup name="entry-list" tag="div">
         <div v-for="group in groupedEntries" :key="group.date" class="mb-6">
-          <!-- Date Header -->
-          <div class="flex items-center justify-between mb-3 px-1">
-            <h3 class="text-sm font-medium text-muted-foreground">{{ group.label }}</h3>
-            <span class="text-xs text-muted-foreground">
+          <div class="flex items-center justify-between mb-2 px-1">
+            <h3 class="cg-text-header">{{ group.label }}</h3>
+            <span class="cg-text-child text-muted-foreground tabular-nums">
               {{ formatDuration(group.totalMinutes) }}
             </span>
           </div>
-
-          <!-- Entries -->
           <div class="space-y-2">
             <TimeTrackerEntryCard
               v-for="entry in group.entries"
@@ -386,27 +358,25 @@ watch(() => selectedClient.value, () => {
         </div>
       </TransitionGroup>
 
-      <!-- Selection Action Bar -->
+      <!-- Selection action bar -->
       <Teleport to="body">
         <Transition name="slide-up">
           <div
             v-if="selectedIds.size > 0"
             class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border shadow-xl rounded-2xl px-5 py-3"
           >
-            <span class="text-sm font-medium">{{ selectedIds.size }} entries selected</span>
-            <span class="text-xs text-muted-foreground">{{ formatHoursLabel(selectedTotalMinutes) }} · ${{ formatRevenue(selectedRevenue) }}</span>
-            <Button size="sm" @click="showInvoiceModal = true">
-              <Icon name="lucide:file-text" class="w-4 h-4 mr-1" />
+            <span class="cg-text-primary">{{ selectedIds.size }} entries selected</span>
+            <span class="cg-text-child text-muted-foreground">
+              {{ formatHoursLabel(selectedTotalMinutes) }} · ${{ formatRevenue(selectedRevenue) }}
+            </span>
+            <UiActionButton icon="lucide:file-text" variant="primary" @click="showInvoiceModal = true">
               Generate Invoice
-            </Button>
-            <Button variant="ghost" size="sm" @click="selectedIds.clear()">
-              <Icon name="lucide:x" class="w-4 h-4" />
-            </Button>
+            </UiActionButton>
+            <UiActionButton icon="lucide:x" @click="selectedIds.clear()" />
           </div>
         </Transition>
       </Teleport>
 
-      <!-- Invoice Generation Modal -->
       <Teleport to="body">
         <TimeTrackerInvoiceFromTimeModal
           v-if="showInvoiceModal"
@@ -416,29 +386,23 @@ watch(() => selectedClient.value, () => {
         />
       </Teleport>
 
-      <!-- Pagination (All tab only) -->
+      <!-- Pagination -->
       <div v-if="activeTab === 'all'" class="flex justify-between items-center mt-4">
-        <p class="text-sm text-muted-foreground">
+        <p class="cg-text-child text-muted-foreground">
           Showing {{ allEntries.length }} of {{ total }}
         </p>
         <div class="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <UiActionButton
+            icon="lucide:chevron-left"
             :disabled="page === 1"
             @click="page--; fetchEntries()"
-          >
-            <Icon name="lucide:chevron-left" class="w-4 h-4" />
-          </Button>
-          <span class="text-sm px-3 py-1">{{ page }}</span>
-          <Button
-            variant="outline"
-            size="sm"
+          />
+          <span class="cg-text-child px-3 py-1">{{ page }}</span>
+          <UiActionButton
+            icon="lucide:chevron-right"
             :disabled="!hasMore"
             @click="page++; fetchEntries()"
-          >
-            <Icon name="lucide:chevron-right" class="w-4 h-4" />
-          </Button>
+          />
         </div>
       </div>
     </div>
@@ -465,10 +429,97 @@ watch(() => selectedClient.value, () => {
         </div>
       </Transition>
     </Teleport>
-  </LayoutPageContainer>
+  </div>
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
+
+/* Pill-segmented tab strip — mirrors AppFloorStrip's active-pill gradient
+ * so this floor reads as part of the same family. Local accent fallback
+ * matches the apps shell vars. */
+.time-tabs {
+  @apply mb-5 flex;
+  --accent-h: var(--app-accent-h, 220);
+  --accent-s: var(--app-accent-s, 10%);
+  --accent-l: var(--app-accent-l, 48%);
+}
+
+.time-tabs__scroller {
+  @apply inline-flex items-center gap-1 rounded-full
+    border border-border bg-card p-0.5
+    overflow-x-auto max-w-full;
+  scrollbar-width: none;
+}
+
+.time-tabs__scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.time-tabs__item {
+  @apply inline-flex items-center gap-1.5 rounded-full
+    px-3 py-1 text-xs font-medium whitespace-nowrap
+    text-muted-foreground transition-all duration-200
+    ease-[cubic-bezier(0.16,1,0.3,1)];
+}
+
+.time-tabs__item:hover {
+  @apply text-foreground;
+  background: hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.08);
+}
+
+.time-tabs__icon {
+  @apply size-3.5 shrink-0;
+  stroke-width: 1.85;
+}
+
+.time-tabs__label {
+  @apply leading-none;
+}
+
+.time-tabs__count {
+  @apply ml-1 inline-flex items-center justify-center min-w-[18px] px-1
+    rounded-full bg-muted/60 text-[10px] font-semibold leading-[16px]
+    text-muted-foreground;
+}
+
+.time-tabs__item--active {
+  color: white;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
+  );
+  box-shadow:
+    0 1px 0 0 hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 14%) / 0.5) inset,
+    0 4px 10px -6px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+}
+
+.time-tabs__item--active:hover {
+  color: white;
+}
+
+.time-tabs__item--active .time-tabs__count {
+  @apply bg-white/20 text-white;
+}
+
+:global(html[data-chip-mode='neutral']) .time-tabs__item--active,
+:global(html[data-surface='glass']) .time-tabs__item--active {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.92),
+    hsl(var(--primary))
+  );
+  box-shadow:
+    0 1px 0 0 hsl(var(--primary) / 0.4) inset,
+    0 4px 10px -6px hsl(var(--primary) / 0.55);
+}
+
+:global(html[data-chip-mode='neutral']) .time-tabs__item:hover,
+:global(html[data-surface='glass']) .time-tabs__item:hover {
+  background: hsl(var(--primary) / 0.08);
+}
+
 /* Entry list transitions */
 .entry-list-enter-active,
 .entry-list-leave-active {
@@ -486,7 +537,6 @@ watch(() => selectedClient.value, () => {
   transition: transform 0.3s ease;
 }
 
-/* Modal transitions */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -496,7 +546,6 @@ watch(() => selectedClient.value, () => {
   opacity: 0;
 }
 
-/* Floating selection bar */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s ease;

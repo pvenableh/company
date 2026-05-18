@@ -33,8 +33,8 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['projects', 'tasks', 'tickets', 'meetings', 'calendar', 'insights'];
+type FloorKey = 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'time' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['projects', 'tasks', 'tickets', 'meetings', 'calendar', 'time', 'insights'];
 
 // Migrate legacy `?floor=gantt` deep-links onto the merged Projects floor.
 // Gantt was its own floor pre-merge; it's now the default *view* on Projects.
@@ -55,6 +55,7 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
   { key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
   { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
+  { key: 'time', label: 'Time', icon: 'lucide:clock' },
   { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
 
@@ -590,6 +591,11 @@ function openMeetingSlideOver(meeting: any) {
           </div>
         </template>
       </ClientOnly>
+
+      <!-- ── Time floor ───────────────────────────────────────────────── -->
+      <template v-else-if="floor === 'time'">
+        <AppsWorkTimeSurface />
+      </template>
 
       <template v-else-if="floor === 'insights'">
         <WorkInsightsView :snapshot="insightsSnapshot" :loading="insightsLoading" />

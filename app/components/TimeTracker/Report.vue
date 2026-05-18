@@ -1,18 +1,19 @@
 <template>
 	<div class="space-y-6">
 		<!-- Date Range Selector -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5">
+		<div class="cg-card-compact">
 			<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 				<!-- Presets -->
-				<div class="flex flex-wrap gap-1.5">
+				<div class="inline-flex flex-wrap items-center gap-1 rounded-full border border-border bg-card p-0.5">
 					<button
 						v-for="preset in presets"
 						:key="preset.label"
-						class="text-xs px-2.5 py-1 rounded-lg transition-colors"
+						type="button"
+						class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors"
 						:class="
 							activePreset === preset.label
-								? 'bg-primary text-primary-foreground'
-								: 'bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted'
+								? 'bg-primary text-primary-foreground shadow-sm'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
 						"
 						@click="applyPreset(preset)"
 					>
@@ -60,31 +61,31 @@
 		<template v-else>
 			<!-- Summary Stats -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Hours</p>
-					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(totalMinutes) }}</p>
-					<p class="text-xs text-muted-foreground">{{ entries.length }} entries</p>
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Total Hours</p>
+					<p class="cg-text-stat tabular-nums text-foreground">{{ formatHours(totalMinutes) }}</p>
+					<p class="cg-text-child text-muted-foreground mt-0.5">{{ entries.length }} entries</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billable Hours</p>
-					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(billableMinutes) }}</p>
-					<p class="text-xs text-muted-foreground">
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Billable Hours</p>
+					<p class="cg-text-stat tabular-nums text-foreground">{{ formatHours(billableMinutes) }}</p>
+					<p class="cg-text-child text-muted-foreground mt-0.5">
 						{{ billableEntries.length }} billable entries
 					</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Revenue</p>
-					<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Revenue</p>
+					<p class="cg-text-stat tabular-nums text-success">
 						${{ formatCurrency(totalRevenue) }}
 					</p>
-					<p class="text-xs text-muted-foreground">
+					<p class="cg-text-child text-muted-foreground mt-0.5">
 						{{ unbilledEntries.length }} unbilled
 					</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg / Day</p>
-					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(avgMinutesPerDay) }}</p>
-					<p class="text-xs text-muted-foreground">
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Avg / Day</p>
+					<p class="cg-text-stat tabular-nums text-foreground">{{ formatHours(avgMinutesPerDay) }}</p>
+					<p class="cg-text-child text-muted-foreground mt-0.5">
 						{{ uniqueDays }} {{ uniqueDays === 1 ? 'day' : 'days' }} tracked
 					</p>
 				</div>
@@ -206,6 +207,51 @@
 					</div>
 				</div>
 			</div>
+			<!-- Retainer Status (current calendar period) -->
+			<div v-if="retainerRows.length" class="cg-card">
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="font-medium text-sm flex items-center gap-2">
+						<Icon name="lucide:gauge" class="w-4 h-4 text-muted-foreground" />
+						Retainer Status
+					</h3>
+					<span class="cg-text-header">Current calendar period</span>
+				</div>
+				<div class="space-y-3">
+					<NuxtLink
+						v-for="row in retainerRows"
+						:key="row.id"
+						:to="`/projects/${row.id}`"
+						class="block hover:bg-muted/30 rounded-lg p-2 -mx-2 transition-colors"
+					>
+						<div class="flex items-center justify-between mb-1 gap-2">
+							<div class="min-w-0 flex-1">
+								<div class="cg-text-primary truncate">{{ row.title }}</div>
+								<div class="cg-text-child text-muted-foreground truncate">
+									{{ row.clientName || 'No client' }} · {{ row.periodLabel }}
+								</div>
+							</div>
+							<div class="text-right shrink-0">
+								<div class="cg-text-primary tabular-nums" :class="row.isOver ? 'text-destructive' : 'text-foreground'">
+									{{ formatHoursDecimal(row.hoursUsed) }}<span class="text-muted-foreground/60 font-normal"> / {{ formatHoursDecimal(row.hoursAllocated) }}</span>
+								</div>
+								<div class="cg-text-child" :class="row.isOver ? 'text-destructive' : row.pct >= 80 ? 'text-warning' : 'text-muted-foreground'">
+									<span v-if="row.isOver">+{{ formatHoursDecimal(row.hoursUsed - row.hoursAllocated) }} over</span>
+									<span v-else-if="row.hoursAllocated > 0">{{ formatHoursDecimal(row.hoursAllocated - row.hoursUsed) }} left</span>
+									<span v-else>no allocation</span>
+								</div>
+							</div>
+						</div>
+						<div class="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+							<div
+								class="h-full rounded-full transition-all"
+								:class="row.isOver ? 'bg-destructive' : row.pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'"
+								:style="{ width: `${Math.min(100, row.pct)}%` }"
+							/>
+						</div>
+					</NuxtLink>
+				</div>
+			</div>
+
 			<!-- Team Member Breakdown (team mode only) -->
 			<div v-if="teamMode && teamBreakdown.length" class="ios-card rounded-2xl border border-border bg-card p-5">
 				<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
@@ -242,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TimeEntry } from '~~/shared/directus';
+import type { TimeEntry, Project } from '~~/shared/directus';
 import type { ChartConfig } from '~/components/ui/chart';
 import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
 import { VisXYContainer, VisStackedBar, VisAxis } from '@unovis/vue';
@@ -256,6 +302,8 @@ const props = withDefaults(defineProps<{
 
 const { getTimeEntries, getOrgMembers, formatDuration } = useTimeTracker();
 const { selectedClient } = useClients();
+const { selectedOrg } = useOrganization();
+const projectItems = useDirectusItems('projects');
 
 // ── Team mode state ────────────────────────────────────────
 const orgMembers = ref<any[]>([]);
@@ -505,8 +553,103 @@ function formatCurrency(value: number): string {
 	}).format(value);
 }
 
-// ── Lifecycle ───────────────────────────────────────────────
-onMounted(fetchReport);
+// ── Retainer Status ─────────────────────────────────────────
+interface RetainerRow {
+	id: string;
+	title: string;
+	clientName: string | null;
+	hoursAllocated: number;
+	hoursUsed: number;
+	pct: number;
+	isOver: boolean;
+	periodLabel: string;
+}
 
-watch(() => selectedClient.value, fetchReport);
+const retainerRows = ref<RetainerRow[]>([]);
+
+function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+function startOfQuarter(d: Date) { const q = Math.floor(d.getMonth() / 3); return new Date(d.getFullYear(), q * 3, 1); }
+function endOfQuarter(d: Date) { const q = Math.floor(d.getMonth() / 3); return new Date(d.getFullYear(), q * 3 + 3, 0); }
+function isoDate(d: Date) {
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
+
+async function fetchRetainerRows() {
+	if (!selectedOrg.value) { retainerRows.value = []; return; }
+	try {
+		const projects = await projectItems.list({
+			fields: ['id', 'title', 'retainer_hours_per_period', 'retainer_period', 'client.id', 'client.name'],
+			filter: {
+				_and: [
+					{ organization: { _eq: selectedOrg.value } },
+					{ billing_type: { _eq: 'hourly_retainer' } },
+				],
+			},
+			limit: -1,
+			sort: ['title'],
+		}) as Project[];
+
+		const now = new Date();
+		const rows: RetainerRow[] = [];
+
+		for (const p of projects) {
+			const isQuarterly = p.retainer_period === 'quarterly';
+			const periodStart = isoDate(isQuarterly ? startOfQuarter(now) : startOfMonth(now));
+			const periodEnd = isoDate(isQuarterly ? endOfQuarter(now) : endOfMonth(now));
+			const periodLabel = isQuarterly
+				? `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`
+				: now.toLocaleString('en-US', { month: 'long' });
+
+			const { data } = await getTimeEntries({
+				projectId: String(p.id),
+				dateFrom: periodStart,
+				dateTo: periodEnd,
+				status: 'completed',
+				limit: 2000,
+			});
+
+			const totalMin = (data as TimeEntry[]).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+			const hoursUsed = Math.round((totalMin / 60) * 100) / 100;
+			const hoursAllocated = p.retainer_hours_per_period ? Number(p.retainer_hours_per_period) : 0;
+			const pct = hoursAllocated > 0 ? Math.min(100, Math.round((hoursUsed / hoursAllocated) * 1000) / 10) : 0;
+
+			rows.push({
+				id: String(p.id),
+				title: p.title || 'Untitled',
+				clientName: (p.client && typeof p.client === 'object' && 'name' in p.client) ? (p.client as any).name : null,
+				hoursAllocated,
+				hoursUsed,
+				pct,
+				isOver: hoursAllocated > 0 && hoursUsed > hoursAllocated,
+				periodLabel,
+			});
+		}
+
+		retainerRows.value = rows.sort((a, b) => b.pct - a.pct);
+	} catch (err) {
+		console.error('Failed to fetch retainer rows:', err);
+		retainerRows.value = [];
+	}
+}
+
+function formatHoursDecimal(h: number): string {
+	if (!h) return '0h';
+	const r = Math.round(h * 10) / 10;
+	return `${r}h`;
+}
+
+// ── Lifecycle ───────────────────────────────────────────────
+onMounted(() => {
+	fetchReport();
+	fetchRetainerRows();
+});
+
+watch(() => selectedClient.value, () => {
+	fetchReport();
+	fetchRetainerRows();
+});
 </script>

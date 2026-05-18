@@ -430,7 +430,7 @@ function handleTopup() {
 						<EarnestIcon class="w-4 h-4 shrink-0" />
 						<span class="text-[13px]">Earnest</span>
 					</button>
-					<NuxtLink to="/time-tracker" class="nav-item" :class="{ 'nav-item-active': isActiveItem('/time-tracker') }">
+					<NuxtLink to="/apps/work?floor=time" class="nav-item" :class="{ 'nav-item-active': isActiveItem('/apps/work?floor=time') }">
 						<Icon name="heroicons:clock" class="w-4 h-4 shrink-0" />
 						<span class="text-[13px]">Timer</span>
 					</NuxtLink>

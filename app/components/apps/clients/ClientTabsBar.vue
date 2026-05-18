@@ -11,6 +11,7 @@ export type ClientTabKey =
 	| 'tickets'
 	| 'tasks'
 	| 'meetings'
+	| 'content'
 	| 'invoices'
 	| 'partners'
 	| 'messages';
@@ -29,6 +30,7 @@ const tabs: Array<{ key: ClientTabKey; label: string; icon: string }> = [
 	{ key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
 	{ key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
 	{ key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
+	{ key: 'content', label: 'Content', icon: 'lucide:palette' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'partners', label: 'Partners', icon: 'lucide:network' },
 	{ key: 'messages', label: 'Messages', icon: 'lucide:message-square' },

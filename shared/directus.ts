@@ -3035,6 +3035,18 @@ export interface Project {
 	category_id?: ProjectCategory | string | null;
 	/** @description The client this project is for */
 	client?: Client | string | null;
+	/** @description How the project bills. Drives retainer hour tracking. */
+	billing_type?: 'fixed_fee' | 'hourly_retainer' | 'time_and_materials' | 'non_billable' | null;
+	/** @description Hours allocated per period (e.g. 20 hrs/month) */
+	retainer_hours_per_period?: number | null;
+	/** @description Reset cadence for the hour pool */
+	retainer_period?: 'monthly' | 'quarterly' | null;
+	/** @description Hourly rate snapshot used for invoicing retainer overages */
+	retainer_hourly_rate?: number | null;
+	/** @description When this retainer began (informational — period math uses calendar) */
+	retainer_started_at?: string | null;
+	/** @description Display monthly hours used to the client in the portal. Per-entry detail is never shown. */
+	show_hours_to_client?: boolean;
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3652,6 +3664,24 @@ export interface SocialPost {
 	cta_url?: string | null;
 	/** @description Short call-to-action label rendered alongside the URL (e.g. "Visit Website", "Book a Call"). */
 	cta_label?: string | null;
+	/** @description Retainer (or fixed-fee) project this post is work for. Joins the hour pool. */
+	project?: Project | string | null;
+	/** @description Client this post is for. Set independently of any connected account. */
+	target_client?: Client | string | null;
+	/** @description Studio review workflow. Independent of publish status until approved. */
+	approval_state?: 'draft' | 'in_review' | 'requested_changes' | 'approved' | 'rejected' | 'scheduled' | 'published';
+	/** @description Opaque token used by the Phase 5 portal review surface. Server-managed. */
+	approval_token?: string | null;
+	/** @description User who approved (or on whose behalf approval was recorded). */
+	approved_by?: DirectusUser | string | null;
+	/** @description When approval landed. */
+	approved_at?: string | null;
+	/** @description CDN URL for the cover art / mockup shown in Studio before media is finalized. */
+	design_image_url?: string | null;
+	/** @description Link to the source Figma frame for design review. */
+	figma_frame_url?: string | null;
+	/** @description First-of-month anchor used to group posts under a retainer period. */
+	target_month?: string | null;
 }
 
 export interface SocialThread {
@@ -3857,6 +3887,8 @@ export interface TimeEntry {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
+	/** @description Social post this time was spent on. Joins the post into the retainer hour pool. */
+	source_social_post?: SocialPost | string | null;
 }
 
 export interface UserPresence {

@@ -187,6 +187,12 @@ export async function getDecryptedRefreshToken(accountId: string): Promise<strin
  * Map Directus SocialPost (post_status, Record fields) to frontend SocialPost
  */
 function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
+  const idOrNull = (v: unknown): string | null => {
+    if (!v) return null
+    if (typeof v === 'string') return v
+    if (typeof v === 'object' && 'id' in (v as any)) return (v as any).id ?? null
+    return null
+  }
   return {
     id: raw.id,
     caption: raw.caption,
@@ -205,6 +211,15 @@ function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
     date_updated: raw.date_updated ?? null,
     cta_url: raw.cta_url ?? null,
     cta_label: raw.cta_label ?? null,
+    project: idOrNull((raw as any).project),
+    target_client: idOrNull((raw as any).target_client),
+    approval_state: ((raw as any).approval_state ?? 'draft') as SocialPost['approval_state'],
+    approval_token: (raw as any).approval_token ?? null,
+    approved_by: idOrNull((raw as any).approved_by),
+    approved_at: (raw as any).approved_at ?? null,
+    design_image_url: (raw as any).design_image_url ?? null,
+    figma_frame_url: (raw as any).figma_frame_url ?? null,
+    target_month: (raw as any).target_month ?? null,
   }
 }
 
@@ -228,6 +243,9 @@ export async function getSocialPosts(
     scheduled_after?: string
     scheduled_before?: string
     client?: string | null
+    project?: string | null
+    target_client?: string | null
+    approval_state?: string
     limit?: number
   },
 ): Promise<SocialPost[]> {
@@ -240,6 +258,11 @@ export async function getSocialPosts(
   if (filters?.scheduled_before) params['filter[scheduled_at][_lte]'] = filters.scheduled_before
   if (filters?.client === null) params['filter[client][_null]'] = 'true'
   else if (filters?.client) params['filter[client][_eq]'] = filters.client
+  if (filters?.project === null) params['filter[project][_null]'] = 'true'
+  else if (filters?.project) params['filter[project][_eq]'] = filters.project
+  if (filters?.target_client === null) params['filter[target_client][_null]'] = 'true'
+  else if (filters?.target_client) params['filter[target_client][_eq]'] = filters.target_client
+  if (filters?.approval_state) params['filter[approval_state][_eq]'] = filters.approval_state
   if (filters?.limit) params.limit = String(filters.limit)
 
   const raw = await directusFetch<DirectusSocialPost[]>('/items/social_posts', { params })

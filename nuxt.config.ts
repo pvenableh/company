@@ -444,6 +444,14 @@ export default defineNuxtConfig({
 		host: '127.0.0.1',
 	},
 
+	routeRules: {
+		// Time Tracker now lives inline on the Work app as `?floor=time`
+		// (retainer/social Phase 2, 2026-05-18). Keep legacy URLs working
+		// as permanent redirects.
+		'/time-tracker': { redirect: { to: '/apps/work?floor=time', statusCode: 301 } },
+		'/apps/work/time': { redirect: { to: '/apps/work?floor=time', statusCode: 301 } },
+	},
+
 	nitro: {
 		externals: {
 			inline: [
