@@ -4,79 +4,118 @@
 		<Popover v-model:open="isPopoverOpen">
 			<PopoverTrigger as-child>
 				<button
-					class="flex items-center justify-center relative rounded-full h-8 w-8 hover:bg-muted/50 text-muted-foreground transition-colors"
+					class="notif-bell"
+					:class="{ 'notif-bell--has-unread': unreadCount > 0 }"
 					:disabled="!user"
+					:aria-label="unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'"
 				>
-					<BellRing
-						v-if="unreadCount"
-						class="size-4 animate-ping absolute text-[var(--cyan)] opacity-50"
-					/>
 					<component :is="unreadCount ? BellRing : Bell" class="size-4" />
-					<div
+					<span
 						v-if="unreadCount > 0"
-						class="absolute -top-1 -right-1 text-[9px] leading-3 rounded-full h-4 w-4 bg-[var(--cyan)] flex items-center justify-center text-white font-bold p-1"
+						class="notif-bell__badge"
+						:aria-hidden="true"
 					>
-						{{ unreadCount }}
-					</div>
+						{{ unreadCount > 99 ? '99+' : unreadCount }}
+					</span>
 				</button>
 			</PopoverTrigger>
 
-			<PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-2">
-				<!-- Header -->
-				<div class="flex items-center justify-between px-2 py-1.5">
-					<p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-						Notifications
-					</p>
-					<div class="flex items-center gap-1">
+			<PopoverContent
+				align="end"
+				:side-offset="10"
+				class="notif-pop w-[400px] max-w-[calc(100vw-1.5rem)] p-0 overflow-hidden"
+			>
+				<!-- Header — apps-shell chrome language: tiny uppercase eyebrow + count -->
+				<div class="notif-pop__header">
+					<div class="min-w-0">
+						<p class="notif-pop__eyebrow">Notifications</p>
+						<p class="notif-pop__count">
+							<span v-if="unreadCount > 0">{{ unreadCount }} unread</span>
+							<span v-else class="text-muted-foreground font-normal">All caught up</span>
+						</p>
+					</div>
+					<div class="notif-pop__head-actions">
 						<button
 							v-if="unreadCount > 0"
-							class="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors disabled:opacity-60"
+							class="notif-pop__icon-btn"
 							:disabled="isMarkingAll"
+							aria-label="Mark all read"
+							title="Mark all read"
 							@click="handleMarkAllAsRead"
 						>
-							<Check class="size-3" />
-							Mark all read
+							<Check class="size-3.5" />
 						</button>
 						<button
-							class="flex items-center gap-0.5 rounded-md px-1.5 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+							class="notif-pop__icon-btn"
+							aria-label="Open full notifications"
+							title="View all"
 							@click="openSheet"
 						>
-							View all
-							<Icon name="lucide:chevron-right" class="size-3" />
+							<Icon name="lucide:arrow-up-right" class="size-3.5" />
 						</button>
 					</div>
 				</div>
 
-				<!-- Notifications List -->
-				<div v-if="notifications?.length" class="space-y-0.5">
-					<LayoutNotificationItem
-						v-for="notification in notifications.slice(0, 5)"
-						:key="notification.id"
-						:notification="notification"
-						:loading="loadingNotifications.has(notification.id)"
-						@mark-read="handleMarkAsRead"
-						@navigate="viewNotification"
-						compact
-					/>
-
-					<div v-if="notifications.length > 5" class="border-t border-border/40 mt-1.5 pt-1.5">
+				<!-- Category quick-filter — segmented strip matching AppFloorStrip -->
+				<div v-if="popoverFilters.length > 1" class="notif-pop__filter-row">
+					<div class="notif-pop__filter-scroll">
 						<button
-							class="inline-flex w-full items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-							@click="openSheet"
+							v-for="f in popoverFilters"
+							:key="f.value"
+							type="button"
+							class="notif-pop__chip"
+							:class="{ 'notif-pop__chip--active': popoverTypeFilter === f.value }"
+							@click="popoverTypeFilter = f.value"
 						>
-							View all notifications
-							<Icon name="lucide:chevron-right" class="size-3" />
+							<span
+								v-if="f.dot"
+								class="notif-pop__chip-dot"
+								:class="f.dot"
+							/>
+							<span>{{ f.label }}</span>
+							<span v-if="f.count" class="notif-pop__chip-count">{{ f.count }}</span>
 						</button>
 					</div>
 				</div>
 
-				<div v-else-if="isLoading" class="px-2 py-6 text-center">
-					<Loader2 class="size-4 animate-spin mx-auto mb-1.5 text-muted-foreground" />
-					<p class="text-xs text-muted-foreground">Loading notifications…</p>
+				<!-- List -->
+				<div class="notif-pop__list">
+					<template v-if="popoverNotifications.length">
+						<LayoutNotificationItem
+							v-for="notification in popoverNotifications"
+							:key="notification.id"
+							:notification="notification"
+							:loading="loadingNotifications.has(notification.id)"
+							@mark-read="handleMarkAsRead"
+							@navigate="viewNotification"
+							compact
+						/>
+					</template>
+
+					<div v-else-if="isLoading" class="notif-pop__empty">
+						<Loader2 class="size-4 animate-spin mb-1.5 text-muted-foreground" />
+						<p class="text-xs text-muted-foreground">Loading notifications…</p>
+					</div>
+
+					<div v-else class="notif-pop__empty">
+						<div class="notif-pop__empty-icon">
+							<BellOff class="size-5 text-muted-foreground/60" />
+						</div>
+						<p class="text-xs text-muted-foreground">
+							{{ popoverTypeFilter === 'all' ? 'No new notifications' : 'Nothing here right now' }}
+						</p>
+					</div>
 				</div>
 
-				<div v-else class="px-2 py-6 text-center text-xs text-muted-foreground">
-					No new notifications
+				<!-- Footer — single CTA -->
+				<div class="notif-pop__footer">
+					<button
+						class="notif-pop__view-all"
+						@click="openSheet"
+					>
+						<span>View all & settings</span>
+						<Icon name="lucide:chevron-right" class="size-3" />
+					</button>
 				</div>
 			</PopoverContent>
 		</Popover>
@@ -327,6 +366,7 @@ const {
 const isLoading = ref(false);
 const isPopoverOpen = ref(false);
 const isSheetOpen = ref(false);
+const popoverTypeFilter = ref('all');
 const showSettings = ref(false);
 const isMarkingAll = ref(false);
 const statusFilter = ref('inbox');
@@ -483,6 +523,55 @@ const filteredNotifications = computed(() => {
 	return source.filter((n) => getNotificationType(n) === typeFilter.value);
 });
 
+// Popover-only: small "live" version of the type filter that shows just
+// the categories that have unread items right now. Cuts the noise on the
+// compact surface — the full sheet still has the static 9-chip set.
+const popoverCategoryCounts = computed(() => {
+	const out = {};
+	for (const n of notifications.value || []) {
+		const cat = getNotificationType(n);
+		out[cat] = (out[cat] || 0) + 1;
+	}
+	return out;
+});
+
+const POPOVER_FILTER_META = [
+	{ value: 'all', label: 'All' },
+	{ value: 'conversations', label: 'Conversations', dot: 'bg-info' },
+	{ value: 'reactions', label: 'Reactions', dot: 'bg-pink-400' },
+	{ value: 'tickets', label: 'Tickets', dot: 'bg-warning' },
+	{ value: 'projects', label: 'Projects', dot: 'bg-success' },
+	{ value: 'invoices', label: 'Invoices', dot: 'bg-emerald-400' },
+	{ value: 'contracts', label: 'Contracts', dot: 'bg-violet-400' },
+	{ value: 'proposals', label: 'Proposals', dot: 'bg-fuchsia-400' },
+	{ value: 'meetings', label: 'Meetings', dot: 'bg-blue-400' },
+];
+
+const popoverFilters = computed(() => {
+	const counts = popoverCategoryCounts.value;
+	const total = (notifications.value || []).length;
+	return POPOVER_FILTER_META
+		.map((meta) => {
+			const count = meta.value === 'all' ? total : counts[meta.value] || 0;
+			return { ...meta, count };
+		})
+		.filter((f) => f.value === 'all' || f.count > 0);
+});
+
+const popoverNotifications = computed(() => {
+	const source = notifications.value || [];
+	const filtered = popoverTypeFilter.value === 'all'
+		? source
+		: source.filter((n) => getNotificationType(n) === popoverTypeFilter.value);
+	return filtered.slice(0, 8);
+});
+
+// Reset the popover filter whenever it closes so a returning visit
+// always opens on "All" — matches typical inbox-style expectations.
+watch(isPopoverOpen, (open) => {
+	if (!open) popoverTypeFilter.value = 'all';
+});
+
 const isRead = (notification) => {
 	return notification.status === 'archived';
 };
@@ -558,3 +647,166 @@ watch(
 	{ immediate: true },
 );
 </script>
+
+<style scoped>
+@reference "~/assets/css/tailwind.css";
+
+/* ── Bell button ────────────────────────────────────────────────────── */
+.notif-bell {
+	@apply relative inline-flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground transition-colors;
+	background: transparent;
+}
+
+.notif-bell:hover {
+	background: hsl(var(--muted) / 0.5);
+}
+
+.notif-bell:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+
+.notif-bell--has-unread {
+	color: hsl(var(--foreground));
+}
+
+.notif-bell__badge {
+	@apply absolute font-bold inline-flex items-center justify-center;
+	top: -2px;
+	right: -2px;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	font-size: 9px;
+	line-height: 1;
+	background: hsl(var(--primary));
+	color: hsl(var(--primary-foreground));
+	box-shadow: 0 0 0 1.5px hsl(var(--background)), 0 1px 3px hsl(0 0% 0% / 0.25);
+}
+
+/* ── Popover shell — glass card matching apps-shell chrome ───────────── */
+:deep(.notif-pop) {
+	border: 1px solid hsl(var(--border) / 0.5);
+	border-radius: 16px;
+	background: hsl(var(--background) / 0.96);
+	backdrop-filter: blur(12px) saturate(1.2);
+	-webkit-backdrop-filter: blur(12px) saturate(1.2);
+	box-shadow:
+		0 10px 30px -10px hsl(0 0% 0% / 0.25),
+		0 4px 12px -4px hsl(0 0% 0% / 0.12),
+		inset 0 1px 0 hsl(0 0% 100% / 0.4);
+}
+
+.dark :deep(.notif-pop) {
+	background: hsl(0 0% 12% / 0.94);
+	box-shadow:
+		0 10px 30px -10px hsl(0 0% 0% / 0.5),
+		0 4px 12px -4px hsl(0 0% 0% / 0.3),
+		inset 0 1px 0 hsl(0 0% 100% / 0.06);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.notif-pop__header {
+	@apply flex items-start justify-between gap-3 px-4 py-3 border-b border-border/40;
+}
+
+.notif-pop__eyebrow {
+	@apply text-[10px] font-semibold uppercase tracking-wider text-muted-foreground;
+	letter-spacing: 0.08em;
+}
+
+.notif-pop__count {
+	@apply text-sm font-semibold text-foreground mt-0.5 leading-none;
+}
+
+.notif-pop__head-actions {
+	@apply flex items-center gap-1 shrink-0;
+}
+
+.notif-pop__icon-btn {
+	@apply inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground transition-colors;
+}
+
+.notif-pop__icon-btn:hover {
+	@apply text-foreground;
+	background: hsl(var(--muted) / 0.6);
+}
+
+.notif-pop__icon-btn:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+
+/* ── Filter row — segmented pill set like AppFloorStrip ──────────────── */
+.notif-pop__filter-row {
+	@apply px-3 py-2 border-b border-border/40;
+}
+
+.notif-pop__filter-scroll {
+	@apply flex items-center gap-1 overflow-x-auto;
+	scrollbar-width: none;
+}
+
+.notif-pop__filter-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+.notif-pop__chip {
+	@apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-muted-foreground transition-all;
+	background: transparent;
+	border: 1px solid transparent;
+}
+
+.notif-pop__chip:hover {
+	@apply text-foreground;
+	background: hsl(var(--muted) / 0.5);
+}
+
+.notif-pop__chip--active {
+	@apply text-foreground;
+	background: hsl(var(--muted));
+	border-color: hsl(var(--border));
+}
+
+.notif-pop__chip-dot {
+	@apply inline-block w-1.5 h-1.5 rounded-full;
+}
+
+.notif-pop__chip-count {
+	@apply inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold leading-none;
+	background: hsl(var(--muted-foreground) / 0.15);
+	color: hsl(var(--muted-foreground));
+}
+
+.notif-pop__chip--active .notif-pop__chip-count {
+	background: hsl(var(--primary) / 0.18);
+	color: hsl(var(--primary));
+}
+
+/* ── List ───────────────────────────────────────────────────────────── */
+.notif-pop__list {
+	@apply max-h-[55vh] overflow-y-auto;
+}
+
+.notif-pop__empty {
+	@apply flex flex-col items-center justify-center py-8 gap-2;
+}
+
+.notif-pop__empty-icon {
+	@apply w-10 h-10 rounded-full bg-muted/40 flex items-center justify-center;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.notif-pop__footer {
+	@apply border-t border-border/40 px-3 py-2 flex justify-end;
+}
+
+.notif-pop__view-all {
+	@apply inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors;
+	letter-spacing: 0.08em;
+}
+
+.notif-pop__view-all:hover {
+	@apply text-foreground;
+	background: hsl(var(--muted) / 0.5);
+}
+</style>

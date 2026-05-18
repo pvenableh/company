@@ -15,6 +15,9 @@
 						<ClientOnly>
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 						</ClientOnly>
+						<ClientOnly>
+							<LayoutDataScopeSelect v-if="user" />
+						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">
 						<LayoutEarnestBrand to="/" tagline="Do good work." />

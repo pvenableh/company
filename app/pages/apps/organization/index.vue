@@ -306,6 +306,10 @@ function socialStatusFor(platform: string): IntegrationStatus {
   return accts.length > 0 ? 'active' : 'inactive';
 }
 
+function socialAccountCount(platform: string): number {
+  return socialAccounts.value.filter((a) => a.platform === platform && a.status !== 'disconnected').length;
+}
+
 const integrationsList = computed(() => {
   const stripeMeta = stripeConnect.value;
   const stripeLabel =
@@ -356,7 +360,7 @@ const integrationsList = computed(() => {
       desc: 'Publish posts and reels',
       icon: 'logos:instagram-icon',
       status: socialStatusFor('instagram'),
-      statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'instagram').length} account(s)` : 'Not connected',
+      statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccountCount('instagram')} account(s)` : 'Not connected',
       action: 'Manage',
       onClick: () => router.push('/social/settings'),
     },
@@ -366,7 +370,7 @@ const integrationsList = computed(() => {
       desc: 'Publish to Pages',
       icon: 'logos:facebook',
       status: socialStatusFor('facebook'),
-      statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'facebook').length} account(s)` : 'Not connected',
+      statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccountCount('facebook')} account(s)` : 'Not connected',
       action: 'Manage',
       onClick: () => router.push('/social/settings'),
     },
@@ -376,7 +380,7 @@ const integrationsList = computed(() => {
       desc: 'Publish to personal + Company Pages',
       icon: 'logos:linkedin-icon',
       status: socialStatusFor('linkedin'),
-      statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'linkedin').length} account(s)` : 'Not connected',
+      statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccountCount('linkedin')} account(s)` : 'Not connected',
       action: 'Manage',
       onClick: () => router.push('/social/settings'),
     },
@@ -386,7 +390,7 @@ const integrationsList = computed(() => {
       desc: 'Publish short-form video',
       icon: 'logos:tiktok-icon',
       status: socialStatusFor('tiktok'),
-      statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'tiktok').length} account(s)` : 'Not connected',
+      statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccountCount('tiktok')} account(s)` : 'Not connected',
       action: 'Manage',
       onClick: () => router.push('/social/settings'),
     },
@@ -396,7 +400,7 @@ const integrationsList = computed(() => {
       desc: 'Publish text + image posts',
       icon: 'lucide:at-sign',
       status: socialStatusFor('threads'),
-      statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'threads').length} account(s)` : 'Not connected',
+      statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccountCount('threads')} account(s)` : 'Not connected',
       action: 'Manage',
       onClick: () => router.push('/social/settings'),
     },

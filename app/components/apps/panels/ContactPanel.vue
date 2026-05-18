@@ -12,7 +12,7 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 
 const props = defineProps<{ id: string }>();
 
-defineEmits<{ (e: 'close'): void }>();
+const emit = defineEmits<{ (e: 'close'): void }>();
 
 const contactItemsApi = useDirectusItems('contacts');
 const { selectedOrg } = useOrganization();
@@ -20,6 +20,17 @@ const { selectedOrg } = useOrganization();
 const contact = ref<any | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
+const showEditModal = ref(false);
+
+// Prefer the linked client's name over the manually-typed `company` field —
+// once a contact is wired to a client, that client name is the authoritative
+// label. Falls back to `company` for unlinked contacts (CardDesk imports,
+// partners, vendors, leads without a client yet).
+const companyLabel = computed(() => {
+	const c = contact.value;
+	if (!c) return null;
+	return c.client?.name || c.company || null;
+});
 
 const title = computed(() => {
 	const c = contact.value;
@@ -27,6 +38,29 @@ const title = computed(() => {
 	const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
 	return name || 'Contact';
 });
+
+async function reloadContact() {
+	const id = props.id;
+	if (!id) return;
+	try {
+		const fetched = await contactItemsApi.get(id, {
+			fields: ['*', 'client.id', 'client.name', 'organizations.organizations_id'],
+		});
+		contact.value = fetched;
+	} catch (err: any) {
+		error.value = err?.message || 'Failed to reload contact';
+	}
+}
+
+function onContactUpdated() {
+	showEditModal.value = false;
+	reloadContact();
+}
+
+function onContactDeleted() {
+	showEditModal.value = false;
+	emit('close');
+}
 
 watch(
 	() => props.id,
@@ -66,6 +100,17 @@ watch(
 
 <template>
 	<AppSlideOverShell :title="title" @close="$emit('close')">
+		<template v-if="contact" #actions>
+			<button
+				type="button"
+				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+				@click="showEditModal = true"
+			>
+				<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+				Edit
+			</button>
+		</template>
+
 		<div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-3">
 			<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
 			<p class="text-xs text-muted-foreground">Loading contact…</p>
@@ -83,10 +128,10 @@ watch(
 						{{ contact.first_name }} {{ contact.last_name }}
 					</p>
 					<p
-						v-if="contact.title || contact.company"
+						v-if="contact.title || companyLabel"
 						class="text-xs text-muted-foreground truncate"
 					>
-						{{ [contact.title, contact.company].filter(Boolean).join(' · ') }}
+						{{ [contact.title, companyLabel].filter(Boolean).join(' · ') }}
 					</p>
 				</div>
 			</div>
@@ -107,9 +152,9 @@ watch(
 						{{ contact.phone }}
 					</a>
 				</div>
-				<div v-if="contact.client?.name" class="flex items-center gap-2">
+				<div v-if="companyLabel" class="flex items-center gap-2">
 					<Icon name="lucide:building-2" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-					<span class="text-xs">{{ contact.client.name }}</span>
+					<span class="text-xs">{{ companyLabel }}</span>
 				</div>
 				<div v-if="contact.category" class="flex items-center gap-2">
 					<Icon name="lucide:tag" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -121,16 +166,6 @@ watch(
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</p>
 				<p class="text-sm whitespace-pre-wrap">{{ contact.notes }}</p>
 			</div>
-
-			<div class="pt-3 border-t border-border/30">
-				<NuxtLink
-					:to="`/contacts/${id}`"
-					class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-				>
-					Open full contact page
-					<Icon name="lucide:external-link" class="w-3 h-3" />
-				</NuxtLink>
-			</div>
 		</div>
 
 		<div v-else-if="error" class="text-sm text-destructive py-10 text-center">
@@ -140,5 +175,13 @@ watch(
 		<div v-else class="text-sm text-muted-foreground py-10 text-center">
 			Could not load contact.
 		</div>
+
+		<ContactsFormModal
+			v-if="contact"
+			v-model="showEditModal"
+			:contact="contact"
+			@updated="onContactUpdated"
+			@deleted="onContactDeleted"
+		/>
 	</AppSlideOverShell>
 </template>

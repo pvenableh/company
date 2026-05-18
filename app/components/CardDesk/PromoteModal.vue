@@ -28,10 +28,8 @@
         </div>
         <div class="flex justify-end gap-2">
           <Button variant="ghost" size="sm" @click="close">Close</Button>
-          <Button as-child variant="default" size="sm">
-            <NuxtLink :to="`/contacts/${preview.promoted_contact?.id}`" @click="close">
-              View contact <Icon name="lucide:arrow-right" class="w-3.5 h-3.5 ml-1" />
-            </NuxtLink>
+          <Button variant="default" size="sm" @click="openPromotedContactPanel">
+            View contact <Icon name="lucide:arrow-right" class="w-3.5 h-3.5 ml-1" />
           </Button>
         </div>
       </template>
@@ -216,6 +214,15 @@ const isOpen = computed({
 
 const { selectedOrg } = useOrganization() as any;
 const toast = useToast();
+const contactSlide = useAppSlideOver('contact');
+
+function openPromotedContactPanel() {
+  const id = preview.value?.promoted_contact?.id;
+  if (!id) return;
+  close();
+  // Defer so the modal close animation doesn't fight the slide-over push.
+  nextTick(() => contactSlide.open(String(id)));
+}
 
 const loadingPreview = ref(false);
 const preview = ref<PreviewResult | null>(null);

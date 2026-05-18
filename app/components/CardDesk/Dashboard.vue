@@ -19,6 +19,11 @@ const {
 	addActivity,
 } = useCardDesk();
 
+// Slide-over push for promoted-contact "View →" — keeps users inside the
+// apps shell instead of bouncing them out to the (now redirecting) full
+// contact route.
+const contactSlide = useAppSlideOver('contact');
+
 // Filters
 const activeTab = ref<string>('all');
 const searchQuery = ref('');
@@ -495,12 +500,13 @@ onMounted(async () => {
 											Lead opened · {{ promotedInfo.leadStage }} stage
 										</div>
 									</div>
-									<NuxtLink
-										:to="`/contacts/${promotedInfo.contactId}`"
+									<button
+										type="button"
 										class="text-[11px] font-medium text-primary hover:underline whitespace-nowrap"
+										@click="contactSlide.open(String(promotedInfo.contactId))"
 									>
 										View →
-									</NuxtLink>
+									</button>
 								</div>
 							</div>
 							<button
