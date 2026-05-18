@@ -1,36 +1,19 @@
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
-
-definePageMeta({
-	layout: 'apps',
-	middleware: ['auth'],
+/**
+ * /carddesk is consolidated into /contacts?view=carddesk so the noun
+ * (people you're networking with) has a single home alongside List + Insights.
+ * Existing links + bookmarks still work — they redirect here, preserving any
+ * `?selected=<id>` deep-link param.
+ */
+definePageMeta({ middleware: ['auth'] });
+const route = useRoute();
+await navigateTo({
+	path: '/contacts',
+	query: { view: 'carddesk', ...(route.query.selected ? { selected: String(route.query.selected) } : {}) },
+	replace: true,
 });
-useHead({ title: 'Card Desk | Earnest' });
 </script>
 
 <template>
-	<div class="apps-page">
-		<AppHeader title="Card Desk">
-			<template #actions>
-				<Button as-child variant="outline" size="sm">
-					<NuxtLink to="/apps/clients?view=contacts">
-						<Icon name="lucide:users" class="w-4 h-4 mr-1" />
-						View all contacts
-					</NuxtLink>
-				</Button>
-			</template>
-		</AppHeader>
-
-		<LayoutPageContainer>
-			<CardDeskDashboard />
-		</LayoutPageContainer>
-	</div>
+	<div />
 </template>
-
-<style scoped>
-@reference "~/assets/css/tailwind.css";
-
-.apps-page {
-	@apply flex flex-col min-h-full;
-}
-</style>

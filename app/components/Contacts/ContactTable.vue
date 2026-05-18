@@ -27,7 +27,7 @@
                 </span>
                 <NuxtLink
                   v-if="cardDeskContactIds && cardDeskContactIds.has(contact.id)"
-                  to="/apps/clients?view=carddesk"
+                  to="/contacts?view=carddesk"
                   class="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400/15 to-red-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider hover:from-orange-400/25 hover:to-red-500/25 transition-colors"
                   title="From Card Desk — click to manage networking pipeline"
                   @click.stop

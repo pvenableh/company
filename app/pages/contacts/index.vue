@@ -18,13 +18,23 @@ const { fetchCardDeskPromotedIds } = useCardDesk();
 // was sourced via Card Desk", not just "shares an email with one".
 const cardDeskContactIds = ref<Set<string>>(new Set());
 
-type ViewKey = 'list' | 'insights';
+type ViewKey = 'list' | 'insights' | 'carddesk';
 
-const initialView: ViewKey = route.query.view === 'insights' ? 'insights' : 'list';
-const view = ref<ViewKey>(initialView);
+function resolveViewFromQuery(q: any): ViewKey {
+  if (q === 'insights') return 'insights';
+  if (q === 'carddesk') return 'carddesk';
+  return 'list';
+}
+const view = ref<ViewKey>(resolveViewFromQuery(route.query.view));
 
 watch(view, (next) => {
   router.replace({ query: { ...route.query, view: next === 'list' ? undefined : next } });
+});
+
+// React to URL changes (e.g. deep-link / browser-back) without remounting.
+watch(() => route.query.view, (q) => {
+  const next = resolveViewFromQuery(q);
+  if (next !== view.value) view.value = next;
 });
 
 const contacts = ref<Contact[]>([]);
@@ -130,7 +140,7 @@ onMounted(async () => {
       </template>
     </LayoutPageHeader>
 
-    <!-- View toggle: List | Insights -->
+    <!-- View toggle: List | Insights | Card Desk -->
     <div class="mb-4 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
       <button
         type="button"
@@ -149,6 +159,15 @@ onMounted(async () => {
       >
         <Icon name="lucide:bar-chart-3" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
         Insights
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        :class="view === 'carddesk' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+        @click="view = 'carddesk'"
+      >
+        <Icon name="lucide:identification" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+        Card Desk
       </button>
     </div>
 
@@ -216,7 +235,9 @@ onMounted(async () => {
       </div>
     </template>
 
-    <ContactsInsightsView v-else />
+    <ContactsInsightsView v-else-if="view === 'insights'" />
+
+    <CardDeskDashboard v-else-if="view === 'carddesk'" />
 
     <!-- Create Modal -->
     <ContactsFormModal v-model="showCreateModal" @created="onContactCreated" />

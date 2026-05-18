@@ -60,7 +60,7 @@ onMounted(() => {
 					<p class="text-[10px] text-gray-400">Networking Pipeline</p>
 				</div>
 			</div>
-			<nuxt-link to="/carddesk" class="text-xs text-primary hover:underline">
+			<nuxt-link to="/contacts?view=carddesk" class="text-xs text-primary hover:underline">
 				View All &rarr;
 			</nuxt-link>
 		</div>
@@ -143,7 +143,7 @@ onMounted(() => {
 				</div>
 				<nuxt-link
 					v-if="stats.needsFollowUp.length > 4"
-					to="/carddesk"
+					to="/contacts?view=carddesk"
 					class="block text-[10px] text-primary hover:underline mt-1.5 text-center"
 				>
 					+{{ stats.needsFollowUp.length - 4 }} more
@@ -175,7 +175,7 @@ onMounted(() => {
 				<p class="text-xs text-gray-400">No CardDesk contacts yet</p>
 				<p class="text-[10px] text-gray-400 mt-1">Scan business cards to build your networking pipeline.</p>
 				<NuxtLink
-					to="/carddesk"
+					to="/contacts?view=carddesk"
 					class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
 				>
 					<UIcon name="i-heroicons-camera" class="w-3 h-3" />

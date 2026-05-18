@@ -2,6 +2,7 @@
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 import type { LeadStage } from '~~/shared/leads';
 import { Button } from '~/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -276,9 +277,7 @@ onUnmounted(() => clearEntity());
 		<template v-else-if="lead">
 			<!-- Back + Header -->
 			<div class="mb-6">
-				<NuxtLink to="/leads" class="text-xs t-text-muted hover:t-text-secondary flex items-center gap-1 mb-3">
-					<UIcon name="i-heroicons-arrow-left" class="w-3 h-3" /> Back to leads
-				</NuxtLink>
+				<BackButton to="/leads" label="Back to leads" class="mb-3" />
 				<div class="flex items-start justify-between">
 					<div>
 						<h1 class="text-xl font-bold t-text">
@@ -292,35 +291,40 @@ onUnmounted(() => clearEntity());
 							<ContactsContactTagBadge v-for="tag in lead.tags" :key="tag" :tag="tag" />
 						</div>
 					</div>
-					<div class="flex items-center gap-1.5">
-						<button
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-							@click="sidebarOpen = true"
-						>
-							<EarnestIcon class="w-3.5 h-3.5" />
-							<span class="hidden sm:inline">Ask Earnest</span>
-						</button>
-						<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
-							Edit
-						</UiActionButton>
-						<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
-							Meeting
-						</UiActionButton>
-						<UiActionButton
-							icon="earnest"
-							variant="primary"
-							:loading="drafting"
-							hide-label="sm"
-							@click="generateDraft"
-						>
-							AI Draft
-						</UiActionButton>
-						<NuxtLink :to="`/proposals?new=1&lead=${lead.id}`">
-							<UiActionButton icon="lucide:file-plus">
-								Proposal
+					<TooltipProvider :delay-duration="200">
+						<div class="flex items-center gap-1.5">
+							<UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="sidebarOpen = true">
+								Ask Earnest
 							</UiActionButton>
-						</NuxtLink>
-					</div>
+							<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
+								Edit
+							</UiActionButton>
+							<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
+								Meeting
+							</UiActionButton>
+							<Tooltip>
+								<TooltipTrigger as-child>
+									<UiActionButton
+										icon="earnest"
+										variant="primary"
+										:loading="drafting"
+										hide-label="sm"
+										@click="generateDraft"
+									>
+										AI Draft
+									</UiActionButton>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
+									Generates a tailored proposal draft from this lead's context — contact, company, scope notes, past won-lead patterns. Drops the result straight into a new proposal you can edit.
+								</TooltipContent>
+							</Tooltip>
+							<NuxtLink :to="`/proposals?new=1&lead=${lead.id}`">
+								<UiActionButton icon="lucide:file-plus">
+									Proposal
+								</UiActionButton>
+							</NuxtLink>
+						</div>
+					</TooltipProvider>
 				</div>
 			</div>
 

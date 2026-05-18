@@ -81,8 +81,20 @@ onMounted(() => {
 		<!-- Stats -->
 		<LeadsLeadStats :stats="stats" class="mb-6" />
 
-		<!-- View Toggle -->
-		<UiPillToggle v-model="activeView" :options="viewOptions" class="mb-6" />
+		<!-- View Toggle — matches the universal pill style used on /contacts -->
+		<div class="mb-6 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+			<button
+				v-for="opt in viewOptions"
+				:key="opt.value"
+				type="button"
+				class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+				:class="activeView === opt.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+				@click="activeView = opt.value"
+			>
+				<Icon :name="opt.icon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+				{{ opt.label }}
+			</button>
+		</div>
 
 		<!-- Board View -->
 		<div v-show="activeView === 'board'">

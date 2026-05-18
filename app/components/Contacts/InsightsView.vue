@@ -66,7 +66,7 @@
 			</NuxtLink>
 
 			<NuxtLink
-				to="/carddesk"
+				to="/contacts?view=carddesk"
 				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
 			>
 				<div class="flex items-center justify-between">
