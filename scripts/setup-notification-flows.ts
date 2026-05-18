@@ -23,9 +23,10 @@
  *
  * Webhook auth: the script reads NOTIFICATION_WEBHOOK_SECRET from env
  * and stamps it into each flow's request body. The trigger endpoint
- * checks it against `config.notificationWebhookSecret`. If unset, the
- * flow is created without a secret and the endpoint skips verification
- * (matches existing behavior).
+ * checks it against `config.notificationWebhookSecret` with a constant-
+ * time compare and FAILS CLOSED if either side is missing — running
+ * this script without the env will provision flows that 403 in prod.
+ * Make sure NOTIFICATION_WEBHOOK_SECRET is set before --apply.
  *
  * Usage:
  *   pnpm tsx scripts/setup-notification-flows.ts            # dry-run
@@ -45,6 +46,11 @@ if (!URL || !TOKEN) {
 }
 
 const APPLY = process.argv.includes('--apply');
+
+if (APPLY && !WEBHOOK_SECRET) {
+	console.error('NOTIFICATION_WEBHOOK_SECRET is required to --apply — the trigger endpoint fails closed without it.');
+	process.exit(1);
+}
 const TRIGGER_URL = `${APP_URL.replace(/\/$/, '')}/api/notifications/trigger`;
 
 interface FlowSpec {
