@@ -22,6 +22,13 @@ const props = defineProps<{
 	leadData?: any;
 	projectId?: string | null;
 	projectData?: any;
+	// Pin the meeting to a client when launched from a client surface
+	// (e.g. ClientWorkspace "+ New Meeting"). Renders a read-only client
+	// chip and sends `client` in the payload. The server's
+	// project→client mirror still wins if the host then picks a project
+	// whose client differs from the pinned one.
+	clientId?: string | null;
+	clientData?: { id?: string; name?: string } | null;
 }>();
 
 const emit = defineEmits(['update:modelValue', 'created', 'saved', 'deleted']);
@@ -173,6 +180,10 @@ const form = reactive({
 	// derives `video_meetings.client` from this; manual client-only picks aren't
 	// supported yet.
 	project: null as null | { id: string; title: string; client_id?: string | null; client_name?: string | null },
+	// Resolved client chip — set from clientId prop or via project pick.
+	// The chip is shown read-only when launched from a client surface
+	// (clientPinned). When a project is picked, its client overrides.
+	client: null as null | { id: string; name: string },
 	members: [] as Array<{ id: string; first_name: string; last_name: string; email: string; avatar?: string; label: string }>,
 	contacts: [] as ContactChip[],
 	guests: [] as Array<{ name: string; email: string; phone: string; invite_method: string }>,
@@ -252,6 +263,7 @@ const showProjectDropdown = ref(false);
 let projectSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
 const projectPinned = computed(() => !!props.projectId);
+const clientPinned = computed(() => !!props.clientId);
 
 // Compact mode: project/lead picker inputs stay collapsed behind a "+ Add" pill
 // until clicked. Once a value is selected, the chip replaces the pill — clearing
@@ -289,12 +301,22 @@ const selectProject = (proj: any) => {
 	const clientId = typeof proj.client === 'object' ? proj.client?.id : proj.client;
 	const clientName = typeof proj.client === 'object' ? proj.client?.name : null;
 	form.project = { id: proj.id, title: proj.title || 'Project', client_id: clientId || null, client_name: clientName || null };
+	// Project's client wins over a pinned client only when explicitly
+	// picked (clientPinned is the *launcher* contract, not a hard lock).
+	// Empty client_id on the project leaves the existing client untouched.
+	if (clientId) {
+		form.client = { id: clientId, name: clientName || 'Client' };
+	}
 	projectSearch.value = '';
 	showProjectDropdown.value = false;
 	projectResults.value = [];
 };
 
-const clearProject = () => { form.project = null; };
+const clearProject = () => {
+	form.project = null;
+	// Don't clear the pinned client — it came from the launcher, not the project.
+	if (!clientPinned.value) form.client = null;
+};
 
 // ── Member search (team/client Directus users) ──
 const memberSearch = ref('');
@@ -657,6 +679,27 @@ watch(isOpen, async (open) => {
 			form.project = null;
 		}
 
+		// Seed the client chip — pinned launcher data wins; otherwise mirror
+		// the project's client; otherwise fall back to the meeting's stored
+		// client when editing.
+		if (props.clientId) {
+			form.client = {
+				id: props.clientId,
+				name: props.clientData?.name || form.project?.client_name || 'Client',
+			};
+		} else if (form.project?.client_id) {
+			form.client = {
+				id: form.project.client_id,
+				name: form.project.client_name || 'Client',
+			};
+		} else if (m?.client) {
+			const cid = typeof m.client === 'object' ? m.client?.id : m.client;
+			const cname = typeof m.client === 'object' ? m.client?.name : null;
+			form.client = cid ? { id: cid, name: cname || 'Client' } : null;
+		} else {
+			form.client = null;
+		}
+
 		// In edit mode, pre-populate members from the appointment's junction so
 		// the host can add/remove without losing existing teammates. Also pull
 		// existing video_meeting_attendees so picker-added contacts come back as
@@ -742,6 +785,7 @@ const handleSubmit = async () => {
 						transcription_enabled: form.transcription_enabled,
 						related_lead: form.related_lead?.id || null,
 						project: props.projectId || form.project?.id || null,
+						client: props.clientId || form.client?.id || form.project?.client_id || null,
 						members: form.members.map(m => m.id),
 						contacts: contactPayload,
 						attendees: validGuests,
@@ -765,6 +809,7 @@ const handleSubmit = async () => {
 						transcription_enabled: form.transcription_enabled,
 						related_lead: form.related_lead?.id || null,
 						project: props.projectId || form.project?.id || null,
+						client: props.clientId || form.client?.id || form.project?.client_id || null,
 						organization: selectedOrg.value || null,
 						invitee_name: first?.name || undefined,
 						invitee_email: first?.email || undefined,
@@ -898,6 +943,13 @@ const sendInviteMeeting = computed(() => {
 					<span class="text-xs font-medium text-foreground">{{ form.project.title }}</span>
 					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Project</span>
 					<span v-if="form.project.client_name" class="ml-auto text-[9px] uppercase tracking-wider text-info/70">{{ form.project.client_name }}</span>
+				</div>
+
+				<!-- Pinned client context (modal launched from a client surface). -->
+				<div v-else-if="clientPinned && form.client" class="flex items-center gap-2 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
+					<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info shrink-0" />
+					<span class="text-xs font-medium text-foreground">{{ form.client.name }}</span>
+					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Client</span>
 				</div>
 
 				<!-- Type + Video toggle -->

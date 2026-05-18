@@ -14,8 +14,8 @@ const clientId = route.params.id as string;
 
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
-type TabKey = 'activity' | 'contacts' | 'projects' | 'tickets' | 'tasks' | 'invoices' | 'partners' | 'messages';
-const VALID_TABS: TabKey[] = ['activity', 'contacts', 'projects', 'tickets', 'tasks', 'invoices', 'partners', 'messages'];
+type TabKey = 'activity' | 'contacts' | 'projects' | 'tickets' | 'tasks' | 'meetings' | 'invoices' | 'partners' | 'messages';
+const VALID_TABS: TabKey[] = ['activity', 'contacts', 'projects', 'tickets', 'tasks', 'meetings', 'invoices', 'partners', 'messages'];
 
 const initialTab: TabKey = (() => {
   const v = route.query.tab;

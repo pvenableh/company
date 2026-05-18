@@ -60,6 +60,7 @@ const invoiceItemsApi = useDirectusItems('invoices');
 const channelItemsApi = useDirectusItems('channels');
 const ticketItemsApi = useDirectusItems('tickets');
 const taskItemsApi = useDirectusItems('project_tasks');
+const meetingItemsApi = useDirectusItems('video_meetings');
 
 const client = ref<Client | null>(null);
 const loading = ref(true);
@@ -79,8 +80,10 @@ const relatedInvoices = ref<any[]>([]);
 const relatedChannels = ref<any[]>([]);
 const relatedTickets = ref<any[]>([]);
 const relatedTasks = ref<any[]>([]);
+const relatedMeetings = ref<any[]>([]);
 const ticketsLoading = ref(false);
 const tasksLoading = ref(false);
+const meetingsLoading = ref(false);
 
 const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
 const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
@@ -124,6 +127,7 @@ watch(activeTab, (next) => {
 	emit('tab-change', next);
 	if (next === 'tickets' && !relatedTickets.value.length && !ticketsLoading.value) loadTickets();
 	if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
+	if (next === 'meetings' && !relatedMeetings.value.length && !meetingsLoading.value) loadMeetings();
 });
 
 async function loadClient() {
@@ -166,6 +170,25 @@ async function loadTasks() {
 		}).catch(() => []) as any[];
 	} finally {
 		tasksLoading.value = false;
+	}
+}
+
+async function loadMeetings() {
+	meetingsLoading.value = true;
+	try {
+		relatedMeetings.value = await meetingItemsApi.list({
+			filter: { client: { _eq: props.clientId } },
+			fields: [
+				'id', 'title', 'status', 'scheduled_start', 'actual_start',
+				'actual_duration_minutes', 'recording_url', 'transcript_text', 'summary_status',
+				'host_user.id', 'host_user.first_name', 'host_user.last_name',
+				'project.id', 'project.title',
+			],
+			sort: ['-scheduled_start'],
+			limit: -1,
+		}).catch(() => []) as any[];
+	} finally {
+		meetingsLoading.value = false;
 	}
 }
 
@@ -250,6 +273,7 @@ const tabCounts = computed(() => ({
 	projects: relatedProjects.value.length,
 	tickets: relatedTickets.value.length,
 	tasks: relatedTasks.value.length,
+	meetings: relatedMeetings.value.length,
 	invoices: relatedInvoices.value.length,
 	partners: totalPartnerCount.value,
 	messages: relatedChannels.value.length,
@@ -348,6 +372,7 @@ const showAttachTaskModal = ref(false);
 const showCreateInvoiceModal = ref(false);
 const showAttachInvoiceModal = ref(false);
 const showAttachChannelModal = ref(false);
+const showCreateMeetingModal = ref(false);
 
 // Quick task add: lightweight inline input instead of full FormModal
 // (no FormModal exists for tasks, and a project-less task at client
@@ -422,6 +447,11 @@ function onInvoiceAttached() {
 function onChannelAttached() {
 	showAttachChannelModal.value = false;
 	loadRelated();
+}
+
+function onMeetingCreated() {
+	showCreateMeetingModal.value = false;
+	loadMeetings();
 }
 
 async function changeTicketStatus(ticket: any, next: typeof TICKET_STATUSES[number]) {
@@ -897,6 +927,49 @@ watch(() => props.clientId, () => {
 					</div>
 				</div>
 
+				<!-- Meetings — list of video meetings linked to this client.
+				     New Meeting opens UnifiedEventModal with the client pinned
+				     (clientId prop). The server route already accepts and
+				     writes `video_meetings.client`. -->
+				<div v-else-if="activeTab === 'meetings'">
+					<div class="flex items-center justify-end mb-3">
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+							@click="showCreateMeetingModal = true"
+						>
+							<Icon name="lucide:plus" class="w-3 h-3" />
+							New Meeting
+						</button>
+					</div>
+					<div v-if="meetingsLoading && !relatedMeetings.length" class="text-sm text-muted-foreground text-center py-10">
+						Loading meetings…
+					</div>
+					<div v-else-if="!relatedMeetings.length" class="text-sm text-muted-foreground text-center py-10">
+						No meetings tied to this client yet.
+					</div>
+					<div v-else class="space-y-px">
+						<NuxtLink
+							v-for="m in relatedMeetings"
+							:key="m.id"
+							:to="`/meetings/${m.id}`"
+							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+						>
+							<Icon name="lucide:video" class="w-4 h-4 text-muted-foreground shrink-0" />
+							<div class="flex-1 min-w-0 flex items-center gap-2">
+								<p class="text-sm font-medium truncate">{{ m.title || 'Untitled meeting' }}</p>
+								<span v-if="m.project?.title" class="hidden md:inline text-[11px] text-muted-foreground truncate max-w-[160px]">
+									· {{ m.project.title }}
+								</span>
+							</div>
+							<span class="text-[11px] text-muted-foreground shrink-0">
+								{{ m.actual_start || m.scheduled_start ? new Date(m.actual_start || m.scheduled_start).toLocaleDateString() : '—' }}
+							</span>
+							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+						</NuxtLink>
+					</div>
+				</div>
+
 				<!-- Invoices -->
 				<div v-else-if="activeTab === 'invoices'">
 					<div class="flex items-center justify-end gap-2 mb-3">
@@ -1156,6 +1229,18 @@ watch(() => props.clientId, () => {
 			:get-search-haystack="(r) => r.name || ''"
 			@attached="onChannelAttached"
 		/>
+
+		<ClientOnly>
+			<SchedulerUnifiedEventModal
+				v-if="client"
+				v-model="showCreateMeetingModal"
+				:default-video="true"
+				:client-id="clientId"
+				:client-data="{ id: clientId, name: (client as any).name }"
+				@created="onMeetingCreated"
+				@saved="onMeetingCreated"
+			/>
+		</ClientOnly>
 	</div>
 </template>
 
