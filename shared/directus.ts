@@ -220,13 +220,13 @@ export interface Appointment {
 	room_name?: string | null;
 	/** @description Linked lead (if this appointment is about a lead) */
 	related_lead?: Lead | string | null;
-	attendees?: AppointmentsDirectusUser[] | string[];
-	/** @description Event type used when this appointment was booked. Null for legacy/pre-Stage-4 rows. */
-	event_type?: EventType | string | null;
 	/** @description Answers to the event type intake form. Shape mirrors intake_schema fields. */
 	intake_responses?: Record<string, any> | null;
-	/** @description Stripe Checkout Session id for paid bookings (Stage 5). Idempotency anchor — set when payment kicks off, used to dedupe finalize calls from the success URL + webhook. */
+	/** @description Event type used when this appointment was booked. Null for legacy/pre-Stage-4 rows. */
+	event_type?: EventType | string | null;
+	/** @description Stripe Checkout Session id for paid bookings (Stage 5). Idempotency key for success URL + webhook. */
 	payment_session_id?: string | null;
+	attendees?: AppointmentsDirectusUser[] | string[];
 }
 
 export interface AppointmentsDirectusUser {
@@ -1050,6 +1050,8 @@ export interface CdContact {
 	notes?: string | null;
 	is_client?: boolean | null;
 	client_at?: string | null;
+	/** @description Earnest CRM contact this Card Desk card was promoted into. Null = unpromoted. */
+	promoted_contact?: Contact | string | null;
 }
 
 export interface CdXpState {
@@ -1120,8 +1122,6 @@ export interface Client {
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
-	/** @description Max(client.date_updated, project/ticket/task.date_updated). Kept in sync by Directus flows that POST to /api/clients/bump-activity on child writes. Drives "Recent" sort across the app. */
-	last_activity_at?: string | null;
 	/** @required */
 	name: string;
 	slug?: string | null;
@@ -1160,7 +1160,9 @@ export interface Client {
 	/** @description Parent client for sub-brands. Billing falls back to parent if not set on this client. */
 	parent_client?: Client | string | null;
 	/** @description Customer relationship state. Lifecycle (published/draft/archived) lives on `status`. */
-	account_state?: 'active' | 'prospect' | 'inactive' | null;
+	account_state?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
+	/** @description Bumped by /api/clients/bump-activity when a child project/ticket/task changes. Drives the "Recent" client sort. */
+	last_activity_at?: string | null;
 	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
 	/** @description Individual users with direct access to this client */
@@ -1328,6 +1330,10 @@ export interface Contact {
 	client?: Client | string | null;
 	/** @description When true, this contact is used as a billing recipient for invoices issued to its client (and inherited by sub-clients via parent_client walk). */
 	is_billing_contact?: boolean;
+	/** @description Most recent inbound or outbound touch across email / meeting / message / task. Maintained by server hooks; nullable for never-contacted rows. */
+	last_contacted_at?: string | null;
+	/** @description Which channel produced the timestamp in last_contacted_at. Pair with the timestamp to render "Met yesterday" vs "Emailed last week". */
+	last_contacted_channel?: 'email' | 'meeting' | 'message' | 'task' | 'manual' | null;
 	organizations?: ContactsOrganization[] | string[];
 	lists?: MailingListContact[] | string[];
 	/** @description Leads associated with this contact. Inverse of leads.related_contact. */
@@ -1653,6 +1659,39 @@ export interface EmailTemplate {
 	blocks?: TemplateBlock[] | string[];
 }
 
+export interface EventType {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	status: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @required */
+	organization: Organization | string;
+	/** @description Host who owns the event type. Slug uniqueness is per-host. @required */
+	host_user: DirectusUser | string;
+	/** @description e.g. "Intro Call" @required */
+	title: string;
+	/** @description URL-safe slug. Unique per host_user. @required */
+	slug: string;
+	/** @description Shown on the booking page. */
+	description?: string | null;
+	/** @required */
+	duration: 15 | 30 | 45 | 60 | 90 | 120;
+	/** @description Hex color or design-token; defaults to --accent. */
+	color?: string | null;
+	/** @description Array of { name, label, type, required, options? } describing the intake form. Empty = skip intake step. */
+	intake_schema?: Record<string, any> | null;
+	/** @description Null = free. Stage 5 wires Stripe Connect. */
+	price_cents?: number | null;
+	/** @description Exactly one per host_user. Bare /book/<org>/<user> renders this one. */
+	is_default?: boolean;
+	enabled?: boolean;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+}
+
 export interface Expense {
 	/** @primaryKey */
 	id: string;
@@ -1682,46 +1721,6 @@ export interface Expense {
 	receipt?: DirectusFile | string | null;
 }
 
-export interface EventTypeIntakeField {
-	/** @description Machine name (e.g. "company"). Sent as a key in Appointment.intake_responses. */
-	name: string;
-	/** @description Display label shown above the form input. */
-	label: string;
-	/** @description Renderer hint. */
-	type: 'text' | 'textarea' | 'select' | 'checkbox';
-	required?: boolean;
-	/** @description For type='select', the list of option labels. */
-	options?: string[];
-}
-
-export interface EventType {
-	/** @primaryKey */
-	id: number;
-	status?: 'published' | 'draft' | 'archived';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
-	date_updated?: string | null;
-	organization: Organization | string;
-	host_user: DirectusUser | string;
-	title: string;
-	/** @description URL-safe slug. Unique per host_user. */
-	slug: string;
-	description?: string | null;
-	/** @description Duration in minutes. */
-	duration: number;
-	/** @description Hex color or design-token reference. */
-	color?: string | null;
-	/** @description Form schema rendered before the time picker. */
-	intake_schema?: EventTypeIntakeField[] | null;
-	/** @description Null = free. Stage 5 wires Stripe Connect. */
-	price_cents?: number | null;
-	/** @description Exactly one per host_user. Bare /book/<org>/<user> renders this one. */
-	is_default?: boolean;
-	enabled?: boolean;
-}
-
 export interface GbpPost {
 	/** @primaryKey */
 	id: string;
@@ -1745,16 +1744,6 @@ export interface GbpPost {
 	source_blog_post?: Blog | string | null;
 }
 
-export type GoalScope = 'user' | 'team' | 'client' | 'organization';
-export type GoalCategory =
-	| 'revenue'
-	| 'growth'
-	| 'retention'
-	| 'learning'
-	| 'wellbeing'
-	| 'delivery'
-	| 'custom';
-
 export interface Goal {
 	/** @primaryKey */
 	id: string;
@@ -1767,11 +1756,6 @@ export interface Goal {
 	/** @required */
 	title: string;
 	description?: string | null;
-	/** Who the goal is for. */
-	scope?: GoalScope;
-	/** High-level theme. */
-	category?: GoalCategory;
-	/** @deprecated Use `category`. Kept for one release while the migration soaks. */
 	type?: 'financial' | 'networking' | 'performance' | 'marketing' | 'custom';
 	target_value?: number | null;
 	target_unit?: string | null;
@@ -1786,6 +1770,10 @@ export interface Goal {
 	tags?: string[] | null;
 	metadata?: Record<string, any> | null;
 	organization?: string | null;
+	/** @description Who the goal is for. user = personal; team/client/organization = shared. @required */
+	scope: 'user' | 'team' | 'client' | 'organization';
+	/** @description High-level theme. Replaces the older `type` field. @required */
+	category: 'revenue' | 'growth' | 'retention' | 'learning' | 'wellbeing' | 'delivery' | 'custom';
 	snapshots?: GoalSnapshot[] | string[];
 }
 
@@ -2239,6 +2227,19 @@ export interface MarketingTouchVariant {
 	date_updated?: string | null;
 }
 
+export interface MeetingChatMessage {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	/** @required */
+	meeting: VideoMeeting | string;
+	sender_session_id?: string | null;
+	sender_name?: string | null;
+	/** @required */
+	message: string;
+	sent_at?: string | null;
+}
+
 export interface MeetingNote {
 	/** @primaryKey */
 	id: number;
@@ -2369,12 +2370,6 @@ export interface Organization {
 	tags?: string[] | null;
 	notes?: string | null;
 	stripe_customer_id?: string | null;
-	/** @description Stripe Express connected-account id (acct_…). Each org owns its own; invoice payments route through this account. */
-	stripe_account_id?: string | null;
-	/** @description Snapshot of the connected account state. Updated by the Connect webhook on `account.updated`. */
-	stripe_account_status?: 'none' | 'pending' | 'active' | 'restricted';
-	/** @description ISO-2 country code used at account creation. Express onboarding is currently US-only. */
-	stripe_account_country?: string;
 	phone?: string | null;
 	/** @description Three letter code for organization identity. */
 	code?: string | null;
@@ -2424,10 +2419,6 @@ export interface Organization {
 	active_addons?: Record<string, any> | null;
 	/** @description Default hourly rate for time tracking billable entries */
 	default_hourly_rate?: number | null;
-	/** @description Per-org override for cloud-recording auto-start on new meetings. Null = use plan default (free=off, studio+=on). */
-	default_recording?: boolean | null;
-	/** @description Per-org override for transcription auto-start on new meetings. Null = use plan default (free=off, solo+=on). */
-	default_transcription?: boolean | null;
 	/** @description URL-safe stable identifier. Auto-generated from name; unique across the org table. */
 	slug?: string;
 	/** @description Soft-delete timestamp. When set, the org is archived; restore clears it. A cleanup cron hard-deletes rows aged past the retention window. */
@@ -2440,6 +2431,20 @@ export interface Organization {
 	document_theme?: 'classic' | 'editorial' | 'mono';
 	/** @description Used by the Mono theme as the brand accent. Defaults to a neutral gray. */
 	document_accent?: string | null;
+	/** @description Stripe Express connected-account id (acct_…). Each org has their own; invoice payments route through this account. */
+	stripe_account_id?: string | null;
+	/** @description Snapshot of the connected account state. Updated by the Connect webhook on `account.updated`. */
+	stripe_account_status?: 'none' | 'pending' | 'active' | 'restricted';
+	/** @description ISO-2 country code used at account creation. Express onboarding is currently US-only. */
+	stripe_account_country?: string;
+	/** @description Org default for new meetings. Null = inherit plan default (free=off, studio+=on). */
+	default_recording?: boolean | null;
+	/** @description Org default for new meetings. Null = inherit plan default (free=off, solo+=on). */
+	default_transcription?: boolean | null;
+	/** @description Address recipients hit when they reply to an org-branded transactional email (notifications, meeting/video invites). Empty falls back to the global Earnest reply-to. */
+	email_reply_to?: string | null;
+	/** @description Physical mailing address rendered in the marketing-email footer (CAN-SPAM requirement). Transactional emails never show it. Free-form text — line breaks preserved. */
+	mailing_address?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -2657,10 +2662,11 @@ export interface PaymentsReceived {
 	payment_method?: string | null;
 	/** @description Check #, Zelle confirmation, Venmo handle, etc. */
 	reference?: string | null;
+	/** @description Optional free-text note about this payment. */
 	note?: string | null;
-	/** @description Photo of the check or screenshot of the Zelle/Venmo confirmation */
+	/** @description Photo of the check or screenshot of the Zelle/Venmo confirmation. */
 	check_image?: DirectusFile | string | null;
-	/** @description Date the check was deposited */
+	/** @description Date the check was deposited (for the "checks awaiting deposit" workflow). */
 	deposit_date?: string | null;
 }
 
@@ -3322,6 +3328,10 @@ export interface ServiceTemplate {
 	default_duration_days?: number | null;
 	/** @description Owning organization @required */
 	organization: Organization | string;
+	/** @description Hex swatch for calendar chips, invoice line items, and any other surface that distinguishes services. Null falls through to the Work-app accent. */
+	color?: string | null;
+	/** @description A single emoji to personalize the service. Renders alongside the colour swatch wherever the service appears. */
+	icon?: string | null;
 }
 
 export interface ShopCategory {
@@ -3869,8 +3879,6 @@ export interface VideoMeetingAttendee {
 	video_meeting?: VideoMeeting | string;
 	attendee_type?: 'user' | 'guest';
 	directus_user?: DirectusUser | string | null;
-	/** @description Linked contact when the attendee was added via the contact picker. NULL for manually-entered guests. */
-	contact?: Contact | string | null;
 	/** @description Name for external guests */
 	guest_name?: string | null;
 	/** @description Email for external guests */
@@ -3883,6 +3891,8 @@ export interface VideoMeetingAttendee {
 	invite_method?: 'email' | 'sms' | 'both' | 'link' | null;
 	date_created?: string | null;
 	date_updated?: string | null;
+	/** @description Linked contact when the attendee was added via the contact picker. NULL for manually-entered guests. */
+	contact?: Contact | string | null;
 }
 
 export interface VideoMeeting {
@@ -3919,8 +3929,6 @@ export interface VideoMeeting {
 	/** @description Peak concurrent participants */
 	participant_count?: number | null;
 	recording_enabled?: boolean | null;
-	/** @description When true, auto-start Deepgram transcription on host join. Null = inherit org default. */
-	transcription_enabled?: boolean | null;
 	recording_url?: string | null;
 	meeting_url?: string | null;
 	/** @description Optional password protection */
@@ -3957,8 +3965,6 @@ export interface VideoMeeting {
 	related_lead?: Lead | string | null;
 	/** @description Project event (milestone) this meeting belongs to */
 	project_event?: ProjectEvent | string | null;
-	/** @description Auto-filled from project.client when this meeting is linked to a project. Used to scope and rank contact pickers. */
-	client?: Client | string | null;
 	/** @description Daily.co transcript handle */
 	transcript_id?: string | null;
 	/** @description Daily-hosted transcript download URL */
@@ -3974,6 +3980,10 @@ export interface VideoMeeting {
 	summary_generated_at?: string | null;
 	/** @description Last failure message, if any */
 	summary_error?: string | null;
+	/** @description Auto-start Deepgram transcription on host join. Null = inherit org default. */
+	transcription_enabled?: boolean | null;
+	/** @description Auto-filled from project.client when this meeting is linked to a project. Used to scope and rank contact pickers. */
+	client?: Client | string | null;
 	attendees?: VideoMeetingAttendee[] | string[];
 	/** @description Structured notes & decisions captured during the meeting (separate from the freeform notes field) */
 	note_entries?: MeetingNote[] | string[];
@@ -4308,8 +4318,6 @@ export interface DirectusUser {
 	external_identifier?: string | null;
 	auth_data?: 'json' | null;
 	email_notifications?: boolean | null;
-	/** @description Per-event-type opt-out map. Missing keys = opt-in (default). Keys: 'meeting_invited', 'meeting_time_changed', 'meeting_removed', 'meeting_cancelled', 'meeting_reminder'. */
-	notification_preferences?: Record<string, boolean> | null;
 	appearance?: null | 'auto' | 'light' | 'dark' | null;
 	theme_dark?: string | null;
 	theme_light?: string | null;
@@ -4322,14 +4330,6 @@ export interface DirectusUser {
 	networking_goal?: string | null;
 	/** @description JSON preferences for nav visibility and order */
 	nav_preferences?: Record<string, any> | null;
-	/** @description Apps Layout shell selector. 'classic' keeps the sidebar+hats layout; 'apps' opts into the department-store rail. */
-	layout_mode?: 'classic' | 'apps';
-	/** @description Apps Layout rail placement. Ignored when layout_mode='classic'. */
-	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
-	/** @description "Me" lens preference for the Command Center: 'me' emphasizes YOU band, 'org' emphasizes US. */
-	view_lens?: 'me' | 'org' | null;
-	/** @description /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */
-	dismissed_app_intros?: string[] | null;
 	/** @description Stripe Customer id (cus_…). Set on registration; primary lookup key for webhook → org sync. */
 	stripe_customer_id?: string | null;
 	/** @description Stripe Subscription id (sub_…). Set by checkout/subscription webhooks. */
@@ -4342,8 +4342,20 @@ export interface DirectusUser {
 	subscription_current_period_end?: string | null;
 	/** @description When the user agreed to Terms of Service & Privacy Policy. Set on registration; updated on subscription checkout re-affirmation. */
 	terms_accepted_at?: string | null;
+	/** @description Personal navigation shell. Classic = sidebar + hats; Apps = department-store rail. */
+	layout_mode?: 'classic' | 'apps';
+	/** @description Apps mode rail placement. Ignored in classic. */
+	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
+	/** @description Per-user palette for the apps shell (default | oceanic | royal). */
+	app_palette?: 'default' | 'oceanic' | 'royal' | null;
+	/** @description Command Center lens preference — controls band emphasis on /. (me | org) */
+	view_lens?: 'me' | 'org' | null;
+	/** @description List of /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */
+	dismissed_app_intros?: string[] | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
+	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
+	client_portal_users?: ClientPortalUser[] | string[];
 	policies?: DirectusAccess[] | string[];
 }
 
@@ -4626,6 +4638,7 @@ export interface Schema {
 	marketing_recommendations: MarketingRecommendation[];
 	marketing_touches: MarketingTouche[];
 	marketing_touch_variants: MarketingTouchVariant[];
+	meeting_chat_messages: MeetingChatMessage[];
 	meeting_notes: MeetingNote[];
 	meeting_requests: MeetingRequest[];
 	menus: Menu[];
@@ -4856,6 +4869,7 @@ export enum CollectionNames {
 	marketing_recommendations = 'marketing_recommendations',
 	marketing_touches = 'marketing_touches',
 	marketing_touch_variants = 'marketing_touch_variants',
+	meeting_chat_messages = 'meeting_chat_messages',
 	meeting_notes = 'meeting_notes',
 	meeting_requests = 'meeting_requests',
 	menus = 'menus',

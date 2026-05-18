@@ -10,11 +10,13 @@ const router = useRouter();
 const route = useRoute();
 const { getContacts, deleteContact: doDelete, unsubscribeContact: doUnsubscribe } = useContacts();
 const { getLists } = useMailingLists();
-const { fetchCardDeskEmails } = useCardDesk();
+const { fetchCardDeskPromotedIds } = useCardDesk();
 
-// Lowercase emails belonging to the current user's Card Desk contacts.
-// Used by ContactTable to render a "Card Desk" provenance pill.
-const cardDeskEmails = ref<Set<string>>(new Set());
+// IDs of Earnest contacts the current user has promoted from Card Desk
+// (cd_contacts.promoted_contact FK). Used by ContactTable to render a
+// "Card Desk" provenance pill — FK-backed so the badge means "this row
+// was sourced via Card Desk", not just "shares an email with one".
+const cardDeskContactIds = ref<Set<string>>(new Set());
 
 type ViewKey = 'list' | 'insights';
 
@@ -104,9 +106,9 @@ async function onContactCreated() {
 
 onMounted(async () => {
   lists.value = await getLists();
-  // Card Desk email index runs in parallel with the contacts fetch — it's
-  // a single-field query and absence of perms just yields an empty Set.
-  fetchCardDeskEmails().then((set) => { cardDeskEmails.value = set; });
+  // Card Desk promoted-id index runs in parallel with the contacts fetch —
+  // it's a single-field query and absence of perms just yields an empty Set.
+  fetchCardDeskPromotedIds().then((set) => { cardDeskContactIds.value = set; });
   await fetchData();
 });
 </script>
@@ -191,7 +193,7 @@ onMounted(async () => {
       <ContactsContactTable
         :contacts="contacts"
         :loading="loading"
-        :card-desk-emails="cardDeskEmails"
+        :card-desk-contact-ids="cardDeskContactIds"
         @edit="editContact"
         @unsubscribe="handleUnsubscribe"
         @delete="handleDelete"

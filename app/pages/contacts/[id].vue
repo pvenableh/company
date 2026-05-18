@@ -15,12 +15,36 @@ const { getContact, linkToClient } = useContacts();
 const { getClients } = useClients();
 const { selectedOrg } = useOrganization();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const cardDeskSlide = useAppSlideOver('carddesk-source');
 
 const contact = ref<Contact | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showEditModal = ref(false);
 const showLeadModal = ref(false);
+
+// "Sourced via Card Desk" chip visibility. The chip renders if either:
+//   (a) contact.source === 'carddesk' (set when promote.post creates a new
+//       contact from a deck card), OR
+//   (b) the current user has a cd_contact with promoted_contact === this
+//       contact's id (the link-existing case, where source stays whatever
+//       it was — usually 'manual' or null).
+// `cardDeskHasCard` is fetched lazily from /api/carddesk/by-contact/<id>.
+const cardDeskHasCard = ref(false);
+const showCardDeskChip = computed(() => {
+  if ((contact.value as any)?.source === 'carddesk') return true;
+  return cardDeskHasCard.value;
+});
+
+async function checkCardDeskSource() {
+  if (!contactId) return;
+  try {
+    const res = await $fetch<{ cd_contact: any }>(`/api/carddesk/by-contact/${contactId}`);
+    cardDeskHasCard.value = !!res.cd_contact;
+  } catch {
+    cardDeskHasCard.value = false;
+  }
+}
 
 // Client association
 const availableClients = ref<any[]>([]);
@@ -165,6 +189,7 @@ function openEditConnection(conn: any) {
 onMounted(() => {
   loadContact();
   loadClients();
+  checkCardDeskSource();
 });
 
 // AI sidebar lifecycle
@@ -223,6 +248,16 @@ onUnmounted(() => clearEntity());
               </h1>
               <ContactsContactCategoryBadge v-if="contact.category" :category="contact.category" show-icon />
               <ContactsContactStatusBadge :status="contact.status" />
+              <button
+                v-if="showCardDeskChip"
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400/15 to-red-500/15 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider hover:from-orange-400/25 hover:to-red-500/25 transition-colors"
+                title="Sourced via Card Desk — open deck card"
+                @click="cardDeskSlide.open(String(contact.id))"
+              >
+                <Icon name="lucide:identification" class="w-3 h-3" />
+                Sourced via Card Desk
+              </button>
             </div>
             <p class="text-xs text-muted-foreground">{{ contact.email }}</p>
           </div>

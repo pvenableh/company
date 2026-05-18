@@ -288,30 +288,34 @@ export const useCardDesk = () => {
 		});
 	};
 
-	// Lightweight email index for cross-app badge matching on /contacts.
-	// Returns a lowercase Set of every email belonging to the current user's
-	// cd_contacts. Cheap query (one field, no joins).
-	const fetchCardDeskEmails = async (): Promise<Set<string>> => {
+	// FK-backed index for cross-app badge matching on /contacts. Returns a
+	// Set of every contacts.id that's the target of one of the current
+	// user's cd_contacts.promoted_contact FKs. Replaces the older
+	// fetchCardDeskEmails approach which matched by email — that gave false
+	// positives when the same person was added to both surfaces
+	// independently, and false negatives when a card was linked to an
+	// existing contact whose email no longer matched the card's.
+	const fetchCardDeskPromotedIds = async (): Promise<Set<string>> => {
 		const userId = authUser.value?.id;
 		if (!userId) return new Set();
 		try {
 			const rows = await contactItems.list({
-				fields: ['email'],
+				fields: ['promoted_contact'],
 				filter: {
 					_and: [
 						{ user_created: { _eq: userId } },
-						{ email: { _nnull: true } },
+						{ promoted_contact: { _nnull: true } },
 					],
 				},
 				limit: -1,
 			});
 			return new Set(
 				rows
-					.map((r: any) => (r.email || '').trim().toLowerCase())
+					.map((r: any) => r.promoted_contact)
 					.filter(Boolean),
 			);
 		} catch (e) {
-			console.warn('[CardDesk] Could not fetch email index:', e);
+			console.warn('[CardDesk] Could not fetch promoted index:', e);
 			return new Set();
 		}
 	};
@@ -326,6 +330,6 @@ export const useCardDesk = () => {
 		updateContact,
 		setIsClient,
 		addActivity,
-		fetchCardDeskEmails,
+		fetchCardDeskPromotedIds,
 	};
 };

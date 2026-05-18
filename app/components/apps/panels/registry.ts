@@ -26,6 +26,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'work-meeting': () => import('./MeetingPanel.vue'),
 	'marketing-campaign': () => import('./CampaignPanel.vue'),
 	client: () => import('./ClientDetailPanel.vue'),
+	'carddesk-source': () => import('./CardDeskSourcePanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();

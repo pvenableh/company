@@ -26,7 +26,7 @@
                   {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
                 </span>
                 <NuxtLink
-                  v-if="cardDeskEmails && contact.email && cardDeskEmails.has(contact.email.toLowerCase())"
+                  v-if="cardDeskContactIds && cardDeskContactIds.has(contact.id)"
                   to="/apps/clients?view=carddesk"
                   class="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400/15 to-red-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider hover:from-orange-400/25 hover:to-red-500/25 transition-colors"
                   title="From Card Desk — click to manage networking pipeline"
@@ -104,11 +104,13 @@ defineProps<{
   contacts: Contact[];
   loading?: boolean;
   /**
-   * Set of lowercase emails that match the current user's Card Desk
-   * contacts. Rows with a matching email get a "Card Desk" pill so the
-   * provenance is visible at a glance. Empty/undefined = no badges.
+   * Set of contacts.id values that are the target of any of the current
+   * user's cd_contacts.promoted_contact FKs. Rows in this set get a
+   * "Card Desk" pill so the provenance is visible at a glance. FK-backed
+   * (was previously email-matched, which gave false hits for shared
+   * inboxes and missed cards linked to renamed contacts).
    */
-  cardDeskEmails?: Set<string>;
+  cardDeskContactIds?: Set<string>;
 }>();
 
 defineEmits<{

@@ -154,6 +154,36 @@ const toggleClient = async () => {
 	}
 };
 
+// ── Promote-to-Earnest ────────────────────────────────────────────────────
+// Local session-scoped map: cd_contact id → { contactId, leadStage | null }.
+// Tracks promoted state for THIS session while the FK column doesn't exist
+// yet. Once schema lands, replace with `selectedContact.promoted_contact`
+// + a fetched lead status; the UI shape below stays identical.
+const promoteModalOpen = ref(false);
+const promotedMap = ref(new Map<string, { contactId: string; leadStage: string | null }>());
+
+const isPromoted = computed(() => {
+	if (!selectedContact.value) return false;
+	return promotedMap.value.has(selectedContact.value.id);
+});
+
+const promotedInfo = computed(() => {
+	if (!selectedContact.value) return null;
+	return promotedMap.value.get(selectedContact.value.id) || null;
+});
+
+const openPromoteModal = () => {
+	promoteModalOpen.value = true;
+};
+
+const onPromoted = (result: { contact: { id: string }; lead: { stage: string } | null; xpEarned: number }) => {
+	if (!selectedContact.value) return;
+	promotedMap.value.set(selectedContact.value.id, {
+		contactId: result.contact.id,
+		leadStage: result.lead?.stage || null,
+	});
+};
+
 // ── Activity logging ──────────────────────────────────────────────────────
 const activityFormOpen = ref(false);
 const activityForm = reactive<{ type: string; label: string; note: string }>({
@@ -422,6 +452,36 @@ onMounted(async () => {
 							</span>
 						</div>
 
+						<!-- Promote-to-Earnest CTA / linked badge -->
+						<div class="mt-4">
+							<div v-if="isPromoted && promotedInfo" class="rounded-lg border border-success/30 bg-success/5 p-2.5">
+								<div class="flex items-center gap-2">
+									<Icon name="lucide:check-circle" class="w-4 h-4 text-success shrink-0" />
+									<div class="flex-1 min-w-0 text-xs">
+										<div class="font-medium text-foreground">In Earnest CRM</div>
+										<div v-if="promotedInfo.leadStage" class="text-muted-foreground capitalize">
+											Lead opened · {{ promotedInfo.leadStage }} stage
+										</div>
+									</div>
+									<NuxtLink
+										:to="`/contacts/${promotedInfo.contactId}`"
+										class="text-[11px] font-medium text-primary hover:underline whitespace-nowrap"
+									>
+										View →
+									</NuxtLink>
+								</div>
+							</div>
+							<button
+								v-else
+								type="button"
+								class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white text-xs font-semibold hover:from-orange-600 hover:to-red-600 transition-colors shadow-sm"
+								@click="openPromoteModal"
+							>
+								<Icon name="lucide:arrow-up-right-from-square" class="w-3.5 h-3.5" />
+								Promote to Earnest
+							</button>
+						</div>
+
 						<!-- Inline editors: rating + state toggles -->
 						<div class="mt-4 space-y-3">
 							<div>
@@ -661,5 +721,13 @@ onMounted(async () => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Promote-to-Earnest modal (lazy: only mounts when opened) -->
+		<CardDeskPromoteModal
+			v-if="promoteModalOpen || isPromoted"
+			v-model="promoteModalOpen"
+			:cd-contact-id="selectedContact?.id ?? null"
+			@promoted="onPromoted"
+		/>
 	</div>
 </template>
