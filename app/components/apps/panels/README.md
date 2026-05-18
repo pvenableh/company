@@ -100,3 +100,5 @@ the underlying page context (e.g. clients/[id]) intact.
 | `MeetingPanel.vue` | Meeting summary + recording link |
 | `CampaignPanel.vue` | Editable status / goal / dates for marketing campaigns |
 | `ClientDetailPanel.vue` | Lean client surface with embedded contacts list (validates cross-panel push) |
+| `ProposalPanel.vue` | Status + value + blocks outline + linked contact/lead chips |
+| `ContractPanel.vue` | Status + signed-by chip + linked contact/source-proposal chips (pushes `proposal` panel on top) |

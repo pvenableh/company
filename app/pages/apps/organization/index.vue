@@ -332,7 +332,17 @@ const integrationsList = computed(() => {
       status: stripeMeta?.status || 'inactive',
       statusLabel: stripeLabel,
       action: stripeMeta?.status === 'active' ? 'Manage on Stripe' : 'Configure',
-      onClick: () => router.push('/organization?tab=billing'),
+      onClick: () => {
+        if (stripeMeta?.status === 'active') {
+          // Standard accounts: open the full Stripe Dashboard in a new tab.
+          // We can't deep-link to the merchant's account from the platform's
+          // session, so we open the root and let them sign in.
+          window.open('https://dashboard.stripe.com/', '_blank', 'noopener');
+        } else {
+          // Stay in apps layout — billing floor hosts the Configure CTA + onboarding link.
+          router.push('/apps/organization?floor=billing');
+        }
+      },
     },
     {
       key: 'plaid',
@@ -352,7 +362,7 @@ const integrationsList = computed(() => {
       status: 'active' as IntegrationStatus,
       statusLabel: 'Built-in',
       action: 'Open meetings',
-      onClick: () => router.push('/meetings'),
+      onClick: () => router.push('/apps/work?floor=meetings'),
     },
     {
       key: 'instagram',

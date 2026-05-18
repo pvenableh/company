@@ -28,6 +28,8 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'social-post': () => import('./SocialPostPanel.vue'),
 	client: () => import('./ClientDetailPanel.vue'),
 	'carddesk-source': () => import('./CardDeskSourcePanel.vue'),
+	proposal: () => import('./ProposalPanel.vue'),
+	contract: () => import('./ContractPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();
