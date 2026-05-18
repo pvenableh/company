@@ -274,20 +274,53 @@ function getClientActivity(clientId: string) {
 
 // ── Contacts data ──────────────────────────────────────────────────────────
 const { getContacts } = useContacts();
+const { fetchCardDeskPromotedIds } = useCardDesk();
+// Inner toggle for the Contacts tab: List vs Insights (charts-driven view).
+// Routed via `?subview=insights` so the segmented control survives a reload.
+const contactsSubview = ref<'list' | 'insights'>(
+  route.query.subview === 'insights' ? 'insights' : 'list',
+);
+watch(contactsSubview, (next) => {
+  router.replace({ query: { ...route.query, subview: next === 'insights' ? 'insights' : undefined } });
+});
+
 const contacts = ref<Contact[]>([]);
 const contactsTotal = ref(0);
 const contactsLoading = ref(true);
 const contactSearch = ref('');
+const contactsFilterStatus = ref('');
+const contactsFilterCategory = ref<Contact['category'] | ''>('');
 const contactsLimit = 50;
 const contactsPage = ref(1);
 const contactsHasMore = computed(() => contactsPage.value * contactsLimit < contactsTotal.value);
 const showCreateContactModal = ref(false);
+
+// FK-backed Card Desk pill set — drives the orange "Card Desk" badge in
+// the ContactTable when a row was promoted from a deck card.
+const cardDeskContactIds = ref<Set<string>>(new Set());
+
+const contactCategoryChips: Array<{ value: Contact['category'] | ''; label: string }> = [
+  { value: '', label: 'All' },
+  { value: 'client', label: 'Clients' },
+  { value: 'prospect', label: 'Prospects' },
+  { value: 'partner', label: 'Partners' },
+  { value: 'architect', label: 'Architects' },
+  { value: 'developer', label: 'Developers' },
+  { value: 'hospitality', label: 'Hospitality' },
+  { value: 'media', label: 'Media' },
+];
+const contactCategoryItems = computed(() => contactCategoryChips.map((c) => ({
+  key: c.value || 'all',
+  label: c.label,
+})));
 
 async function fetchContacts() {
   contactsLoading.value = true;
   try {
     const result = await getContacts({
       search: contactSearch.value || undefined,
+      status: contactsFilterStatus.value || undefined,
+      category: contactsFilterCategory.value || undefined,
       limit: contactsLimit,
       page: contactsPage.value,
     });
@@ -298,10 +331,18 @@ async function fetchContacts() {
   }
 }
 
+function selectContactCategory(value: Contact['category'] | '') {
+  contactsFilterCategory.value = value;
+  contactsPage.value = 1;
+  fetchContacts();
+}
+
 const debouncedFetchContacts = useDebounceFn(() => {
   contactsPage.value = 1;
   fetchContacts();
 }, 300);
+
+watch(contactsFilterStatus, () => { contactsPage.value = 1; fetchContacts(); });
 
 // ── Partners data (contact_connections) ────────────────────────────────────
 const connectionItems = useDirectusItems('contact_connections');
@@ -373,6 +414,8 @@ watch(view, (next) => {
   if (next === 'contacts' && !contactsLoaded) {
     contactsLoaded = true;
     fetchContacts();
+    // Single-field query; empty perms yield an empty Set — fire-and-forget.
+    fetchCardDeskPromotedIds().then((set) => { cardDeskContactIds.value = set; });
   }
   if (next === 'partners' && !partnersLoaded) {
     partnersLoaded = true;
@@ -624,6 +667,40 @@ watch(view, (next) => {
 
       <!-- ── Contacts view ────────────────────────────────────────────── -->
       <template v-else-if="view === 'contacts'">
+        <!-- Inner List | Insights toggle (universal pill style) -->
+        <div class="mb-4 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+          <button
+            type="button"
+            class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            :class="contactsSubview === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+            @click="contactsSubview = 'list'"
+          >
+            <Icon name="lucide:list" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+            List
+          </button>
+          <button
+            type="button"
+            class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            :class="contactsSubview === 'insights' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+            @click="contactsSubview = 'insights'"
+          >
+            <Icon name="lucide:bar-chart-3" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+            Insights
+          </button>
+        </div>
+
+        <ContactsInsightsView v-if="contactsSubview === 'insights'" />
+
+        <template v-else>
+        <!-- Category tabs — same UTabs strip used on the standalone /contacts -->
+        <UTabs
+          :model-value="contactsFilterCategory || 'all'"
+          :items="contactCategoryItems"
+          class="mb-3 w-fit"
+          @update:model-value="(v) => selectContactCategory(v === 'all' ? '' : (v as Contact['category']))"
+        />
+
+        <!-- Search + status filter -->
         <div class="flex gap-3 mb-5 flex-wrap items-center">
           <input
             v-model="contactSearch"
@@ -632,12 +709,24 @@ watch(view, (next) => {
             class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
             @input="debouncedFetchContacts"
           />
+          <select
+            v-model="contactsFilterStatus"
+            class="rounded-md border bg-background px-3 py-2 text-sm w-36"
+          >
+            <option value="">All Statuses</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="archived">Archived</option>
+          </select>
         </div>
 
         <ContactsContactTable
           :contacts="contacts"
           :loading="contactsLoading"
+          :card-desk-contact-ids="cardDeskContactIds"
+          quick-edit
           @edit="(c) => router.push(`/contacts/${c.id}`)"
+          @patched="fetchContacts"
         />
 
         <div class="flex justify-between items-center mt-4">
@@ -654,6 +743,7 @@ watch(view, (next) => {
             </Button>
           </div>
         </div>
+        </template> <!-- /contacts list subview -->
       </template>
 
       <!-- ── Partners view ────────────────────────────────────────────── -->

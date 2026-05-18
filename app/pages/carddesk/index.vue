@@ -1,14 +1,12 @@
 <script setup lang="ts">
 /**
- * /carddesk is consolidated into /contacts?view=carddesk so the noun
- * (people you're networking with) has a single home alongside List + Insights.
- * Existing links + bookmarks still work — they redirect here, preserving any
- * `?selected=<id>` deep-link param.
+ * /carddesk is the legacy entry — the canonical home is the Clients app's
+ * Card Desk tab. Redirect preserves any `?selected=<id>` deep-link param.
  */
 definePageMeta({ middleware: ['auth'] });
 const route = useRoute();
 await navigateTo({
-	path: '/contacts',
+	path: '/apps/clients',
 	query: { view: 'carddesk', ...(route.query.selected ? { selected: String(route.query.selected) } : {}) },
 	replace: true,
 });

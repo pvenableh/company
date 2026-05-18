@@ -27,7 +27,7 @@
                 </span>
                 <NuxtLink
                   v-if="cardDeskContactIds && cardDeskContactIds.has(contact.id)"
-                  to="/contacts?view=carddesk"
+                  to="/apps/clients?view=carddesk"
                   class="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400/15 to-red-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider hover:from-orange-400/25 hover:to-red-500/25 transition-colors"
                   title="From Card Desk — click to manage networking pipeline"
                   @click.stop
@@ -43,13 +43,44 @@
           </td>
           <td class="py-3 pr-4 text-muted-foreground">{{ contact.email }}</td>
           <td class="py-3 pr-4 text-muted-foreground">{{ contact.company || '—' }}</td>
-          <td class="py-3 pr-4">
-            <ContactsContactCategoryBadge v-if="contact.category" :category="contact.category" />
-            <span v-else class="text-muted-foreground/50">—</span>
+
+          <!-- Category cell — inline dropdown when quick-edit is enabled -->
+          <td class="py-3 pr-4" @click.stop>
+            <select
+              v-if="quickEdit"
+              :value="contact.category || ''"
+              :disabled="savingFor === contact.id"
+              class="rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-xs hover:border-border focus:border-primary focus:outline-none transition-colors disabled:opacity-50"
+              :class="categoryClass(contact.category)"
+              @change="(e) => onPatch(contact, { category: ((e.target as HTMLSelectElement).value || null) as Contact['category'] })"
+            >
+              <option value="">—</option>
+              <option v-for="opt in CATEGORY_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+            <template v-else>
+              <ContactsContactCategoryBadge v-if="contact.category" :category="contact.category" />
+              <span v-else class="text-muted-foreground/50">—</span>
+            </template>
           </td>
-          <td class="py-3 pr-4">
-            <ContactStatusBadge :status="contact.status" />
+
+          <!-- Status cell — inline dropdown when quick-edit is enabled -->
+          <td class="py-3 pr-4" @click.stop>
+            <select
+              v-if="quickEdit"
+              :value="contact.status || 'published'"
+              :disabled="savingFor === contact.id"
+              class="rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-xs hover:border-border focus:border-primary focus:outline-none transition-colors disabled:opacity-50"
+              @change="(e) => onPatch(contact, { status: (e.target as HTMLSelectElement).value as Contact['status'] })"
+            >
+              <option v-for="opt in STATUS_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+            <ContactStatusBadge v-else :status="contact.status" />
           </td>
+
           <td class="py-3 pr-4">
             <div class="flex gap-1 flex-wrap">
               <ContactTagBadge v-for="tag in (contact.tags || []).slice(0, 3)" :key="tag" :tag="tag" />
@@ -60,7 +91,6 @@
           </td>
           <td class="py-3 text-right">
             <div class="flex items-center justify-end gap-1" @click.stop>
-
               <Button
                 v-if="contact.email_subscribed"
                 variant="ghost"
@@ -100,7 +130,7 @@
 import type { Contact } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 
-defineProps<{
+const props = defineProps<{
   contacts: Contact[];
   loading?: boolean;
   /**
@@ -111,11 +141,61 @@ defineProps<{
    * inboxes and missed cards linked to renamed contacts).
    */
   cardDeskContactIds?: Set<string>;
+  /**
+   * When true, Category + Status cells become click-to-edit dropdowns
+   * that PATCH the contact in-place. Emits `patched` after a successful
+   * save so the parent can re-fetch if the list ordering or filter set
+   * depends on the changed field.
+   */
+  quickEdit?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   edit: [contact: Contact];
   unsubscribe: [contact: Contact];
   delete: [contact: Contact];
+  patched: [contact: Contact];
 }>();
+
+const CATEGORY_OPTIONS: Array<{ value: NonNullable<Contact['category']>; label: string }> = [
+  { value: 'client', label: 'Client' },
+  { value: 'prospect', label: 'Prospect' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'architect', label: 'Architect' },
+  { value: 'developer', label: 'Developer' },
+  { value: 'hospitality', label: 'Hospitality' },
+  { value: 'media', label: 'Media' },
+];
+
+const STATUS_OPTIONS: Array<{ value: NonNullable<Contact['status']>; label: string }> = [
+  { value: 'published', label: 'Published' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'archived', label: 'Archived' },
+];
+
+// Faintly tint the category dropdown in its idle state so the picked value
+// is legible at a glance (the dropdown itself is borderless until hovered).
+function categoryClass(category: Contact['category'] | null | undefined): string {
+  if (!category) return 'text-muted-foreground';
+  return 'text-foreground font-medium';
+}
+
+const { updateContact } = useContacts();
+const savingFor = ref<string | null>(null);
+
+async function onPatch(contact: Contact, patch: Partial<Contact>) {
+  if (!props.quickEdit) return;
+  savingFor.value = contact.id;
+  // Optimistic — assign locally so the dropdown reflects the new value
+  // even before the PATCH round-trips.
+  Object.assign(contact, patch);
+  try {
+    await updateContact(contact.id, patch);
+    emit('patched', contact);
+  } catch (err) {
+    console.warn('[ContactTable] quick-edit patch failed', err);
+  } finally {
+    savingFor.value = null;
+  }
+}
 </script>

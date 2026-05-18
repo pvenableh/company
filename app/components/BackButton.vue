@@ -28,17 +28,22 @@ const handleClick = () => {
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
+/* Matches the uppercase 10px convention used on AppHeader, invoice/contract
+   detail pages, and the apps-clients sub-pages — so every "back to X" anchor
+   looks the same across the project. */
 .back-btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 2px;
+	gap: 4px;
 	padding: 4px 8px 4px 4px;
 	border-radius: 8px;
 	background: transparent;
 	border: none;
 	color: hsl(var(--muted-foreground));
-	font-size: 13px;
-	font-weight: 500;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 	cursor: pointer;
 	transition: color 0.15s, background 0.15s;
 	-webkit-tap-highlight-color: transparent;
@@ -54,8 +59,8 @@ const handleClick = () => {
 }
 
 .back-btn-icon {
-	width: 16px;
-	height: 16px;
+	width: 12px;
+	height: 12px;
 	flex-shrink: 0;
 }
 

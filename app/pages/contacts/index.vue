@@ -1,245 +1,35 @@
 <script setup lang="ts">
-import type { Contact } from '~~/shared/email/contacts';
-import { Button } from '~/components/ui/button';
-import { useDebounceFn } from '@vueuse/core';
-
+/**
+ * /contacts is the legacy entry — the canonical home is now the Clients
+ * app's "All Contacts" tab at /apps/clients?view=contacts. Insights and
+ * Card Desk sub-views live alongside it under ?view=insights and
+ * ?view=carddesk respectively.
+ *
+ * Forwarded params: a `?view=` qs gets handed straight through so external
+ * links to /contacts?view=insights still land on the right tab.
+ */
 definePageMeta({ middleware: ['auth'] });
-useHead({ title: 'Contacts | Earnest' });
 
-const router = useRouter();
 const route = useRoute();
-const { getContacts, deleteContact: doDelete, unsubscribeContact: doUnsubscribe } = useContacts();
-const { getLists } = useMailingLists();
-const { fetchCardDeskPromotedIds } = useCardDesk();
+const incomingView = typeof route.query.view === 'string' ? route.query.view : '';
 
-// IDs of Earnest contacts the current user has promoted from Card Desk
-// (cd_contacts.promoted_contact FK). Used by ContactTable to render a
-// "Card Desk" provenance pill — FK-backed so the badge means "this row
-// was sourced via Card Desk", not just "shares an email with one".
-const cardDeskContactIds = ref<Set<string>>(new Set());
-
-type ViewKey = 'list' | 'insights' | 'carddesk';
-
-function resolveViewFromQuery(q: any): ViewKey {
-  if (q === 'insights') return 'insights';
-  if (q === 'carddesk') return 'carddesk';
-  return 'list';
+// Mapping:
+//   /contacts                  → /apps/clients?view=contacts
+//   /contacts?view=insights    → /apps/clients?view=contacts&subview=insights
+//   /contacts?view=carddesk    → /apps/clients?view=carddesk
+//   /contacts?view=list        → /apps/clients?view=contacts
+const forwardedQuery: Record<string, string> = {};
+if (incomingView === 'carddesk') {
+	forwardedQuery.view = 'carddesk';
+} else {
+	forwardedQuery.view = 'contacts';
+	if (incomingView === 'insights') forwardedQuery.subview = 'insights';
 }
-const view = ref<ViewKey>(resolveViewFromQuery(route.query.view));
+if (route.query.selected) forwardedQuery.selected = String(route.query.selected);
 
-watch(view, (next) => {
-  router.replace({ query: { ...route.query, view: next === 'list' ? undefined : next } });
-});
-
-// React to URL changes (e.g. deep-link / browser-back) without remounting.
-watch(() => route.query.view, (q) => {
-  const next = resolveViewFromQuery(q);
-  if (next !== view.value) view.value = next;
-});
-
-const contacts = ref<Contact[]>([]);
-const total = ref(0);
-const loading = ref(true);
-const search = ref('');
-const filterIndustry = ref('');
-const filterStatus = ref('');
-const filterCategory = ref<Contact['category'] | ''>('');
-const page = ref(1);
-const limit = 50;
-const hasMore = computed(() => page.value * limit < total.value);
-const lists = ref<any[]>([]);
-const showCreateModal = ref(false);
-
-const industries = [
-  'Technology', 'Healthcare', 'Finance', 'Education',
-  'Real Estate', 'Retail', 'Hospitality', 'Legal', 'Non-Profit', 'Government', 'Other',
-];
-
-const categoryChips: Array<{ value: Contact['category'] | ''; label: string }> = [
-  { value: '', label: 'All' },
-  { value: 'client', label: 'Clients' },
-  { value: 'prospect', label: 'Prospects' },
-  { value: 'partner', label: 'Partners' },
-  { value: 'architect', label: 'Architects' },
-  { value: 'developer', label: 'Developers' },
-  { value: 'hospitality', label: 'Hospitality' },
-  { value: 'media', label: 'Media' },
-];
-
-const categoryItems = computed(() => categoryChips.map((c) => ({
-  key: c.value || 'all',
-  label: c.label,
-})));
-
-const fetchData = async () => {
-  loading.value = true;
-  const result = await getContacts({
-    search: search.value || undefined,
-    industry: filterIndustry.value || undefined,
-    status: filterStatus.value || undefined,
-    category: filterCategory.value || undefined,
-    limit,
-    page: page.value,
-  });
-  contacts.value = result.data;
-  total.value = result.total;
-  loading.value = false;
-};
-
-function selectCategory(value: Contact['category'] | '') {
-  filterCategory.value = value;
-  page.value = 1;
-  fetchData();
-}
-
-const debouncedFetch = useDebounceFn(fetchData, 300);
-
-function editContact(contact: Contact) {
-  router.push(`/contacts/${contact.id}`);
-}
-
-async function handleUnsubscribe(contact: Contact) {
-  if (!confirm(`Unsubscribe ${contact.email}?`)) return;
-  await doUnsubscribe(contact.id);
-  await fetchData();
-}
-
-async function handleDelete(contact: Contact) {
-  if (!confirm(`Delete ${contact.first_name} ${contact.last_name}?`)) return;
-  await doDelete(contact.id);
-  await fetchData();
-}
-
-async function onContactCreated() {
-  await fetchData();
-}
-
-onMounted(async () => {
-  lists.value = await getLists();
-  // Card Desk promoted-id index runs in parallel with the contacts fetch —
-  // it's a single-field query and absence of perms just yields an empty Set.
-  fetchCardDeskPromotedIds().then((set) => { cardDeskContactIds.value = set; });
-  await fetchData();
-});
+await navigateTo({ path: '/apps/clients', query: forwardedQuery, replace: true });
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <LayoutPageHeader title="Contacts" :subtitle="`${total.toLocaleString()} contacts`">
-      <template #actions>
-        <NuxtLink to="/contacts/import">
-          <Button variant="outline" size="sm">
-            <Icon name="lucide:upload" class="w-4 h-4 mr-1" />
-            Import CSV
-          </Button>
-        </NuxtLink>
-        <Button size="sm" @click="showCreateModal = true">
-          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-          Add Contact
-        </Button>
-      </template>
-    </LayoutPageHeader>
-
-    <!-- View toggle: List | Insights | Card Desk -->
-    <div class="mb-4 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
-      <button
-        type="button"
-        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-        :class="view === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-        @click="view = 'list'"
-      >
-        <Icon name="lucide:list" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
-        List
-      </button>
-      <button
-        type="button"
-        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-        :class="view === 'insights' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-        @click="view = 'insights'"
-      >
-        <Icon name="lucide:bar-chart-3" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
-        Insights
-      </button>
-      <button
-        type="button"
-        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-        :class="view === 'carddesk' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-        @click="view = 'carddesk'"
-      >
-        <Icon name="lucide:identification" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
-        Card Desk
-      </button>
-    </div>
-
-    <template v-if="view === 'list'">
-      <!-- Category Tabs -->
-      <UTabs
-        :model-value="filterCategory || 'all'"
-        :items="categoryItems"
-        class="mb-3 w-fit"
-        @update:model-value="(v) => selectCategory(v === 'all' ? '' : (v as Contact['category']))"
-      />
-
-      <!-- Filters -->
-      <div class="flex gap-3 mb-4 flex-wrap">
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search name, email, company..."
-          class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
-          @input="debouncedFetch"
-        />
-        <select
-          v-model="filterIndustry"
-          @change="page = 1; fetchData()"
-          class="rounded-md border bg-background px-3 py-2 text-sm w-40"
-        >
-          <option value="">All Industries</option>
-          <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
-        </select>
-        <select
-          v-model="filterStatus"
-          @change="page = 1; fetchData()"
-          class="rounded-md border bg-background px-3 py-2 text-sm w-36"
-        >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="unsubscribed">Unsubscribed</option>
-          <option value="bounced">Bounced</option>
-        </select>
-      </div>
-
-      <ContactsContactTable
-        :contacts="contacts"
-        :loading="loading"
-        :card-desk-contact-ids="cardDeskContactIds"
-        @edit="editContact"
-        @unsubscribe="handleUnsubscribe"
-        @delete="handleDelete"
-      />
-
-      <!-- Pagination -->
-      <div class="flex justify-between items-center mt-4">
-        <p class="text-sm text-muted-foreground">
-          Showing {{ contacts.length }} of {{ total }}
-        </p>
-        <div class="flex gap-2">
-          <Button variant="outline" size="sm" :disabled="page === 1" @click="page--; fetchData()">
-            <Icon name="lucide:chevron-left" class="w-4 h-4" />
-          </Button>
-          <span class="text-sm px-3 py-1">{{ page }}</span>
-          <Button variant="outline" size="sm" :disabled="!hasMore" @click="page++; fetchData()">
-            <Icon name="lucide:chevron-right" class="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </template>
-
-    <ContactsInsightsView v-else-if="view === 'insights'" />
-
-    <CardDeskDashboard v-else-if="view === 'carddesk'" />
-
-    <!-- Create Modal -->
-    <ContactsFormModal v-model="showCreateModal" @created="onContactCreated" />
-  </LayoutPageContainer>
+	<div />
 </template>
