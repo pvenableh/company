@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { marked } from 'marked';
-import type { DocumentBlockEntry } from '~/composables/useDocumentBlocks';
+import { getBlockType } from '~~/shared/blocks/registry';
+import { normalizeEntries } from '~~/shared/blocks/normalize';
+import type { DocumentBlockEntry, RichTextPayload } from '~~/shared/blocks/types';
+import '~/components/Documents/blocks/builtins';
+
+marked.setOptions({ gfm: true, breaks: true });
 
 interface CoverContext {
 	logoUrl?: string | null;
@@ -13,11 +19,9 @@ interface CoverContext {
 }
 
 const props = defineProps<{
-	blocks: DocumentBlockEntry[] | null | undefined;
+	blocks: any[] | null | undefined;
 	cover?: CoverContext | null;
 }>();
-
-marked.setOptions({ gfm: true, breaks: true });
 
 function fmtDate(d: string | null | undefined) {
 	if (!d) return '';
@@ -26,22 +30,49 @@ function fmtDate(d: string | null | undefined) {
 	return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-// Detect a cover block: the FIRST entry with `page_break_after: true`. No
-// schema flag — heuristic only. If detected, we render that block with a
-// special full-page layout that uses the parent's cover context (logo,
-// title, recipient, dates) instead of the standard heading + markdown.
+const entries = computed<DocumentBlockEntry[]>(() => normalizeEntries(props.blocks));
+
+// Detect a cover block: the FIRST entry with `page_break_after: true`.
+// Legacy heuristic preserved until the `cover` primitive ships and rows
+// are converted. When detected, render that block with the special
+// full-page layout that uses the parent's cover context (logo, title,
+// recipient, dates) instead of the block's heading + body.
 const hasCover = computed(() => {
-	const list = props.blocks || [];
+	const list = entries.value;
 	return list.length > 0 && !!list[0].page_break_after;
 });
 
-const rendered = computed(() => {
-	const list = props.blocks || [];
-	return list.map((entry) => ({
-		heading: entry.heading || '',
-		html: marked.parse(entry.content || '') as string,
-		page_break_after: !!entry.page_break_after,
-	}));
+const coverBodyHtml = computed(() => {
+	if (!hasCover.value) return '';
+	const e = entries.value[0];
+	if (e.type !== 'rich_text') return '';
+	const payload = e.payload as RichTextPayload;
+	return marked.parse(payload?.body_markdown || '') as string;
+});
+
+const rendererCache = new Map<string, Component>();
+const rendererComponents = ref<Record<string, Component | null>>({});
+
+async function resolveRenderer(type: string) {
+	if (rendererComponents.value[type] !== undefined) return;
+	const desc = getBlockType(type);
+	if (!desc?.Renderer) {
+		rendererComponents.value = { ...rendererComponents.value, [type]: null };
+		return;
+	}
+	if (rendererCache.has(type)) {
+		rendererComponents.value = { ...rendererComponents.value, [type]: rendererCache.get(type)! };
+		return;
+	}
+	const loaded = (await desc.Renderer()) as Component;
+	rendererCache.set(type, loaded);
+	rendererComponents.value = { ...rendererComponents.value, [type]: loaded };
+}
+
+watchEffect(() => {
+	for (const e of entries.value) {
+		if (rendererComponents.value[e.type] === undefined) resolveRenderer(e.type);
+	}
 });
 </script>
 
@@ -63,11 +94,11 @@ const rendered = computed(() => {
 				<p v-if="cover?.recipient" class="doc__cover-recipient">
 					Prepared for {{ cover.recipient }}
 				</p>
-				<!-- Optional cover-block content (e.g. tagline, intro paragraph) -->
+				<!-- Optional cover-block content (tagline, intro paragraph) -->
 				<div
-					v-if="rendered[0]?.html"
+					v-if="coverBodyHtml"
 					class="doc__cover-body prose prose-sm dark:prose-invert max-w-none"
-					v-html="rendered[0].html"
+					v-html="coverBodyHtml"
 				/>
 			</div>
 			<div class="doc__cover-meta">
@@ -82,14 +113,20 @@ const rendered = computed(() => {
 
 		<!-- Body blocks (skip first if it was used as the cover) -->
 		<section
-			v-for="(block, idx) in rendered"
+			v-for="(entry, idx) in entries"
 			v-show="!(hasCover && idx === 0)"
-			:key="idx"
+			:key="entry.id"
 			class="doc__block"
-			:class="{ 'doc__block--page-break': block.page_break_after }"
+			:class="{ 'doc__block--page-break': entry.page_break_after }"
 		>
-			<h2 v-if="block.heading" class="doc__block-heading">{{ block.heading }}</h2>
-			<div class="prose prose-sm dark:prose-invert max-w-none" v-html="block.html" />
+			<component
+				:is="rendererComponents[entry.type]"
+				v-if="rendererComponents[entry.type]"
+				:payload="entry.payload"
+			/>
+			<div v-else-if="rendererComponents[entry.type] === null" class="text-xs text-amber-700 dark:text-amber-300 italic">
+				[Unsupported block type: {{ entry.type }}]
+			</div>
 		</section>
 	</div>
 </template>
@@ -99,7 +136,7 @@ const rendered = computed(() => {
 	margin-top: 2rem;
 }
 
-.doc__block-heading {
+.doc__block :deep(.doc__block-heading) {
 	font-size: 0.95rem;
 	font-weight: 700;
 	text-transform: uppercase;

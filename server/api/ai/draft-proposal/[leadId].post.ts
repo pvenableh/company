@@ -19,8 +19,15 @@ import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~~/server/utils/llm/types';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
+import { newEntryId } from '~~/shared/blocks/normalize';
+import type { DocumentBlockEntry } from '~~/shared/blocks/types';
 
-interface BlockEntry {
+/**
+ * The LLM emits this simpler shape (heading + content), which we transform
+ * into the typed `DocumentBlockEntry` shape before returning to the client.
+ * Keeps the prompt small while writing new data in the canonical format.
+ */
+interface LlmBlockEntry {
 	block_id: string | null;
 	heading: string | null;
 	content: string;
@@ -31,7 +38,7 @@ interface DraftResult {
 	title: string;
 	total_value: number | null;
 	valid_until: string | null;
-	blocks: BlockEntry[];
+	blocks: DocumentBlockEntry[];
 	suggested_template_id: string | null;
 	suggested_template_name: string | null;
 }
@@ -106,7 +113,7 @@ export default defineEventHandler(async (event) => {
 	];
 
 	const provider = getLLMProvider();
-	let parsed: DraftResult;
+	let parsed: any;
 	try {
 		const response = await provider.chat(messages, {
 			systemPrompt, maxTokens: 4096, temperature: 0.6,
@@ -146,19 +153,22 @@ export default defineEventHandler(async (event) => {
 		const key = (b.name || '').trim().toLowerCase();
 		if (key) libByName.set(key, b.id);
 	}
-	parsed.blocks = parsed.blocks.map((b) => {
-		let blockId = b.block_id && validIds.has(b.block_id) ? b.block_id : null;
-		if (!blockId && b.heading) {
-			const matchId = libByName.get(b.heading.trim().toLowerCase());
-			if (matchId) blockId = matchId;
-		}
-		return {
-			block_id: blockId,
-			heading: b.heading || null,
-			content: b.content || '',
-			page_break_after: !!b.page_break_after,
-		};
-	}).filter((b) => b.content.trim() || b.heading);
+	parsed.blocks = (parsed.blocks as LlmBlockEntry[])
+		.map((b) => {
+			let libraryRef = b.block_id && validIds.has(b.block_id) ? b.block_id : null;
+			if (!libraryRef && b.heading) {
+				const matchId = libByName.get(b.heading.trim().toLowerCase());
+				if (matchId) libraryRef = matchId;
+			}
+			return {
+				id: newEntryId(),
+				type: 'rich_text' as const,
+				payload: { heading: b.heading || null, body_markdown: b.content || '' },
+				library_ref: libraryRef,
+				page_break_after: !!b.page_break_after,
+			};
+		})
+		.filter((e) => (e.payload.body_markdown as string).trim() || e.payload.heading);
 
 	return parsed;
 });

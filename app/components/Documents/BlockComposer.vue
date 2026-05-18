@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import type { DocumentBlock, DocumentBlockEntry, BlockAppliesTo } from '~/composables/useDocumentBlocks';
+import type { Component } from 'vue';
+import type { DocumentBlock, BlockAppliesTo } from '~/composables/useDocumentBlocks';
+import { getBlockType, listBlockTypes } from '~~/shared/blocks/registry';
+import type { BlockTypeDescriptor } from '~~/shared/blocks/registry';
+import { normalizeEntries, newEntryId } from '~~/shared/blocks/normalize';
+import type { DocumentBlockEntry, RichTextPayload } from '~~/shared/blocks/types';
+import '~/components/Documents/blocks/builtins';
 
+/**
+ * `modelValue` may arrive in either legacy or typed shape; we normalize
+ * on read and always emit typed shape. The parent's stored value will
+ * thus migrate to the new shape on the next save with no data loss.
+ */
 const props = defineProps<{
-	modelValue: DocumentBlockEntry[] | null | undefined;
+	modelValue: any[] | null | undefined;
 	appliesTo: BlockAppliesTo;
 	saving?: boolean;
 }>();
@@ -15,7 +26,7 @@ const { listPublished, create: createBlock } = useDocumentBlocks();
 const toast = useToast();
 
 const entries = computed<DocumentBlockEntry[]>({
-	get: () => props.modelValue || [],
+	get: () => normalizeEntries(props.modelValue),
 	set: (v) => emit('update:modelValue', v),
 });
 
@@ -37,26 +48,45 @@ const libraryByCategory = computed(() => {
 	return groups;
 });
 
+const availableTypes = computed<BlockTypeDescriptor[]>(() => listBlockTypes(props.appliesTo));
+
 function update(idx: number, patch: Partial<DocumentBlockEntry>) {
 	const next = entries.value.slice();
 	next[idx] = { ...next[idx], ...patch };
 	entries.value = next;
 }
 
+function updatePayload(idx: number, payload: any) {
+	update(idx, { payload });
+}
+
 function addEntry(entry: DocumentBlockEntry) {
 	entries.value = [...entries.value, entry];
 }
 
-function addInline() {
-	addEntry({ block_id: null, heading: '', content: '', page_break_after: false });
+function addInline(type: string = 'rich_text') {
+	const desc = getBlockType(type);
+	const payload = desc ? desc.defaultPayload() : { heading: '', body_markdown: '' };
+	addEntry({
+		id: newEntryId(),
+		type: (desc?.type || 'rich_text'),
+		payload,
+		library_ref: null,
+		page_break_after: false,
+	});
 	pickerOpen.value = false;
 }
 
 function addFromLibrary(block: DocumentBlock) {
+	const t = (block.type as any) || 'rich_text';
+	const payload = (block.payload && Object.keys(block.payload).length > 0)
+		? { ...block.payload }
+		: ({ heading: block.name, body_markdown: block.content || '' } as RichTextPayload);
 	addEntry({
-		block_id: block.id,
-		heading: block.name,
-		content: block.content || '',
+		id: newEntryId(),
+		type: t,
+		payload,
+		library_ref: block.id,
 		page_break_after: false,
 	});
 	pickerOpen.value = false;
@@ -82,21 +112,29 @@ function moveDown(idx: number) {
 
 async function saveToLibrary(idx: number) {
 	const entry = entries.value[idx];
-	if (entry.block_id) {
+	if (entry.library_ref) {
 		toast.add({ title: 'Already in library', color: 'blue' });
 		return;
 	}
-	const name = entry.heading?.trim() || prompt('Name this block for the library:');
+	// Only rich_text can save to library today; other types follow as their primitives ship.
+	if (entry.type !== 'rich_text') {
+		toast.add({ title: 'Save-to-library not yet supported for this block type', color: 'amber' });
+		return;
+	}
+	const payload = entry.payload as RichTextPayload;
+	const name = payload?.heading?.trim() || prompt('Name this block for the library:');
 	if (!name) return;
 	try {
 		const newBlock = await createBlock({
 			name,
 			category: 'other',
-			content: entry.content,
+			content: payload.body_markdown || '',
+			type: 'rich_text',
+			payload: { heading: payload.heading || null, body_markdown: payload.body_markdown || '' },
 			applies_to: ['proposals', 'contracts'],
 			status: 'published',
-		});
-		update(idx, { block_id: newBlock.id });
+		} as any);
+		update(idx, { library_ref: newBlock.id });
 		library.value = [newBlock, ...library.value];
 		toast.add({ title: 'Saved to library', description: name, color: 'green' });
 	} catch (err: any) {
@@ -105,7 +143,7 @@ async function saveToLibrary(idx: number) {
 }
 
 function detachFromLibrary(idx: number) {
-	update(idx, { block_id: null });
+	update(idx, { library_ref: null });
 	toast.add({ title: 'Detached — block is now inline', color: 'blue' });
 }
 
@@ -127,6 +165,39 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
+
+/**
+ * Resolve the Editor component for a given block type. Returns null if
+ * the type isn't registered (renders an "unsupported" placeholder).
+ */
+const editorCache = new Map<string, Component>();
+const editorComponents = ref<Record<string, Component | null>>({});
+
+async function resolveEditor(type: string) {
+	if (editorComponents.value[type] !== undefined) return;
+	const desc = getBlockType(type);
+	if (!desc?.Editor) {
+		editorComponents.value = { ...editorComponents.value, [type]: null };
+		return;
+	}
+	if (editorCache.has(type)) {
+		editorComponents.value = { ...editorComponents.value, [type]: editorCache.get(type)! };
+		return;
+	}
+	const loaded = (await desc.Editor()) as Component;
+	editorCache.set(type, loaded);
+	editorComponents.value = { ...editorComponents.value, [type]: loaded };
+}
+
+watchEffect(() => {
+	for (const e of entries.value) {
+		if (editorComponents.value[e.type] === undefined) resolveEditor(e.type);
+	}
+});
+
+function typeLabel(type: string): string {
+	return getBlockType(type)?.name || type;
+}
 </script>
 
 <template>
@@ -134,7 +205,7 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 		<TransitionGroup name="block-list" tag="div" class="space-y-3">
 			<div
 				v-for="(entry, idx) in entries"
-				:key="`${entry.block_id || 'inline'}-${idx}`"
+				:key="entry.id"
 				class="ios-card p-4 space-y-2 group"
 			>
 				<!-- Toolbar -->
@@ -156,11 +227,17 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 						>
 							<UIcon name="lucide:chevron-down" class="w-3.5 h-3.5" />
 						</button>
-						<span v-if="entry.block_id" class="ml-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] uppercase tracking-wider">
+						<span v-if="entry.library_ref" class="ml-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] uppercase tracking-wider">
 							Library
 						</span>
 						<span v-else class="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] uppercase tracking-wider">
 							Inline
+						</span>
+						<span
+							v-if="entry.type !== 'rich_text'"
+							class="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] uppercase tracking-wider"
+						>
+							{{ typeLabel(entry.type) }}
 						</span>
 					</div>
 					<div class="flex items-center gap-1.5">
@@ -174,7 +251,7 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 							{{ entry.page_break_after ? 'Page break' : 'Break' }}
 						</button>
 						<button
-							v-if="!entry.block_id"
+							v-if="!entry.library_ref && entry.type === 'rich_text'"
 							class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded hover:bg-muted text-muted-foreground"
 							@click="saveToLibrary(idx)"
 							title="Save this block to your library for reuse"
@@ -182,7 +259,7 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 							Save to library
 						</button>
 						<button
-							v-else
+							v-else-if="entry.library_ref"
 							class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded hover:bg-muted text-muted-foreground"
 							@click="detachFromLibrary(idx)"
 							title="Detach from library — your edits stay on this document only"
@@ -198,22 +275,20 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 					</div>
 				</div>
 
-				<!-- Heading -->
-				<input
-					:value="entry.heading || ''"
-					placeholder="Section heading (optional)"
-					class="w-full bg-transparent border-0 border-b border-transparent focus:border-border outline-none px-0 py-1 text-sm font-semibold"
-					@input="update(idx, { heading: ($event.target as HTMLInputElement).value })"
+				<!-- Type-dispatched editor -->
+				<component
+					:is="editorComponents[entry.type]"
+					v-if="editorComponents[entry.type]"
+					:model-value="entry.payload"
+					@update:model-value="updatePayload(idx, $event)"
 				/>
-
-				<!-- Content -->
-				<textarea
-					:value="entry.content"
-					placeholder="Block content (markdown supported)"
-					rows="6"
-					class="w-full bg-transparent border-0 focus:ring-0 outline-none resize-y text-sm leading-relaxed"
-					@input="update(idx, { content: ($event.target as HTMLTextAreaElement).value })"
-				/>
+				<div v-else-if="editorComponents[entry.type] === null" class="p-3 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs">
+					Unsupported block type "{{ entry.type }}" — no editor registered.
+				</div>
+				<div v-else class="py-2 text-xs text-muted-foreground">
+					<UIcon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin inline -mt-0.5" />
+					Loading editor…
+				</div>
 
 				<div v-if="entry.page_break_after" class="border-t border-dashed border-primary/40 pt-2 -mb-2">
 					<p class="text-[10px] uppercase tracking-wider text-primary/70 text-center">↓ Page break ↓</p>
@@ -241,24 +316,31 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 				v-if="pickerOpen"
 				class="absolute left-0 right-0 top-full mt-2 ios-card p-3 z-20 max-h-96 overflow-y-auto shadow-lg"
 			>
-				<button
-					class="w-full text-left p-2 rounded hover:bg-muted text-sm flex items-center gap-2 mb-2"
-					@click="addInline"
-				>
-					<UIcon name="lucide:pencil" class="w-4 h-4 text-muted-foreground" />
-					<span>Write a custom block</span>
-					<span class="ml-auto text-[10px] uppercase text-muted-foreground">Inline</span>
-				</button>
+				<!-- Inline block types (registry-driven) -->
+				<div class="space-y-0.5 mb-2">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pt-1">New inline block</p>
+					<button
+						v-for="t in availableTypes"
+						:key="t.type"
+						class="w-full text-left p-2 rounded hover:bg-muted text-sm flex items-center gap-2"
+						@click="addInline(t.type)"
+					>
+						<UIcon :name="t.icon" class="w-4 h-4 text-muted-foreground" />
+						<span>{{ t.name }}</span>
+						<span v-if="t.description" class="ml-auto text-[10px] text-muted-foreground line-clamp-1">{{ t.description }}</span>
+					</button>
+				</div>
 
 				<div v-if="!libraryLoaded" class="py-4 text-center">
 					<UIcon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
 				</div>
-				<div v-else-if="library.length === 0" class="py-3 px-2 text-xs text-muted-foreground">
+				<div v-else-if="library.length === 0" class="py-3 px-2 text-xs text-muted-foreground border-t border-border mt-2 pt-3">
 					No library blocks yet.
 					<NuxtLink to="/organization/document-blocks" class="underline">Create one</NuxtLink>
 					to reuse across documents.
 				</div>
-				<div v-else class="space-y-2">
+				<div v-else class="space-y-2 border-t border-border mt-2 pt-2">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pt-1">From library</p>
 					<div
 						v-for="(catBlocks, cat) in libraryByCategory"
 						:key="cat"

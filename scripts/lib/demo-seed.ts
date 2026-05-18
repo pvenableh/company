@@ -306,6 +306,8 @@ export async function seedDocumentBlocks(orgId: string): Promise<Record<string, 
 				category: b.category,
 				description: b.description,
 				content: b.content,
+				type: 'rich_text',
+				payload: { heading: b.name, body_markdown: b.content },
 				applies_to: b.applies_to,
 				organization: orgId,
 				status: 'published',
@@ -389,35 +391,45 @@ export async function seedServiceTemplates(orgId: string): Promise<Record<string
 }
 
 /**
- * Build the proposal/contract `blocks` json array. Includes a cover-page
- * intro block (block_id=null inline), then library references for bio,
+ * Build the proposal/contract `blocks` json array in the typed-block
+ * shape. Cover-page intro block (inline) + library references for bio,
  * deliverables, references, and standard terms.
  */
+interface TypedBlockEntry {
+	id: string;
+	type: 'rich_text';
+	payload: { heading: string | null; body_markdown: string };
+	library_ref: string | null;
+	page_break_after?: boolean;
+}
+
+function entryId(): string {
+	if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+	return `entry_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 function buildComposedBlocks(
 	blockIds: Record<string, string>,
 	intro: { heading: string; content: string },
-): Array<{ block_id: string | null; heading: string | null; content: string; page_break_after?: boolean }> {
-	const blocks: Array<{
-		block_id: string | null;
-		heading: string | null;
-		content: string;
-		page_break_after?: boolean;
-	}> = [
+): TypedBlockEntry[] {
+	const blocks: TypedBlockEntry[] = [
 		{
-			block_id: null,
-			heading: intro.heading,
-			content: intro.content,
+			id: entryId(),
+			type: 'rich_text',
+			payload: { heading: intro.heading, body_markdown: intro.content },
+			library_ref: null,
 			page_break_after: true,
 		},
 	];
-	const lib = (key: string, heading: string) => {
+	const lib = (key: string, heading: string): TypedBlockEntry | null => {
 		const id = blockIds[key];
 		if (!id) return null;
 		const seed = BLOCK_SEEDS.find((b) => b.key === key);
 		return {
-			block_id: id,
-			heading,
-			content: seed?.content ?? '',
+			id: entryId(),
+			type: 'rich_text',
+			payload: { heading, body_markdown: seed?.content ?? '' },
+			library_ref: id,
 		};
 	};
 	for (const entry of [

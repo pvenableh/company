@@ -186,7 +186,40 @@ async function setupDocumentBlocks() {
     field: 'content', type: 'text',
     meta: {
       interface: 'input-rich-text-md',
-      note: 'Block content (markdown). Renders into proposals + contracts. Per-document overrides don\'t mutate this.',
+      note: 'Legacy markdown body — kept for rich_text blocks and back-compat. New blocks set type + payload instead.',
+    },
+    schema: {},
+  });
+  await createField('document_blocks', {
+    field: 'type', type: 'string',
+    meta: {
+      interface: 'select-dropdown', width: 'half',
+      options: { choices: [
+        { text: 'Rich text', value: 'rich_text' },
+        { text: 'Cover', value: 'cover' },
+        { text: 'Signed letter', value: 'signed_letter' },
+        { text: 'Figure', value: 'figure' },
+        { text: 'Repeater', value: 'repeater' },
+        { text: 'Grouped list', value: 'grouped_list' },
+        { text: 'Pull quote', value: 'pull_quote' },
+        { text: 'Scope tree', value: 'scope_tree' },
+        { text: 'Pricing tiers', value: 'pricing_tiers' },
+        { text: 'Line items', value: 'line_items' },
+        { text: 'Footnotes', value: 'footnotes' },
+        { text: 'Numbered clauses', value: 'numbered_clauses' },
+        { text: 'Definitions', value: 'definitions' },
+        { text: 'Signature block', value: 'signature_block' },
+      ] },
+      note: 'Block primitive — drives editor + renderer dispatch via the shared block registry.',
+    },
+    schema: { default_value: 'rich_text' },
+  });
+  await createField('document_blocks', {
+    field: 'payload', type: 'json',
+    meta: {
+      interface: 'input-code', options: { language: 'json' }, width: 'half',
+      note: 'Typed payload matching `type`. For rich_text: { heading, body_markdown }.',
+      special: ['cast-json'],
     },
     schema: {},
   });

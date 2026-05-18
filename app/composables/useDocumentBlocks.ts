@@ -2,7 +2,13 @@
  * useDocumentBlocks — manage org-scoped reusable content blocks (bio,
  * references, deliverables, terms, NDA, case studies) that compose into
  * proposals + contracts.
+ *
+ * Block-entry types now live in `shared/blocks/` so server + scripts can
+ * read them without pulling in Vue. Re-exported here for back-compat.
  */
+
+import type { BlockType, BlockAppliesTo as _BlockAppliesTo } from '~~/shared/blocks/registry';
+import type { BlockPayload, DocumentBlockEntry as _DocumentBlockEntry } from '~~/shared/blocks/types';
 
 export type BlockCategory =
   | 'bio'
@@ -16,7 +22,8 @@ export type BlockCategory =
   | 'cover'
   | 'other';
 
-export type BlockAppliesTo = 'proposals' | 'contracts';
+export type BlockAppliesTo = _BlockAppliesTo;
+export type DocumentBlockEntry = _DocumentBlockEntry;
 
 export interface DocumentBlock {
   id: string;
@@ -24,26 +31,18 @@ export interface DocumentBlock {
   name: string;
   category: BlockCategory;
   description: string | null;
+  /** Legacy markdown body. New rows set `type` + `payload` instead. */
   content: string | null;
+  /** Typed-block discriminator. Pre-migration rows are null → treated as `rich_text`. */
+  type?: BlockType | null;
+  /** Typed payload matching `type`. For legacy rich_text rows, derived from `content`. */
+  payload?: BlockPayload | null;
   applies_to: BlockAppliesTo[];
   organization: string;
   date_created?: string;
   date_updated?: string;
   user_created?: string;
   user_updated?: string;
-}
-
-/**
- * Per-document block entry stored on a proposal/contract `blocks: jsonb[]`.
- * `block_id` references the library; `content_override` carries the
- * per-document edited copy (null = render the library content as-is).
- * `block_id: null` = pure inline / one-off block.
- */
-export interface DocumentBlockEntry {
-  block_id: string | null;
-  heading: string | null;
-  content: string;
-  page_break_after?: boolean;
 }
 
 export function useDocumentBlocks() {
@@ -76,7 +75,7 @@ export function useDocumentBlocks() {
   const listPublished = async (appliesTo?: BlockAppliesTo): Promise<DocumentBlock[]> => {
     if (!selectedOrg.value) return [];
     const rows = (await blocks.list({
-      fields: ['id', 'name', 'category', 'description', 'content', 'applies_to'],
+      fields: ['id', 'name', 'category', 'description', 'content', 'type', 'payload', 'applies_to'],
       filter: {
         organization: { _eq: selectedOrg.value },
         status: { _eq: 'published' },
