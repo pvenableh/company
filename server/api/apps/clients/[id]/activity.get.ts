@@ -110,13 +110,13 @@ export default defineEventHandler(async (event) => {
       limit: SLICE,
     })).catch(() => []) as Promise<any[]> : Promise.resolve([]),
 
-    want(['projects']) ? directus.request(readItems('project_tasks', {
+    want(['projects']) ? directus.request(readItems('tasks', {
       filter: {
-        completed: { _eq: true },
-        project: { client: { _eq: clientId } },
+        status: { _eq: 'completed' },
+        project_id: { client: { _eq: clientId } },
       },
-      fields: ['id', 'title', 'completed_at', 'project.id', 'project.title'],
-      sort: ['-completed_at'],
+      fields: ['id', 'title', 'date_completed', 'project_id.id', 'project_id.title'],
+      sort: ['-date_completed'],
       limit: SLICE,
     })).catch(() => []) as Promise<any[]> : Promise.resolve([]),
   ]);
@@ -203,14 +203,14 @@ export default defineEventHandler(async (event) => {
   }
 
   for (const t of tasks as any[]) {
-    if (!t.completed_at) continue;
+    if (!t.date_completed) continue;
     rows.push({
       id: `task-${t.id}`,
       kind: 'task_completed',
-      ts: t.completed_at,
+      ts: t.date_completed,
       title: t.title || 'Task',
-      subtitle: t.project?.title ? `in ${t.project.title}` : null,
-      href: t.project?.id ? `/projects/${t.project.id}` : null,
+      subtitle: t.project_id?.title ? `in ${t.project_id.title}` : null,
+      href: t.project_id?.id ? `/projects/${t.project_id.id}` : null,
       icon: 'lucide:check-square',
     });
   }

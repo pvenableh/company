@@ -21,6 +21,7 @@
       with a CTA from the workspace.
 -->
 <script setup lang="ts">
+import VueDraggable from 'vuedraggable';
 import type { ProjectTabKey } from './ProjectTabsBar.vue';
 
 const props = defineProps<{
@@ -47,12 +48,14 @@ const config = useRuntimeConfig();
 const { selectedOrg } = useOrganization();
 
 const projectItemsApi = useDirectusItems('projects');
-const taskItemsApi = useDirectusItems('project_tasks');
+const taskItemsApi = useDirectusItems('tasks');
 const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
 const invoiceItemsApi = useDirectusItems('invoices');
 const projectFilesItemsApi = useDirectusItems('projects_files');
+const projectsContactsApi = useDirectusItems('projects_contacts');
+const contactItemsApi = useDirectusItems('contacts');
 
 const project = ref<any | null>(null);
 const loading = ref(true);
@@ -74,6 +77,16 @@ const invoices = ref<any[]>([]);
 const invoicesLoading = ref(false);
 const files = ref<any[]>([]);
 const filesLoading = ref(false);
+
+// Contacts tab — backed by the `projects_contacts` junction (created by
+// scripts/setup-projects-contacts-junction.ts). Each row holds a sort key on
+// the junction itself so the same contact can be pinned to multiple projects
+// with different orderings.
+const projectContactRows = ref<any[]>([]);  // raw junction rows w/ contact nested
+const directProjectContactsOrdered = ref<any[]>([]); // ordered for drag-reorder
+const contactsLoading = ref(false);
+const contactsLoaded = ref(false);
+const projectContactCount = ref(0);
 
 // Documents tab — proposals + contracts scoped to this project via the
 // FK added by scripts/setup-doc-project-fk.ts. Counts come from the
@@ -101,6 +114,7 @@ const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
 	meetings: meetings.value.length,
 	invoices: invoices.value.length,
 	documents: documentsProposalCount.value + documentsContractCount.value,
+	contacts: projectContactCount.value,
 	files: files.value.length,
 }));
 
@@ -124,6 +138,7 @@ function loadForTab(tab: ProjectTabKey) {
 		case 'channels': if (!channels.value.length && !channelsLoading.value) loadChannels(); break;
 		case 'meetings': if (!meetings.value.length && !meetingsLoading.value) loadMeetings(); break;
 		case 'invoices': if (!invoices.value.length && !invoicesLoading.value) loadInvoices(); break;
+		case 'contacts': if (!contactsLoaded.value && !contactsLoading.value) loadProjectContacts(); break;
 		case 'files':    if (!files.value.length && !filesLoading.value) loadFiles(); break;
 		// 'activity' (ProjectsActivityTimeline) + 'documents' (Money*List)
 		// self-fetch; nothing to warm here.
@@ -160,6 +175,7 @@ async function loadProject() {
 		// Kick off cheap counts in parallel for the initial tab badges.
 		refreshTaskCount();
 		refreshTicketCount();
+		refreshProjectContactCount();
 	} catch (e: any) {
 		error.value = e?.message || 'Failed to load project';
 	} finally {
@@ -171,8 +187,8 @@ async function refreshTaskCount() {
 	try {
 		taskCount.value = await taskItemsApi.count({
 			_or: [
-				{ project: { _eq: props.projectId } },
-				{ event_id: { project: { _eq: props.projectId } } },
+				{ project_id: { _eq: props.projectId } },
+				{ project_event_id: { project: { _eq: props.projectId } } },
 			],
 		}).catch(() => 0);
 	} catch {
@@ -244,6 +260,121 @@ async function loadInvoices() {
 	}
 }
 
+// Project Contacts — fetched lazily via the projects_contacts junction.
+// We pull the nested contact row so the UI can render names/emails without
+// an extra round trip. Junction rows are sorted by their own `sort` column
+// (NOT the contacts.sort, since one contact can be pinned to many projects).
+const PROJECT_CONTACT_FIELDS = [
+	'id',
+	'sort',
+	'date_created',
+	'contact.id',
+	'contact.first_name',
+	'contact.last_name',
+	'contact.email',
+	'contact.title',
+	'contact.is_billing_contact',
+];
+
+async function loadProjectContacts() {
+	contactsLoading.value = true;
+	try {
+		const rows = await projectsContactsApi.list({
+			fields: PROJECT_CONTACT_FIELDS,
+			filter: { project: { _eq: props.projectId } },
+			sort: ['sort'],
+			limit: -1,
+		}).catch(() => []) as any[];
+		projectContactRows.value = rows;
+		// Order by junction `sort`; rows missing a sort fall to the end and
+		// sub-sort alphabetically so first-load looks tidy.
+		const ordered = [...rows];
+		ordered.sort((a, b) => {
+			const sa = a?.sort, sb = b?.sort;
+			if (sa != null && sb != null && sa !== sb) return sa - sb;
+			if (sa != null && sb == null) return -1;
+			if (sa == null && sb != null) return 1;
+			const an = `${a?.contact?.first_name || ''} ${a?.contact?.last_name || ''}`.toLowerCase();
+			const bn = `${b?.contact?.first_name || ''} ${b?.contact?.last_name || ''}`.toLowerCase();
+			return an.localeCompare(bn);
+		});
+		directProjectContactsOrdered.value = ordered;
+		projectContactCount.value = rows.length;
+		contactsLoaded.value = true;
+	} finally {
+		contactsLoading.value = false;
+	}
+}
+
+async function refreshProjectContactCount() {
+	try {
+		projectContactCount.value = await projectsContactsApi
+			.count({ project: { _eq: props.projectId } })
+			.catch(() => 0);
+	} catch {
+		projectContactCount.value = 0;
+	}
+}
+
+async function onProjectContactDragEnd() {
+	const updates: Array<{ id: string; sort: number }> = [];
+	directProjectContactsOrdered.value.forEach((row, idx) => {
+		const next = (idx + 1) * 10;
+		if (row?.sort !== next) {
+			row.sort = next;
+			if (row?.id) updates.push({ id: row.id, sort: next });
+		}
+	});
+	if (!updates.length) return;
+	try {
+		await Promise.all(updates.map((u) => projectsContactsApi.update(u.id, { sort: u.sort })));
+	} catch (err) {
+		console.error('[ProjectWorkspace] persist contact order failed', err);
+		// Reseed from server on failure so the UI doesn't show a phantom order.
+		contactsLoaded.value = false;
+		await loadProjectContacts();
+	}
+}
+
+// When the user creates a brand-new contact from the Contacts tab, we want
+// it attached to BOTH the client (via clients_contacts, so it appears under
+// the client roster too) AND the project (via projects_contacts). The
+// ContactsFormModal already writes clients_contacts when client-id is
+// supplied; we just have to add the projects_contacts row on success.
+async function onContactCreatedFromProject(contact: any) {
+	showCreateContactModal.value = false;
+	const contactId = contact?.id;
+	if (!contactId) {
+		await loadProjectContacts();
+		return;
+	}
+	try {
+		await projectsContactsApi.create({
+			project: props.projectId,
+			contact: contactId,
+			sort: ((projectContactCount.value || 0) + 1) * 10,
+		});
+	} catch (err) {
+		console.error('[ProjectWorkspace] attach new contact to project failed', err);
+	}
+	contactsLoaded.value = false;
+	await loadProjectContacts();
+}
+
+function onContactAttachedToProject() {
+	showAttachContactModal.value = false;
+	contactsLoaded.value = false;
+	loadProjectContacts();
+}
+
+// Cross-panel push for contact rows. NuxtLink would route the page; in the
+// slide-over stack we push a Contact panel instead so the user keeps their
+// project context on screen.
+const contactSlide = useAppSlideOver('contact');
+function openContactSlideOver(id: string) {
+	contactSlide.open(id);
+}
+
 async function loadFiles() {
 	filesLoading.value = true;
 	try {
@@ -278,6 +409,8 @@ const showAttachChannelModal = ref(false);
 const showCreateMeetingModal = ref(false);
 const showCreateProposalModal = ref(false);
 const showCreateContractModal = ref(false);
+const showCreateContactModal = ref(false);
+const showAttachContactModal = ref(false);
 
 function onTicketAttached() {
 	showAttachTicketModal.value = false;
@@ -765,6 +898,109 @@ watch(() => props.projectId, () => {
 					</section>
 				</div>
 
+				<!-- Contacts — extra contacts pinned to this project via the
+				     projects_contacts m2m junction. Mirrors the ClientWorkspace
+				     contacts tab (drag to reorder, Attach Existing, New Contact)
+				     but writes to the project junction instead of the client's
+				     clients_contacts. New contacts also get a clients_contacts
+				     row when the project has a client, so the same contact
+				     surfaces under both the project AND its parent client. -->
+				<div v-else-if="activeTab === 'contacts'">
+					<div class="flex items-center justify-end gap-2 mb-3">
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+							@click="showAttachContactModal = true"
+						>
+							<Icon name="lucide:link" class="w-3 h-3" />
+							Attach Existing
+						</button>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+							@click="showCreateContactModal = true"
+						>
+							<Icon name="lucide:plus" class="w-3 h-3" />
+							New Contact
+						</button>
+					</div>
+
+					<div v-if="contactsLoading && !directProjectContactsOrdered.length" class="space-y-px" aria-busy="true" aria-label="Loading contacts">
+						<div
+							v-for="i in skeletonRows(projectContactCount)"
+							:key="`pc-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
+							<USkeleton class="h-3.5 flex-1 max-w-[40%]" />
+						</div>
+					</div>
+
+					<div v-else-if="!directProjectContactsOrdered.length" class="text-sm text-muted-foreground text-center py-10">
+						No contacts pinned to this project yet.
+						<span v-if="(project as any)?.client?.name" class="block mt-1 text-xs">
+							Client roster lives on
+							<NuxtLink :to="`/apps/clients/${(project as any).client.id}`" class="text-primary hover:underline">
+								{{ (project as any).client.name }}
+							</NuxtLink>.
+						</span>
+					</div>
+
+					<VueDraggable
+						v-else
+						v-model="directProjectContactsOrdered"
+						handle=".pc-row-drag-handle"
+						item-key="id"
+						class="space-y-px"
+						ghost-class="contact-row__ghost"
+						chosen-class="contact-row__chosen"
+						drag-class="contact-row__drag"
+						@end="onProjectContactDragEnd"
+					>
+						<template #item="{ element: row }">
+							<div
+								class="flex items-stretch gap-1 h-12 hover:bg-muted/40 border-b border-border/30 transition-colors group"
+							>
+								<span
+									class="pc-row-drag-handle flex items-center justify-center w-6 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground"
+									title="Drag to reorder"
+								>
+									<Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
+								</span>
+								<button
+									v-if="row.contact"
+									type="button"
+									class="flex flex-1 min-w-0 items-center gap-3 px-2 text-left"
+									@click="openContactSlideOver(row.contact.id)"
+								>
+									<span
+										class="w-1.5 h-1.5 rounded-full shrink-0"
+										:class="row.contact.is_billing_contact ? 'bg-success' : 'bg-primary/60'"
+									/>
+									<div class="flex-1 min-w-0 flex items-center gap-2">
+										<p class="text-sm font-medium truncate">
+											{{ row.contact.first_name }} {{ row.contact.last_name }}
+										</p>
+										<span v-if="row.contact.title" class="text-[11px] text-muted-foreground truncate hidden sm:inline">
+											· {{ row.contact.title }}
+										</span>
+									</div>
+									<span v-if="row.contact.email" class="hidden md:inline text-[11px] text-muted-foreground font-mono truncate max-w-[200px]">
+										{{ row.contact.email }}
+									</span>
+									<span v-if="row.contact.is_billing_contact" class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success shrink-0">
+										Billing
+									</span>
+									<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+								</button>
+								<div v-else class="flex flex-1 min-w-0 items-center px-2 text-xs text-muted-foreground italic">
+									Contact removed
+								</div>
+							</div>
+						</template>
+					</VueDraggable>
+				</div>
+
 				<!-- Files -->
 				<div v-else-if="activeTab === 'files'">
 					<div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
@@ -874,16 +1110,16 @@ watch(() => props.projectId, () => {
 			v-if="project"
 			v-model="showAttachTaskModal"
 			:project-id="projectId"
-			collection="project_tasks"
+			collection="tasks"
 			entity-singular="Task"
 			entity-plural="tasks"
-			fk-field="project"
+			fk-field="project_id"
 			row-icon="lucide:check-square"
-			:fields="['id', 'title', 'status', 'priority', 'due_date', 'project.id', 'project.title']"
-			:build-org-filter="(orgId) => ({ organization: { _eq: orgId } })"
+			:fields="['id', 'title', 'status', 'priority', 'due_date', 'project_id.id', 'project_id.title']"
+			:build-org-filter="(orgId) => ({ organization_id: { _eq: orgId } })"
 			:get-label="(r) => r.title"
 			:get-subtitle="(r) => [r.status, r.priority].filter(Boolean).join(' · ')"
-			:get-current-project-name="(r) => r.project && r.project.title"
+			:get-current-project-name="(r) => r.project_id && r.project_id.title"
 			:get-search-haystack="(r) => `${r.title || ''} ${r.status || ''}`"
 			@attached="onTaskAttached"
 		/>
@@ -920,6 +1156,25 @@ watch(() => props.projectId, () => {
 			:get-current-project-name="(r) => r.project && r.project.title"
 			:get-search-haystack="(r) => r.name || ''"
 			@attached="onChannelAttached"
+		/>
+
+		<!-- Contacts: create + attach. ContactsFormModal handles writing
+		     clients_contacts when client-id is supplied; we wrap @created to
+		     also write the projects_contacts junction row. -->
+		<ContactsFormModal
+			v-if="project"
+			v-model="showCreateContactModal"
+			:client-id="clientId || undefined"
+			@created="onContactCreatedFromProject"
+		/>
+		<AppsWorkAttachContactToProjectModal
+			v-if="project"
+			v-model="showAttachContactModal"
+			:project-id="projectId"
+			:organization-id="organizationId || undefined"
+			:client-id="clientId || undefined"
+			:already-attached-ids="directProjectContactsOrdered.map((r) => r.contact?.id).filter(Boolean)"
+			@attached="onContactAttachedToProject"
 		/>
 	</div>
 </template>

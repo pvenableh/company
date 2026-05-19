@@ -1340,6 +1340,8 @@ export interface Contact {
 	leads?: Lead[] | string[];
 	/** @description Cross-client connections. Inverse of contact_connections.contact. */
 	connections?: ContactConnection[] | string[];
+	/** @description Projects this contact is pinned to. */
+	projects?: ProjectsContact[] | string[];
 }
 
 export interface ContactsOrganization {
@@ -2645,6 +2647,22 @@ export interface PartnerLogo {
 	date_created?: string | null;
 }
 
+export interface PasswordResetToken {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description User this reset token belongs to. */
+	user?: DirectusUser | string;
+	/** @description 64-char hex (crypto.randomBytes(32).toString("hex")). Indexed. */
+	token?: string;
+	/** @description Token becomes invalid after this time. Set to 1h after creation by convention. */
+	expires_at?: string;
+	/** @description Set when the token is redeemed. Single-use — non-null means burnt. */
+	used_at?: string | null;
+	/** @description IP that requested the reset (best-effort, from req headers). */
+	requested_ip?: string | null;
+}
+
 export interface PaymentsReceived {
 	/** @primaryKey */
 	id: string;
@@ -3058,6 +3076,19 @@ export interface Project {
 	files?: ProjectsFile[] | string[];
 	/** @description AI-generated daily PM briefs for this project */
 	digests?: ProjectDigest[] | string[];
+	/** @description Extra contacts pinned to this project (beyond the client roster). */
+	contacts?: ProjectsContact[] | string[];
+}
+
+export interface ProjectsContact {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	date_created?: string | null;
+	/** @description Project this contact is attached to. */
+	project?: Project | string;
+	/** @description Contact pinned to this project. */
+	contact?: Contact | string;
 }
 
 export interface ProjectsDirectusUser {
@@ -4722,6 +4753,7 @@ export interface Schema {
 	page_services: PageServices;
 	page_services_content_blocks: PageServicesContentBlock[];
 	partner_logos: PartnerLogo[];
+	password_reset_tokens: PasswordResetToken[];
 	payments_received: PaymentsReceived[];
 	people: People[];
 	people_organizations: PeopleOrganization[];
@@ -4741,6 +4773,7 @@ export interface Schema {
 	project_events_comments: ProjectEventsComment[];
 	project_events_invoices: ProjectEventsInvoice[];
 	projects: Project[];
+	projects_contacts: ProjectsContact[];
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
@@ -4954,6 +4987,7 @@ export enum CollectionNames {
 	page_services = 'page_services',
 	page_services_content_blocks = 'page_services_content_blocks',
 	partner_logos = 'partner_logos',
+	password_reset_tokens = 'password_reset_tokens',
 	payments_received = 'payments_received',
 	people = 'people',
 	people_organizations = 'people_organizations',
@@ -4973,6 +5007,7 @@ export enum CollectionNames {
 	project_events_comments = 'project_events_comments',
 	project_events_invoices = 'project_events_invoices',
 	projects = 'projects',
+	projects_contacts = 'projects_contacts',
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',

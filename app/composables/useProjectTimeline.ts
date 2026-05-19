@@ -34,8 +34,8 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     ? (usePortalItems<ProjectEvent>('project_events') as any)
     : useDirectusItems<ProjectEvent>('project_events');
   const tasks = opts.portal
-    ? (usePortalItems<ProjectTask>('project_tasks') as any)
-    : useDirectusItems<ProjectTask>('project_tasks');
+    ? (usePortalItems('tasks') as any)
+    : useDirectusItems('tasks');
   // Aggregate-only handles for batched comment/reaction count rollups.
   // Skipped in portal mode — counts aren't displayed there and the portal
   // proxy doesn't expose `comments` / `reactions` collections.
@@ -112,13 +112,14 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     'events.category_id.*',
     'events.tasks.id',
     'events.tasks.title',
-    'events.tasks.completed',
+    'events.tasks.status',
+    'events.tasks.date_completed',
     'events.tasks.due_date',
     'events.tasks.priority',
-    'events.tasks.assignee_id.id',
-    'events.tasks.assignee_id.first_name',
-    'events.tasks.assignee_id.last_name',
-    'events.tasks.assignee_id.avatar',
+    'events.tasks.assigned_to.directus_users_id.id',
+    'events.tasks.assigned_to.directus_users_id.first_name',
+    'events.tasks.assigned_to.directus_users_id.last_name',
+    'events.tasks.assigned_to.directus_users_id.avatar',
     'events.files.id',
     'events.files.directus_files_id.id',
     'events.files.directus_files_id.filename_download',
@@ -383,23 +384,22 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
   const toggleTask = async (taskId: string, completed: boolean): Promise<void> => {
     if (opts.portal) portalWriteGuard();
     await tasks.update(taskId, {
-      completed,
-      completed_at: completed ? new Date().toISOString() : null,
-      completed_by: completed ? user.value?.id : null,
-    } as Partial<ProjectTask>);
+      status: completed ? 'completed' : 'new',
+      date_completed: completed ? new Date().toISOString() : null,
+    } as any);
     await fetchProjects();
   };
 
-  const createTask = async (data: CreateTaskPayload): Promise<ProjectTask> => {
+  const createTask = async (data: CreateTaskPayload): Promise<any> => {
     if (opts.portal) portalWriteGuard();
-    const created = await tasks.create(data as Partial<ProjectTask>);
+    const created = await tasks.create(data as any);
     await fetchProjects();
     return created;
   };
 
-  const updateTask = async (taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask> => {
+  const updateTask = async (taskId: string, data: Partial<ProjectTask>): Promise<any> => {
     if (opts.portal) portalWriteGuard();
-    const updated = await tasks.update(taskId, data);
+    const updated = await tasks.update(taskId, data as any);
     await fetchProjects();
     return updated;
   };

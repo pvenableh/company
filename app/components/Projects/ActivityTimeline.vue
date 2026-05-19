@@ -6,7 +6,7 @@ const props = defineProps({
 const activityItems = useDirectusItems('directus_activity');
 const commentItems = useDirectusItems('directus_comments');
 const ticketItems = useDirectusItems('tickets');
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
 const eventItems = useDirectusItems('project_events');
 
 const activities = ref([]);
@@ -15,7 +15,7 @@ const loading = ref(true);
 const collectionLabels = {
 	projects: 'project',
 	tickets: 'ticket',
-	project_tasks: 'task',
+	tasks: 'task',
 	project_events: 'event',
 	invoices: 'invoice',
 	comments: 'comment',
@@ -24,7 +24,7 @@ const collectionLabels = {
 const collectionIcons = {
 	projects: 'i-heroicons-folder',
 	tickets: 'i-heroicons-square-3-stack-3d',
-	project_tasks: 'i-heroicons-check-circle',
+	tasks: 'i-heroicons-check-circle',
 	project_events: 'i-heroicons-calendar-days',
 	invoices: 'i-heroicons-document-currency-dollar',
 	comments: 'i-heroicons-chat-bubble-left',
@@ -33,7 +33,7 @@ const collectionIcons = {
 const collectionColors = {
 	projects: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
 	tickets: 'text-warning bg-warning/10 dark:bg-warning/20',
-	project_tasks: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
+	tasks: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
 	project_events: 'text-info bg-info/10 dark:bg-info',
 	invoices: 'text-success bg-success/10 dark:bg-success/20',
 	comments: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
@@ -47,7 +47,7 @@ const loadActivity = async () => {
 		// First, get ticket, task, and event IDs belonging to this project
 		const [projectTickets, projectTasks, projectEvents] = await Promise.all([
 			ticketItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
-			taskItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
+			taskItems.list({ fields: ['id'], filter: { project_id: { _eq: props.projectId } }, limit: 200 }),
 			eventItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
 		]);
 		const ticketIds = (projectTickets || []).map((t) => t.id);
@@ -71,7 +71,7 @@ const loadActivity = async () => {
 			}).catch(() => []) : Promise.resolve([]),
 			taskIds.length > 0 ? activityItems.list({
 				fields: activityFields,
-				filter: { _and: [{ collection: { _eq: 'project_tasks' } }, { item: { _in: taskIds } }] },
+				filter: { _and: [{ collection: { _eq: 'tasks' } }, { item: { _in: taskIds } }] },
 				sort: ['-timestamp'],
 				limit: 20,
 			}).catch(() => []) : Promise.resolve([]),

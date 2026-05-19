@@ -45,6 +45,11 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 	const ticketItems = opts.portal ? (usePortalItems('tickets') as any) : useDirectusItems('tickets');
 	const taskItems = opts.portal ? (usePortalItems('tasks') as any) : useDirectusItems('tasks');
 	const { selectedOrg } = useOrganization();
+	const { selectedClient } = useClients();
+	// Portal mode is already user-scoped server-side; agency mode honors the
+	// Mine/All header toggle. `isMine` is always true for non-admins.
+	const { user } = useDirectusAuth();
+	const { isMine } = useDataScope();
 
 	const viewMode = ref<TimelineViewMode>('nested');
 	const loading = ref(false);
@@ -80,6 +85,12 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 
 		try {
 			const orgId = selectedOrg.value;
+			const myId = (user.value as any)?.id;
+			// Apply the Mine filter in agency mode only — portal mode is
+			// already user-scoped server-side. Non-admins are clamped to
+			// `isMine === true` inside useDataScope, so this also acts as
+			// the row-level guard for plain members.
+			const restrictToMine = !opts.portal && isMine.value && myId;
 
 			// Projects are loaded by useProjectTimeline (shallow list +
 			// per-project lazy detail expand). The unified Gantt only reads
@@ -89,8 +100,25 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 			const projects: ProjectWithRelations[] = [];
 
 			// Fetch tickets
+			const ticketFilter: any = opts.portal ? undefined : { _and: [{ organization: { _eq: orgId } }] };
+			if (restrictToMine && ticketFilter) {
+				ticketFilter._and.push({
+					_or: [
+						{ user_created: { _eq: myId } },
+						{ assigned_to: { directus_users_id: { _eq: myId } } },
+					],
+				});
+			}
+			// Honor the header client selector for non-portal mode.
+			if (!opts.portal && ticketFilter && selectedClient.value) {
+				if (selectedClient.value === 'org') {
+					ticketFilter._and.push({ client: { _null: true } });
+				} else {
+					ticketFilter._and.push({ client: { _eq: selectedClient.value } });
+				}
+			}
 			const tickets = await ticketItems.list({
-				filter: opts.portal ? undefined : { organization: { _eq: orgId } },
+				filter: ticketFilter,
 				fields: ['*', 'tasks.*', 'assigned_to.directus_users_id.*'],
 				sort: ['-date_created'],
 				limit: 100,
@@ -100,15 +128,31 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 			// Portal users don't have a personal "quick task" stream — clients
 			// don't author standalone tasks — so skip this fetch entirely
 			// and the unified-timeline `personalTasks` swimlane stays empty.
+			const taskFilter: any = {
+				_and: [
+					{ organization_id: { _eq: orgId } },
+					{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
+				],
+			};
+			if (restrictToMine) {
+				taskFilter._and.push({
+					_or: [
+						{ user_created: { _eq: myId } },
+						{ assigned_to: { directus_users_id: { _eq: myId } } },
+					],
+				});
+			}
+			if (selectedClient.value) {
+				if (selectedClient.value === 'org') {
+					taskFilter._and.push({ client_id: { _null: true } });
+				} else {
+					taskFilter._and.push({ client_id: { _eq: selectedClient.value } });
+				}
+			}
 			const tasks = opts.portal
 				? []
 				: await taskItems.list({
-					filter: {
-						_and: [
-							{ organization_id: { _eq: orgId } },
-							{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
-						],
-					},
+					filter: taskFilter,
 					fields: ['*'],
 					sort: ['-date_created'],
 					limit: 200,

@@ -98,13 +98,13 @@ async function handleRescheduleProject(
     }
   }
 
-  // 3. Shift project tasks with due dates
+  // 3. Shift tasks with due dates that belong to this project
   if (shift_tasks) {
     const tasks = await directus.request(
-      readItems('project_tasks', {
+      readItems('tasks', {
         filter: {
           _and: [
-            { project: { _eq: project_id } },
+            { project_id: { _eq: project_id } },
             { due_date: { _nnull: true } },
           ],
         },
@@ -116,7 +116,7 @@ async function handleRescheduleProject(
     for (const task of tasks) {
       if (task.due_date) {
         await directus.request(
-          updateItem('project_tasks', task.id, { due_date: shiftDate(task.due_date) }),
+          updateItem('tasks', task.id, { due_date: shiftDate(task.due_date) }),
         );
         tasksShifted++;
       }
@@ -141,12 +141,12 @@ async function handleRescheduleProject(
 // ─── update_field ────────────────────────────────────────────────────────────
 
 // Collections that are scoped to an organization — we verify ownership before mutating.
-// Value is a dotted field path that resolves to the org id. project_events and
-// project_tasks have no direct organization column; we walk the parent project.
+// Value is a dotted field path that resolves to the org id. project_events
+// has no direct organization column; we walk the parent project.
 const ORG_SCOPED_COLLECTIONS: Record<string, string> = {
   projects: 'organization',
   tickets: 'organization',
-  project_tasks: 'project.organization',
+  tasks: 'organization_id',
   invoices: 'organization',
   leads: 'organization',
   contacts: 'organization',
@@ -210,8 +210,9 @@ async function handleAddTask(
 
   const directus = getServerDirectus();
 
-  // If the chat is focused on a project_event and no project/event id was passed,
-  // resolve them from the focused event so the model doesn't have to invent UUIDs.
+  // Resolve project/event from focused entity so the model doesn't have to
+  // invent UUIDs. On a project page (entityType='project'), attach to that
+  // project. On a project_event page, attach to both the event and its project.
   if (!project_id && !ticket_id && ctx.entityType === 'project_event' && ctx.entityId) {
     const ev = await directus.request(
       readItem('project_events', ctx.entityId, { fields: ['id', 'project.id', 'project.organization'] }),
@@ -222,54 +223,60 @@ async function handleAddTask(
       if (!event_id) event_id = ev.id;
     }
   }
+  if (!project_id && !ticket_id && ctx.entityType === 'project' && ctx.entityId) {
+    const proj = await directus.request(
+      readItem('projects', ctx.entityId, { fields: ['id', 'organization'] }),
+    ).catch(() => null) as any;
+    if (proj?.id && proj.organization === ctx.organizationId) {
+      project_id = proj.id;
+    }
+  }
 
   // If the model supplied a project_id, verify it actually belongs to this org
   // — otherwise the FK error from Directus is opaque and we can't tell whether
-  // the model hallucinated. Replace fabricated IDs with the focused event's
-  // project when one is available.
+  // the model hallucinated.
   if (project_id) {
     const proj = await directus.request(
       readItem('projects', project_id, { fields: ['id', 'organization'] }),
     ).catch(() => null) as any;
     if (!proj || proj.organization !== ctx.organizationId) {
-      if (ctx.entityType === 'project_event' && ctx.entityId) {
-        const ev = await directus.request(
-          readItem('project_events', ctx.entityId, { fields: ['id', 'project.id', 'project.organization'] }),
-        ).catch(() => null) as any;
-        if (ev?.project?.id && ev.project.organization === ctx.organizationId) {
-          project_id = ev.project.id;
-          if (!event_id) event_id = ev.id;
-        } else {
-          return { success: false, summary: '', error: 'Provided project_id is invalid for this organization' };
-        }
-      } else {
-        return { success: false, summary: '', error: 'Provided project_id is invalid for this organization' };
-      }
+      return { success: false, summary: '', error: 'Provided project_id is invalid for this organization' };
     }
   }
+
+  // Pick a category for Quick Task scoping. Order matters — the most specific
+  // link wins so the task surfaces in the right widget.
+  let category: 'quick' | 'ticket' | 'project' | 'event' = 'quick';
+  if (ticket_id) category = 'ticket';
+  else if (event_id) category = 'event';
+  else if (project_id) category = 'project';
 
   const payload: Record<string, any> = {
     title,
     user_created: ctx.userId,
-    status: 'published',
-    completed: false,
+    organization_id: ctx.organizationId,
+    status: 'new',
+    schedule: 'today',
+    category,
   };
 
-  if (project_id) payload.project = project_id;
-  if (event_id) payload.event_id = event_id;
-  if (ticket_id) payload.ticket = ticket_id;
+  if (project_id) payload.project_id = project_id;
+  if (event_id) payload.project_event_id = event_id;
+  if (ticket_id) payload.ticket_id = ticket_id;
   if (due_date) payload.due_date = due_date;
   if (priority) payload.priority = priority;
-  if (assignee_id) payload.assignee_id = assignee_id;
+  if (assignee_id) {
+    payload.assigned_to = [{ directus_users_id: assignee_id }];
+  }
 
   const created = await directus.request(
-    createItem('project_tasks', payload, { fields: ['id', 'title'] }),
+    createItem('tasks', payload, { fields: ['id', 'title'] }),
   ) as any;
 
   return {
     success: true,
     summary: `Created task "${title}"${due_date ? ` due ${due_date}` : ''}.`,
-    data: { id: created.id, title: created.title, project_id, event_id },
+    data: { id: created.id, title: created.title, project_id, event_id, ticket_id },
   };
 }
 

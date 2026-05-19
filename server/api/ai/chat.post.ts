@@ -186,23 +186,23 @@ export default defineEventHandler(async (event) => {
       (async () => {
         try {
           const tasks = await directus.request(
-            readItems('project_tasks', {
-              filter: { assignee_id: { _eq: userId } },
-              fields: ['id', 'title', 'status', 'completed', 'due_date', 'priority'],
+            readItems('tasks', {
+              filter: { assigned_to: { directus_users_id: { _eq: userId } } },
+              fields: ['id', 'title', 'status', 'due_date', 'priority'],
               sort: ['-due_date'],
               limit: 30,
             }),
-          ) as Array<{ id: string; title: string; status: string; completed: boolean; due_date: string; priority: string }>;
+          ) as Array<{ id: string; title: string; status: string; due_date: string; priority: string }>;
 
           if (tasks.length === 0) return '';
 
-          const pending = tasks.filter(t => !t.completed);
+          const pending = tasks.filter(t => t.status !== 'completed');
           const overdue = pending.filter(t => t.due_date && new Date(t.due_date) < now);
-          const completed = tasks.filter(t => t.completed);
+          const completed = tasks.filter(t => t.status === 'completed');
 
           let ctx = `\n\nUSER'S CURRENT TASKS (${tasks.length} total, ${pending.length} pending, ${completed.length} completed${overdue.length ? `, ${overdue.length} overdue` : ''}):\n`;
           ctx += pending.slice(0, 15).map(t =>
-            `- [${t.completed ? 'x' : ' '}] ${t.title}${t.due_date ? ` (due: ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${t.status ? ` — ${t.status}` : ''}`,
+            `- [${t.status === 'completed' ? 'x' : ' '}] ${t.title}${t.due_date ? ` (due: ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${t.status ? ` — ${t.status}` : ''}`,
           ).join('\n');
           if (overdue.length > 0) {
             ctx += `\n\nOVERDUE TASKS:\n`;

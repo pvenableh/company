@@ -3,8 +3,10 @@
  * SendGrid Event Webhook endpoint.
  *
  * Receives SendGrid event notifications (delivered, open, click, bounce,
- * dropped, spam_report, etc.) and stores them in the `email_activity`
- * Directus collection.
+ * dropped, spam_report, etc.) and stores them in the `email_events`
+ * Directus collection (matches the EmailEvent type in shared/directus.ts;
+ * previously this code wrote to a non-existent `email_activity` collection
+ * and SendGrid retries were silently swallowed because we still returned 200).
  *
  * SendGrid sends arrays of events — each event has:
  *   - email: recipient address
@@ -57,24 +59,28 @@ export default defineEventHandler(async (event) => {
 
       const results = await Promise.allSettled(
         batch.map((sgEvent) => {
-          const activityData: Record<string, any> = {
-            email_id: sgEvent.sg_message_id || null,
+          // Field shape matches the EmailEvent collection per shared/directus.ts.
+          // `email_id` is the FK to the originating `emails` campaign row
+          // (NOT the SendGrid sg_message_id — that's stored separately so we
+          // can dedup on retry without losing the campaign linkage).
+          const eventData: Record<string, any> = {
+            email_id: sgEvent.send_id || null,
+            sg_message_id: sgEvent.sg_message_id || null,
             recipient: sgEvent.email,
             event: sgEvent.event,
             timestamp: sgEvent.timestamp
               ? new Date(sgEvent.timestamp * 1000).toISOString()
               : new Date().toISOString(),
-            send_collection: sgEvent.send_collection || null,
-            send_id: sgEvent.send_id || null,
             organization: sgEvent.organization || null,
-            metadata: {
-              url: sgEvent.url,
+            url: sgEvent.url || null,
+            raw: {
+              send_collection: sgEvent.send_collection,
               ip: sgEvent.ip,
               useragent: sgEvent.useragent,
             },
           };
 
-          return directus.request(createItem('email_activity', activityData));
+          return directus.request(createItem('email_events', eventData));
         }),
       );
 

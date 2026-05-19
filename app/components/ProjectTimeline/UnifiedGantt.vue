@@ -42,6 +42,9 @@ const { user: authUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const { canEdit } = useOrgRole();
+// Mine/All toggle from the apps shell header. Portal mode ignores it
+// since the proxy is already user-scoped.
+const { isMine } = useDataScope();
 const toast = useToast();
 
 const canEditProjects = computed(() => canEdit('projects'));
@@ -99,6 +102,12 @@ async function fetchAllData() {
 }
 
 watch([selectedOrg, selectedClient], () => fetchAllData());
+
+// Mine/All toggle → refetch tickets + tasks with the new predicate.
+// Skip in portal mode since the proxy is already user-scoped.
+if (!props.portal) {
+	watch(isMine, () => fetchAllData());
+}
 
 watch(
 	() => authUser.value?.id,
@@ -305,7 +314,7 @@ const rows = computed<GanttRow[]>(() => {
 							type: 'task',
 							depth: 2,
 							color: '#8b5cf6', // purple — matches label icon
-							status: task.completed ? 'Completed' : 'In Progress',
+							status: task.status === 'completed' ? 'Completed' : 'In Progress',
 							dueDate: task.due_date,
 							projectId: project.id,
 						});
@@ -375,7 +384,7 @@ const rows = computed<GanttRow[]>(() => {
 				color: '#8b5cf6',
 				startDate: task.createdAt,
 				dueDate: task.dueDate,
-				status: task.completed ? 'completed' : 'active',
+				status: task.status === 'completed' ? 'completed' : 'active',
 			});
 		}
 	}
@@ -677,8 +686,8 @@ function handleCloseDetail() {
 }
 
 // ── Task completion toggle ──
-const projectTaskItems = useDirectusItems('project_tasks');
-const standaloneTaskItems = useDirectusItems('tasks');
+// All tasks (project-scoped and personal) live in the `tasks` collection now.
+const taskItemsClient = useDirectusItems('tasks');
 // Optimistic toggles — tracks IDs whose completion state is flipped locally before server confirms
 const optimisticToggles = ref(new Set<string>());
 // Per-task lock to prevent double-clicking the same task
@@ -703,16 +712,10 @@ async function toggleTaskCompleted(row: GanttRow) {
 	optimisticToggles.value = new Set(optimisticToggles.value);
 
 	try {
-		if (row.projectId) {
-			await projectTaskItems.update(row.id, {
-				completed: !wasCompleted,
-				completed_at: !wasCompleted ? new Date().toISOString() : null,
-			});
-		} else {
-			await standaloneTaskItems.update(row.id, {
-				status: wasCompleted ? 'in_progress' : 'completed',
-			});
-		}
+		await taskItemsClient.update(row.id, {
+			status: wasCompleted ? 'new' : 'completed',
+			date_completed: wasCompleted ? null : new Date().toISOString(),
+		});
 		toast.add({ title: wasCompleted ? 'Task reopened' : 'Task completed', color: wasCompleted ? 'blue' : 'green' });
 		// Background refetch — don't await, let it sync in the background
 		fetchAllData().then(() => {
@@ -764,7 +767,7 @@ async function openEventDetailFull() {
 	loadingEventDetail.value = true;
 	try {
 		const fullEvent = await eventItems.get(selectedEventId.value, {
-			fields: ['*', 'tasks.*', 'tasks.assignee_id.id', 'tasks.assignee_id.first_name', 'tasks.assignee_id.last_name', 'tasks.assignee_id.avatar', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
+			fields: ['*', 'tasks.*', 'tasks.assigned_to.directus_users_id.id', 'tasks.assigned_to.directus_users_id.first_name', 'tasks.assigned_to.directus_users_id.last_name', 'tasks.assigned_to.directus_users_id.avatar', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
 		});
 		selectedEventFull.value = fullEvent;
 	} catch (err) {

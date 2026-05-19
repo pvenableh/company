@@ -16,7 +16,7 @@ const emit = defineEmits<{
 
 const nodeRadius = computed(() => props.event.is_milestone ? 18 : 10);
 const taskCount = computed(() => props.event.tasks?.length || 0);
-const completedTasks = computed(() => props.event.tasks?.filter((t) => t.completed).length || 0);
+const completedTasks = computed(() => props.event.tasks?.filter((t) => t.status === 'completed').length || 0);
 const hasCategory = computed(() => !!props.event.category_id);
 const categoryColor = computed(() => {
   if (typeof props.event.category_id === 'object' && props.event.category_id) {

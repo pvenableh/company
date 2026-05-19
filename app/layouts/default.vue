@@ -1,5 +1,14 @@
 <template>
-	<div class="relative bg-background text-foreground transition duration-150 ios-safe-area">
+	<!-- Apps mode delegates to the apps layout regardless of which legacy
+	     page is rendering. This is the systemic fix for "page X is orphaned
+	     from the AppRail in apps mode": any page that defaults to this
+	     layout (i.e. doesn't set `layout: 'apps'` or `layout: false` itself)
+	     now gets the apps shell automatically when the user is in apps mode.
+	     The classic-mode branch below is untouched. -->
+	<NuxtLayout v-if="isAppsMode" name="apps">
+		<slot />
+	</NuxtLayout>
+	<div v-else class="relative bg-background text-foreground transition duration-150 ios-safe-area">
 		<!-- Archived-org banner (shown above the active layout when current org is archived) -->
 		<ClientOnly>
 			<LayoutArchivedOrgBanner />
@@ -55,6 +64,10 @@ import { aiTrayOpen, aiTrayInitialPrompt, openAITray, closeAITray } from '~/comp
 
 const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
+// In apps mode, the template short-circuits to the apps layout for every
+// page that doesn't define its own layout — fixes the "orphaned from
+// AppRail" class of bugs systemically.
+const { isAppsMode } = useAppsMode();
 
 const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
 

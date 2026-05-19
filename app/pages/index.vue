@@ -730,6 +730,16 @@ watch(activeTab, (t) => {
 							</div>
 						</div>
 
+				<!-- Active client + project carousels — quick access to the
+				     most-recently-active rows. Cards open the corresponding
+				     slide-over panel in apps mode. -->
+				<ClientOnly v-if="showWidget('active-clients')">
+					<CommandCenterActiveClientCarousel />
+				</ClientOnly>
+				<ClientOnly v-if="showWidget('active-projects')">
+					<CommandCenterActiveProjectCarousel />
+				</ClientOnly>
+
 				<!-- Today's Briefs (org-wide project digests) -->
 				<ClientOnly v-if="showWidget('project-digests')">
 					<CommandCenterProjectDigestsWidget />

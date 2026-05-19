@@ -87,14 +87,14 @@ export async function getCRMContext(
 		})).catch(() => [] as any[]),
 
 		// ─── Tasks ───
-		directus.request(readItems('project_tasks', {
+		directus.request(readItems('tasks', {
 			filter: {
 				_or: [
-					{ assignee_id: { _eq: userId || '$CURRENT_USER' } },
-					{ event_id: { organization: { _eq: orgId } } },
+					{ assigned_to: { directus_users_id: { _eq: userId || '$CURRENT_USER' } } },
+					{ organization_id: { _eq: orgId } },
 				],
 			},
-			fields: ['id', 'status', 'completed', 'due_date'],
+			fields: ['id', 'status', 'due_date'],
 			limit: 200,
 		})).catch(() => [] as any[]),
 
@@ -342,8 +342,8 @@ export async function getCRMContext(
 	}
 
 	const tasksAll = tasks as any[];
-	const tasksCompleted = tasksAll.filter((t: any) => t.completed).length;
-	const tasksPending = tasksAll.filter((t: any) => !t.completed).length;
+	const tasksCompleted = tasksAll.filter((t: any) => t.status === 'completed').length;
+	const tasksPending = tasksAll.filter((t: any) => t.status !== 'completed').length;
 
 	// ─── Build Tickets Summary ───
 	const ticketsByStatus: Record<string, number> = {};

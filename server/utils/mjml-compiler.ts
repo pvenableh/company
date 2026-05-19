@@ -20,10 +20,21 @@ export interface CompileResult {
  * Strip MJML attributes that have empty, whitespace-only, or unreplaced
  * template variable values. These produce MJML validation errors
  * (invalid Color, Unit, or Enum values).
+ *
+ * `href` and `src` are special-cased: emptying them silently breaks
+ * buttons + images for recipients, so they fall back to a safe '#'
+ * sentinel instead of being stripped. The recipient sees a benign
+ * non-functional button rather than untargeted plain text wrapped in
+ * an <a> tag with no anchor (which most clients render as bare text).
  */
 export function stripEmptyMjmlAttributes(mjml: string): string {
   let result = mjml;
-  // Strip attributes with empty values: attr=""
+  // Replace empty / whitespace / unreplaced href and src with '#' so the
+  // anchor or image still has a valid attribute and renders predictably.
+  result = result.replace(/(\s+)(href|src)=""/g, '$1$2="#"');
+  result = result.replace(/(\s+)(href|src)="\s+"/g, '$1$2="#"');
+  result = result.replace(/(\s+)(href|src)="\{\{\{[^}]*\}\}\}"/g, '$1$2="#"');
+  // Strip remaining attributes with empty values: attr=""
   result = result.replace(/\s+[\w-]+=""/g, '');
   // Strip attributes with whitespace-only values: attr="   "
   result = result.replace(/\s+[\w-]+="\s+"/g, '');
@@ -44,10 +55,15 @@ export function compileMjml(
     // Strip any remaining design-time triple-brace variables {{{...}}} that weren't
     // resolved by the template builder. These would otherwise be treated as unescaped
     // Handlebars expressions and resolve to empty strings, causing blank content.
+    // *_url and *_href tokens get a '#' fallback so anchor href attributes
+    // remain valid (the stripEmptyMjmlAttributes safety net also catches this,
+    // but pre-replacing keeps the assembled MJML inspectable in the builder).
     const source = mjmlSource.replace(/\{\{\{(?!#|\/|>)([^}]+)\}\}\}/g, (_match, key) => {
       const trimmedKey = key.trim();
       // If this variable exists in the provided context, convert to double-brace
       if (trimmedKey in variables) return `{{${trimmedKey}}}`;
+      // Hrefs and srcs need a non-empty value to render the wrapping element
+      if (/_url$|_href$|^url$|^href$|_src$|^src$/i.test(trimmedKey)) return '#';
       // Otherwise remove it entirely (it's a leftover design-time variable)
       return '';
     });

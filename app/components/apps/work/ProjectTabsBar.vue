@@ -12,6 +12,7 @@ export type ProjectTabKey =
 	| 'meetings'
 	| 'invoices'
 	| 'documents'
+	| 'contacts'
 	| 'files';
 
 defineProps<{
@@ -42,6 +43,7 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
+	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
 	{ key: 'files', label: 'Files', icon: 'lucide:folder' },
 ];
 </script>

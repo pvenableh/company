@@ -108,7 +108,23 @@ const emit = defineEmits<{
 	statsChanged: [];
 }>();
 
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
+
+// UX column → tasks.status enum
+const COLUMN_TO_STATUS: Record<TaskColumn, 'new' | 'in_progress' | 'completed'> = {
+	todo: 'new',
+	in_progress: 'in_progress',
+	done: 'completed',
+};
+function statusToColumn(status: string | null | undefined): TaskColumn {
+	if (status === 'completed') return 'done';
+	if (status === 'in_progress') return 'in_progress';
+	return 'todo';
+}
+// Mine/All from the apps shell header — restricts to tasks the user owns
+// or created when 'Mine' is active (and clamps non-admins to Mine).
+const { isMine } = useDataScope();
+const { user } = useDirectusAuth();
 
 const allTasks = ref<any[]>([]);
 const loading = ref(true);
@@ -144,14 +160,10 @@ function distributeTasksToColumns() {
 	const done: any[] = [];
 
 	for (const t of allTasks.value) {
-		const s = t.status || 'todo';
-		if (s === 'done' || t.completed) {
-			done.push(t);
-		} else if (s === 'in_progress') {
-			in_progress.push(t);
-		} else {
-			todo.push(t);
-		}
+		const col = statusToColumn(t.status);
+		if (col === 'done') done.push(t);
+		else if (col === 'in_progress') in_progress.push(t);
+		else todo.push(t);
 	}
 
 	columnTasks.todo = todo;
@@ -166,14 +178,32 @@ function getColumnTasks(status: string) {
 async function fetchTasks() {
 	loading.value = true;
 	try {
-		const data = await taskItems.list({
-			fields: ['id', 'title', 'description', 'status', 'priority', 'due_date', 'completed', 'completed_at', 'assignee_id', 'sort', 'event_id', 'project'],
-			filter: {
+		const myId = (user.value as any)?.id;
+		const filter: any = {
+			_and: [
+				{
+					_or: [
+						{ project_id: { _eq: props.projectId } },
+						{ project_event_id: { project: { _eq: props.projectId } } },
+					],
+				},
+			],
+		};
+		if (isMine.value && myId) {
+			filter._and.push({
 				_or: [
-					{ project: { _eq: props.projectId } },
-					{ event_id: { project: { _eq: props.projectId } } },
+					{ assigned_to: { directus_users_id: { _eq: myId } } },
+					{ user_created: { _eq: myId } },
 				],
-			},
+			});
+		}
+		const data = await taskItems.list({
+			fields: [
+				'id', 'title', 'description', 'status', 'priority', 'due_date', 'date_completed', 'sort',
+				'project_id', 'project_event_id', 'category',
+				'assigned_to.directus_users_id',
+			],
+			filter,
 			sort: ['sort', '-date_created'],
 			limit: -1,
 		});
@@ -193,12 +223,16 @@ async function quickAdd(columnStatus: TaskColumn) {
 	if (!title) return;
 
 	try {
+		const status = COLUMN_TO_STATUS[columnStatus];
 		const newTask = await taskItems.create({
 			title,
-			status: columnStatus,
-			project: props.projectId,
-			completed: columnStatus === 'done',
+			status,
+			project_id: props.projectId,
+			organization_id: props.organizationId,
+			category: 'project',
+			schedule: 'unscheduled',
 			priority: 'medium',
+			date_completed: status === 'completed' ? new Date().toISOString() : null,
 		});
 		allTasks.value.push(newTask);
 		columnTasks[columnStatus].push(newTask);
@@ -210,12 +244,13 @@ async function quickAdd(columnStatus: TaskColumn) {
 }
 
 async function toggleComplete(task: any) {
-	const wasCompleted = task.completed;
-	const fromColumn = wasCompleted ? 'done' : (task.status === 'in_progress' ? 'in_progress' : 'todo');
-	const toColumn = wasCompleted ? 'todo' : 'done';
+	const wasCompleted = task.status === 'completed';
+	const fromColumn: TaskColumn = wasCompleted ? 'done' : (task.status === 'in_progress' ? 'in_progress' : 'todo');
+	const toColumn: TaskColumn = wasCompleted ? 'todo' : 'done';
+	const newStatus = COLUMN_TO_STATUS[toColumn];
+	const oldStatus = task.status;
 
-	task.completed = !wasCompleted;
-	task.status = toColumn;
+	task.status = newStatus;
 
 	// Splice from the old column and append to the new — no full
 	// re-distribution. Avoids tasks shuffling on every checkbox tick.
@@ -225,15 +260,13 @@ async function toggleComplete(task: any) {
 
 	try {
 		await taskItems.update(task.id, {
-			completed: task.completed,
-			status: task.status,
-			completed_at: task.completed ? new Date().toISOString() : null,
+			status: newStatus,
+			date_completed: newStatus === 'completed' ? new Date().toISOString() : null,
 		});
 		emit('statsChanged');
 	} catch (err) {
 		// Revert
-		task.completed = wasCompleted;
-		task.status = fromColumn;
+		task.status = oldStatus;
 		const idxBack = columnTasks[toColumn].findIndex((t) => t.id === task.id);
 		if (idxBack !== -1) columnTasks[toColumn].splice(idxBack, 1);
 		columnTasks[fromColumn].push(task);
@@ -243,15 +276,13 @@ async function toggleComplete(task: any) {
 async function handleColumnChange(columnKey: string, evt: any) {
 	if (evt.added) {
 		const task = evt.added.element;
-		const newStatus = columnKey;
-		const isCompleted = newStatus === 'done';
+		const newStatus = COLUMN_TO_STATUS[columnKey as TaskColumn];
+		const isCompleted = newStatus === 'completed';
 		task.status = newStatus;
-		task.completed = isCompleted;
 		try {
 			await taskItems.update(task.id, {
 				status: newStatus,
-				completed: isCompleted,
-				completed_at: isCompleted ? new Date().toISOString() : null,
+				date_completed: isCompleted ? new Date().toISOString() : null,
 			});
 			emit('statsChanged');
 		} catch (err) {
@@ -267,20 +298,12 @@ async function handleTaskUpdate(taskId: string, payload: any) {
 		const idx = allTasks.value.findIndex(t => t.id === taskId);
 		if (idx === -1) return;
 		const task = allTasks.value[idx];
-		const oldColumn = task.completed
-			? 'done'
-			: task.status === 'in_progress'
-				? 'in_progress'
-				: 'todo';
+		const oldColumn = statusToColumn(task.status);
 		Object.assign(task, payload);
 		// Move between columns only if the bucket actually changed —
 		// editing other fields keeps the card in place.
-		if ('status' in payload || 'completed' in payload) {
-			const newColumn = task.completed
-				? 'done'
-				: task.status === 'in_progress'
-					? 'in_progress'
-					: 'todo';
+		if ('status' in payload) {
+			const newColumn = statusToColumn(task.status);
 			if (newColumn !== oldColumn) {
 				const fromIdx = columnTasks[oldColumn].findIndex(t => t.id === taskId);
 				if (fromIdx !== -1) columnTasks[oldColumn].splice(fromIdx, 1);
@@ -309,6 +332,9 @@ async function handleTaskDelete(taskId: string) {
 }
 
 onMounted(fetchTasks);
+
+// Refetch when the Mine/All toggle flips so the board responds live.
+watch(isMine, () => fetchTasks());
 </script>
 
 <style scoped>

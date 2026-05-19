@@ -2,8 +2,13 @@
 import type { Invoice, PaymentsReceived } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Invoice Detail | Earnest' });
+
+// Apps-mode users get the apps shell so this legacy route isn't orphaned
+// from the AppRail. Classic mode keeps the original sidebar.
+const { isAppsMode } = useAppsMode();
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 const route = useRoute();
 const router = useRouter();
@@ -189,6 +194,7 @@ onUnmounted(() => clearEntity());
 </script>
 
 <template>
+  <NuxtLayout :name="layout">
   <LayoutPageContainer>
     <!-- Loading State -->
     <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -594,4 +600,5 @@ onUnmounted(() => clearEntity());
       </Transition>
     </ClientOnly>
   </LayoutPageContainer>
+  </NuxtLayout>
 </template>

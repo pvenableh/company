@@ -2,10 +2,14 @@
 const { params } = useRoute();
 const ticketItems = useDirectusItems('tickets');
 
-definePageMeta({
-	middleware: ['auth'],
-});
+definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Ticket Details | Earnest' });
+
+// Apps-mode users get the apps shell so the detail page isn't orphaned.
+// The board now opens a slide-over for quick look — this full page is the
+// escape hatch (and what cold deep-links land on).
+const { isAppsMode } = useAppsMode();
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 // Archive any unread notifications for this ticket as soon as the user
 // lands here — click-through is implicit acknowledgement.
@@ -53,6 +57,7 @@ const columns = [
 ];
 </script>
 <template>
+	<NuxtLayout :name="layout">
 	<LayoutPageContainer>
 		<NuxtLink
 			to="/tickets"
@@ -65,5 +70,6 @@ const columns = [
 			<TicketsDetailsNew :element="ticket" :columns="columns" />
 		</div>
 	</LayoutPageContainer>
+	</NuxtLayout>
 </template>
 <style></style>

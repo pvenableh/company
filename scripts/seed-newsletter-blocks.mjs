@@ -534,7 +534,7 @@ const PARTIALS = [
     type: 'web_version_bar',
     is_default: true,
     description: 'Small bar at the top of every email with a link to view in browser',
-    mjml_source: `<mj-section background-color="#f4f4f4" padding="8px 30px">
+    mjml_source: `<mj-section full-width="full-width" background-color="#f4f4f4" padding="8px 30px">
   <mj-column>
     <mj-text align="center" font-size="11px" color="#999999" line-height="1.4">
       Having trouble viewing this email? <a href="{{web_view_url}}" style="color:#999999;text-decoration:underline;">View in your browser</a>
@@ -621,7 +621,27 @@ async function seedPartials() {
       const existing = await existingRes.json();
 
       if (existing?.data?.length > 0) {
-        console.log(`  [skip] "${partial.name}" (already exists)`);
+        // Bring stale mjml_source in line with the seed so layout/markup
+        // fixes (e.g. full-width="full-width" on the web-version bar) land
+        // on existing prod rows without a separate migration script.
+        const existingRow = existing.data[0];
+        if (existingRow.mjml_source !== partial.mjml_source) {
+          const patch = await fetch(
+            `${DIRECTUS_URL}/items/email_partials/${existingRow.id}`,
+            {
+              method: 'PATCH',
+              headers,
+              body: JSON.stringify({ mjml_source: partial.mjml_source }),
+            },
+          ).then((r) => r.json());
+          if (patch.data?.id) {
+            console.log(`  [upd]  Updated mjml_source: ${partial.name}`);
+          } else {
+            console.error(`  [fail] update ${partial.name}:`, JSON.stringify(patch.errors || patch));
+          }
+        } else {
+          console.log(`  [skip] "${partial.name}" (already exists, mjml unchanged)`);
+        }
         skipped++;
         continue;
       }

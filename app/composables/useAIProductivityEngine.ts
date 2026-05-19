@@ -103,6 +103,7 @@ export const useAIProductivityEngine = () => {
 	const { selectedOrg, organizations } = useOrganization();
 	const { selectedTeam } = useTeams();
 	const { selectedClient, getClientFilter } = useClients();
+	const { isMine } = useDataScope();
 
 	// Build org/team/client filter fragments for Directus queries.
 	// When `selectedOrg` is null (multi-org admin "All Orgs" view) we used to
@@ -124,6 +125,19 @@ export const useAIProductivityEngine = () => {
 		return {};
 	};
 	const clientFilter = () => getClientFilter();
+	// Mine/All from the header pill. Returned as a sub-filter fragment
+	// suitable to merge with other filter pieces in queries that have an
+	// assigned_to junction (tickets, tasks, projects). Use only on queries
+	// where ownership is meaningful — e.g. don't apply to org-wide CRM stats.
+	const myFilter = () => {
+		if (!isMine.value || !user.value?.id) return {};
+		return {
+			_or: [
+				{ user_created: { _eq: user.value.id } },
+				{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+			],
+		};
+	};
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -270,9 +284,12 @@ export const useAIProductivityEngine = () => {
 			const tickets = await ticketItems.list({
 				fields: ['id', 'title', 'status', 'priority', 'due_date', 'assigned_to', 'organization.name'],
 				filter: {
-					status: { _nin: ['completed', 'archived'] },
-					...orgFilter(),
-					...clientFilter(),
+					_and: [
+						{ status: { _nin: ['completed', 'archived'] } },
+						orgFilter(),
+						clientFilter(),
+						myFilter(),
+					],
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -1390,8 +1407,8 @@ export const useAIProductivityEngine = () => {
 		_moduleCache.clear();
 	}
 
-	// Invalidate cache when org/client/team changes so next analysis uses fresh data
-	watch([selectedOrg, selectedClient, selectedTeam], () => {
+	// Invalidate cache when org/client/team/scope changes so next analysis uses fresh data
+	watch([selectedOrg, selectedClient, selectedTeam, isMine], () => {
 		clearCache();
 	});
 

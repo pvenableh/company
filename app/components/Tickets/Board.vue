@@ -172,9 +172,13 @@
 						class="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors stagger-item"
 					>
 						<div class="flex-1 min-w-0">
-							<nuxt-link :to="`/tickets/${ticket.id}`" class="text-sm font-medium text-foreground hover:underline truncate block">
+							<button
+								type="button"
+								class="text-sm font-medium text-foreground hover:underline truncate block w-full text-left"
+								@click="openArchivedTicket(ticket.id)"
+							>
 								{{ ticket.title }}
-							</nuxt-link>
+							</button>
 							<div class="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground uppercase">
 								<span v-if="ticket.organization?.name" class="flex items-center gap-1">
 									<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
@@ -340,6 +344,18 @@ const ticketItems = props.portal ? usePortalItems('tickets') : useDirectusItems(
 const commentItems = useDirectusItems('comments');
 const projectItems = props.portal ? usePortalItems('projects') : useDirectusItems('projects');
 const { registerRefreshCallback } = useTicketsStore();
+const { isAppsMode } = useAppsMode();
+const ticketSlide = useAppSlideOver('ticket');
+
+// Apps-mode archived-ticket row clicks open the slide-over so the user
+// stays on the board. Classic mode keeps the nav-to-/tickets/[id] flow.
+function openArchivedTicket(id) {
+	if (isAppsMode.value && id) {
+		ticketSlide.open(String(id));
+		return;
+	}
+	navigateTo(`/tickets/${id}`);
+}
 const { user } = useDirectusAuth();
 const { triggerHaptic } = useHaptic();
 const toast = useToast();

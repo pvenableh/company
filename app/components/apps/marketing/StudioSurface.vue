@@ -29,6 +29,15 @@ const projectsById = ref<Map<string, Pick<Project, 'id' | 'title' | 'billing_typ
 const clientsById = ref<Map<string, Pick<Client, 'id' | 'name'>>>(new Map());
 const loading = ref(false);
 
+// Top-level view: 'approval' = work-in-progress drafts moving through the
+// approval workflow; 'upcoming' = future-scheduled publish queue (replaces
+// the old /social Upcoming Posts card).
+type StudioView = 'approval' | 'upcoming';
+const route = useRoute();
+const router = useRouter();
+const initialView: StudioView = route.query.view === 'upcoming' ? 'upcoming' : 'approval';
+const view = ref<StudioView>(initialView);
+
 const stateFilter = ref<'all' | ApprovalState>('all');
 
 const STATE_FILTERS: { key: 'all' | ApprovalState; label: string }[] = [
@@ -40,6 +49,18 @@ const STATE_FILTERS: { key: 'all' | ApprovalState; label: string }[] = [
   { key: 'scheduled', label: 'Scheduled' },
   { key: 'published', label: 'Published' },
 ];
+
+// Reflect `view` in the URL so deep-links from /social land on Upcoming.
+watch(view, (next) => {
+  const current = (route.query.view as string | undefined) ?? 'approval';
+  if (current === next) return;
+  router.replace({ query: { ...route.query, view: next === 'approval' ? undefined : next } });
+});
+// Sync the other direction too — back/forward navigation should flip the toggle.
+watch(() => route.query.view, (qv) => {
+  const next: StudioView = qv === 'upcoming' ? 'upcoming' : 'approval';
+  if (view.value !== next) view.value = next;
+});
 
 // ── Create modal ──────────────────────────────────────────────────
 const showCreate = ref(false);
@@ -168,7 +189,15 @@ async function fetchPosts() {
   loading.value = true;
   try {
     const query: Record<string, string | number> = { limit: 200 };
-    if (stateFilter.value !== 'all') query.approval_state = stateFilter.value;
+    if (view.value === 'upcoming') {
+      // Future-dated, publisher-scheduled posts. Bypass the approval-state
+      // filter — the Upcoming queue is publisher-status driven.
+      query.status = 'scheduled';
+      query['scheduled_at[_gte]'] = new Date().toISOString();
+      query.sort = 'scheduled_at';
+    } else {
+      if (stateFilter.value !== 'all') query.approval_state = stateFilter.value;
+    }
     const r = await $fetch<{ data: SocialPost[] }>('/api/social/posts', { query });
     let list = r?.data ?? [];
 
@@ -186,6 +215,9 @@ async function fetchPosts() {
     loading.value = false;
   }
 }
+
+// Re-fetch when the view toggle flips so the queue updates immediately.
+watch(view, () => { fetchPosts(); });
 
 async function fetchProjects() {
   try {
@@ -653,8 +685,36 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- State pill tabs -->
-    <div class="studio-tabs" role="tablist" aria-label="Approval state filter">
+    <!-- View toggle — Approval Queue (workflow) vs Upcoming Publish
+         (scheduled by the publisher). Approval is the default; Upcoming
+         consolidates what used to live as an /social Upcoming Posts card. -->
+    <div class="studio-view-toggle" role="tablist" aria-label="Studio view">
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="view === 'approval'"
+        class="studio-view-toggle__item"
+        :class="{ 'studio-view-toggle__item--active': view === 'approval' }"
+        @click="view = 'approval'"
+      >
+        <Icon name="lucide:list-checks" class="w-3.5 h-3.5" />
+        Approval Queue
+      </button>
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="view === 'upcoming'"
+        class="studio-view-toggle__item"
+        :class="{ 'studio-view-toggle__item--active': view === 'upcoming' }"
+        @click="view = 'upcoming'"
+      >
+        <Icon name="lucide:calendar-clock" class="w-3.5 h-3.5" />
+        Upcoming Publish
+      </button>
+    </div>
+
+    <!-- State pill tabs — only meaningful for the Approval Queue view -->
+    <div v-if="view === 'approval'" class="studio-tabs" role="tablist" aria-label="Approval state filter">
       <div class="studio-tabs__scroller">
         <button
           v-for="f in STATE_FILTERS"
@@ -1206,6 +1266,32 @@ onMounted(() => {
 
 .studio-group__dot {
   @apply w-1 h-1 rounded-full bg-muted-foreground/40 inline-block;
+}
+
+.studio-view-toggle {
+  @apply mb-4 inline-flex items-center gap-1 rounded-full
+    border border-border bg-card p-0.5;
+}
+
+.studio-view-toggle__item {
+  @apply inline-flex items-center gap-1.5 rounded-full
+    px-3 py-1.5 text-xs font-medium whitespace-nowrap
+    text-muted-foreground transition-all duration-200
+    ease-[cubic-bezier(0.16,1,0.3,1)];
+}
+
+.studio-view-toggle__item:hover {
+  @apply text-foreground;
+  background: hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.08);
+}
+
+.studio-view-toggle__item--active {
+  color: white;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
+  );
 }
 
 .studio-tabs {

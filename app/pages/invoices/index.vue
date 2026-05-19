@@ -4,8 +4,13 @@ import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 // getFriendlyDateThree is auto-imported from utils/dates.ts
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
+
+// Apps-mode users get the apps shell so this legacy route isn't orphaned
+// from the AppRail. Classic mode keeps the original sidebar.
+const { isAppsMode } = useAppsMode();
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 const router = useRouter();
 const { getInvoices, updateInvoice, deleteInvoice } = useInvoices();
@@ -161,6 +166,7 @@ watch(() => selectedClient.value, debouncedFetch);
 </script>
 
 <template>
+  <NuxtLayout :name="layout">
   <LayoutPageContainer>
     <LayoutPageHeader
       title="Invoices"
@@ -497,4 +503,5 @@ watch(() => selectedClient.value, debouncedFetch);
       </div>
     </Teleport>
   </LayoutPageContainer>
+  </NuxtLayout>
 </template>

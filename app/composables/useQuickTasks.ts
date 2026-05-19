@@ -128,6 +128,8 @@ const isLoading = ref(false);
 export const useQuickTasks = () => {
 	const { user } = useDirectusAuth();
 	const { selectedOrg } = useOrganization();
+	const { selectedClient } = useClients();
+	const { isMine } = useDataScope();
 	const taskItems = useDirectusItems('tasks');
 
 	const TASK_FIELDS = [
@@ -146,30 +148,56 @@ export const useQuickTasks = () => {
 		if (import.meta.server || !user.value?.id) return;
 		isLoading.value = true;
 		try {
-			const filter: any = {
-				_and: [
-					// Show tasks the user created (and didn't assign away) OR tasks assigned to them
-					{
-						_or: [
-							{
-								_and: [
-									{ user_created: { _eq: user.value.id } },
-									{
-										_or: [
-											{ assigned_to: { _null: true } },
-											{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
-										],
-									},
-								],
-							},
-							{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
-						],
-					},
-				],
-			};
+			const filter: any = { _and: [] };
+			// Mine vs All — admins can flip to All to see the whole org's tasks.
+			// Non-admins are clamped to Mine inside useDataScope.
+			if (isMine.value) {
+				filter._and.push({
+					_or: [
+						{
+							_and: [
+								{ user_created: { _eq: user.value.id } },
+								{
+									_or: [
+										{ assigned_to: { _null: true } },
+										{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+									],
+								},
+							],
+						},
+						{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+					],
+				});
+			} else {
+				// "All" mode: admins see everyone's *shared* work, but other
+				// users' untethered personal tasks stay private. A task is
+				// "shared" if it links to a ticket/project/event/channel/team
+				// OR has been assigned to someone. Otherwise it's a personal
+				// quick task and only the creator sees it.
+				filter._and.push({
+					_or: [
+						{ user_created: { _eq: user.value.id } },
+						{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+						{ ticket_id: { _nnull: true } },
+						{ project_id: { _nnull: true } },
+						{ project_event_id: { _nnull: true } },
+						{ channel_id: { _nnull: true } },
+						{ team_id: { _nnull: true } },
+						{ assigned_to: { _nnull: true } },
+					],
+				});
+			}
 			// Scope to selected org
 			if (selectedOrg.value) {
 				filter._and.push({ organization_id: { _eq: selectedOrg.value } });
+			}
+			// Honor the header client selector. null → no filter,
+			// 'org' → tasks with no client (org-owned work), uuid → that client.
+			const clientId = selectedClient.value;
+			if (clientId === 'org') {
+				filter._and.push({ client_id: { _null: true } });
+			} else if (clientId) {
+				filter._and.push({ client_id: { _eq: clientId } });
 			}
 
 			const records = await taskItems.list({
@@ -402,6 +430,18 @@ export const useQuickTasks = () => {
 	});
 
 	watch(() => selectedOrg.value, () => {
+		isLoaded.value = false;
+		load();
+	});
+
+	// Reload when Mine/All scope flips so the toggle actually feels live.
+	watch(() => isMine.value, () => {
+		isLoaded.value = false;
+		load();
+	});
+
+	// Reload when the header client selector changes.
+	watch(() => selectedClient.value, () => {
 		isLoaded.value = false;
 		load();
 	});

@@ -37,11 +37,11 @@
 				<button class="shrink-0" @click="toggleComplete(task)">
 					<div
 						class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-						:class="task.completed || task.status === 'done'
+						:class="task.status === 'completed'
 							? 'bg-primary border-primary'
 							: 'border-border hover:border-primary'"
 					>
-						<Icon v-if="task.completed || task.status === 'done'" name="lucide:check" class="w-2.5 h-2.5 text-white" />
+						<Icon v-if="task.status === 'completed'" name="lucide:check" class="w-2.5 h-2.5 text-white" />
 					</div>
 				</button>
 
@@ -49,24 +49,24 @@
 				<div class="flex-1 min-w-0">
 					<p
 						class="text-xs font-medium truncate"
-						:class="task.completed || task.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'"
+						:class="task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'"
 					>
 						{{ task.title }}
 					</p>
-					<div v-if="task.due_date || task.assignee_id" class="flex items-center gap-2 mt-0.5">
+					<div v-if="task.due_date || taskAssigneeId(task)" class="flex items-center gap-2 mt-0.5">
 						<span v-if="task.due_date" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
 							<Icon name="lucide:calendar" class="w-2.5 h-2.5" />
 							{{ getFriendlyDateTwo(task.due_date) }}
 						</span>
-						<span v-if="task.assignee_id && getAssignee(task.assignee_id)" class="text-[10px] text-muted-foreground">
-							{{ getAssigneeName(task.assignee_id) }}
+						<span v-if="taskAssigneeId(task) && getAssignee(taskAssigneeId(task)!)" class="text-[10px] text-muted-foreground">
+							{{ getAssigneeName(taskAssigneeId(task)!) }}
 						</span>
 					</div>
 				</div>
 
 				<!-- Priority -->
 				<span
-					v-if="task.priority && task.priority !== 'medium' && !(task.completed || task.status === 'done')"
+					v-if="task.priority && task.priority !== 'medium' && task.status !== 'completed'"
 					class="text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded-md shrink-0"
 					:class="{
 						'text-destructive bg-destructive/10': task.priority === 'high',
@@ -79,9 +79,9 @@
 				<!-- Status pill -->
 				<span
 					class="text-[8px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
-					:class="getStatusBadgeClasses(task.completed ? 'done' : (task.status || 'todo'))"
+					:class="getStatusBadgeClasses(task.status || 'new')"
 				>
-					{{ task.status === 'done' || task.completed ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do' }}
+					{{ task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do' }}
 				</span>
 
 				<!-- Delete -->
@@ -114,8 +114,11 @@ const emit = defineEmits<{
 	statsChanged: [];
 }>();
 
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
 const { getStatusBadgeClasses } = useStatusStyle();
+// Mine/All from the apps shell header.
+const { isMine } = useDataScope();
+const { user } = useDirectusAuth();
 
 const tasks = ref<any[]>([]);
 const loading = ref(true);
@@ -124,22 +127,49 @@ const newTitle = ref('');
 const inputRef = ref<HTMLInputElement | null>(null);
 
 const sortedTasks = computed(() => {
-	const active = tasks.value.filter(t => !t.completed && t.status !== 'done');
-	const done = tasks.value.filter(t => t.completed || t.status === 'done');
+	const active = tasks.value.filter(t => t.status !== 'completed');
+	const done = tasks.value.filter(t => t.status === 'completed');
 	return [...active, ...done];
 });
+
+function taskAssigneeId(task: any): string | null {
+	const junction = task?.assigned_to?.[0];
+	if (!junction) return null;
+	const id = typeof junction === 'string'
+		? junction
+		: junction?.directus_users_id?.id || junction?.directus_users_id || null;
+	return id || null;
+}
 
 async function fetchTasks() {
 	loading.value = true;
 	try {
-		const data = await taskItems.list({
-			fields: ['id', 'title', 'description', 'status', 'priority', 'due_date', 'completed', 'completed_at', 'assignee_id', 'sort', 'event_id', 'project'],
-			filter: {
+		const myId = (user.value as any)?.id;
+		const filter: any = {
+			_and: [
+				{
+					_or: [
+						{ project_id: { _eq: props.projectId } },
+						{ project_event_id: { project: { _eq: props.projectId } } },
+					],
+				},
+			],
+		};
+		if (isMine.value && myId) {
+			filter._and.push({
 				_or: [
-					{ project: { _eq: props.projectId } },
-					{ event_id: { project: { _eq: props.projectId } } },
+					{ assigned_to: { directus_users_id: { _eq: myId } } },
+					{ user_created: { _eq: myId } },
 				],
-			},
+			});
+		}
+		const data = await taskItems.list({
+			fields: [
+				'id', 'title', 'description', 'status', 'priority', 'due_date', 'date_completed', 'sort',
+				'project_id', 'project_event_id',
+				'assigned_to.directus_users_id',
+			],
+			filter,
 			sort: ['sort', '-date_created'],
 			limit: -1,
 		});
@@ -158,8 +188,11 @@ async function handleAdd() {
 	try {
 		const newTask = await taskItems.create({
 			title: newTitle.value.trim(),
-			status: 'todo',
-			project: props.projectId,
+			status: 'new',
+			project_id: props.projectId,
+			organization_id: props.organizationId,
+			category: 'project',
+			schedule: 'unscheduled',
 			priority: 'medium',
 		});
 		tasks.value.push(newTask);
@@ -174,19 +207,17 @@ async function handleAdd() {
 }
 
 async function toggleComplete(task: any) {
-	const wasCompleted = task.completed || task.status === 'done';
-	task.completed = !wasCompleted;
-	task.status = wasCompleted ? 'todo' : 'done';
+	const wasCompleted = task.status === 'completed';
+	const newStatus = wasCompleted ? 'new' : 'completed';
+	task.status = newStatus;
 	try {
 		await taskItems.update(task.id, {
-			completed: task.completed,
-			status: task.status,
-			completed_at: task.completed ? new Date().toISOString() : null,
+			status: newStatus,
+			date_completed: newStatus === 'completed' ? new Date().toISOString() : null,
 		});
 		emit('statsChanged');
 	} catch (err) {
-		task.completed = wasCompleted;
-		task.status = wasCompleted ? 'done' : 'todo';
+		task.status = wasCompleted ? 'completed' : 'new';
 	}
 }
 
@@ -210,4 +241,7 @@ function getAssigneeName(id: string) {
 }
 
 onMounted(fetchTasks);
+
+// Refetch when the Mine/All toggle flips.
+watch(isMine, () => fetchTasks());
 </script>

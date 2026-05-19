@@ -1,4 +1,5 @@
 <template>
+	<NuxtLayout :name="layout">
 	<LayoutPageContainer>
 		<LayoutPageHeader title="Tickets" subtitle="Board">
 			<template #actions>
@@ -10,11 +11,15 @@
 			<TicketsBoard />
 		</div>
 	</LayoutPageContainer>
+	</NuxtLayout>
 </template>
 
 <script setup>
-definePageMeta({
-	middleware: ['auth'],
-});
+definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Tickets | Earnest' });
+
+// Apps-mode users get the apps shell so the board isn't orphaned from
+// the AppRail. Classic mode keeps the original sidebar.
+const { isAppsMode } = useAppsMode();
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 </script>

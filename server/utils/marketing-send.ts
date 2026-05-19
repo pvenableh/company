@@ -163,15 +163,16 @@ async function resolveAudience(args: {
 		const prev = previous[0];
 		if (!prev) return loadEligibleContacts(directus, baseIds, campaign.organization);
 
-		// Look for opens via email_activity (if collection exists).
+		// Look for opens via email_events. Schema fields per shared/directus.ts:
+		// `event` (not `event_type`), `email_id` (campaign FK), `contact` (FK).
 		let openedIds: Set<string> = new Set();
 		try {
 			const opens = await directus.request(
-				readItems('email_activity', {
+				readItems('email_events', {
 					filter: {
 						_and: [
-							{ event_type: { _eq: 'open' } },
-							{ source_email_send: { _eq: prev.source_email_send } },
+							{ event: { _eq: 'open' } },
+							{ email_id: { _eq: prev.source_email_send } },
 						],
 					},
 					fields: ['contact'],
@@ -180,7 +181,7 @@ async function resolveAudience(args: {
 			) as any[];
 			openedIds = new Set(opens.map((o: any) => o.contact).filter(Boolean));
 		} catch {
-			// email_activity may not exist on this DB — fall back to "all".
+			// email_events may not exist on this DB — fall back to "all".
 			return loadEligibleContacts(directus, baseIds, campaign.organization);
 		}
 

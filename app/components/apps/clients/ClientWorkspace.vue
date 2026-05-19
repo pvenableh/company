@@ -59,7 +59,7 @@ const projectItemsApi = useDirectusItems('projects');
 const invoiceItemsApi = useDirectusItems('invoices');
 const channelItemsApi = useDirectusItems('channels');
 const ticketItemsApi = useDirectusItems('tickets');
-const taskItemsApi = useDirectusItems('project_tasks');
+const taskItemsApi = useDirectusItems('tasks');
 const meetingItemsApi = useDirectusItems('video_meetings');
 
 const client = ref<Client | null>(null);
@@ -510,10 +510,14 @@ async function quickAddTask() {
 	if (!title || addingTask.value) return;
 	addingTask.value = true;
 	try {
+		const orgId = (client.value as any)?.organization;
 		const created = await taskItemsApi.create({
 			title,
 			status: 'new',
 			client_id: props.clientId,
+			organization_id: orgId,
+			category: 'quick',
+			schedule: 'unscheduled',
 		});
 		if (created) relatedTasks.value = [created as any, ...relatedTasks.value];
 		newTaskTitle.value = '';

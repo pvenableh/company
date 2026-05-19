@@ -113,6 +113,34 @@ export default defineEventHandler(async (event) => {
     contact = linked[0];
     if (!contact) throw createError({ statusCode: 404, message: 'existing_contact_id not found in this org' });
   } else {
+    // Email-dup guard: prevents two users from independently promoting cd_contacts
+    // with the same email into separate contact rows. The preview route shows a
+    // match prompt but a stale or skipped preview would otherwise still race
+    // here.
+    const cdEmail = (cd.email || '').trim().toLowerCase();
+    if (cdEmail) {
+      const dupes: any[] = await directus.request(
+        readItems('contacts', {
+          fields: ['id', 'first_name', 'last_name', 'email', 'company', 'title'],
+          filter: {
+            _and: [
+              { email: { _eq: cdEmail } },
+              { organizations: { organizations_id: { _eq: body.org_id } } },
+            ],
+          },
+          sort: ['-date_updated'],
+          limit: 1,
+        }),
+      );
+      if (dupes[0]) {
+        throw createError({
+          statusCode: 409,
+          message: `A contact with email "${cdEmail}" already exists in this org. Re-open the promote modal to link it instead, or change the Card Desk email if this is a different person.`,
+          data: { existingContact: dupes[0] },
+        });
+      }
+    }
+
     const firstName = cd.first_name || (cd.name?.split(' ')[0] ?? 'Unknown');
     const lastName = cd.last_name || (cd.name?.split(' ').slice(1).join(' ') ?? '');
     contact = await directus.request(

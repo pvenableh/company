@@ -7,11 +7,26 @@
 import { format, startOfWeek, endOfWeek, isToday } from 'date-fns'
 import type { SocialPost, SocialAccountPublic, SocialDashboardStats, SocialPlatform } from '~~/shared/social'
 
-definePageMeta({
-  layout: 'default',
-  middleware: ['auth'],
-})
+definePageMeta({ layout: false, middleware: ['auth'] })
 useHead({ title: 'Social Media | Earnest' })
+
+// Apps-mode users get the apps shell so the page isn't orphaned from
+// the AppRail. Classic mode keeps the original sidebar.
+const { isAppsMode } = useAppsMode()
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'))
+
+// "New Post" → slide-over composer in apps mode, /social/compose page
+// in classic mode. The slide-over is the slim quick-post; the page is
+// the full composer with AI Wizard, drag-reorder, per-platform options.
+const composeSlide = useAppSlideOver('social-compose')
+const router = useRouter()
+function openComposer() {
+  if (isAppsMode.value) {
+    composeSlide.open('new')
+  } else {
+    router.push('/social/compose')
+  }
+}
 
 const showAIWizard = ref(false)
 const toast = useToast()
@@ -66,6 +81,7 @@ const { getStatusColorName: statusColor } = useStatusStyle()
 </script>
 
 <template>
+  <NuxtLayout :name="layout">
   <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
@@ -83,9 +99,9 @@ const { getStatusColorName: statusColor } = useStatusStyle()
           size="sm"
         />
         <UButton
-          to="/social/compose"
           icon="i-lucide-plus"
           size="lg"
+          @click="openComposer"
         >
           New Post
         </UButton>
@@ -167,75 +183,41 @@ const { getStatusColorName: statusColor } = useStatusStyle()
     </div>
 
     <div class="grid lg:grid-cols-3 gap-6">
-      <!-- Upcoming Posts -->
+      <!-- Upcoming queue lives in Studio. This card is the entry point;
+           the full grouped/project view renders at
+           /apps/marketing?floor=studio&view=upcoming. -->
       <div class="lg:col-span-2">
         <UCard>
           <template #header>
             <div class="flex items-center justify-between">
-              <h2 class="font-semibold text-gray-900 dark:text-white">Upcoming Posts</h2>
-              <UButton
-                to="/social/calendar"
-                variant="ghost"
-                size="sm"
-                trailing-icon="i-lucide-arrow-right"
-              >
-                View Calendar
-              </UButton>
+              <h2 class="font-semibold text-gray-900 dark:text-white">Upcoming Publish Queue</h2>
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                {{ upcomingPosts.length }} scheduled
+              </span>
             </div>
           </template>
 
-          <div v-if="upcomingPosts.length === 0" class="text-center py-8">
-            <UIcon name="i-lucide-calendar" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p class="text-gray-500 dark:text-gray-400">No scheduled posts</p>
-            <UButton to="/social/compose" variant="soft" size="sm" class="mt-3">
-              Create your first post
-            </UButton>
-          </div>
-
-          <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
-            <div
-              v-for="post in upcomingPosts"
-              :key="post.id"
-              class="flex items-center gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-4 px-4 rounded-lg transition-colors cursor-pointer"
-            >
-              <!-- Thumbnail -->
-              <div class="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
-                <img
-                  v-if="post.thumbnail_url"
-                  :src="post.thumbnail_url"
-                  :alt="post.caption"
-                  class="w-full h-full object-cover"
-                />
-                <div v-else class="w-full h-full flex items-center justify-center">
-                  <UIcon :name="platformIcon(post.platforms[0]?.platform)" class="w-5 h-5 text-gray-400" />
-                </div>
-              </div>
-
-              <!-- Content -->
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {{ post.caption.slice(0, 60) }}{{ post.caption.length > 60 ? '...' : '' }}
-                </p>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ format(new Date(post.scheduled_at), 'MMM d, h:mm a') }}
-                  </span>
-                  <span class="text-gray-300 dark:text-gray-600">·</span>
-                  <div class="flex items-center gap-1">
-                    <UIcon
-                      v-for="target in post.platforms"
-                      :key="target.account_id"
-                      :name="platformIcon(target.platform)"
-                      class="w-3.5 h-3.5 text-gray-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Status Badge -->
-              <UBadge :color="statusColor(post.status)" variant="subtle" size="xs">
-                {{ post.status }}
-              </UBadge>
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-calendar-clock" class="w-6 h-6 text-primary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-white">
+                Scheduled posts now live in Content Studio
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Grouped by project + month, with drag-to-reschedule and approval state side-by-side.
+              </p>
+              <UButton
+                to="/apps/marketing?floor=studio&view=upcoming"
+                variant="link"
+                size="sm"
+                trailing-icon="i-lucide-arrow-right"
+                :padded="false"
+                class="mt-2"
+              >
+                View upcoming in Studio
+              </UButton>
             </div>
           </div>
         </UCard>
@@ -251,11 +233,11 @@ const { getStatusColorName: statusColor } = useStatusStyle()
 
           <div class="space-y-2">
             <UButton
-              to="/social/compose"
               block
               variant="soft"
               color="primary"
               icon="i-lucide-edit-3"
+              @click="openComposer"
             >
               Create Post
             </UButton>
@@ -353,7 +335,7 @@ const { getStatusColorName: statusColor } = useStatusStyle()
               <div
                 class="w-2 h-2 rounded-full"
                 :class="account.status === 'active' ? 'bg-success' : 'bg-destructive'"
-              />
+              ></div>
             </div>
           </div>
         </UCard>
@@ -367,4 +349,5 @@ const { getStatusColorName: statusColor } = useStatusStyle()
       @created="handleAICreated"
     />
   </LayoutPageContainer>
+  </NuxtLayout>
 </template>

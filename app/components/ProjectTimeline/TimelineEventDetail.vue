@@ -115,7 +115,7 @@ async function save() {
 const taskStats = computed(() => {
   const tasks = props.event.tasks || [];
   const total = tasks.length;
-  const completed = tasks.filter((t: any) => t.completed).length;
+  const completed = tasks.filter((t: any) => t.status === 'completed').length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   return { total, completed, percent };
 });

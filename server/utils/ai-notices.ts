@@ -162,14 +162,14 @@ export async function generateProjectNotices(
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('project_tasks', {
+      readItems('tasks', {
         filter: {
           _and: [
-            { project: { _eq: projectId } },
-            { completed: { _eq: false } },
+            { project_id: { _eq: projectId } },
+            { status: { _neq: 'completed' } },
           ],
         },
-        fields: ['id', 'title', 'due_date', 'completed'],
+        fields: ['id', 'title', 'due_date', 'status'],
         limit: 50,
       }),
     ).catch(() => []) as Promise<any[]>,

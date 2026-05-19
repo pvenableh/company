@@ -516,7 +516,7 @@ const runtimeConfig = useRuntimeConfig();
 const eventItems = useDirectusItems('project_events');
 const eventFileItems = useDirectusItems('project_events_files');
 const ticketItems = useDirectusItems('tickets');
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
 const invoiceItems = useDirectusItems('invoices');
 const meetingItems = useDirectusItems('video_meetings');
 const { upload: uploadFile } = useDirectusFiles();
@@ -591,7 +591,7 @@ const loadProjectData = async () => {
 		const meetingFilter = { project: { _eq: props.project.id } };
 		const [tickets, tasks, invoices, meetings] = await Promise.all([
 			ticketItems.list({ fields: ['id', 'status'], filter: projectFilter, limit: 200 }),
-			taskItems.list({ fields: ['id', 'completed', 'status'], filter: projectFilter, limit: 200 }),
+			taskItems.list({ fields: ['id', 'status'], filter: { project_id: { _eq: props.project.id } }, limit: 200 }),
 			invoiceItems.list({ fields: ['id', 'status', 'total_amount', 'invoice_code', 'invoice_date', 'due_date'], filter: invoiceProjectFilter, limit: 100 }),
 			meetingItems.list({ fields: ['id', 'title', 'scheduled_start', 'scheduled_end', 'duration_minutes', 'status', 'meeting_url', 'room_name', 'invitee_name', 'invitee_email', 'meeting_type'], filter: meetingFilter, limit: 100 }).catch(() => []),
 		]);
@@ -599,7 +599,7 @@ const loadProjectData = async () => {
 		stats.value.ticketCount = tickets?.length || 0;
 		stats.value.openTickets = tickets?.filter(t => t.status !== 'Completed').length || 0;
 		stats.value.taskCount = tasks?.length || 0;
-		stats.value.completedTasks = tasks?.filter(t => t.completed || t.status === 'completed').length || 0;
+		stats.value.completedTasks = tasks?.filter(t => t.status === 'completed').length || 0;
 
 		let total = 0;
 		let paid = 0;
@@ -814,7 +814,7 @@ const openEventDetail = async (event) => {
 	loadingEventDetail.value = true;
 	try {
 		const fullEvent = await eventItems.get(event.id, {
-			fields: ['*', 'tasks.*', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
+			fields: ['*', 'tasks.*', 'tasks.assigned_to.directus_users_id.id', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
 		});
 		selectedEventFull.value = fullEvent;
 	} catch (err) {

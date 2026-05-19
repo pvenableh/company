@@ -233,9 +233,9 @@ async function buildProjectContext(directus: any, projectId: string, now: Date):
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('project_tasks', {
-        filter: { project: { _eq: projectId } },
-        fields: ['id', 'title', 'status', 'completed', 'due_date', 'priority', 'assignee_id'],
+      readItems('tasks', {
+        filter: { project_id: { _eq: projectId } },
+        fields: ['id', 'title', 'status', 'due_date', 'priority'],
         sort: ['-due_date'],
         limit: 30,
       }),
@@ -280,8 +280,8 @@ async function buildProjectContext(directus: any, projectId: string, now: Date):
 
   // Tasks [Source: Tasks]
   if (tasks.length > 0) {
-    const completed = tasks.filter((t: any) => t.completed);
-    const pending = tasks.filter((t: any) => !t.completed);
+    const completed = tasks.filter((t: any) => t.status === 'completed');
+    const pending = tasks.filter((t: any) => t.status !== 'completed');
     const overdue = pending.filter((t: any) => t.due_date && new Date(t.due_date) < now);
 
     lines.push('');
@@ -883,9 +883,9 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('project_tasks', {
-        filter: { event: { _eq: eventId } },
-        fields: ['id', 'title', 'completed', 'due_date', 'priority'],
+      readItems('tasks', {
+        filter: { project_event_id: { _eq: eventId } },
+        fields: ['id', 'title', 'status', 'due_date', 'priority'],
         sort: ['-due_date'],
         limit: 15,
       }),
@@ -959,8 +959,8 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
   }
 
   if (tasks.length > 0) {
-    const completed = tasks.filter((t: any) => t.completed);
-    const pending = tasks.filter((t: any) => !t.completed);
+    const completed = tasks.filter((t: any) => t.status === 'completed');
+    const pending = tasks.filter((t: any) => t.status !== 'completed');
     lines.push('');
     lines.push('[Source: Tasks]');
     lines.push(`TASKS (${tasks.length} total, ${completed.length} done, ${pending.length} pending):`);

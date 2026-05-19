@@ -10,19 +10,19 @@
 			<button class="shrink-0 mt-0.5" @click.stop="$emit('toggle-complete')">
 				<div
 					class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-					:class="task.completed
+					:class="isCompleted
 						? 'bg-primary border-primary'
 						: 'border-border hover:border-primary'"
-					:title="task.completed ? 'Mark incomplete' : 'Mark complete'"
+					:title="isCompleted ? 'Mark incomplete' : 'Mark complete'"
 				>
-					<UIcon v-if="task.completed" name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+					<UIcon v-if="isCompleted" name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 				</div>
 			</button>
 
 			<div class="flex-1 min-w-0">
 				<p
 					class="text-xs font-medium leading-snug line-clamp-2"
-					:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
+					:class="isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'"
 				>
 					{{ task.title }}
 				</p>
@@ -37,7 +37,7 @@
 						{{ task.priority }}
 					</span>
 					<span
-						v-if="task.due_date && !task.completed"
+						v-if="task.due_date && !isCompleted"
 						class="text-[10px] flex items-center gap-0.5"
 						:class="dueDateTextClass"
 					>
@@ -89,6 +89,8 @@ defineEmits<{
 const { getPriorityIconClass } = useStatusStyle();
 const config = useRuntimeConfig();
 
+const isCompleted = computed(() => props.task?.status === 'completed');
+
 const priorityIconClass = computed(() => getPriorityIconClass(props.task?.priority));
 
 const dueDateUrgency = computed(() => formatDueDateStatus(props.task?.due_date));
@@ -102,7 +104,11 @@ const dueDateTextClass = computed(() => {
 });
 
 const assignee = computed<TeamMember | undefined>(() => {
-	const id = props.task?.assignee_id;
+	// tasks.assigned_to is an m2m junction array — first assignee wins for the avatar.
+	const junction = props.task?.assigned_to?.[0];
+	const id = typeof junction === 'string'
+		? junction
+		: junction?.directus_users_id?.id || junction?.directus_users_id || null;
 	if (!id) return undefined;
 	return props.teamMembers?.find(m => m.id === id);
 });

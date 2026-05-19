@@ -2,7 +2,7 @@
  * Batch Save Project Events & Tasks.
  *
  * Takes an array of approved events with nested tasks and creates them
- * in Directus as project_events and project_tasks records.
+ * in Directus as project_events and tasks records.
  */
 import { createItem, readItem } from '@directus/sdk';
 import type { SaveEventsRequest } from '~~/shared/projects/timeline-generator';
@@ -24,9 +24,13 @@ export default defineEventHandler(async (event) => {
 
   const directus = await getUserDirectus(event);
 
-  // Verify project exists
+  // Verify project exists and grab its org (needed for tasks.organization_id)
+  let projectOrgId: string | null = null;
   try {
-    await directus.request(readItem('projects', body.projectId, { fields: ['id'] }));
+    const proj = await directus.request(
+      readItem('projects', body.projectId, { fields: ['id', 'organization'] }),
+    ) as { id: string; organization: string | null };
+    projectOrgId = proj.organization;
   } catch {
     throw createError({ statusCode: 404, message: 'Project not found' });
   }
@@ -63,14 +67,17 @@ export default defineEventHandler(async (event) => {
       if (evt.tasks && evt.tasks.length > 0) {
         for (const task of evt.tasks) {
           await directus.request(
-            createItem('project_tasks', {
-              event_id: created.id,
+            createItem('tasks', {
+              project_event_id: created.id,
+              project_id: body.projectId,
+              organization_id: projectOrgId,
+              category: 'event',
               title: task.title,
               description: task.description,
               priority: task.priority,
               due_date: task.due_date,
-              status: 'published',
-              completed: false,
+              status: 'new',
+              schedule: 'unscheduled',
             }),
           );
           tasksCreated++;

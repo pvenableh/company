@@ -9,18 +9,18 @@
 						<button @click="toggleComplete" class="shrink-0">
 							<div
 								class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-								:class="localTask.completed
+								:class="isCompleted
 									? 'bg-primary border-primary'
 									: 'border-border hover:border-primary'"
 							>
-								<Icon v-if="localTask.completed" name="lucide:check" class="w-3 h-3 text-white" />
+								<Icon v-if="isCompleted" name="lucide:check" class="w-3 h-3 text-white" />
 							</div>
 						</button>
 						<span
 							class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-							:class="getStatusBadgeClasses(localTask.status || 'todo')"
+							:class="getStatusBadgeClasses(localTask.status || 'new')"
 						>
-							{{ statusLabels[localTask.status || 'todo'] }}
+							{{ statusLabels[localTask.status || 'new'] }}
 						</span>
 					</div>
 					<div class="flex items-center gap-1">
@@ -60,11 +60,11 @@
 							<select
 								v-model="localTask.status"
 								class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
-								@change="saveField('status', localTask.status); if (localTask.status === 'done') { localTask.completed = true; saveField('completed', true); } else { localTask.completed = false; saveField('completed', false); }"
+								@change="onStatusChange"
 							>
-								<option value="todo">To Do</option>
+								<option value="new">To Do</option>
 								<option value="in_progress">In Progress</option>
-								<option value="done">Done</option>
+								<option value="completed">Done</option>
 							</select>
 						</div>
 
@@ -84,15 +84,17 @@
 							</div>
 						</div>
 
-						<!-- Assignee -->
+						<!-- Assignee — tasks.assigned_to is an m2m junction; we expose
+						     the first assignee as a single-pick for backwards compatibility
+						     with the prior project_tasks UX. -->
 						<div class="flex items-center gap-3">
 							<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Assignee</span>
 							<select
-								v-model="localTask.assignee_id"
+								:value="assigneeId"
 								class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
-								@change="saveField('assignee_id', localTask.assignee_id || null)"
+								@change="onAssigneeChange(($event.target as HTMLSelectElement).value || null)"
 							>
-								<option :value="null">Unassigned</option>
+								<option value="">Unassigned</option>
 								<option v-for="m in teamMembers" :key="m.id" :value="m.id">
 									{{ m.first_name }} {{ m.last_name }}
 								</option>
@@ -159,12 +161,22 @@ watch(() => props.task, (newTask) => {
 const { getStatusBadgeClasses } = useStatusStyle();
 
 const statusLabels: Record<string, string> = {
-	todo: 'To Do',
+	new: 'To Do',
+	approved: 'To Do',
 	in_progress: 'In Progress',
-	done: 'Done',
-	published: 'To Do',
-	draft: 'Draft',
+	completed: 'Done',
 };
+
+const isCompleted = computed(() => localTask.status === 'completed');
+
+const assigneeId = computed<string>(() => {
+	const junction = localTask.assigned_to?.[0];
+	if (!junction) return '';
+	const id = typeof junction === 'string'
+		? junction
+		: junction?.directus_users_id?.id || junction?.directus_users_id || '';
+	return id || '';
+});
 
 const priorityOptions = [
 	{ value: 'low', label: 'Low', activeClass: 'bg-blue-500/10 text-blue-500' },
@@ -176,13 +188,28 @@ function saveField(field: string, value: any) {
 	emit('update', props.task.id, { [field]: value });
 }
 
-function toggleComplete() {
-	localTask.completed = !localTask.completed;
-	localTask.status = localTask.completed ? 'done' : 'todo';
+function onStatusChange() {
 	emit('update', props.task.id, {
-		completed: localTask.completed,
 		status: localTask.status,
-		completed_at: localTask.completed ? new Date().toISOString() : null,
+		date_completed: localTask.status === 'completed' ? new Date().toISOString() : null,
+	});
+}
+
+function onAssigneeChange(newId: string | null) {
+	// Replace the m2m array with a single-row payload — Directus accepts an
+	// array of partial junction rows to overwrite the relation.
+	localTask.assigned_to = newId
+		? [{ directus_users_id: newId }]
+		: [];
+	emit('update', props.task.id, { assigned_to: localTask.assigned_to });
+}
+
+function toggleComplete() {
+	const newStatus = isCompleted.value ? 'new' : 'completed';
+	localTask.status = newStatus;
+	emit('update', props.task.id, {
+		status: newStatus,
+		date_completed: newStatus === 'completed' ? new Date().toISOString() : null,
 	});
 }
 </script>
