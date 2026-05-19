@@ -1,15 +1,17 @@
 <script setup lang="ts">
 /**
  * Money app — Apps Layout Phase 4 (Time floor extracted in retainer/social
- * Phase 2, 2026-05-18).
+ * Phase 2, 2026-05-18; Documents floor added in document-system step 5,
+ * 2026-05-18).
  *
  * Single landing page with a pill-segmented floor strip:
- *   Cash flow (default) | Invoices | Payments | Expenses | Insights
+ *   Cash flow (default) | Documents | Invoices | Payments | Expenses | Insights
  *
  * Same shape as /apps/work: floor switching is in-place via `?floor=` query
  * param so the shell never remounts. Drill-downs from any floor still push
  * to the canonical classic detail routes (`/invoices/detail/[id]`,
- * `/invoices/[id]`, etc.).
+ * `/invoices/[id]`, etc.) — except Documents, which opens proposal/contract
+ * slide-over panels instead of navigating away.
  *
  * `?floor=time` now redirects to `/apps/work?floor=time` — time tracking
  * lives under Work because the hours pool absorbs ALL work types, not just
@@ -38,8 +40,8 @@ const route = useRoute();
 // ── Floor strip ─────────────────────────────────────────────────────────────
 // Time tracking moved to /apps/work?floor=time in Phase 2 of the retainer
 // plan — any lingering `?floor=time` deep-links bounce out below.
-type FloorKey = 'cashflow' | 'invoices' | 'payments' | 'expenses' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['cashflow', 'invoices', 'payments', 'expenses', 'insights'];
+type FloorKey = 'cashflow' | 'documents' | 'invoices' | 'payments' | 'expenses' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['cashflow', 'documents', 'invoices', 'payments', 'expenses', 'insights'];
 
 if (route.query.floor === 'time') {
   await navigateTo({ path: '/apps/work', query: { floor: 'time' } }, { redirectCode: 302, replace: true });
@@ -57,11 +59,43 @@ watch(floor, (next) => {
 
 const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'cashflow', label: 'Cash flow', icon: 'lucide:trending-up' },
+  { key: 'documents', label: 'Documents', icon: 'lucide:files' },
   { key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
   { key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
   { key: 'expenses', label: 'Expenses', icon: 'lucide:receipt' },
   { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
+
+// Documents floor — sub-tab `?tab=` rides alongside `?floor=documents`.
+// Hosting page owns the create modals; the floor component only renders
+// the lists + tab strip + counts.
+const documentsTab = ref<'proposals' | 'contracts'>(
+  route.query.tab === 'contracts' || route.query.tab === 'proposals'
+    ? (route.query.tab as 'proposals' | 'contracts')
+    : 'proposals',
+);
+const documentsFloorRef = ref<any>(null);
+const showProposalModal = ref(false);
+const showContractModal = ref(false);
+
+watch(documentsTab, (next) => {
+  if (floor.value !== 'documents') return;
+  router.replace({ query: { ...route.query, tab: next === 'proposals' ? undefined : next } });
+});
+
+watch(floor, (next, prev) => {
+  if (prev === 'documents' && next !== 'documents') {
+    // Drop ?tab= when leaving Documents so it doesn't bleed into other floors.
+    const { tab: _t, ...rest } = route.query;
+    router.replace({ query: { ...rest, floor: next === 'cashflow' ? undefined : next } });
+  }
+});
+
+function onDocumentCreated() {
+  showProposalModal.value = false;
+  showContractModal.value = false;
+  documentsFloorRef.value?.refresh?.();
+}
 
 // ── Insights floor ──────────────────────────────────────────────────────────
 const { snapshot: moneyInsightsSnapshot, snapshotLoading: moneyInsightsLoading, fetchSnapshot: fetchMoneyInsights } = useCRMIntelligence();
@@ -414,6 +448,11 @@ const headerAction = computed(() => {
   if (floor.value === 'expenses') {
     return { label: 'Add Expense', icon: 'lucide:plus', onClick: openExpenseCreate };
   }
+  if (floor.value === 'documents') {
+    return documentsTab.value === 'contracts'
+      ? { label: 'New Contract', icon: 'lucide:plus', onClick: () => (showContractModal.value = true) }
+      : { label: 'New Proposal', icon: 'lucide:plus', onClick: () => (showProposalModal.value = true) };
+  }
   return null;
 });
 </script>
@@ -619,6 +658,15 @@ const headerAction = computed(() => {
             </div>
           </div>
         </template>
+      </template>
+
+      <!-- ── Documents floor ──────────────────────────────────────────── -->
+      <template v-else-if="floor === 'documents'">
+        <MoneyDocumentsFloor
+          ref="documentsFloorRef"
+          :initial-tab="documentsTab"
+          @tab-change="documentsTab = $event"
+        />
       </template>
 
       <!-- ── Invoices floor ───────────────────────────────────────────── -->
@@ -940,6 +988,17 @@ const headerAction = computed(() => {
       <template v-else-if="floor === 'insights'">
         <MoneyInsightsView :snapshot="moneyInsightsSnapshot" :loading="moneyInsightsLoading" />
       </template>
+
+      <!-- Documents create modals — owned at the page level so the header
+           "+ New Proposal/Contract" CTA can trigger them. -->
+      <ProposalsFormModal
+        v-model="showProposalModal"
+        @created="onDocumentCreated"
+      />
+      <ContractsFormModal
+        v-model="showContractModal"
+        @created="onDocumentCreated"
+      />
     </LayoutPageContainer>
   </div>
 </template>

@@ -7,7 +7,41 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 definePageMeta({ middleware: ['auth'] });
 
 const route = useRoute();
+const router = useRouter();
 const leadId = computed(() => route.params.id as string);
+
+// Mount the slide-over stack on this page so row clicks in the Documents
+// tab (and the AI-draft success handler) can push proposal/contract
+// panels. Default layout doesn't render the stack — we wire it locally.
+useAppSlideOverStackUrlSync();
+const proposalSlide = useAppSlideOver('proposal');
+
+// Tab state — `?view=documents` swaps the page body between the
+// existing overview (left sidebar + activity) and the new Documents tab
+// (proposals + contracts scoped to this lead).
+type LeadView = 'overview' | 'documents';
+const VIEW_KEYS: LeadView[] = ['overview', 'documents'];
+const view = ref<LeadView>(
+  typeof route.query.view === 'string' && VIEW_KEYS.includes(route.query.view as LeadView)
+    ? (route.query.view as LeadView)
+    : 'overview',
+);
+watch(view, (next) => {
+  router.replace({ query: { ...route.query, view: next === 'overview' ? undefined : next } });
+});
+
+const docsProposalCount = ref(0);
+const docsContractCount = ref(0);
+const docsProposalsRef = ref<any>(null);
+const docsContractsRef = ref<any>(null);
+const showCreateProposalModal = ref(false);
+const showCreateContractModal = ref(false);
+function onDocCreated() {
+  showCreateProposalModal.value = false;
+  showCreateContractModal.value = false;
+  docsProposalsRef.value?.refresh?.();
+  docsContractsRef.value?.refresh?.();
+}
 
 const { getLead, updateLeadStageWithAutomation, addLeadToList } = useLeads();
 const { getActivitiesForLead, createActivity } = useLeadActivities();
@@ -48,10 +82,16 @@ async function generateDraft() {
 			title: 'Draft ready',
 			description: draft.suggested_template_name
 				? `Starting from template: ${draft.suggested_template_name}`
-				: 'Review and edit on the proposal page.',
+				: 'Opening the new proposal.',
 			color: 'green',
 		});
-		if (created?.id) navigateTo(`/proposals/${created.id}`);
+		if (created?.id) {
+			// Switch to the Documents tab so the freshly-fetched list shows
+			// the new row underneath the slide-over once it closes.
+			view.value = 'documents';
+			docsProposalsRef.value?.refresh?.();
+			await proposalSlide.open(String(created.id));
+		}
 	} catch (err: any) {
 		console.error('[draft-proposal]', err);
 		toast.add({
@@ -318,11 +358,9 @@ onUnmounted(() => clearEntity());
 									Generates a tailored proposal draft from this lead's context — contact, company, scope notes, past won-lead patterns. Drops the result straight into a new proposal you can edit.
 								</TooltipContent>
 							</Tooltip>
-							<NuxtLink :to="`/proposals?new=1&lead=${lead.id}`">
-								<UiActionButton icon="lucide:file-plus">
-									Proposal
-								</UiActionButton>
-							</NuxtLink>
+							<UiActionButton icon="lucide:file-plus" @click="showCreateProposalModal = true">
+								Proposal
+							</UiActionButton>
 						</div>
 					</TooltipProvider>
 				</div>
@@ -349,7 +387,109 @@ onUnmounted(() => clearEntity());
 				/>
 			</div>
 
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<!-- View tab strip — Overview keeps the existing 3-col layout;
+			     Documents swaps the body for proposals + contracts scoped
+			     to this lead, mirroring the ClientWorkspace Documents tab.
+			     Counts come from the shared MoneyProposalsList/ContractsList
+			     components via `@count`. -->
+			<div class="flex flex-wrap gap-1.5 mb-5">
+				<button
+					type="button"
+					class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
+					:class="view === 'overview'
+						? 'bg-primary text-primary-foreground border-primary'
+						: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+					@click="view = 'overview'"
+				>
+					<Icon name="lucide:layout-dashboard" class="w-3.5 h-3.5" />
+					Overview
+				</button>
+				<button
+					type="button"
+					class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
+					:class="view === 'documents'
+						? 'bg-primary text-primary-foreground border-primary'
+						: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+					@click="view = 'documents'"
+				>
+					<Icon name="lucide:files" class="w-3.5 h-3.5" />
+					Documents
+					<span class="text-[10px] opacity-70 ml-0.5">{{ docsProposalCount + docsContractCount }}</span>
+				</button>
+			</div>
+
+			<!-- Documents tab body -->
+			<div v-if="view === 'documents'" class="ios-card p-4 sm:p-6 space-y-6">
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<div class="flex items-center gap-2">
+							<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+								Proposals
+							</h4>
+							<span class="text-[10px] text-muted-foreground/70">{{ docsProposalCount }}</span>
+						</div>
+						<div class="flex items-center gap-1.5">
+							<Tooltip>
+								<TooltipTrigger as-child>
+									<UiActionButton
+										icon="earnest"
+										variant="primary"
+										:loading="drafting"
+										size="xs"
+										@click="generateDraft"
+									>
+										AI Draft
+									</UiActionButton>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
+									Generates a tailored proposal draft from this lead's context. Opens the new proposal in a slide-over for review.
+								</TooltipContent>
+							</Tooltip>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="showCreateProposalModal = true"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Proposal
+							</button>
+						</div>
+					</div>
+					<MoneyProposalsList
+						ref="docsProposalsRef"
+						:lead-id="lead.id"
+						@count="docsProposalCount = $event"
+					/>
+				</section>
+
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<div class="flex items-center gap-2">
+							<Icon name="lucide:file-signature" class="w-4 h-4 text-muted-foreground" />
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+								Contracts
+							</h4>
+							<span class="text-[10px] text-muted-foreground/70">{{ docsContractCount }}</span>
+						</div>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+							@click="showCreateContractModal = true"
+						>
+							<Icon name="lucide:plus" class="w-3 h-3" />
+							New Contract
+						</button>
+					</div>
+					<MoneyContractsList
+						ref="docsContractsRef"
+						:lead-id="lead.id"
+						@count="docsContractCount = $event"
+					/>
+				</section>
+			</div>
+
+			<div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<!-- Left: Lead info -->
 				<div class="lg:col-span-1 space-y-4">
 					<!-- Details -->
@@ -639,6 +779,19 @@ onUnmounted(() => clearEntity());
 				@saved="handleMeetingCreated"
 			/>
 
+			<!-- Documents create modals — lead is prefilled via :lead-id
+			     so the new proposal/contract joins this lead's set. -->
+			<ProposalsFormModal
+				v-model="showCreateProposalModal"
+				:lead-id="lead?.id"
+				@created="onDocCreated"
+			/>
+			<ContractsFormModal
+				v-model="showCreateContractModal"
+				:lead-id="lead?.id"
+				@created="onDocCreated"
+			/>
+
 		</template>
 
 		<!-- Contextual AI Sidebar -->
@@ -653,6 +806,14 @@ onUnmounted(() => clearEntity());
 			<Transition name="overlay">
 				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
 			</Transition>
+		</ClientOnly>
+
+		<!-- Slide-over stack — Teleports to body. Mounted on this page so
+		     Documents-tab row clicks + AI-draft success can push proposal
+		     / contract panels even though the default layout doesn't
+		     render the stack. -->
+		<ClientOnly>
+			<AppsAppSlideOverStack />
 		</ClientOnly>
 	</LayoutPageContainer>
 </template>

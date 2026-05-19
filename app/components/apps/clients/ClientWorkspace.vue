@@ -88,6 +88,12 @@ const meetingsLoading = ref(false);
 const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
 const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
 
+// Documents tab — proposals + contracts scoped to this client. Counts
+// pulled from the shared list components via `@count`.
+const documentsProposalCount = ref(0);
+const documentsContractCount = ref(0);
+const documentsRefreshTick = ref(0); // bumped on new-create to refresh both lists
+
 const TICKET_STATUSES: Array<'Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'Archived'> = [
 	'Pending', 'Scheduled', 'In Progress', 'Completed', 'Archived',
 ];
@@ -129,6 +135,7 @@ watch(activeTab, (next) => {
 	if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
 	if (next === 'meetings' && !relatedMeetings.value.length && !meetingsLoading.value) loadMeetings();
 	if (next === 'content' && !relatedContent.value.length && !contentLoading.value) loadContent();
+	// 'documents' tab is self-loading via MoneyProposalsList/ContractsList.
 });
 
 const relatedContent = ref<any[]>([]);
@@ -312,6 +319,7 @@ const totalPartnerCount = computed(() => directConnections.value.length + inheri
 const tabCounts = computed(() => ({
 	contacts: totalContactCount.value,
 	projects: relatedProjects.value.length,
+	documents: documentsProposalCount.value + documentsContractCount.value,
 	tickets: relatedTickets.value.length,
 	tasks: relatedTasks.value.length,
 	meetings: relatedMeetings.value.length,
@@ -415,6 +423,8 @@ const showCreateInvoiceModal = ref(false);
 const showAttachInvoiceModal = ref(false);
 const showAttachChannelModal = ref(false);
 const showCreateMeetingModal = ref(false);
+const showCreateProposalModal = ref(false);
+const showCreateContractModal = ref(false);
 
 // Quick task add: lightweight inline input instead of full FormModal
 // (no FormModal exists for tasks, and a project-less task at client
@@ -495,6 +505,26 @@ function onMeetingCreated() {
 	showCreateMeetingModal.value = false;
 	loadMeetings();
 }
+
+function onProposalCreated() {
+	showCreateProposalModal.value = false;
+	documentsRefreshTick.value++;
+}
+
+function onContractCreated() {
+	showCreateContractModal.value = false;
+	documentsRefreshTick.value++;
+}
+
+// Refs to refresh lists on inline create (the tick is consumed via watch
+// inside MoneyProposalsList/MoneyContractsList — they re-fetch on scope
+// changes, but inline creates don't change scope. Use exposed refresh.)
+const documentsProposalsRef = ref<any>(null);
+const documentsContractsRef = ref<any>(null);
+watch(documentsRefreshTick, () => {
+	documentsProposalsRef.value?.refresh?.();
+	documentsContractsRef.value?.refresh?.();
+});
 
 async function changeTicketStatus(ticket: any, next: typeof TICKET_STATUSES[number]) {
 	const prev = ticket.status;
@@ -763,6 +793,63 @@ watch(() => props.clientId, () => {
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
 						</NuxtLink>
 					</div>
+				</div>
+
+				<!-- Documents (proposals + contracts) — two stacked sections.
+				     Lists scope themselves to this client via the shared
+				     MoneyProposalsList / MoneyContractsList components.
+				     Empty state per section keeps both visible even with
+				     zero rows so the create chips are always reachable. -->
+				<div v-else-if="activeTab === 'documents'" class="space-y-6">
+					<section>
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-2">
+								<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
+								<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+									Proposals
+								</h4>
+								<span class="text-[10px] text-muted-foreground/70">{{ documentsProposalCount }}</span>
+							</div>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="showCreateProposalModal = true"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Proposal
+							</button>
+						</div>
+						<MoneyProposalsList
+							ref="documentsProposalsRef"
+							:client-id="clientId"
+							@count="documentsProposalCount = $event"
+						/>
+					</section>
+
+					<section>
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-2">
+								<Icon name="lucide:file-signature" class="w-4 h-4 text-muted-foreground" />
+								<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+									Contracts
+								</h4>
+								<span class="text-[10px] text-muted-foreground/70">{{ documentsContractCount }}</span>
+							</div>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="showCreateContractModal = true"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Contract
+							</button>
+						</div>
+						<MoneyContractsList
+							ref="documentsContractsRef"
+							:client-id="clientId"
+							@count="documentsContractCount = $event"
+						/>
+					</section>
 				</div>
 
 				<!-- Tickets -->
@@ -1340,6 +1427,25 @@ watch(() => props.clientId, () => {
 				@saved="onMeetingCreated"
 			/>
 		</ClientOnly>
+
+		<!-- Documents create modals. Proposals have no client FK in the
+		     schema (they tie to lead + contact + organization), so the
+		     modal just opens unscoped here — the user picks the lead or
+		     contact in the form. Contracts DO have a client FK; the
+		     modal prefill goes through ContractForm.contact today, so
+		     the same un-scoped open is fine until ContractForm grows a
+		     client picker. Lists still re-scope on refresh via the
+		     unioned filter in MoneyProposalsList. -->
+		<ProposalsFormModal
+			v-if="client"
+			v-model="showCreateProposalModal"
+			@created="onProposalCreated"
+		/>
+		<ContractsFormModal
+			v-if="client"
+			v-model="showCreateContractModal"
+			@created="onContractCreated"
+		/>
 	</div>
 </template>
 
