@@ -39,7 +39,7 @@ import { resolve } from 'node:path'
 
 const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055'
 const DIRECTUS_TOKEN = process.env.DIRECTUS_SERVER_TOKEN || process.env.DIRECTUS_ADMIN_TOKEN || ''
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:peter@huestudios.com'
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:hello@earnest.guru'
 
 if (!DIRECTUS_TOKEN) {
 	console.error('Error: DIRECTUS_SERVER_TOKEN or DIRECTUS_ADMIN_TOKEN environment variable is required')

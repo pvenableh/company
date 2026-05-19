@@ -16,7 +16,7 @@ function ensureConfigured(): boolean {
 	const config = useRuntimeConfig()
 	const publicKey = config.public?.vapidPublicKey
 	const privateKey = (config as any).vapidPrivateKey
-	const subject = (config as any).vapidSubject || 'mailto:peter@huestudios.com'
+	const subject = (config as any).vapidSubject || 'mailto:hello@earnest.guru'
 	if (!publicKey || !privateKey) {
 		// First call without keys configured — log once and return false. The
 		// send-side wraps this and silently no-ops so dev environments without

@@ -226,7 +226,7 @@ export default defineNuxtConfig({
 
 		// Web Push (VAPID)
 		vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
-		vapidSubject: process.env.VAPID_SUBJECT || 'mailto:peter@huestudios.com',
+		vapidSubject: process.env.VAPID_SUBJECT || 'mailto:hello@earnest.guru',
 
 		// SendGrid webhook verification key
 		sendgridWebhookKey: process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY || '',
