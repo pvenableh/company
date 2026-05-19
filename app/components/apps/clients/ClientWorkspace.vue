@@ -138,20 +138,38 @@ function taskStatusLabel(s: string): string {
 	return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+// Skeleton sizing — match the row count to the badge so the tab body
+// occupies its final height immediately and rows don't pop in. Capped
+// so a 200-project client doesn't render a huge ghost list.
+function skeletonRows(n: number, fallback = 4, max = 8): number[] {
+	const k = Math.min(Math.max(n || fallback, 1), max);
+	return Array.from({ length: k }, (_, i) => i);
+}
+
 const { inheritedContacts, inheritedConnections, load: loadInherited } = useClientInheritedContacts();
 
 const activeTab = ref<ClientTabKey>(props.initialTab || 'activity');
 
+// Tab-activation loader. Shared by the active-tab watcher AND the
+// hover-prefetch handler from <ClientTabsBar>, so a hover and a click
+// converge on the same fetch (the `loading` flags prevent doubles, and
+// the useDirectusItems request-dedup layer eliminates same-key races).
+function loadForTab(tab: ClientTabKey) {
+	switch (tab) {
+		case 'projects': if (!projectsLoaded.value && !projectsLoading.value) loadProjects(); break;
+		case 'invoices': if (!invoicesLoaded.value && !invoicesLoading.value) loadInvoices(); break;
+		case 'messages': if (!channelsLoaded.value && !channelsLoading.value) loadChannels(); break;
+		case 'tickets':  if (!relatedTickets.value.length && !ticketsLoading.value) loadTickets(); break;
+		case 'tasks':    if (!relatedTasks.value.length && !tasksLoading.value) loadTasks(); break;
+		case 'meetings': if (!relatedMeetings.value.length && !meetingsLoading.value) loadMeetings(); break;
+		case 'content':  if (!relatedContent.value.length && !contentLoading.value) loadContent(); break;
+		// 'documents' tab is self-loading via MoneyProposalsList/ContractsList.
+	}
+}
+
 watch(activeTab, (next) => {
 	emit('tab-change', next);
-	if (next === 'projects' && !projectsLoaded.value && !projectsLoading.value) loadProjects();
-	if (next === 'invoices' && !invoicesLoaded.value && !invoicesLoading.value) loadInvoices();
-	if (next === 'messages' && !channelsLoaded.value && !channelsLoading.value) loadChannels();
-	if (next === 'tickets' && !relatedTickets.value.length && !ticketsLoading.value) loadTickets();
-	if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
-	if (next === 'meetings' && !relatedMeetings.value.length && !meetingsLoading.value) loadMeetings();
-	if (next === 'content' && !relatedContent.value.length && !contentLoading.value) loadContent();
-	// 'documents' tab is self-loading via MoneyProposalsList/ContractsList.
+	loadForTab(next);
 });
 
 const relatedContent = ref<any[]>([]);
@@ -645,6 +663,7 @@ watch(() => props.clientId, () => {
 				v-model="activeTab"
 				:counts="tabCounts"
 				class="mb-5"
+				@prefetch="loadForTab"
 			/>
 
 			<div class="ios-card p-4 sm:p-6">
@@ -834,8 +853,16 @@ watch(() => props.clientId, () => {
 							New Project
 						</button>
 					</div>
-					<div v-if="projectsLoading && !relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading projects…
+					<div v-if="projectsLoading && !relatedProjects.length" class="space-y-px" aria-busy="true" aria-label="Loading projects">
+						<div
+							v-for="i in skeletonRows(projectCount)"
+							:key="`proj-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
+							<USkeleton class="h-3.5 flex-1 max-w-[40%]" />
+							<USkeleton class="h-4 w-16 rounded-full" />
+						</div>
 					</div>
 					<div v-else-if="!relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
 						No projects linked to this client.
@@ -1241,8 +1268,18 @@ watch(() => props.clientId, () => {
 							New Invoice
 						</button>
 					</div>
-					<div v-if="invoicesLoading && !relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading invoices…
+					<div v-if="invoicesLoading && !relatedInvoices.length" class="space-y-px" aria-busy="true" aria-label="Loading invoices">
+						<div
+							v-for="i in skeletonRows(invoiceCount)"
+							:key="`inv-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
+							<USkeleton class="h-3.5 w-24" />
+							<USkeleton class="h-3.5 flex-1 max-w-[20%]" />
+							<USkeleton class="h-4 w-16" />
+							<USkeleton class="h-4 w-14 rounded-full" />
+						</div>
 					</div>
 					<div v-else-if="!relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
 						No invoices yet for this client.
@@ -1332,8 +1369,16 @@ watch(() => props.clientId, () => {
 							Attach Existing
 						</button>
 					</div>
-					<div v-if="channelsLoading && !relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading channels…
+					<div v-if="channelsLoading && !relatedChannels.length" class="space-y-px" aria-busy="true" aria-label="Loading channels">
+						<div
+							v-for="i in skeletonRows(channelCount)"
+							:key="`ch-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+							<USkeleton class="h-3.5 flex-1 max-w-[35%]" />
+							<USkeleton class="h-3.5 w-32 hidden md:block" />
+						</div>
 					</div>
 					<div v-else-if="!relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
 						No channels tagged to this client.

@@ -114,14 +114,25 @@ const projectTeamMembers = computed(() => {
 const organizationId = computed(() => (project.value as any)?.organization?.id || null);
 const clientId = computed(() => (project.value as any)?.client?.id || null);
 
+// Tab-activation loader. Shared by the active-tab watcher AND the
+// hover-prefetch handler from <ProjectTabsBar>. The `loading` flags +
+// useDirectusItems request-dedup prevent doubles.
+function loadForTab(tab: ProjectTabKey) {
+	switch (tab) {
+		case 'tasks':    if (taskCount.value === 0) refreshTaskCount(); break;
+		case 'tickets':  if (ticketCount.value === 0) refreshTicketCount(); break;
+		case 'channels': if (!channels.value.length && !channelsLoading.value) loadChannels(); break;
+		case 'meetings': if (!meetings.value.length && !meetingsLoading.value) loadMeetings(); break;
+		case 'invoices': if (!invoices.value.length && !invoicesLoading.value) loadInvoices(); break;
+		case 'files':    if (!files.value.length && !filesLoading.value) loadFiles(); break;
+		// 'activity' (ProjectsActivityTimeline) + 'documents' (Money*List)
+		// self-fetch; nothing to warm here.
+	}
+}
+
 watch(activeTab, (next) => {
 	emit('tab-change', next);
-	if (next === 'tasks' && taskCount.value === 0) refreshTaskCount();
-	if (next === 'tickets' && ticketCount.value === 0) refreshTicketCount();
-	if (next === 'channels' && !channels.value.length && !channelsLoading.value) loadChannels();
-	if (next === 'meetings' && !meetings.value.length && !meetingsLoading.value) loadMeetings();
-	if (next === 'invoices' && !invoices.value.length && !invoicesLoading.value) loadInvoices();
-	if (next === 'files' && !files.value.length && !filesLoading.value) loadFiles();
+	loadForTab(next);
 });
 
 async function loadProject() {
@@ -353,6 +364,14 @@ function formatFileSize(bytes: number | null | undefined): string {
 	return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
+// Skeleton sizing — uses the tab badge as a hint so the body occupies
+// its final height immediately. Capped so a large list doesn't produce
+// a huge ghost block.
+function skeletonRows(n: number, fallback = 4, max = 8): number[] {
+	const k = Math.min(Math.max(n || fallback, 1), max);
+	return Array.from({ length: k }, (_, i) => i);
+}
+
 function getFileIcon(type: string | null | undefined): string {
 	if (!type) return 'lucide:file';
 	if (type.startsWith('image/')) return 'lucide:image';
@@ -423,6 +442,7 @@ watch(() => props.projectId, () => {
 				v-model="activeTab"
 				:counts="tabCounts"
 				class="mb-5"
+				@prefetch="loadForTab"
 			/>
 
 			<div class="ios-card p-4 sm:p-6">
@@ -519,8 +539,16 @@ watch(() => props.projectId, () => {
 							Attach Existing
 						</button>
 					</div>
-					<div v-if="channelsLoading && !channels.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading channels…
+					<div v-if="channelsLoading && !channels.length" class="space-y-px" aria-busy="true" aria-label="Loading channels">
+						<div
+							v-for="i in skeletonRows(channels.length)"
+							:key="`ch-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+							<USkeleton class="h-3.5 flex-1 max-w-[35%]" />
+							<USkeleton class="h-3.5 w-32 hidden md:block" />
+						</div>
 					</div>
 					<div v-else-if="!channels.length" class="text-sm text-muted-foreground text-center py-10">
 						No channels tagged to this project.
@@ -558,8 +586,24 @@ watch(() => props.projectId, () => {
 							New Meeting
 						</button>
 					</div>
-					<div v-if="meetingsLoading && !meetings.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading meetings…
+					<div v-if="meetingsLoading && !meetings.length" class="space-y-2" aria-busy="true" aria-label="Loading meetings">
+						<div
+							v-for="i in skeletonRows(meetings.length, 3, 5)"
+							:key="`meet-skel-${i}`"
+							class="ios-card flex items-start gap-3 px-4 py-3"
+						>
+							<USkeleton class="w-9 h-9 rounded-xl shrink-0" />
+							<div class="flex-1 space-y-2">
+								<div class="flex items-start justify-between gap-2">
+									<USkeleton class="h-3.5 flex-1 max-w-[60%]" />
+									<USkeleton class="h-4 w-20 rounded-full shrink-0" />
+								</div>
+								<div class="flex gap-3">
+									<USkeleton class="h-3 w-28" />
+									<USkeleton class="h-3 w-12" />
+								</div>
+							</div>
+						</div>
 					</div>
 					<div v-else-if="!meetings.length" class="text-sm text-muted-foreground text-center py-10">
 						No meetings linked to this project yet.
@@ -627,8 +671,18 @@ watch(() => props.projectId, () => {
 							New Invoice
 						</button>
 					</div>
-					<div v-if="invoicesLoading && !invoices.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading invoices…
+					<div v-if="invoicesLoading && !invoices.length" class="space-y-px" aria-busy="true" aria-label="Loading invoices">
+						<div
+							v-for="i in skeletonRows(invoices.length)"
+							:key="`inv-skel-${i}`"
+							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+						>
+							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
+							<USkeleton class="h-3.5 w-24" />
+							<USkeleton class="h-3.5 flex-1 max-w-[20%]" />
+							<USkeleton class="h-4 w-16" />
+							<USkeleton class="h-4 w-14 rounded-full" />
+						</div>
 					</div>
 					<div v-else-if="!invoices.length" class="text-sm text-muted-foreground text-center py-10">
 						No invoices on this project yet.
@@ -719,8 +773,18 @@ watch(() => props.projectId, () => {
 							<NuxtLink :to="`/projects/${projectId}`" class="text-primary hover:underline">full project page</NuxtLink>.
 						</p>
 					</div>
-					<div v-if="filesLoading && !files.length" class="text-sm text-muted-foreground text-center py-10">
-						Loading files…
+					<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
+						<div
+							v-for="i in skeletonRows(files.length, 4, 6)"
+							:key="`file-skel-${i}`"
+							class="ios-card p-3 flex items-center gap-3"
+						>
+							<USkeleton class="w-4 h-4 shrink-0" />
+							<div class="flex-1 space-y-1.5">
+								<USkeleton class="h-3.5 w-3/4" />
+								<USkeleton class="h-2.5 w-20" />
+							</div>
+						</div>
 					</div>
 					<div v-else-if="!files.length" class="text-sm text-muted-foreground text-center py-10">
 						No documents uploaded to this project.

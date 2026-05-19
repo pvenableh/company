@@ -19,7 +19,20 @@ defineProps<{
 	counts: Partial<Record<ProjectTabKey, number>>;
 }>();
 
-defineEmits<{ (e: 'update:modelValue', value: ProjectTabKey): void }>();
+const emit = defineEmits<{
+	(e: 'update:modelValue', value: ProjectTabKey): void;
+	(e: 'prefetch', value: ProjectTabKey): void;
+}>();
+
+// Hovering/focusing a tab is a strong signal of intent — fire `prefetch`
+// so the parent can warm the lazy loader before the click lands. Dedupe
+// per-key so a wandering cursor doesn't re-emit on every mouse re-entry.
+const _prefetched = new Set<ProjectTabKey>();
+function prefetch(key: ProjectTabKey) {
+	if (_prefetched.has(key)) return;
+	_prefetched.add(key);
+	emit('prefetch', key);
+}
 
 const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
@@ -43,6 +56,9 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 				? 'bg-primary text-primary-foreground border-primary'
 				: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
 			@click="$emit('update:modelValue', tab.key)"
+			@mouseenter="prefetch(tab.key)"
+			@focus="prefetch(tab.key)"
+			@touchstart.passive="prefetch(tab.key)"
 		>
 			<Icon :name="tab.icon" class="w-3.5 h-3.5" />
 			{{ tab.label }}
