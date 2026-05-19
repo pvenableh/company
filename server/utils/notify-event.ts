@@ -17,6 +17,7 @@ import { createNotification, readNotifications, readUsers, updateNotification } 
 import { ctaLabelFor, sendNotificationEmail } from './notification-emails';
 import { fetchOrgBrand } from './email-send';
 import { NEVER_EMAIL, type NotificationCategory } from './notification-categories';
+import { pushToUser } from './web-push';
 
 interface EmitArgs {
 	category: NotificationCategory;
@@ -83,6 +84,25 @@ function bellAllowed(recipient: RecipientRow, category: NotificationCategory): b
 	if (category !== 'reactions') return true;
 	const prefs = recipient.notification_preferences || {};
 	return prefs.reactions !== false;
+}
+
+/**
+ * Whether to fan out a Web Push for this recipient + category. Push is
+ * gated on the per-category opt-out (same as email) but NOT on the
+ * `email_notifications` master toggle — push is its own channel. The
+ * reactions category never pushes (mirrors the email NEVER_EMAIL rule —
+ * lock-screen noise is worse than inbox noise).
+ *
+ * No "master push" pref key: enabling push is opt-in already (the user
+ * must explicitly subscribe in NotificationsMenu). If the subscription
+ * exists, they want to be pinged.
+ */
+function pushAllowed(recipient: RecipientRow, category: NotificationCategory): boolean {
+	if (NEVER_EMAIL.has(category)) return false;
+	const prefs = recipient.notification_preferences || {};
+	if (prefs._all === false) return false;
+	if (prefs[category] === false) return false;
+	return true;
 }
 
 export async function emitNotification(args: EmitArgs): Promise<{ bellSent: number; emailSent: number }> {
@@ -161,6 +181,18 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 				} catch (err) {
 					console.error('[notify-event] bell write failed for', recipient.id, err);
 				}
+			}
+
+			// Push fanout — fire-and-forget. Don't await; we don't want
+			// notification latency on the request that triggered the fanout.
+			if (pushAllowed(recipient, category)) {
+				void pushToUser(recipient.id, {
+					title: subject,
+					body: stripHtmlTags(message) || subject,
+					url: link || undefined,
+					tag: `${collection}:${itemId}`,
+					data: { category, collection, itemId },
+				});
 			}
 
 			if (!emailAllowed(recipient, category)) return;
