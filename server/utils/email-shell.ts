@@ -287,3 +287,64 @@ export function renderOrgEmail(args: OrgShellArgs): RenderedEmail {
  * stitching them into bodyHtml.
  */
 export { escapeHtml };
+
+/**
+ * Inject a CAN-SPAM compliance footer (unsubscribe link + physical
+ * mailing address + optional "Powered by Earnest" attribution) directly
+ * into a fully-rendered MJML email body, immediately before the closing
+ * `</body>` tag.
+ *
+ * Use this for marketing sends where the body is a complete MJML output
+ * doc: wrapping such a doc inside renderOrgEmail's transactional shell
+ * strips the MJML `<head>` (responsive media queries gone) and nests a
+ * 600px content table inside a 560px container. Sends arrive but render
+ * broken. This helper keeps the MJML output intact and only appends the
+ * legally-required marketing footer.
+ *
+ * For fragment-bodied sends (markdown → simple paragraphs) keep using
+ * renderOrgEmail — the shell is the only thing carrying the chrome.
+ */
+export function injectMarketingFooter(
+	html: string,
+	args: {
+		org: OrgBrandRef | null | undefined;
+		unsubscribeUrl?: string | null;
+		physicalAddress?: string | null;
+	},
+): string {
+	const orgName = (args.org?.name && String(args.org.name).trim()) || 'this team';
+	const whitelabel = args.org?.whitelabel === true;
+	const unsubUrl = safeUrl(args.unsubscribeUrl);
+	const addr = (args.physicalAddress && String(args.physicalAddress).trim()) || '';
+	const addrHtml = addr ? escapeHtml(addr).replace(/\n/g, '<br />') : '';
+
+	const tag = whitelabel
+		? `This is an automated message from ${escapeHtml(orgName)}.`
+		: `This is an automated message from ${escapeHtml(orgName)}. <span style="color:#aaaaaa;">Powered by <a href="${EARNEST_HOME}" style="color:#aaaaaa;text-decoration:underline;">Earnest</a>.</span>`;
+
+	const footerHtml = `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+	<tr>
+		<td align="center" style="padding:24px 12px;">
+			<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+				<tr>
+					<td style="padding:16px 24px;border-top:1px solid #e5e5e5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.6;color:#888888;text-align:center;">
+						<p style="margin:0 0 8px;">${tag}</p>
+						${unsubUrl ? `<p style="margin:0 0 4px;"><a href="${escapeAttr(unsubUrl)}" style="color:#888888;text-decoration:underline;">Unsubscribe</a></p>` : ''}
+						${addrHtml ? `<p style="margin:0;color:#aaaaaa;font-size:11px;">${addrHtml}</p>` : ''}
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>
+`;
+
+	// Inject before </body>. If no </body> tag exists (defensive — MJML
+	// output always has one), append the footer to the end so the legally
+	// required content is still delivered.
+	if (/<\/body\s*>/i.test(html)) {
+		return html.replace(/<\/body\s*>/i, `${footerHtml}</body>`);
+	}
+	return html + footerHtml;
+}

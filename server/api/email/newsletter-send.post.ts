@@ -6,21 +6,11 @@
 import sgMail from '@sendgrid/mail';
 import { compileMjml, compileSubject } from '~~/server/utils/mjml-compiler';
 import { buildContactVariableMap } from '~~/server/utils/contact-variables';
-import { renderOrgEmail } from '~~/server/utils/email-shell';
+import { injectMarketingFooter } from '~~/server/utils/email-shell';
 import { fetchOrgBrand } from '~~/server/utils/email-send';
 import { buildUnsubscribeUrl } from '~~/server/utils/unsubscribe';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
-
-/**
- * Extract the body content from a full MJML-compiled HTML document so it
- * can be wrapped in renderOrgEmail without producing nested <html> docs.
- * Falls back to the original string when no <body> is found.
- */
-function extractMjmlBody(html: string): string {
-  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  return match ? match[1] : html;
-}
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
@@ -322,11 +312,15 @@ export default defineEventHandler(async (event) => {
       ? buildUnsubscribeUrl(contact.unsubscribe_token, siteUrl)
       : `${siteUrl}/unsubscribe`;
 
-    const { html: shellHtml, text: shellText } = renderOrgEmail({
+    // Inject the CAN-SPAM footer directly into the MJML output instead of
+    // wrapping the body inside renderOrgEmail's transactional shell. The
+    // old path stripped MJML's <head> styles (losing responsive media
+    // queries) and nested its 600px content table inside a 560px shell —
+    // emails delivered but rendered broken, especially on mobile. The
+    // MJML doc already carries the org's chrome via its header/footer
+    // partials; we only need to append the compliance footer.
+    const finalHtml = injectMarketingFooter(compiledHtml, {
       org,
-      subject,
-      heading: null,
-      bodyHtml: extractMjmlBody(compiledHtml),
       unsubscribeUrl,
       physicalAddress,
     });
@@ -335,8 +329,7 @@ export default defineEventHandler(async (event) => {
       to: contact.email,
       from: { email: fromEmail, name: fromName },
       subject,
-      html: shellHtml,
-      text: shellText,
+      html: finalHtml,
       categories: ['marketing', `newsletter-template-${template_id}`, ...(recordedEmailId ? [`email-${recordedEmailId}`] : [])],
     };
 
@@ -369,6 +362,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Build a generic preview HTML for web view (no personalized data) ──
+  // Mirror the live-send path: MJML output + injectMarketingFooter, never
+  // double-wrapped. Keeps the web view visually identical to what landed
+  // in recipient inboxes.
   let previewHtml: string | null = null;
   try {
     const previewVars: Record<string, any> = {
@@ -386,17 +382,11 @@ export default defineEventHandler(async (event) => {
     };
     const previewResult = compileMjml(template.mjml_source, previewVars);
     if (previewResult.html) {
-      const previewSubject = template.subject_template
-        ? compileSubject(template.subject_template, previewVars)
-        : template.name;
-      previewHtml = renderOrgEmail({
+      previewHtml = injectMarketingFooter(previewResult.html, {
         org,
-        subject: previewSubject,
-        heading: null,
-        bodyHtml: extractMjmlBody(previewResult.html),
         unsubscribeUrl: `${siteUrl}/unsubscribe`,
         physicalAddress,
-      }).html;
+      });
     }
   } catch {
     // Non-critical — web view just won't be available
