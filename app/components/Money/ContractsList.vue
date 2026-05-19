@@ -7,7 +7,9 @@
     - `clientId`:  contracts.client._eq (direct FK)
     - `leadId`:    walks proposal.lead AND contract.lead — contracts
                    linked to the lead directly OR via the proposal chain
-    - `projectId`: not modeled on contracts today — emits empty
+    - `projectId`: contracts.project._eq (FK added by
+                   scripts/setup-doc-project-fk.ts — tab shows empty
+                   until the migration runs and rows are linked)
 
   Without any scope prop, lists the full org-scoped set (used by the
   Money/Documents floor).
@@ -74,7 +76,7 @@ function buildScopeFilter(): Record<string, any> | null {
 		};
 	}
 	if (props.projectId) {
-		return { id: { _eq: '__no_match__' } };
+		return { project: { _eq: props.projectId } };
 	}
 	return null;
 }

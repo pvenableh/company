@@ -75,6 +75,20 @@ const invoicesLoading = ref(false);
 const files = ref<any[]>([]);
 const filesLoading = ref(false);
 
+// Documents tab — proposals + contracts scoped to this project via the
+// FK added by scripts/setup-doc-project-fk.ts. Counts come from the
+// shared MoneyProposalsList / MoneyContractsList `@count` emits; until
+// the migration runs (or any row is linked) both stay at 0.
+const documentsProposalCount = ref(0);
+const documentsContractCount = ref(0);
+const documentsRefreshTick = ref(0);
+const documentsProposalsRef = ref<any>(null);
+const documentsContractsRef = ref<any>(null);
+watch(documentsRefreshTick, () => {
+	documentsProposalsRef.value?.refresh?.();
+	documentsContractsRef.value?.refresh?.();
+});
+
 // Toggle between Board / List for tasks + tickets. Stored per-surface in
 // a cookie so the panel and page can share their preference.
 const tasksView = useCookie<'board' | 'list'>('apps-project-tasks-view', { default: () => 'list' });
@@ -86,6 +100,7 @@ const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
 	channels: channels.value.length,
 	meetings: meetings.value.length,
 	invoices: invoices.value.length,
+	documents: documentsProposalCount.value + documentsContractCount.value,
 	files: files.value.length,
 }));
 
@@ -258,6 +273,8 @@ const showCreateInvoiceModal = ref(false);
 const showAttachInvoiceModal = ref(false);
 const showAttachChannelModal = ref(false);
 const showCreateMeetingModal = ref(false);
+const showCreateProposalModal = ref(false);
+const showCreateContractModal = ref(false);
 
 function onTicketAttached() {
 	showAttachTicketModal.value = false;
@@ -282,6 +299,14 @@ function onChannelAttached() {
 function onMeetingCreated() {
 	showCreateMeetingModal.value = false;
 	loadMeetings();
+}
+function onProposalCreated() {
+	showCreateProposalModal.value = false;
+	documentsRefreshTick.value++;
+}
+function onContractCreated() {
+	showCreateContractModal.value = false;
+	documentsRefreshTick.value++;
 }
 
 // Cross-panel push for client row in identity strip. NuxtLink to
@@ -638,6 +663,62 @@ watch(() => props.projectId, () => {
 					</div>
 				</div>
 
+				<!-- Documents (proposals + contracts) — scoped to this project via
+				     the proposals.project / contracts.project FK added by
+				     scripts/setup-doc-project-fk.ts. Empty state until rows are
+				     linked. Mirrors ClientWorkspace Documents tab. -->
+				<div v-else-if="activeTab === 'documents'" class="space-y-6">
+					<section>
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-2">
+								<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
+								<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+									Proposals
+								</h4>
+								<span class="text-[10px] text-muted-foreground/70">{{ documentsProposalCount }}</span>
+							</div>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="showCreateProposalModal = true"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Proposal
+							</button>
+						</div>
+						<MoneyProposalsList
+							ref="documentsProposalsRef"
+							:project-id="projectId"
+							@count="documentsProposalCount = $event"
+						/>
+					</section>
+
+					<section>
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-2">
+								<Icon name="lucide:file-signature" class="w-4 h-4 text-muted-foreground" />
+								<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+									Contracts
+								</h4>
+								<span class="text-[10px] text-muted-foreground/70">{{ documentsContractCount }}</span>
+							</div>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="showCreateContractModal = true"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Contract
+							</button>
+						</div>
+						<MoneyContractsList
+							ref="documentsContractsRef"
+							:project-id="projectId"
+							@count="documentsContractCount = $event"
+						/>
+					</section>
+				</div>
+
 				<!-- Files -->
 				<div v-else-if="activeTab === 'files'">
 					<div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
@@ -697,6 +778,24 @@ watch(() => props.projectId, () => {
 				@saved="onMeetingCreated"
 			/>
 		</ClientOnly>
+
+		<!-- Documents create modals. Neither ProposalsFormModal nor
+		     ContractsFormModal accepts a project pre-fill today (the forms
+		     have no project picker), so they open unscoped — the user picks
+		     the lead/contact and the list re-scopes on refresh. Once a UI
+		     for attach-to-project lands, the new row will appear under the
+		     correct project via the proposals.project / contracts.project
+		     FK once set. -->
+		<ProposalsFormModal
+			v-if="project"
+			v-model="showCreateProposalModal"
+			@created="onProposalCreated"
+		/>
+		<ContractsFormModal
+			v-if="project"
+			v-model="showCreateContractModal"
+			@created="onContractCreated"
+		/>
 
 		<!-- Attach Existing modals — project-parented. -->
 		<AppsWorkAttachExistingModal

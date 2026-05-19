@@ -7,8 +7,9 @@
     - `clientId`: walk lead.resulting_client OR contact.client (proposals
        have no direct client FK, so both paths are unioned)
     - `leadId`:   proposals.lead._eq
-    - `projectId`: not modeled on proposals today — emits empty until a
-       schema link exists
+    - `projectId`: proposals.project._eq (FK added by
+       scripts/setup-doc-project-fk.ts — tab shows empty until the
+       migration runs and rows are linked)
 
   Without any scope prop, lists the full org-scoped set (used by the
   Money/Documents floor).
@@ -69,10 +70,7 @@ function buildScopeFilter(): Record<string, any> | null {
 		return { lead: { _eq: Number(props.leadId) } };
 	}
 	if (props.projectId) {
-		// No proposal→project FK in the current schema. Returning an
-		// always-false filter keeps the list empty rather than showing
-		// the full org set.
-		return { id: { _eq: '__no_match__' } };
+		return { project: { _eq: props.projectId } };
 	}
 	return null;
 }
