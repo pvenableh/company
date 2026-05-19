@@ -409,6 +409,57 @@ function chipMagnifyStyle(appId: string) {
 	background: rgba(40, 40, 40, 0.88);
 }
 
+/* ── Palette tint overlay ────────────────────────────────────────────
+ * When `data-rail-tint='on'` (default — toggled in the rail settings),
+ * paint the floating pill with a soft multi-stop linear gradient sampled
+ * from the active palette's per-app accents over a darkened plinth in
+ * dark mode and a softer pastel wash in light mode. The gradient stops
+ * read four palette accents (work → clients → marketing → money) so
+ * the rail visibly carries the palette identity instead of sitting as
+ * a neutral grey pill.
+ *
+ * `html[data-rail-tint='on']` is set client-side by the palette plugin;
+ * SSR markup defaults to `on` via useAppPalette's hydrate default. The
+ * `:where()` wrapper keeps specificity flat so per-position overrides
+ * (top/bottom/left/right backgrounds) still win when needed.
+ *
+ * The HSL var triples consumed below (`--app-work-h`, etc.) are emitted
+ * by `applyPaletteToDocument` — see useAppAccent.ts. They re-sample on
+ * every palette switch, so the tint follows the palette automatically. */
+html[data-rail-tint='on'] .app-rail--top,
+html[data-rail-tint='on'] .app-rail--bottom,
+html[data-rail-tint='on'] .app-rail--left,
+html[data-rail-tint='on'] .app-rail--right {
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-work-h, 220) var(--app-work-s, 50%) var(--app-work-l, 55%) / 0.22) 0%,
+			hsl(var(--app-clients-h, 200) var(--app-clients-s, 50%) var(--app-clients-l, 55%) / 0.18) 35%,
+			hsl(var(--app-marketing-h, 320) var(--app-marketing-s, 50%) var(--app-marketing-l, 55%) / 0.20) 65%,
+			hsl(var(--app-money-h, 145) var(--app-money-s, 50%) var(--app-money-l, 55%) / 0.22) 100%
+		),
+		hsl(220 14% 95% / 0.78);
+}
+
+html.dark[data-rail-tint='on'] .app-rail--top,
+html.dark[data-rail-tint='on'] .app-rail--bottom,
+html.dark[data-rail-tint='on'] .app-rail--left,
+html.dark[data-rail-tint='on'] .app-rail--right {
+	/* Dark + tint: stronger saturation but darker baseline so the gradient
+	 * reads as a tinted-dark plinth, not a glowy bar. The base is shifted
+	 * a touch darker (28/30/32) so the palette stops have headroom to
+	 * show without blowing out the contrast on the chips on top. */
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-work-h, 220) var(--app-work-s, 50%) var(--app-work-l, 55%) / 0.34) 0%,
+			hsl(var(--app-clients-h, 200) var(--app-clients-s, 50%) var(--app-clients-l, 55%) / 0.28) 35%,
+			hsl(var(--app-marketing-h, 320) var(--app-marketing-s, 50%) var(--app-marketing-l, 55%) / 0.30) 65%,
+			hsl(var(--app-money-h, 145) var(--app-money-s, 50%) var(--app-money-l, 55%) / 0.34) 100%
+		),
+		rgba(28, 30, 32, 0.92);
+}
+
 .app-rail--top,
 .app-rail--bottom {
 	@apply left-1/2 -translate-x-1/2;

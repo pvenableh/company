@@ -13,7 +13,7 @@ import { applyPaletteToDocument } from '~/composables/useAppAccent';
 import { useAppPalette } from '~/composables/useAppPalette';
 
 export default defineNuxtPlugin(() => {
-	const { palette, glassChrome } = useAppPalette();
+	const { palette, glassChrome, paletteTint } = useAppPalette();
 	watch(
 		palette,
 		(next) => {
@@ -25,6 +25,13 @@ export default defineNuxtPlugin(() => {
 		glassChrome,
 		(on) => {
 			document.documentElement.setAttribute('data-surface', on ? 'glass' : 'solid');
+		},
+		{ immediate: true },
+	);
+	watch(
+		paletteTint,
+		(on) => {
+			document.documentElement.setAttribute('data-rail-tint', on ? 'on' : 'off');
 		},
 		{ immediate: true },
 	);

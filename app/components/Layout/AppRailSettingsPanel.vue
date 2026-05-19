@@ -28,7 +28,7 @@ const props = withDefaults(
 );
 
 const { railPosition, storedRailPosition, setRailPosition, railShowLabels, setRailShowLabels } = useAppsMode();
-const { palette, setPalette, glassChrome, setGlassChrome } = useAppPalette();
+const { palette, setPalette, glassChrome, setGlassChrome, paletteTint, setPaletteTint } = useAppPalette();
 
 const labelsToggleVisible = computed(
 	() => railPosition.value === 'top' || railPosition.value === 'bottom',
@@ -140,6 +140,21 @@ const isCompact = computed(() => props.density === 'compact');
         :model-value="glassChrome"
         class="shrink-0"
         @update:model-value="setGlassChrome"
+        @click.stop
+      />
+    </div>
+
+    <!-- ── Section: Palette tint ─────────────────────────────────── -->
+    <div class="rail-panel__toggle" @click="setPaletteTint(!paletteTint)">
+      <Icon name="lucide:droplets" class="rail-panel__toggle-icon" />
+      <div class="rail-panel__toggle-body">
+        <div class="rail-panel__toggle-title">Palette tint</div>
+        <div class="rail-panel__toggle-hint">Wash the rail in a four-stop gradient sampled from the palette — especially rich in dark mode.</div>
+      </div>
+      <Switch
+        :model-value="paletteTint"
+        class="shrink-0"
+        @update:model-value="setPaletteTint"
         @click.stop
       />
     </div>

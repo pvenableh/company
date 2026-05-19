@@ -53,6 +53,33 @@ function hydrateGlassFromStorage() {
 	}
 }
 
+/**
+ * Palette-tint toggle — paints the floating AppRail (and other glass
+ * surfaces) with a multi-stop linear gradient sampled from the active
+ * palette's per-app accents, over a darkened plinth in dark mode. Pairs
+ * with `glassChrome` but is independent: a user can wear the rail as
+ * grey-frosted or palette-tinted regardless of the chip-mode setting.
+ *
+ * Same persistence shape as glassChrome (localStorage, not Directus) —
+ * cheap chrome preference, not worth a schema migration. Defaults to
+ * ON because the feature is the whole point of the toggle — users who
+ * dislike it can disable from the rail settings panel.
+ */
+const TINT_STORAGE_KEY = 'earnest.appPaletteTint';
+const localTint = ref<boolean | null>(null);
+
+function hydrateTintFromStorage() {
+	if (typeof window === 'undefined' || localTint.value !== null) return;
+	try {
+		const stored = window.localStorage.getItem(TINT_STORAGE_KEY);
+		// Default to ON when no preference has been saved yet — first-load
+		// users see the tint and discover the toggle.
+		localTint.value = stored === null ? true : stored === 'true';
+	} catch {
+		localTint.value = true;
+	}
+}
+
 async function hydrateFromServer(updateMe?: (patch: any) => Promise<unknown>) {
 	if (hydrationPromise) return hydrationPromise;
 	hydrationPromise = (async () => {
@@ -89,6 +116,7 @@ export function useAppPalette() {
 		hydrateFromServer(updateMe);
 	}
 	if (import.meta.client) hydrateGlassFromStorage();
+	if (import.meta.client) hydrateTintFromStorage();
 
 	const palette = computed<AppPaletteId>(() => {
 		if (localPalette.value !== null) return localPalette.value;
@@ -96,6 +124,7 @@ export function useAppPalette() {
 	});
 
 	const glassChrome = computed<boolean>(() => localGlass.value ?? false);
+	const paletteTint = computed<boolean>(() => localTint.value ?? true);
 
 	async function setPalette(next: AppPaletteId): Promise<void> {
 		if (!APP_PALETTE_IDS.includes(next)) return;
@@ -125,5 +154,17 @@ export function useAppPalette() {
 		}
 	}
 
-	return { palette, setPalette, paletteIds: APP_PALETTE_IDS, glassChrome, setGlassChrome };
+	function setPaletteTint(next: boolean): void {
+		if (localTint.value === next) return;
+		localTint.value = next;
+		if (typeof window !== 'undefined') {
+			try {
+				window.localStorage.setItem(TINT_STORAGE_KEY, String(next));
+			} catch {
+				// Quota / private-mode — local override stays for the session.
+			}
+		}
+	}
+
+	return { palette, setPalette, paletteIds: APP_PALETTE_IDS, glassChrome, setGlassChrome, paletteTint, setPaletteTint };
 }
