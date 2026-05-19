@@ -74,16 +74,17 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
   const nowIso = new Date().toISOString().slice(0, 10);
 
   // Run all fan-out reads in parallel — each lookup is independent.
+  // Counts use aggregate(); attention/activity feeds use readItems with tight
+  // limits. The projects/tickets aggregates are NOT also re-fetched as rows
+  // — the active project count is the only thing the UI needs for that KPI.
   const [
     unpaidInvoices,
     pendingProposals,
     unsignedContracts,
-    activeProjects,
-    openTickets,
-    activeProjectCount,
-    openTicketCount,
-    monthlyCampaigns,
-    channelCount,
+    activeProjectAgg,
+    openTicketRows,
+    monthlyCampaignAgg,
+    channelAgg,
     recentInvoices,
     recentTickets,
     recentProjects,
@@ -141,14 +142,9 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
         }),
       )
       .catch(() => [{ count: 0 }]),
-    directus
-      .request(
-        aggregate('tickets', {
-          aggregate: { count: '*' },
-          query: { filter: { _and: [orgAndClient, { status: { _in: OPEN_TICKET_STATUSES } }] } },
-        }),
-      )
-      .catch(() => [{ count: 0 }]),
+    // Open tickets — fetch the actual rows so we can surface the high-priority
+    // ones in the attention list AND count them for the KPI. Cap matches the
+    // attention-list slice; KPI says "X+ open" if we hit the cap.
     directus
       .request(
         readItems('tickets', {
@@ -160,27 +156,10 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
           },
           fields: ['id', 'title', 'priority', 'due_date', 'date_updated'],
           sort: ['-date_updated'],
-          limit: 10,
+          limit: 100,
         }),
       )
       .catch(() => [] as Array<Record<string, unknown>>),
-    // KPIs use these counts even though we read the rows above.
-    directus
-      .request(
-        aggregate('projects', {
-          aggregate: { count: '*' },
-          query: { filter: { _and: [orgAndClient, { status: { _in: ACTIVE_PROJECT_STATUSES } }] } },
-        }),
-      )
-      .catch(() => [{ count: 0 }]),
-    directus
-      .request(
-        aggregate('tickets', {
-          aggregate: { count: '*' },
-          query: { filter: { _and: [orgAndClient, { status: { _in: OPEN_TICKET_STATUSES } }] } },
-        }),
-      )
-      .catch(() => [{ count: 0 }]),
     directus
       .request(
         aggregate('marketing_campaigns', {
@@ -283,7 +262,8 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
 
   // Tickets aren't strictly "needing client action" but they often do
   // (questions, approvals). Surface the highest-priority open ones.
-  for (const t of (openTickets as Array<Record<string, unknown>>).slice(0, 3)) {
+  const openTicketsArr = openTicketRows as Array<Record<string, unknown>>;
+  for (const t of openTicketsArr.slice(0, 3)) {
     if ((t.priority as string | null) !== 'high') continue;
     attention.push({
       id: String(t.id),
@@ -308,8 +288,8 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
 
   const kpis: SummaryResponse['kpis'] = {
     progress: {
-      activeProjects: toCount(activeProjectCount),
-      openTickets: toCount(openTicketCount),
+      activeProjects: toCount(activeProjectAgg),
+      openTickets: openTicketsArr.length,
     },
     billing: {
       outstandingTotal,
@@ -317,10 +297,10 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
       unsignedContracts: (unsignedContracts as unknown[]).length,
     },
     performance: {
-      campaignsThisMonth: toCount(monthlyCampaigns),
+      campaignsThisMonth: toCount(monthlyCampaignAgg),
     },
     messages: {
-      channelCount: toCount(channelCount),
+      channelCount: toCount(channelAgg),
     },
   };
 

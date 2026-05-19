@@ -158,17 +158,12 @@ async function loadProject() {
 
 async function refreshTaskCount() {
 	try {
-		const rows = await taskItemsApi.list({
-			fields: ['id'],
-			filter: {
-				_or: [
-					{ project: { _eq: props.projectId } },
-					{ event_id: { project: { _eq: props.projectId } } },
-				],
-			},
-			limit: -1,
-		}).catch(() => [] as any[]);
-		taskCount.value = (rows as any[]).length;
+		taskCount.value = await taskItemsApi.count({
+			_or: [
+				{ project: { _eq: props.projectId } },
+				{ event_id: { project: { _eq: props.projectId } } },
+			],
+		}).catch(() => 0);
 	} catch {
 		taskCount.value = 0;
 	}
@@ -176,12 +171,9 @@ async function refreshTaskCount() {
 
 async function refreshTicketCount() {
 	try {
-		const rows = await ticketItemsApi.list({
-			fields: ['id'],
-			filter: { project: { _eq: props.projectId } },
-			limit: -1,
-		}).catch(() => [] as any[]);
-		ticketCount.value = (rows as any[]).length;
+		ticketCount.value = await ticketItemsApi
+			.count({ project: { _eq: props.projectId } })
+			.catch(() => 0);
 	} catch {
 		ticketCount.value = 0;
 	}

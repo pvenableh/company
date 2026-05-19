@@ -9,7 +9,7 @@ useHead({ title: 'Clients | Earnest' });
 
 const router = useRouter();
 const config = useRuntimeConfig();
-const { getClients, deleteClient: doDelete, updateClient } = useClients();
+const { getClients, getClientCount, deleteClient: doDelete, updateClient } = useClients();
 
 const STATUS_QUICK_OPTIONS: Array<{ value: 'active' | 'prospect' | 'inactive' | 'archived'; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -89,14 +89,15 @@ const tabCounts = ref<Record<string, number>>({});
 
 async function fetchTabCounts() {
   try {
+    // Count-only requests — skip the row payload that fetchData() will
+    // re-fetch for the active tab anyway. Drops 4×(list+aggregate) =
+    // 8 Directus calls to 4 aggregates.
     const results = await Promise.all(
-      tabs.map(tab =>
-        getClients({ ...tabFilter(tab.value), limit: 1, page: 1 })
-      )
+      tabs.map(tab => getClientCount(tabFilter(tab.value))),
     );
     const counts: Record<string, number> = {};
     tabs.forEach((tab, i) => {
-      counts[tab.value] = results[i].total;
+      counts[tab.value] = results[i] ?? 0;
     });
     tabCounts.value = counts;
   } catch {

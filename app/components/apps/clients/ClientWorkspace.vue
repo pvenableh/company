@@ -81,9 +81,22 @@ const relatedChannels = ref<any[]>([]);
 const relatedTickets = ref<any[]>([]);
 const relatedTasks = ref<any[]>([]);
 const relatedMeetings = ref<any[]>([]);
+const projectsLoading = ref(false);
+const invoicesLoading = ref(false);
+const channelsLoading = ref(false);
 const ticketsLoading = ref(false);
 const tasksLoading = ref(false);
 const meetingsLoading = ref(false);
+
+// Counts-only on mount so the tab badges are accurate without paying for
+// full row fetches the user may never look at. Each `loadX()` swaps the
+// count for the real row list once its tab is activated.
+const projectCount = ref(0);
+const invoiceCount = ref(0);
+const channelCount = ref(0);
+const projectsLoaded = ref(false);
+const invoicesLoaded = ref(false);
+const channelsLoaded = ref(false);
 
 const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
 const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
@@ -131,6 +144,9 @@ const activeTab = ref<ClientTabKey>(props.initialTab || 'activity');
 
 watch(activeTab, (next) => {
 	emit('tab-change', next);
+	if (next === 'projects' && !projectsLoaded.value && !projectsLoading.value) loadProjects();
+	if (next === 'invoices' && !invoicesLoaded.value && !invoicesLoading.value) loadInvoices();
+	if (next === 'messages' && !channelsLoaded.value && !channelsLoading.value) loadChannels();
 	if (next === 'tickets' && !relatedTickets.value.length && !ticketsLoading.value) loadTickets();
 	if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
 	if (next === 'meetings' && !relatedMeetings.value.length && !meetingsLoading.value) loadMeetings();
@@ -241,20 +257,57 @@ async function loadMeetings() {
 }
 
 async function loadRelated() {
+	// Counts on mount keep tab badges accurate without paying for full row
+	// fetches the user may never look at. Each tab's real list is fetched
+	// on activation (see watch(activeTab) above).
+	const filter = { client: { _eq: props.clientId } };
 	const [projects, invoices, channels] = await Promise.all([
-		projectItemsApi.list({
+		projectItemsApi.count(filter).catch(() => 0),
+		invoiceItemsApi.count(filter).catch(() => 0),
+		channelItemsApi.count(filter).catch(() => 0),
+	]);
+	projectCount.value = projects;
+	invoiceCount.value = invoices;
+	channelCount.value = channels;
+	await loadInherited(props.clientId);
+}
+
+async function loadProjects() {
+	projectsLoading.value = true;
+	try {
+		relatedProjects.value = await projectItemsApi.list({
 			filter: { client: { _eq: props.clientId } },
 			fields: ['id', 'title', 'status', 'date_created'],
 			sort: ['-date_created'],
 			limit: -1,
-		}).catch(() => []),
-		invoiceItemsApi.list({
+		}).catch(() => []) as any[];
+		projectCount.value = relatedProjects.value.length;
+		projectsLoaded.value = true;
+	} finally {
+		projectsLoading.value = false;
+	}
+}
+
+async function loadInvoices() {
+	invoicesLoading.value = true;
+	try {
+		relatedInvoices.value = await invoiceItemsApi.list({
 			filter: { client: { _eq: props.clientId } },
 			fields: ['id', 'invoice_code', 'status', 'total_amount', 'invoice_date', 'due_date'],
 			sort: ['-invoice_date'],
 			limit: -1,
-		}).catch(() => []),
-		channelItemsApi.list({
+		}).catch(() => []) as any[];
+		invoiceCount.value = relatedInvoices.value.length;
+		invoicesLoaded.value = true;
+	} finally {
+		invoicesLoading.value = false;
+	}
+}
+
+async function loadChannels() {
+	channelsLoading.value = true;
+	try {
+		relatedChannels.value = await channelItemsApi.list({
 			filter: { client: { _eq: props.clientId } },
 			fields: [
 				'id', 'name', 'date_created',
@@ -263,12 +316,12 @@ async function loadRelated() {
 			],
 			sort: ['name'],
 			limit: -1,
-		}).catch(() => []),
-	]);
-	relatedProjects.value = projects as any[];
-	relatedInvoices.value = invoices as any[];
-	relatedChannels.value = channels as any[];
-	await loadInherited(props.clientId);
+		}).catch(() => []) as any[];
+		channelCount.value = relatedChannels.value.length;
+		channelsLoaded.value = true;
+	} finally {
+		channelsLoading.value = false;
+	}
 }
 
 // Direct contacts on THIS client — draggable, persisted via `sort`.
@@ -318,15 +371,17 @@ const totalPartnerCount = computed(() => directConnections.value.length + inheri
 
 const tabCounts = computed(() => ({
 	contacts: totalContactCount.value,
-	projects: relatedProjects.value.length,
+	// Projects/invoices/messages: cached counts on mount; replaced by the
+	// loaded row count once the tab is activated.
+	projects: projectsLoaded.value ? relatedProjects.value.length : projectCount.value,
 	documents: documentsProposalCount.value + documentsContractCount.value,
 	tickets: relatedTickets.value.length,
 	tasks: relatedTasks.value.length,
 	meetings: relatedMeetings.value.length,
 	content: relatedContent.value.length,
-	invoices: relatedInvoices.value.length,
+	invoices: invoicesLoaded.value ? relatedInvoices.value.length : invoiceCount.value,
 	partners: totalPartnerCount.value,
-	messages: relatedChannels.value.length,
+	messages: channelsLoaded.value ? relatedChannels.value.length : channelCount.value,
 }));
 
 function fmtCurrency(n: number | string | null | undefined): string {
@@ -463,12 +518,16 @@ function onContactCreated() {
 
 function onProjectCreated() {
 	showCreateProjectModal.value = false;
-	loadRelated();
+	// Refresh the projects list if it's already loaded, otherwise just the
+	// count for the badge.
+	if (projectsLoaded.value) loadProjects();
+	else projectItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { projectCount.value = n; }).catch(() => {});
 }
 
 function onProjectAttached() {
 	showAttachProjectModal.value = false;
-	loadRelated();
+	if (projectsLoaded.value) loadProjects();
+	else projectItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { projectCount.value = n; }).catch(() => {});
 }
 
 function onTicketCreated() {
@@ -488,17 +547,20 @@ function onTaskAttached() {
 
 function onInvoiceCreated() {
 	showCreateInvoiceModal.value = false;
-	loadRelated();
+	if (invoicesLoaded.value) loadInvoices();
+	else invoiceItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { invoiceCount.value = n; }).catch(() => {});
 }
 
 function onInvoiceAttached() {
 	showAttachInvoiceModal.value = false;
-	loadRelated();
+	if (invoicesLoaded.value) loadInvoices();
+	else invoiceItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { invoiceCount.value = n; }).catch(() => {});
 }
 
 function onChannelAttached() {
 	showAttachChannelModal.value = false;
-	loadRelated();
+	if (channelsLoaded.value) loadChannels();
+	else channelItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { channelCount.value = n; }).catch(() => {});
 }
 
 function onMeetingCreated() {
@@ -772,7 +834,10 @@ watch(() => props.clientId, () => {
 							New Project
 						</button>
 					</div>
-					<div v-if="!relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
+					<div v-if="projectsLoading && !relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
+						Loading projects…
+					</div>
+					<div v-else-if="!relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
 						No projects linked to this client.
 					</div>
 					<div v-else class="space-y-px">
@@ -1176,7 +1241,10 @@ watch(() => props.clientId, () => {
 							New Invoice
 						</button>
 					</div>
-					<div v-if="!relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
+					<div v-if="invoicesLoading && !relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
+						Loading invoices…
+					</div>
+					<div v-else-if="!relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
 						No invoices yet for this client.
 					</div>
 					<div v-else class="space-y-px">
@@ -1264,7 +1332,10 @@ watch(() => props.clientId, () => {
 							Attach Existing
 						</button>
 					</div>
-					<div v-if="!relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
+					<div v-if="channelsLoading && !relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
+						Loading channels…
+					</div>
+					<div v-else-if="!relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
 						No channels tagged to this client.
 					</div>
 					<div v-else class="space-y-px">

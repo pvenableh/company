@@ -388,6 +388,28 @@ export function useClients() {
   };
 
   /**
+   * Count clients matching the same filter shape as getClients(), but skips
+   * the row fetch entirely. Used by tab badges where the row payload would
+   * be discarded anyway. Cuts the per-tab cost from (list + count) to just
+   * a single aggregate request.
+   */
+  const getClientCount = async (params?: {
+    status?: string;
+    accountState?: string;
+  }): Promise<number> => {
+    if (!selectedOrg.value) return 0;
+    const filter: any = { _and: [{ organization: { _eq: selectedOrg.value } }] };
+    const allowedIds = accessibleClientIds.value;
+    if (allowedIds !== null) {
+      if (allowedIds.length === 0) return 0;
+      filter._and.push({ id: { _in: allowedIds } });
+    }
+    if (params?.status) filter._and.push({ status: { _eq: params.status } });
+    if (params?.accountState) filter._and.push({ account_state: { _eq: params.accountState } });
+    return items.count(filter);
+  };
+
+  /**
    * Lightweight sort update — does NOT trigger fetchActiveClients() refetch.
    * Used by drag-and-drop reorder to avoid N refetches.
    */
@@ -604,6 +626,7 @@ export function useClients() {
 
     // CRUD
     getClients,
+    getClientCount,
     getClient,
     createClient,
     updateClient,
