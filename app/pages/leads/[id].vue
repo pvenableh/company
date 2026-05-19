@@ -121,13 +121,12 @@ const stageStatuses = Object.entries(LEAD_STAGE_LABELS).map(([id, name]) => ({ i
 async function fetchData() {
 	loading.value = true;
 	try {
-		const [leadResult, activitiesResult] = await Promise.all([
-			getLead(leadId.value),
-			getActivitiesForLead(leadId.value),
-		]);
-		lead.value = leadResult;
-		activities.value = activitiesResult as any[];
+		lead.value = await getLead(leadId.value);
 		useHead({ title: `${lead.value?.related_contact?.first_name || 'Lead'} | Earnest` });
+		activities.value = await getActivitiesForLead(leadId.value).catch((err) => {
+			console.warn('[leads/[id]] activities fetch failed (degrading to empty):', err);
+			return [];
+		}) as any[];
 	} catch (e) {
 		console.error('Failed to load lead:', e);
 	} finally {
@@ -430,22 +429,24 @@ onUnmounted(() => clearEntity());
 							<span class="text-[10px] text-muted-foreground/70">{{ docsProposalCount }}</span>
 						</div>
 						<div class="flex items-center gap-1.5">
-							<Tooltip>
-								<TooltipTrigger as-child>
-									<UiActionButton
-										icon="earnest"
-										variant="primary"
-										:loading="drafting"
-										size="xs"
-										@click="generateDraft"
-									>
-										AI Draft
-									</UiActionButton>
-								</TooltipTrigger>
-								<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
-									Generates a tailored proposal draft from this lead's context. Opens the new proposal in a slide-over for review.
-								</TooltipContent>
-							</Tooltip>
+							<TooltipProvider :delay-duration="200">
+								<Tooltip>
+									<TooltipTrigger as-child>
+										<UiActionButton
+											icon="earnest"
+											variant="primary"
+											:loading="drafting"
+											size="xs"
+											@click="generateDraft"
+										>
+											AI Draft
+										</UiActionButton>
+									</TooltipTrigger>
+									<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
+										Generates a tailored proposal draft from this lead's context. Opens the new proposal in a slide-over for review.
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
 							<button
 								type="button"
 								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
