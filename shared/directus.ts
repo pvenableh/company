@@ -1429,6 +1429,10 @@ export interface DocumentBlock {
 	organization: Organization | string;
 	/** @description Block content (markdown). Renders into proposals + contracts. Per-document overrides don't mutate this. */
 	content?: string | null;
+	/** @description Block primitive — drives editor + renderer dispatch via the shared block registry. */
+	type?: 'rich_text' | 'cover' | 'signed_letter' | 'figure' | 'repeater' | 'grouped_list' | 'pull_quote' | 'scope_tree' | 'pricing_tiers' | 'line_items' | 'footnotes' | 'numbered_clauses' | 'definitions' | 'signature_block' | null;
+	/** @description Typed payload matching `type`. For rich_text: { heading, body_markdown }. */
+	payload?: Record<string, any> | null;
 }
 
 export interface EarnestHistory {
@@ -3332,10 +3336,8 @@ export interface ServiceTemplate {
 	category?: 'branding' | 'web' | 'marketing' | 'retainer' | 'other' | null;
 	/** @description One-liner shown in the picker */
 	description?: string | null;
-	/** @description Legacy free-text scope. Superseded by `scope_payload`. Kept read-only for back-compat on rows pre-dating the typed-block migration. */
+	/** @description Legacy free-text scope. Superseded by scope_payload (structured ScopeTreePayload). Kept read-only for back-compat on rows pre-dating the typed-block migration. */
 	scope_template?: string | null;
-	/** @description Structured `ScopeTreePayload` — phased deliverables editable in-app via ScopeTreeEditor. Replaces free-text `scope_template`. */
-	scope_payload?: import('./blocks/types').ScopeTreePayload | null;
 	/** @description Reference base price */
 	default_total?: number | null;
 	/** @description Typical project length */
@@ -3346,6 +3348,8 @@ export interface ServiceTemplate {
 	color?: string | null;
 	/** @description A single emoji to personalize the service. Renders alongside the colour swatch wherever the service appears. */
 	icon?: string | null;
+	/** @description Structured ScopeTreePayload — phased deliverables editable in-app via ScopeTreeEditor. Replaces free-text scope_template. */
+	scope_payload?: Record<string, any> | null;
 }
 
 export interface ShopCategory {
@@ -4386,6 +4390,8 @@ export interface DirectusUser {
 	view_lens?: 'me' | 'org' | null;
 	/** @description List of /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */
 	dismissed_app_intros?: string[] | null;
+	/** @description CardDesk install-promo dismissal. Null = show; within 30 days = snooze; far-future (9999) = never show again. */
+	app_pref_carddesk_promo_dismissed_at?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */

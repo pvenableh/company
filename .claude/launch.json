@@ -18,6 +18,15 @@
       "url": "http://127.0.0.1:3001",
       "host": "127.0.0.1",
       "autoPort": true
+    },
+    {
+      "name": "carddesk-dev",
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "cd /Users/peterhoffman/Sites/earnest/carddesk/website && source ~/.zshrc && pnpm dev --port 3100"],
+      "port": 3100,
+      "url": "http://127.0.0.1:3100",
+      "host": "127.0.0.1",
+      "autoPort": true
     }
   ]
 }

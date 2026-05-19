@@ -52,6 +52,7 @@ const USER_PREF_FIELDS = [
 	'theme_dark_overrides',
 	'industry',
 	'networking_goal',
+	'app_pref_carddesk_promo_dismissed_at',
 ];
 
 async function main() {

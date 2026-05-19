@@ -288,6 +288,10 @@ onMounted(async () => {
 
 <template>
 	<div>
+		<!-- Install-promo banner — dismissible, hidden in standalone PWAs and
+		     on platforms that can't install (e.g. desktop Firefox). -->
+		<CardDeskInstallPromo />
+
 		<!-- Stats Overview -->
 		<div v-if="!isLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
 			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
