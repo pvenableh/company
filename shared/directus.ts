@@ -3167,6 +3167,27 @@ export interface ProposalsFile {
 	directus_files_id?: string | null;
 }
 
+export interface PushSubscription {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @description Owner of this push subscription @required */
+	user: DirectusUser | string;
+	/** @description The origin that owns this subscription (app.earnest.guru / carddesk.earnest.guru) @required */
+	origin: string;
+	/** @description Push service URL returned by the browser. Must be unique — same endpoint = same subscription. @required */
+	endpoint: string;
+	/** @description Client public key (base64url) @required */
+	p256dh: string;
+	/** @description Client auth secret (base64url) @required */
+	auth: string;
+	/** @description Captured at subscribe time for debugging + "scanned on another device" copy */
+	user_agent?: string | null;
+	/** @description Last time we successfully delivered a push to this endpoint */
+	last_seen_at?: string | null;
+}
+
 export interface Reaction {
 	/** @primaryKey */
 	id: string;
@@ -4728,6 +4749,7 @@ export interface Schema {
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
+	push_subscriptions: PushSubscription[];
 	reactions: Reaction[];
 	requests: Request[];
 	restaurants: Restaurant[];
@@ -4959,6 +4981,7 @@ export enum CollectionNames {
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',
+	push_subscriptions = 'push_subscriptions',
 	reactions = 'reactions',
 	requests = 'requests',
 	restaurants = 'restaurants',

@@ -224,6 +224,10 @@ export default defineNuxtConfig({
 		// Notification webhook secret
 		notificationWebhookSecret: process.env.NOTIFICATION_WEBHOOK_SECRET || '',
 
+		// Web Push (VAPID)
+		vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+		vapidSubject: process.env.VAPID_SUBJECT || 'mailto:peter@huestudios.com',
+
 		// SendGrid webhook verification key
 		sendgridWebhookKey: process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY || '',
 
@@ -260,6 +264,9 @@ export default defineNuxtConfig({
 			siteUrl: process.env.SITE_URL || 'https://app.earnest.guru',
 			appUrl: process.env.APP_URL || process.env.SITE_URL || 'https://app.earnest.guru',
 			marketingUrl: process.env.MARKETING_URL || 'https://earnest.guru',
+
+			// Web Push (VAPID public key — safe to expose; private key stays server-side)
+			vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
 
 			// SSO provider flags (controls which buttons appear on login)
 			appleClientId: process.env.APPLE_CLIENT_ID || '',
