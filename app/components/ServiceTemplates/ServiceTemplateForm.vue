@@ -111,18 +111,22 @@
 
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Default scope</label>
-			<UTextarea
-				v-model="form.scope_template"
-				:rows="8"
-				placeholder="Describe the deliverables. The AI will adapt this to each lead's industry and brief when drafting."
+			<DocumentsBlocksScopeTreeEditor
+				v-model="form.scope_payload"
+				:enable-service-import="false"
 			/>
-			<p class="text-xs t-text-muted">Plain text or markdown. The AI uses this as a starting point — it tailors phrasing to the lead.</p>
+			<p class="text-xs t-text-muted">Phased deliverables. Same primitive used in proposals — when this offering is dropped into a proposal, these phases are appended directly to the scope tree.</p>
+			<details v-if="legacyScopeText" class="text-xs t-text-muted mt-2">
+				<summary class="cursor-pointer">Legacy free-text scope (read-only)</summary>
+				<pre class="whitespace-pre-wrap p-2 rounded bg-muted/40 mt-1 max-h-40 overflow-auto">{{ legacyScopeText }}</pre>
+			</details>
 		</div>
 	</form>
 </template>
 
 <script setup lang="ts">
 import type { ServiceTemplate } from '~/composables/useServiceTemplates';
+import type { ScopeTreePayload } from '~~/shared/blocks/types';
 import { legibleTextOn, legibleTextOnHsl } from '~/utils/color-contrast';
 
 const props = defineProps<{
@@ -140,17 +144,38 @@ const emit = defineEmits<{
 	submit: [data: any];
 }>();
 
-const form = reactive({
+const form = reactive<{
+	name: string;
+	category: string;
+	status: string;
+	description: string;
+	scope_payload: ScopeTreePayload;
+	default_total: number | string;
+	default_duration_days: number | string;
+	color: string;
+	icon: string;
+}>({
 	name: props.template?.name || '',
 	category: props.template?.category || 'other',
 	status: props.template?.status || 'published',
 	description: props.template?.description || '',
-	scope_template: props.template?.scope_template || '',
+	scope_payload: normalizeScopePayload(props.template?.scope_payload),
 	default_total: props.template?.default_total ?? '',
 	default_duration_days: props.template?.default_duration_days ?? '',
 	color: props.template?.color || '',
 	icon: props.template?.icon || '',
 });
+
+const legacyScopeText = computed(() => {
+	const t = props.template?.scope_template;
+	if (!t || typeof t !== 'string') return '';
+	return t.trim();
+});
+
+function normalizeScopePayload(p: ScopeTreePayload | null | undefined): ScopeTreePayload {
+	if (p && Array.isArray(p.phases)) return p;
+	return { numbering_style: 'phase_word', phases: [] };
+}
 
 // Curated grid covering the kinds of work an agency runs. Six columns by
 // four rows = 24 picks — enough to feel personal, few enough to make
@@ -187,7 +212,11 @@ function onColorInput(e: Event) {
 
 function handleSubmit() {
 	emit('submit', {
-		...form,
+		name: form.name,
+		category: form.category,
+		status: form.status,
+		description: form.description,
+		scope_payload: form.scope_payload,
 		color: form.color?.trim() || null,
 		icon: form.icon?.trim() || null,
 		default_total: form.default_total === '' || form.default_total == null ? null : Number(form.default_total),

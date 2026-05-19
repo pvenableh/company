@@ -320,12 +320,17 @@ export async function seedDocumentBlocks(orgId: string): Promise<Record<string, 
 	return ids;
 }
 
+interface SeedPhase {
+	heading: string;
+	summary?: string;
+	bullets?: string[];
+}
 interface ServiceTemplateSeed {
 	key: string;
 	name: string;
 	category: string;
 	description: string;
-	scope_template: string;
+	phases: SeedPhase[];
 	default_total: number;
 	default_duration_days: number;
 }
@@ -336,8 +341,12 @@ const SERVICE_TEMPLATE_SEEDS: ServiceTemplateSeed[] = [
 		name: 'Brand Identity Package',
 		category: 'branding',
 		description: 'Wordmark + system + guidelines for a launching or rebranding company.',
-		scope_template:
-			'Discovery, two creative directions, identity system (logo, type, color, motion principles), guidelines PDF + Figma library. 10-week engagement, two revision rounds per phase.',
+		phases: [
+			{ heading: 'Discovery', summary: '60-min kickoff, brand strategy workshop, competitor scan.', bullets: ['Stakeholder interviews', 'Audience + voice positioning', 'Mood + reference board'] },
+			{ heading: 'Two creative directions', summary: 'Two distinct identity routes presented for selection.', bullets: ['Logo + wordmark', 'Type system', 'Color palette + motion principles'] },
+			{ heading: 'Identity system', summary: 'Refined chosen route into a full identity system.', bullets: ['Final logo lockups', 'Typography hierarchy', 'Color tokens + accessibility checks'] },
+			{ heading: 'Guidelines + handoff', bullets: ['Brand guidelines PDF', 'Figma library', 'Two revision rounds included per phase'] },
+		],
 		default_total: 38_000,
 		default_duration_days: 70,
 	},
@@ -346,8 +355,12 @@ const SERVICE_TEMPLATE_SEEDS: ServiceTemplateSeed[] = [
 		name: 'Marketing Site Redesign',
 		category: 'web',
 		description: 'Strategy → design → build for a 6–12 page marketing site on Webflow or Nuxt.',
-		scope_template:
-			'Audit + sitemap, content workshops, key-page design, full responsive build, CMS setup, launch + analytics.',
+		phases: [
+			{ heading: 'Audit + sitemap', bullets: ['Analytics + heatmap review', 'Sitemap proposal', 'Content gap analysis'] },
+			{ heading: 'Content workshops', bullets: ['Messaging hierarchy', 'Key-page outlines', 'Voice + tone alignment'] },
+			{ heading: 'Key-page design', bullets: ['Homepage + product pages', 'Component system in Figma', 'One revision round per page'] },
+			{ heading: 'Responsive build', bullets: ['Mobile + desktop implementation', 'CMS setup', 'Analytics + launch QA'] },
+		],
 		default_total: 28_000,
 		default_duration_days: 56,
 	},
@@ -356,12 +369,41 @@ const SERVICE_TEMPLATE_SEEDS: ServiceTemplateSeed[] = [
 		name: 'Launch Retainer (3 months)',
 		category: 'retainer',
 		description: 'Hands-on launch support: campaigns, social, email, light design.',
-		scope_template:
-			'Three-month retainer covering campaign planning, social content, email sequences, and ongoing creative across channels. Weekly cadence; monthly review.',
+		phases: [
+			{ heading: 'Campaign planning', summary: 'Quarterly plan + monthly briefs aligned with launch milestones.', bullets: ['Channel mix recommendation', 'Calendar + key dates', 'KPIs + review cadence'] },
+			{ heading: 'Social content', bullets: ['~4 posts / week across primary channels', 'Asset production from existing brand library'] },
+			{ heading: 'Email sequences', bullets: ['Welcome + nurture flows', 'Launch + post-launch broadcasts'] },
+			{ heading: 'Ongoing creative + reviews', bullets: ['Weekly creative cadence', 'Monthly review + iteration', 'Tracker + reporting'] },
+		],
 		default_total: 18_000,
 		default_duration_days: 90,
 	},
 ];
+
+function nodeId(): string {
+	if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+	return `phase_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function buildScopePayload(phases: SeedPhase[]) {
+	return {
+		numbering_style: 'phase_word' as const,
+		phases: phases.map((p) => ({
+			id: nodeId(),
+			heading: p.heading,
+			summary: p.summary || '',
+			bullets: p.bullets || [],
+			note: null,
+			hours: null,
+			fee: null,
+			deliverables: [],
+			show_hours: false,
+			show_fee: false,
+			show_deliverables: false,
+			children: [],
+		})),
+	};
+}
 
 /**
  * Seed the per-org service_templates with three starter templates. Returns
@@ -377,7 +419,7 @@ export async function seedServiceTemplates(orgId: string): Promise<Record<string
 				name: t.name,
 				category: t.category,
 				description: t.description,
-				scope_template: t.scope_template,
+				scope_payload: buildScopePayload(t.phases),
 				default_total: t.default_total,
 				default_duration_days: t.default_duration_days,
 				organization: orgId,

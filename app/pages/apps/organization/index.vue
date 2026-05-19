@@ -439,8 +439,7 @@ function statusDotClass(status: IntegrationStatus) {
 const settingsTiles = [
   { label: 'Teams', desc: 'Group members for permissions and assignment', to: '/organization/teams', icon: 'lucide:user-cog' },
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', to: '/organization/roles', icon: 'lucide:shield-check' },
-  { label: 'Document blocks', desc: 'Reusable proposal + contract sections', to: '/organization/document-blocks', icon: 'lucide:blocks' },
-  { label: 'Service templates', desc: 'Pre-built quote / package presets', to: '/organization/service-templates', icon: 'lucide:layers' },
+  { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', to: '/organization/documents-library', icon: 'lucide:blocks' },
 ];
 
 const isArchived = computed(() => !!org.value?.archived_at);

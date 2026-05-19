@@ -203,7 +203,18 @@ async function setupServiceTemplates() {
     field: 'scope_template', type: 'text',
     meta: {
       interface: 'input-rich-text-md',
-      note: 'Default scope copy. Use plain text or markdown — the AI will adapt this to the lead\'s context (industry, brief, etc.) when drafting the proposal.',
+      hidden: true,
+      note: 'Legacy free-text scope. Superseded by scope_payload (structured ScopeTreePayload). Kept read-only for back-compat on rows pre-dating the typed-block migration.',
+    },
+    schema: {},
+  });
+  await createField('service_templates', {
+    field: 'scope_payload', type: 'json',
+    meta: {
+      special: ['cast-json'],
+      interface: 'input-code',
+      options: { language: 'JSON', lineNumber: true },
+      note: 'Structured ScopeTreePayload — phased deliverables editable in-app via ScopeTreeEditor. Replaces free-text scope_template.',
     },
     schema: {},
   });

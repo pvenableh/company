@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
 	const [templates, blockLibrary] = await Promise.all([
 		directus.request(
 			readItems('service_templates', {
-				fields: ['id', 'name', 'category', 'description', 'scope_template', 'default_total', 'default_duration_days'],
+				fields: ['id', 'name', 'category', 'description', 'scope_template', 'scope_payload', 'default_total', 'default_duration_days'],
 				filter: {
 					organization: { _eq: lead.organization },
 					status: { _eq: 'published' },
@@ -181,8 +181,8 @@ function buildSystemPrompt(templates: any[], blocks: any[], leadContext: string,
 - Description: ${t.description || '(none)'}
 - Default total: ${t.default_total != null ? `$${t.default_total}` : '(unset)'}
 - Default duration: ${t.default_duration_days ? `${t.default_duration_days} days` : '(unset)'}
-- Scope copy:
-${t.scope_template || '(empty)'}`).join('\n\n')
+- Scope (structured phases):
+${scopePayloadToText(t.scope_payload) || t.scope_template || '(empty)'}`).join('\n\n')
 		: '(No service templates configured. Compose blocks from scratch using the lead context.)';
 
 	const blockLibraryBlock = blocks.length
@@ -239,6 +239,45 @@ COMPOSITION RULES:
 - Don't use code fences anywhere in content. Plain markdown only (#/##/-/**bold**).
 - Today's date is ${new Date().toISOString().split('T')[0]}.
 - Output JSON only. No explanations before or after.`;
+}
+
+/**
+ * Render a ScopeTreePayload as a compact markdown-ish outline so it fits
+ * comfortably in the LLM system prompt. Returns '' when the payload is
+ * absent or empty — caller falls back to legacy scope_template text.
+ */
+function scopePayloadToText(payload: any): string {
+	if (!payload || !Array.isArray(payload.phases) || payload.phases.length === 0) return '';
+	const lines: string[] = [];
+	for (const phase of payload.phases) {
+		if (!phase) continue;
+		const heading = (phase.heading || '').trim() || 'Phase';
+		lines.push(`## ${heading}`);
+		if (phase.summary) lines.push(String(phase.summary).trim());
+		if (Array.isArray(phase.bullets)) {
+			for (const b of phase.bullets) {
+				const v = (b || '').trim();
+				if (v) lines.push(`- ${v}`);
+			}
+		}
+		if (phase.note) lines.push(`_${String(phase.note).trim()}_`);
+		if (Array.isArray(phase.children)) {
+			for (const child of phase.children) {
+				if (!child) continue;
+				const cHeading = (child.heading || '').trim() || 'Sub-phase';
+				lines.push(`### ${cHeading}`);
+				if (child.summary) lines.push(String(child.summary).trim());
+				if (Array.isArray(child.bullets)) {
+					for (const b of child.bullets) {
+						const v = (b || '').trim();
+						if (v) lines.push(`  - ${v}`);
+					}
+				}
+			}
+		}
+		lines.push('');
+	}
+	return lines.join('\n').trim();
 }
 
 function contactDisplay(lead: any): string {

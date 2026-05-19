@@ -12,10 +12,20 @@
  * Spec: project_proposal_builder_overhaul_kickoff.md (scope_tree editor UX)
  */
 import type { ScopeTreePayload, ScopeTreeNode } from '~~/shared/blocks/types';
+import type { ServiceTemplate } from '~/composables/useServiceTemplates';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
 	modelValue: ScopeTreePayload;
-}>();
+	/**
+	 * When true, the add-phase action exposes a dropdown that lets the
+	 * user import phases from the org's published Service Offerings. Set
+	 * false when this editor is itself authoring a Service Offering, to
+	 * avoid the (recursive) confusion of importing a service into itself.
+	 */
+	enableServiceImport?: boolean;
+}>(), {
+	enableServiceImport: true,
+});
 
 const emit = defineEmits<{
 	'update:modelValue': [v: ScopeTreePayload];
@@ -303,6 +313,72 @@ function toggleExpanded(path: number[]) {
 	const key = path.join('-');
 	expandedPath.value = expandedPath.value === key ? null : key;
 }
+
+// ─── Service Offerings import (the "From service" add-phase action) ───────
+// Lazy-loaded on first open of the add-phase menu so docs that never use
+// the action don't pay the request. Composable is mounted only when the
+// caller opts in via enableServiceImport.
+const services = ref<ServiceTemplate[] | null>(null);
+const servicesLoading = ref(false);
+const addMenuOpen = ref(false);
+const addMenuRef = ref<HTMLDivElement | null>(null);
+
+async function ensureServicesLoaded() {
+	if (!props.enableServiceImport) return;
+	if (services.value !== null) return;
+	servicesLoading.value = true;
+	try {
+		const { listPublished } = useServiceTemplates();
+		const rows = await listPublished();
+		services.value = rows.filter((r) => {
+			// Skip offerings with no usable scope yet — they would import
+			// as zero phases, which is a confusing no-op for the user.
+			const p = r.scope_payload as ScopeTreePayload | null;
+			return !!(p && Array.isArray(p.phases) && p.phases.length > 0);
+		});
+	} catch (err) {
+		console.error('[ScopeTreeEditor] failed to load services', err);
+		services.value = [];
+	} finally {
+		servicesLoading.value = false;
+	}
+}
+
+function toggleAddMenu() {
+	addMenuOpen.value = !addMenuOpen.value;
+	if (addMenuOpen.value) ensureServicesLoaded();
+}
+
+function appendBlankPhase() {
+	addMenuOpen.value = false;
+	addPhase();
+}
+
+function importFromService(svc: ServiceTemplate) {
+	addMenuOpen.value = false;
+	const src = svc.scope_payload as ScopeTreePayload | null;
+	if (!src || !Array.isArray(src.phases) || src.phases.length === 0) return;
+	const imported = clone(src.phases) as ScopeTreeNode[];
+	imported.forEach(reassignIds);
+	// 2-level cap: flatten any children-of-children the source somehow
+	// produced. (Authoring constraints should prevent this, but a future
+	// import source could be looser.)
+	for (const p of imported) {
+		if (Array.isArray(p.children)) {
+			p.children.forEach((c) => { c.children = []; });
+		}
+	}
+	setPhases([...payload.value.phases, ...imported]);
+}
+
+// Close the add menu when clicking outside it.
+function onDocClick(e: MouseEvent) {
+	if (!addMenuOpen.value) return;
+	const el = addMenuRef.value;
+	if (el && !el.contains(e.target as Node)) addMenuOpen.value = false;
+}
+onMounted(() => document.addEventListener('mousedown', onDocClick));
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 </script>
 
 <template>
@@ -327,10 +403,42 @@ function toggleExpanded(path: number[]) {
 		<div v-if="payload.phases.length === 0" class="ios-card p-6 text-center border-dashed">
 			<UIcon name="lucide:layout-template" class="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-sm text-muted-foreground mb-3">No phases yet. Add the first one to start mapping the scope.</p>
-			<button
-				class="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground"
-				@click="addPhase"
-			>+ Add first phase</button>
+			<div ref="addMenuRef" class="relative inline-block">
+				<button
+					class="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground inline-flex items-center gap-1.5"
+					@click="enableServiceImport ? toggleAddMenu() : addPhase()"
+				>
+					+ Add first phase
+					<UIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
+				</button>
+				<div
+					v-if="enableServiceImport && addMenuOpen"
+					class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-20 text-left p-1"
+				>
+					<button class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted" @click="appendBlankPhase">
+						<span class="inline-flex items-center gap-2"><UIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
+					</button>
+					<div class="border-t border-border my-1"></div>
+					<p class="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">From service offering</p>
+					<div v-if="servicesLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+					<div v-else-if="!(services?.length)" class="px-3 py-2 text-xs text-muted-foreground">
+						No published offerings yet.
+						<NuxtLink to="/organization/documents-library?tab=offerings" class="underline">Create one</NuxtLink>
+					</div>
+					<div v-else class="max-h-60 overflow-auto">
+						<button
+							v-for="s in services"
+							:key="s.id"
+							class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted flex items-center gap-2"
+							@click="importFromService(s)"
+						>
+							<span v-if="s.icon" class="text-base leading-none">{{ s.icon }}</span>
+							<span class="truncate flex-1">{{ s.name }}</span>
+							<span class="text-[10px] text-muted-foreground">{{ s.scope_payload?.phases?.length || 0 }} phases</span>
+						</button>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<!-- Phase cards -->
@@ -581,14 +689,47 @@ function toggleExpanded(path: number[]) {
 			</div>
 		</div>
 
-		<button
+		<div
 			v-if="payload.phases.length > 0"
-			class="w-full ios-card p-2 border-dashed border-2 border-border bg-transparent text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5"
-			@click="addPhase"
+			ref="addMenuRef"
+			class="relative"
 		>
-			<UIcon name="lucide:plus" class="w-3.5 h-3.5" />
-			Add phase
-		</button>
+			<button
+				class="w-full ios-card p-2 border-dashed border-2 border-border bg-transparent text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5"
+				@click="enableServiceImport ? toggleAddMenu() : addPhase()"
+			>
+				<UIcon name="lucide:plus" class="w-3.5 h-3.5" />
+				Add phase
+				<UIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
+			</button>
+			<div
+				v-if="enableServiceImport && addMenuOpen"
+				class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-20 text-left p-1"
+			>
+				<button class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted" @click="appendBlankPhase">
+					<span class="inline-flex items-center gap-2"><UIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
+				</button>
+				<div class="border-t border-border my-1"></div>
+				<p class="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">From service offering</p>
+				<div v-if="servicesLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+				<div v-else-if="!(services?.length)" class="px-3 py-2 text-xs text-muted-foreground">
+					No published offerings yet.
+					<NuxtLink to="/organization/documents-library?tab=offerings" class="underline">Create one</NuxtLink>
+				</div>
+				<div v-else class="max-h-60 overflow-auto">
+					<button
+						v-for="s in services"
+						:key="s.id"
+						class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted flex items-center gap-2"
+						@click="importFromService(s)"
+					>
+						<span v-if="s.icon" class="text-base leading-none">{{ s.icon }}</span>
+						<span class="truncate flex-1">{{ s.name }}</span>
+						<span class="text-[10px] text-muted-foreground">{{ s.scope_payload?.phases?.length || 0 }} phases</span>
+					</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 

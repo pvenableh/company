@@ -3332,8 +3332,10 @@ export interface ServiceTemplate {
 	category?: 'branding' | 'web' | 'marketing' | 'retainer' | 'other' | null;
 	/** @description One-liner shown in the picker */
 	description?: string | null;
-	/** @description Default scope copy. Use plain text or markdown — the AI will adapt this to the lead's context (industry, brief, etc.) when drafting the proposal. */
+	/** @description Legacy free-text scope. Superseded by `scope_payload`. Kept read-only for back-compat on rows pre-dating the typed-block migration. */
 	scope_template?: string | null;
+	/** @description Structured `ScopeTreePayload` — phased deliverables editable in-app via ScopeTreeEditor. Replaces free-text `scope_template`. */
+	scope_payload?: import('./blocks/types').ScopeTreePayload | null;
 	/** @description Reference base price */
 	default_total?: number | null;
 	/** @description Typical project length */
