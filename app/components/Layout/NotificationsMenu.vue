@@ -215,6 +215,24 @@
 							<Switch :model-value="preferences.emailEnabled" @update:model-value="preferences.emailEnabled = $event" />
 						</div>
 
+						<div class="flex items-start justify-between gap-3">
+							<div class="min-w-0">
+								<div class="font-medium text-sm">Push Notifications</div>
+								<div class="text-xs text-muted-foreground">
+									<span v-if="!pushSupport.canSubscribe && pushIsIOS">On iPhone, add Earnest to your Home Screen first, then enable.</span>
+									<span v-else-if="!pushSupport.pushManager">This browser doesn't support push.</span>
+									<span v-else-if="pushPermission === 'denied'">Permission denied — re-enable in browser settings.</span>
+									<span v-else>Real-time alerts on this device when something needs you.</span>
+								</div>
+								<div v-if="pushError" class="text-xs text-destructive mt-1">{{ pushError }}</div>
+							</div>
+							<Switch
+								:model-value="pushIsSubscribed"
+								:disabled="pushLoading || !pushSupport.canSubscribe || !pushSupport.pushManager"
+								@update:model-value="handlePushToggle($event)"
+							/>
+						</div>
+
 						<div class="pl-4 space-y-3 border-l-2 border-muted">
 							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">In-app + email</div>
 							<div
@@ -338,6 +356,7 @@
 import { ref, computed, watch } from 'vue';
 import { useInfiniteScroll } from '@vueuse/core';
 import { useNotifications } from '~/composables/useNotifications';
+import { usePushSubscription } from '~/composables/usePushSubscription';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
@@ -427,6 +446,36 @@ async function hydratePrefs() {
 	}
 }
 watch(showSettings, (open) => { if (open) hydratePrefs(); });
+
+// Web Push — wired into the settings panel as a third master toggle alongside
+// Sound and Email. Disabled on platforms that can't deliver (notably iOS
+// Safari outside of standalone PWA mode).
+const {
+	support: pushSupport,
+	permission: pushPermission,
+	isSubscribed: pushIsSubscribed,
+	loading: pushLoading,
+	error: pushError,
+	subscribe: subscribePush,
+	unsubscribe: unsubscribePush,
+} = usePushSubscription();
+
+const pushIsIOS = computed(() => {
+	if (typeof navigator === 'undefined') return false;
+	const ua = navigator.userAgent;
+	return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+});
+
+async function handlePushToggle(next: boolean) {
+	if (next) {
+		const sub = await subscribePush();
+		if (sub) toast.success('Push notifications enabled');
+		else if (pushError.value) toast.error(pushError.value);
+	} else {
+		await unsubscribePush();
+		toast.success('Push notifications disabled');
+	}
+}
 const notificationsContainer = ref(null);
 const loadMoreTrigger = ref(null);
 
