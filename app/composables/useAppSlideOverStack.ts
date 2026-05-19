@@ -34,6 +34,7 @@
 export type SlidePanel = {
 	type: string;
 	id: string;
+	mode?: string;
 };
 
 const STACK_KEY = 'apps-slide-over-stack';
@@ -75,8 +76,8 @@ export function useAppSlideOverStack() {
 	const route = useRoute();
 	const router = useRouter();
 
-	async function push(type: string, id: string) {
-		const next: SlidePanel = { type, id: String(id) };
+	async function push(type: string, id: string, mode?: string) {
+		const next: SlidePanel = { type, id: String(id), ...(mode ? { mode } : {}) };
 		const existingTop = stack.value[stack.value.length - 1];
 
 		let newStack: SlidePanel[];
@@ -151,7 +152,7 @@ export function useAppSlideOver(type: string) {
 	return {
 		isOpen,
 		activeId,
-		open: (id: string) => push(type, id),
+		open: (id: string, mode?: string) => push(type, id, mode),
 		close: () => pop(),
 	};
 }
@@ -167,7 +168,12 @@ export function useAppSlideOverStackState() {
 }
 
 function serializeStack(s: SlidePanel[]): string {
-	return s.map((p) => `${p.type}:${encodeURIComponent(p.id)}`).join('/');
+	return s
+		.map((p) => {
+			const base = `${p.type}:${encodeURIComponent(p.id)}`;
+			return p.mode ? `${base}:${p.mode}` : base;
+		})
+		.join('/');
 }
 
 function parseStack(slide: string): SlidePanel[] {
@@ -175,13 +181,18 @@ function parseStack(slide: string): SlidePanel[] {
 		.split('/')
 		.slice(0, MAX_DEPTH)
 		.map<SlidePanel | null>((segment) => {
-			const colon = segment.indexOf(':');
-			if (colon <= 0) return null;
-			const type = segment.slice(0, colon);
-			const rawId = segment.slice(colon + 1);
+			const parts = segment.split(':');
+			if (parts.length < 2) return null;
+			const type = parts[0];
+			const rawId = parts[1];
+			const mode = parts[2];
 			if (!type || !rawId) return null;
 			try {
-				return { type, id: decodeURIComponent(rawId) };
+				return {
+					type,
+					id: decodeURIComponent(rawId),
+					...(mode ? { mode } : {}),
+				};
 			} catch {
 				return null;
 			}
@@ -193,6 +204,7 @@ function stacksEqual(a: SlidePanel[], b: SlidePanel[]): boolean {
 	if (a.length !== b.length) return false;
 	for (let i = 0; i < a.length; i++) {
 		if (a[i]!.type !== b[i]!.type || a[i]!.id !== b[i]!.id) return false;
+		if ((a[i]!.mode ?? null) !== (b[i]!.mode ?? null)) return false;
 	}
 	return true;
 }

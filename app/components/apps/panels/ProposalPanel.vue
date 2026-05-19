@@ -1,13 +1,17 @@
 <!--
   ProposalPanel — slide-over body for a single proposal.
 
-  Quick-look surface: status, value, expiry, linked lead/contact/client,
-  blocks outline. Heavy editing (BlockComposer + theme + PDF preview)
-  stays at /proposals/[id] — the "Full Page" action chip in the header
-  is the deep-link there.
+  Two modes:
+    - 'view'  (default) — status, value, expiry, linked records, block outline.
+                          Quick-look surface used for row clicks.
+    - 'edit'           — embeds the typed-block composer (BlockComposer)
+                          with a sticky save bar in the panel footer.
 
-  Cross-panel push: clicking the linked contact/client/lead opens its
-  panel on top via `useAppSlideOverStack().push()`.
+  Heavy chrome (PDF preview, theme settings, send flow) stays at
+  /proposals/[id] — the "Full Page ↗" action chip is the escape hatch.
+
+  Cross-panel push: clicking the linked contact opens its panel on top
+  via `useAppSlideOverStack().push()`.
 -->
 <script setup lang="ts">
 import { Icon } from '#components';
@@ -15,15 +19,22 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_COLORS } from '~~/shared/proposals-enhanced';
 import { formatCurrency } from '~/utils/currency';
 
-const props = defineProps<{ id: string }>();
+const props = defineProps<{ id: string; mode?: string }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
 const { getProposal } = useProposals();
 const { push } = useAppSlideOverStack();
+const toast = useToast();
+const proposalItems = useDirectusItems('proposals');
 
 const proposal = ref<any | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+const editing = ref(props.mode === 'edit');
+const blocks = ref<any[]>([]);
+const blocksDirty = ref(false);
+const savingBlocks = ref(false);
 
 const statusLabel = computed(() => {
 	const s = proposal.value?.proposal_status as keyof typeof PROPOSAL_STATUS_LABELS | undefined;
@@ -33,10 +44,6 @@ const statusColor = computed(() => {
 	const s = proposal.value?.proposal_status as keyof typeof PROPOSAL_STATUS_COLORS | undefined;
 	return s ? PROPOSAL_STATUS_COLORS[s] : '#6B7280';
 });
-
-const blocks = computed<any[]>(() =>
-	Array.isArray(proposal.value?.blocks) ? proposal.value.blocks : [],
-);
 
 const linkedContact = computed(() => {
 	const p = proposal.value;
@@ -59,8 +66,11 @@ async function load(id: string) {
 	loading.value = true;
 	error.value = null;
 	proposal.value = null;
+	blocks.value = [];
+	blocksDirty.value = false;
 	try {
 		proposal.value = await getProposal(id);
+		blocks.value = Array.isArray(proposal.value?.blocks) ? proposal.value.blocks : [];
 	} catch (err: any) {
 		error.value = err?.message || 'Failed to load proposal';
 	} finally {
@@ -69,6 +79,53 @@ async function load(id: string) {
 }
 
 watch(() => props.id, load, { immediate: true });
+watch(() => props.mode, (m) => { editing.value = m === 'edit'; });
+
+function onBlocksChange(next: any[]) {
+	blocks.value = next;
+	blocksDirty.value = true;
+}
+
+async function saveBlocks() {
+	if (!proposal.value?.id || savingBlocks.value) return;
+	savingBlocks.value = true;
+	try {
+		await proposalItems.update(proposal.value.id, { blocks: blocks.value });
+		proposal.value = { ...proposal.value, blocks: [...blocks.value] };
+		blocksDirty.value = false;
+		toast.add({ title: 'Saved', color: 'green' });
+	} catch (err: any) {
+		toast.add({ title: 'Failed to save blocks', description: err.message, color: 'red' });
+	} finally {
+		savingBlocks.value = false;
+	}
+}
+
+async function exitEdit() {
+	if (blocksDirty.value) {
+		if (!confirm('Discard unsaved block changes?')) return;
+		blocks.value = Array.isArray(proposal.value?.blocks) ? [...proposal.value.blocks] : [];
+		blocksDirty.value = false;
+	}
+	editing.value = false;
+}
+
+function startEdit() {
+	editing.value = true;
+}
+
+function onShellClose() {
+	if (editing.value && blocksDirty.value) {
+		if (!confirm('You have unsaved block changes. Close anyway?')) return;
+	}
+	emit('close');
+}
+
+onBeforeUnmount(() => {
+	if (editing.value && blocksDirty.value && proposal.value?.id) {
+		proposalItems.update(proposal.value.id, { blocks: blocks.value }).catch(() => {});
+	}
+});
 
 function openContact() {
 	if (linkedContact.value) push('contact', linkedContact.value.id);
@@ -79,11 +136,29 @@ function openContact() {
 	<AppSlideOverShell
 		:title="proposal?.title || 'Proposal'"
 		:subtitle="proposal?.organization?.name"
-		@close="emit('close')"
+		@close="onShellClose"
 	>
 		<template v-if="proposal" #actions>
+			<button
+				v-if="!editing"
+				type="button"
+				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-foreground bg-muted hover:bg-muted/80 transition-colors"
+				@click="startEdit"
+			>
+				<Icon name="lucide:pencil" class="w-3 h-3" />
+				Edit
+			</button>
+			<button
+				v-else
+				type="button"
+				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+				@click="exitEdit"
+			>
+				<Icon name="lucide:eye" class="w-3 h-3" />
+				View
+			</button>
 			<NuxtLink
-				:to="`/proposals/${proposal.id}`"
+				:to="editing ? `/proposals/${proposal.id}?edit=1` : `/proposals/${proposal.id}`"
 				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
 				:title="`Open full page for ${proposal.title || 'proposal'}`"
 			>
@@ -101,6 +176,21 @@ function openContact() {
 			{{ error }}
 		</div>
 
+		<!-- ── EDIT MODE ── -->
+		<div v-else-if="proposal && editing" class="space-y-3">
+			<div class="rounded-md border border-dashed border-muted-foreground/30 bg-muted/40 px-3 py-2 flex items-start gap-2 text-xs text-muted-foreground">
+				<Icon name="lucide:info" class="w-3.5 h-3.5 mt-0.5 shrink-0" />
+				<span>Compose the body with typed blocks. Use <strong>Full Page ↗</strong> for PDF preview &amp; send.</span>
+			</div>
+			<DocumentsBlockComposer
+				:model-value="blocks"
+				applies-to="proposals"
+				:saving="savingBlocks"
+				@update:model-value="onBlocksChange"
+			/>
+		</div>
+
+		<!-- ── VIEW MODE ── -->
 		<div v-else-if="proposal" class="space-y-5">
 			<!-- Status + value strip -->
 			<div class="flex items-center justify-between gap-3 flex-wrap">
@@ -167,10 +257,17 @@ function openContact() {
 						class="flex items-baseline gap-2 py-1"
 					>
 						<span class="text-[10px] tabular-nums text-muted-foreground/70 w-5 shrink-0">{{ i + 1 }}.</span>
-						<span class="truncate">{{ b.heading || (b.content ? String(b.content).slice(0, 60) : 'Untitled block') }}</span>
+						<span class="truncate">{{ b?.payload?.heading || b.heading || (b?.payload?.body_markdown ? String(b.payload.body_markdown).slice(0, 60) : 'Untitled block') }}</span>
 					</li>
 				</ol>
-				<p v-else class="text-xs text-muted-foreground italic">No content yet — open the full page to compose blocks.</p>
+				<button
+					v-else
+					type="button"
+					class="w-full rounded-md border border-dashed border-muted-foreground/30 px-3 py-3 text-xs text-muted-foreground hover:bg-muted/40 transition-colors"
+					@click="startEdit"
+				>
+					No content yet — click to compose blocks
+				</button>
 			</div>
 
 			<!-- Notes -->
@@ -183,5 +280,32 @@ function openContact() {
 		<div v-else class="text-sm text-muted-foreground py-10 text-center">
 			Could not load proposal.
 		</div>
+
+		<template v-if="editing && proposal" #footer>
+			<div class="flex items-center justify-between gap-3">
+				<span class="text-xs text-muted-foreground">
+					<span v-if="blocksDirty">Unsaved changes</span>
+					<span v-else>All changes saved</span>
+				</span>
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						class="text-xs h-7 px-3 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+						@click="exitEdit"
+					>
+						Done
+					</button>
+					<button
+						type="button"
+						class="text-xs h-7 px-3 rounded-full font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						:disabled="!blocksDirty || savingBlocks"
+						@click="saveBlocks"
+					>
+						<Icon v-if="savingBlocks" name="lucide:loader-2" class="w-3 h-3 mr-1 inline animate-spin" />
+						Save
+					</button>
+				</div>
+			</div>
+		</template>
 	</AppSlideOverShell>
 </template>

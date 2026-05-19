@@ -49,8 +49,10 @@ const currentStatus = ref<string>(props.contract?.contract_status || 'draft');
 const formRef = ref<any>(null);
 
 const toast = useToast();
+const route = useRoute();
 const { createContract } = useContracts();
 const contractItems = useDirectusItems('contracts');
+const contractSlide = useAppSlideOver('contract');
 
 const contractStatuses = Object.entries(CONTRACT_STATUS_LABELS).map(([id, name]) => ({ id, name }));
 
@@ -79,8 +81,17 @@ async function onFormSave(payload: any) {
 			emit('updated', updated);
 		} else {
 			const created = await createContract(fullPayload);
-			toast.add({ title: 'Contract created', color: 'green' });
+			toast.add({ title: 'Contract created — opening composer', color: 'green' });
 			emit('created', created);
+			isOpen.value = false;
+			if (created?.id) {
+				if (route.path.startsWith('/apps/')) {
+					await contractSlide.open(String(created.id), 'edit');
+				} else {
+					await navigateTo(`/contracts/${created.id}?edit=1`);
+				}
+				return;
+			}
 		}
 		isOpen.value = false;
 	} catch (err: any) {

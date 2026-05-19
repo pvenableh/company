@@ -17,8 +17,13 @@
 		</div>
 
 		<div class="space-y-1">
-			<label class="t-label text-muted-foreground">Notes</label>
-			<UTextarea v-model="form.notes" :rows="4" placeholder="Proposal details, scope, deliverables..." />
+			<label class="t-label text-muted-foreground">Internal notes</label>
+			<UTextarea v-model="form.notes" :rows="3" placeholder="Private notes — not shown on the rendered proposal" />
+		</div>
+
+		<div v-if="!isEditing" class="rounded-md border border-dashed border-muted-foreground/30 bg-muted/40 px-3 py-2 flex items-start gap-2 text-xs text-muted-foreground">
+			<Icon name="lucide:layout-template" class="w-4 h-4 mt-0.5 shrink-0" />
+			<span>After saving, you'll land in the block composer to add scope, pricing, and signatures.</span>
 		</div>
 	</form>
 </template>
@@ -29,6 +34,8 @@ const props = defineProps<{
 	leadId?: number | string;
 	saving?: boolean;
 }>();
+
+const isEditing = computed(() => !!props.proposal?.id);
 
 const emit = defineEmits<{
 	submit: [data: any];

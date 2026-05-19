@@ -31,6 +31,11 @@
 			<label class="t-label text-muted-foreground">Internal Notes</label>
 			<UTextarea v-model="form.notes" :rows="3" placeholder="Notes (not rendered to the client)" />
 		</div>
+
+		<div v-if="!isEditing" class="rounded-md border border-dashed border-muted-foreground/30 bg-muted/40 px-3 py-2 flex items-start gap-2 text-xs text-muted-foreground">
+			<Icon name="lucide:layout-template" class="w-4 h-4 mt-0.5 shrink-0" />
+			<span>After saving, you'll land in the block composer to add scope, fees, and signatures.</span>
+		</div>
 	</form>
 </template>
 
@@ -41,6 +46,8 @@ const props = defineProps<{
 	proposalId?: string | null;
 	saving?: boolean;
 }>();
+
+const isEditing = computed(() => !!props.contract?.id);
 
 const emit = defineEmits<{
 	submit: [data: any];

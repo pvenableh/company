@@ -47,6 +47,7 @@ const renderable = computed(() =>
 				key: `${panel.type}:${panel.id}`,
 				type: panel.type,
 				id: panel.id,
+				mode: panel.mode,
 				index,
 				component,
 				isTop: index === panels.value.length - 1,
@@ -128,6 +129,7 @@ function onShellClose() {
 							<component
 								:is="panel.component"
 								:id="panel.id"
+								:mode="panel.mode"
 								@close="onShellClose"
 							/>
 						</div>

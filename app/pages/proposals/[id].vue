@@ -26,7 +26,7 @@ const blocksDirty = ref(false);
 const savingBlocks = ref(false);
 
 type Mode = 'view' | 'edit';
-const mode = ref<Mode>('view');
+const mode = ref<Mode>(route.query.edit ? 'edit' : 'view');
 
 const config = useRuntimeConfig();
 

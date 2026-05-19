@@ -47,8 +47,10 @@ const currentStatus = ref<string>(props.proposal?.proposal_status || 'draft');
 const formRef = ref<any>(null);
 
 const toast = useToast();
+const route = useRoute();
 const { createProposal } = useProposals();
 const proposalItems = useDirectusItems('proposals');
+const proposalSlide = useAppSlideOver('proposal');
 
 const proposalStatuses = Object.entries(PROPOSAL_STATUS_LABELS).map(([id, name]) => ({ id, name }));
 
@@ -77,8 +79,20 @@ async function onFormSave(payload: any) {
 			emit('updated', updated);
 		} else {
 			const created = await createProposal(fullPayload);
-			toast.add({ title: 'Proposal created', color: 'green' });
+			toast.add({ title: 'Proposal created — opening composer', color: 'green' });
 			emit('created', created);
+			isOpen.value = false;
+			if (created?.id) {
+				// Inside Apps Layout: push the slide-over panel in edit mode so
+				// the user stays in the apps chrome. Elsewhere: route to the full
+				// detail page (apps stack isn't mounted off /apps/).
+				if (route.path.startsWith('/apps/')) {
+					await proposalSlide.open(String(created.id), 'edit');
+				} else {
+					await navigateTo(`/proposals/${created.id}?edit=1`);
+				}
+				return;
+			}
 		}
 		isOpen.value = false;
 	} catch (err: any) {

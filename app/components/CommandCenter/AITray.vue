@@ -320,8 +320,9 @@ watch(quickStreamingContent, () => {
 			<div class="border-b border-border/30">
 				<div class="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-violet-500/5">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="activePersona.iconBg">
-							<UIcon :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
+						<div class="w-8 h-8 rounded-full flex items-center justify-center" :class="activePersona.iconBg">
+							<EarnestIcon v-if="selectedPersona === 'default'" class="w-4 h-4 text-primary" />
+							<UIcon v-else :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
 						</div>
 						<div>
 							<h2 class="text-sm font-bold text-foreground">Earnest</h2>
@@ -335,7 +336,7 @@ watch(quickStreamingContent, () => {
 							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground"
 							title="Manage AI tokens"
 						>
-							<UIcon name="i-heroicons-bolt" class="w-4 h-4" />
+							<UIcon name="i-heroicons-wallet" class="w-4 h-4" />
 						</button>
 						<button
 							@click="showPreferences = !showPreferences"
@@ -412,7 +413,8 @@ watch(quickStreamingContent, () => {
 							? p.bgClass + ' border ' + (p.iconColor)
 							: 'text-muted-foreground hover:bg-muted/50'"
 					>
-						<UIcon :name="p.icon" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : ''" />
+						<EarnestIcon v-if="p.value === 'default'" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : 'text-muted-foreground'" />
+						<UIcon v-else :name="p.icon" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : ''" />
 						<span class="hidden sm:inline">{{ p.label.replace('The ', '') }}</span>
 					</button>
 				</div>
@@ -463,8 +465,9 @@ watch(quickStreamingContent, () => {
 					<div ref="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
 						<!-- Empty state with prompts -->
 						<div v-if="quickMessages.length === 0 && !isQuickStreaming" class="flex flex-col items-center justify-center h-full px-4">
-							<div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" :class="activePersona.iconBg">
-								<UIcon :name="activePersona.icon" class="w-7 h-7" :class="activePersona.iconColor" />
+							<div class="w-14 h-14 rounded-full flex items-center justify-center mb-4" :class="activePersona.iconBg">
+								<EarnestIcon v-if="selectedPersona === 'default'" class="w-7 h-7 text-primary" />
+								<UIcon v-else :name="activePersona.icon" class="w-7 h-7" :class="activePersona.iconColor" />
 							</div>
 							<p class="text-sm font-medium text-foreground text-center mb-1">{{ activePersona.label }}</p>
 							<p class="text-xs text-muted-foreground text-center mb-6 max-w-[240px]">{{ activePersona.description }}</p>
@@ -502,7 +505,8 @@ watch(quickStreamingContent, () => {
 									class="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
 									:class="activePersona.iconBg"
 								>
-									<UIcon :name="activePersona.icon" class="w-3 h-3" :class="activePersona.iconColor" />
+									<EarnestIcon v-if="selectedPersona === 'default'" class="w-3 h-3 text-primary" />
+									<UIcon v-else :name="activePersona.icon" class="w-3 h-3" :class="activePersona.iconColor" />
 								</div>
 								<div class="max-w-[85%] relative">
 									<div
@@ -585,7 +589,8 @@ watch(quickStreamingContent, () => {
 									class="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
 									:class="activePersona.iconBg"
 								>
-									<UIcon :name="activePersona.icon" class="w-3 h-3 animate-pulse" :class="activePersona.iconColor" />
+									<EarnestIcon v-if="selectedPersona === 'default'" class="w-3 h-3 text-primary animate-pulse" />
+									<UIcon v-else :name="activePersona.icon" class="w-3 h-3 animate-pulse" :class="activePersona.iconColor" />
 								</div>
 								<div class="max-w-[85%] rounded-xl px-3 py-2 bg-muted text-xs">
 									<div
