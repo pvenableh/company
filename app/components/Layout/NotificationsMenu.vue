@@ -466,7 +466,7 @@ const pushIsIOS = computed(() => {
 	return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
 });
 
-async function handlePushToggle(next: boolean) {
+async function handlePushToggle(next) {
 	if (next) {
 		const sub = await subscribePush();
 		if (sub) toast.success('Push notifications enabled');
