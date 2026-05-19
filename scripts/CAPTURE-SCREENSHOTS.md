@@ -76,15 +76,27 @@ which login the shot is captured under.
 | `project-timeline`       | `/projects/<first-seeded-id>`  | 1280×720 @2x |
 | `tickets-kanban`         | `/tickets`                     | 1280×720 @2x |
 | `financials-overview`    | `/financials`                  | 1280×720 @2x |
+| `time-tracker`           | `/apps/work?floor=time`        | 1280×720 @2x |
+
+### Apps Layout (Member role) — the new unified shell
+
+| Slug                     | URL                                                         | Viewport     |
+|--------------------------|-------------------------------------------------------------|--------------|
+| `apps-rail`              | `/apps/work` (gantt-expanded)                               | 1440×900 @2x |
+| `client-workspace`       | `/apps/clients/<first-seeded-id>`                           | 1280×720 @2x |
+| `project-workspace`      | `/apps/work/projects/<first-seeded-id>`                     | 1280×720 @2x |
+| `project-documents`      | `/apps/work/projects/<first-seeded-id>?tab=documents`       | 1280×720 @2x |
+| `carddesk`               | `/carddesk`                                                 | 1280×720 @2x |
 
 ### Agency (Admin role) — requires `DEMO_AGENCY_USER_PASSWORD`
 
-| Slug                     | URL                            | Viewport     |
-|--------------------------|--------------------------------|--------------|
-| `marketing-overview`     | `/marketing`                   | 1280×720 @2x |
-| `organization-overview`  | `/organization`                | 1280×720 @2x |
-| `organization-teams`     | `/organization/teams`          | 1280×720 @2x |
-| `team-detail`            | `/teams/<first-seeded-id>`     | 1280×720 @2x |
+| Slug                     | URL                                                         | Viewport     |
+|--------------------------|-------------------------------------------------------------|--------------|
+| `marketing-overview`     | `/marketing`                                                | 1280×720 @2x |
+| `organization-overview`  | `/organization`                                             | 1280×720 @2x |
+| `organization-teams`     | `/organization/teams`                                       | 1280×720 @2x |
+| `team-detail`            | `/teams/<first-seeded-id>`                                  | 1280×720 @2x |
+| `documents-library`      | `/apps/organization?floor=settings&slide=documents_library:offerings` | 1280×720 @2x |
 
 Detail-page IDs are resolved at run-time by scraping the first
 `<a href="/contacts/…">` (etc.) in the list view — no hardcoded UUIDs.

@@ -13,7 +13,7 @@ const projectId = route.params.id as string;
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 import type { ProjectTabKey } from '~/components/apps/work/ProjectTabsBar.vue';
-const VALID_TABS: ProjectTabKey[] = ['activity', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'files'];
+const VALID_TABS: ProjectTabKey[] = ['activity', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
 
 const initialTab: ProjectTabKey = (() => {
   const v = route.query.tab;

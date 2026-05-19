@@ -207,7 +207,9 @@ const SHOTS: Shot[] = [
 		slug: 'time-tracker',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/time-tracker`,
+		// Legacy `/time-tracker` route was removed in the Retainer plan
+		// (Phase 2) — the canonical home is the Time floor on /apps/work.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/work?floor=time`,
 		// Realtime subscription on time_entries can lag the initial render
 		// of the "This Week" tab — give it a beat before the shutter fires.
 		waitFor: async (page) => {
@@ -297,6 +299,70 @@ const SHOTS: Shot[] = [
 		},
 	},
 
+	// ── Apps Layout — the new unified shell ──
+	{
+		slug: 'apps-rail',
+		viewport: 'hero',
+		persona: 'solo',
+		// The /apps/work landing — primary visual proof of the AppRail
+		// (palette-tinted plinth, circular gradient app chips) + the
+		// pill-segmented floor strip + the Projects timeline. This is the
+		// hero shot for the new shell.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/work`,
+		// Same gantt-expand routine as command-center so a row is open.
+		waitFor: async (page) => {
+			const toggle = page.locator('.gantt__toggle').first();
+			try {
+				await toggle.waitFor({ state: 'visible', timeout: 5000 });
+				await toggle.evaluate((el: HTMLElement) => el.click());
+				await page.waitForTimeout(800);
+				await page.evaluate(() => window.scrollTo(0, 0));
+				await page.waitForTimeout(300);
+			} catch {
+				/* fall through */
+			}
+		},
+	},
+	{
+		slug: 'client-workspace',
+		viewport: 'inline',
+		persona: 'solo',
+		// ClientWorkspace 8-tab parity surface at /apps/clients/[id]. The
+		// existing `client-detail` shot points at the classic /clients/[id]
+		// route — this is the Apps Layout variant.
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/clients/${await firstItemId(ctx.page, 'clients', ctx.baseUrl)}`,
+	},
+	{
+		slug: 'project-workspace',
+		viewport: 'inline',
+		persona: 'solo',
+		// ProjectWorkspace 8-tab parity surface at /apps/work/projects/[id],
+		// default Activity tab. Complements the classic `project-timeline`
+		// shot (which still shows the Gantt at /projects/[id]).
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
+	},
+	{
+		slug: 'project-documents',
+		viewport: 'inline',
+		persona: 'solo',
+		// Documents tab on ProjectWorkspace — stacks Proposals + Contracts
+		// scoped to this project via the new project FK on each. `?tab=documents`
+		// is honored by VALID_TABS in the page.
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}?tab=documents`,
+	},
+	{
+		slug: 'carddesk',
+		viewport: 'inline',
+		persona: 'solo',
+		// CardDesk dashboard — the new business-card scanner / contact-sourcing
+		// surface that promotes into the CRM. Shows the install-promo banner
+		// when not yet installed as a PWA.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/carddesk`,
+	},
+
 	// ── Agency (Admin role) — shots that Member role would render empty or 403 ──
 	{
 		slug: 'marketing-overview',
@@ -377,6 +443,21 @@ const SHOTS: Shot[] = [
 		viewport: 'inline',
 		persona: 'agency',
 		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/teams', ctx.baseUrl)}`,
+	},
+	{
+		slug: 'documents-library',
+		viewport: 'inline',
+		persona: 'agency',
+		// Documents Library is now a slide-over panel in the apps layout —
+		// the /organization/documents-library route 301s into this URL.
+		// Shows the panel-stack chrome over the org-settings floor.
+		resolveUrl: async ({ baseUrl }) =>
+			`${baseUrl}/apps/organization?floor=settings&slide=documents_library:offerings`,
+		// The slide-over animates in (Framework7 spring, ~400ms) — wait for
+		// it to fully render before shooting.
+		waitFor: async (page) => {
+			await page.waitForTimeout(900);
+		},
 	},
 ];
 
