@@ -436,11 +436,15 @@ function statusDotClass(status: IntegrationStatus) {
 }
 
 // ── Settings floor — admin tooling tiles ─────────────────────────────────────
+// Most tiles route to a dedicated `/organization/*` page. Documents Library
+// is a slide-over panel instead (the page is an orphan settings surface and
+// reads better stacked on top of /apps/organization than as its own route).
+const documentsLibrarySlide = useAppSlideOver('documents_library');
 const settingsTiles = [
   { label: 'Teams', desc: 'Group members for permissions and assignment', to: '/organization/teams', icon: 'lucide:user-cog' },
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', to: '/organization/roles', icon: 'lucide:shield-check' },
-  { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', to: '/organization/documents-library', icon: 'lucide:blocks' },
-];
+  { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
+] as Array<{ label: string; desc: string; icon: string; to?: string; onClick?: () => void }>;
 
 const isArchived = computed(() => !!org.value?.archived_at);
 
@@ -1103,11 +1107,13 @@ function onClientInvited() {
               Admin tooling
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <NuxtLink
+              <component
+                :is="tile.to ? 'NuxtLink' : 'button'"
                 v-for="tile in settingsTiles"
                 :key="tile.label"
-                :to="tile.to"
-                class="ios-card p-4 flex items-start gap-3 hover:border-primary/40 transition-colors group"
+                v-bind="tile.to ? { to: tile.to } : { type: 'button' }"
+                class="ios-card p-4 flex items-start gap-3 hover:border-primary/40 transition-colors group text-left w-full"
+                @click="tile.onClick?.()"
               >
                 <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
                   <Icon :name="tile.icon" class="w-5 h-5" />
@@ -1117,7 +1123,7 @@ function onClientInvited() {
                   <p class="text-xs text-muted-foreground mt-0.5">{{ tile.desc }}</p>
                 </div>
                 <Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/50 shrink-0 mt-1" />
-              </NuxtLink>
+              </component>
             </div>
           </div>
 
