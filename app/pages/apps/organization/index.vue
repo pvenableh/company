@@ -436,15 +436,18 @@ function statusDotClass(status: IntegrationStatus) {
 }
 
 // ── Settings floor — admin tooling tiles ─────────────────────────────────────
-// Most tiles route to a dedicated `/organization/*` page. Documents Library
-// is a slide-over panel instead (the page is an orphan settings surface and
-// reads better stacked on top of /apps/organization than as its own route).
+// Tiles either link out (`to`) or open a slide-over panel (`onClick`).
+// Teams / Roles / Documents Library all live as slide-overs registered in
+// `panels/registry.ts`; tiles fire `useAppSlideOver(type).open(id)` so the
+// underlying Settings page stays in place behind the panel.
+const teamsSlide = useAppSlideOver('teams');
+const rolesSlide = useAppSlideOver('roles');
 const documentsLibrarySlide = useAppSlideOver('documents_library');
 const settingsTiles = [
-  { label: 'Teams', desc: 'Group members for permissions and assignment', to: '/organization/teams', icon: 'lucide:user-cog' },
-  { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', to: '/organization/roles', icon: 'lucide:shield-check' },
+  { label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') },
+  { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
   { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
-] as Array<{ label: string; desc: string; icon: string; to?: string; onClick?: () => void }>;
+];
 
 const isArchived = computed(() => !!org.value?.archived_at);
 
@@ -845,12 +848,10 @@ function onClientInvited() {
                 Each team has its own roster of members and shared client visibility.
               </p>
             </div>
-            <NuxtLink to="/organization/teams" class="inline-flex">
-              <Button size="sm" variant="outline">
-                <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
-                Manage teams
-              </Button>
-            </NuxtLink>
+            <Button size="sm" variant="outline" @click="teamsSlide.open('_')">
+              <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
+              Manage teams
+            </Button>
           </div>
 
           <div v-if="teamsLoading" class="ios-card p-8 text-center">
@@ -862,12 +863,10 @@ function onClientInvited() {
             <p class="text-xs text-muted-foreground mt-1 mb-3">
               Group members so the Work app and calendar can be filtered by team.
             </p>
-            <NuxtLink to="/organization/teams" class="inline-flex">
-              <Button size="sm">
-                <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-                Create team
-              </Button>
-            </NuxtLink>
+            <Button size="sm" @click="teamsSlide.open('_')">
+              <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+              Create team
+            </Button>
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <NuxtLink
@@ -1111,7 +1110,8 @@ function onClientInvited() {
                 :is="tile.to ? 'NuxtLink' : 'button'"
                 v-for="tile in settingsTiles"
                 :key="tile.label"
-                v-bind="tile.to ? { to: tile.to } : { type: 'button' }"
+                :to="tile.to"
+                :type="tile.to ? undefined : 'button'"
                 class="ios-card p-4 flex items-start gap-3 hover:border-primary/40 transition-colors group text-left w-full"
                 @click="tile.onClick?.()"
               >

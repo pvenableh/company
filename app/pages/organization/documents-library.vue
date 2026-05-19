@@ -1,28 +1,33 @@
 <script setup lang="ts">
-// The Documents Library surface lives as a slide-over panel on top of
-// /apps/organization?floor=settings. This route is kept for bookmarks
-// and legacy aliases (`/organization/document-blocks`,
-// `/organization/service-templates`) — it redirects to the apps URL
-// with the panel pre-opened.
-//
-// Tab query (`?tab=blocks` | `?tab=offerings`) is preserved as the
-// panel's `id` slot (the slide-over stack uses the id segment to seed
-// the body's initial tab).
-definePageMeta({ middleware: ['auth'] });
+// Documents Library is a slide-over panel in the apps layout. This route
+// exists only to preserve inbound links (AI library refs, marketing site
+// CTAs, in-app NuxtLinks). It redirects into the apps layout with the
+// `documents_library` slide-over already pushed onto the stack. The
+// inbound `?tab=blocks|offerings` query becomes the slide-over's id
+// segment so the deep link still lands on the right tab.
+definePageMeta({
+	middleware: 'auth',
+});
+
 useHead({ title: 'Documents Library | Earnest' });
 
 const route = useRoute();
-const router = useRouter();
+const tab = typeof route.query.tab === 'string' && (route.query.tab === 'offerings' || route.query.tab === 'blocks')
+	? route.query.tab
+	: 'blocks';
 
-onMounted(() => {
-	const raw = route.query.tab;
-	const tab = (typeof raw === 'string' && (raw === 'blocks' || raw === 'offerings')) ? raw : 'blocks';
-	router.replace({
-		path: '/apps/organization',
-		query: { floor: 'settings', slide: `documents_library:${tab}` },
-	});
-});
+const target = {
+	path: '/apps/organization',
+	query: { floor: 'settings', slide: `documents_library:${tab}` },
+} as const;
+
+if (import.meta.server) {
+	await navigateTo(target, { redirectCode: 301 });
+} else {
+	await navigateTo(target, { replace: true });
+}
 </script>
+
 <template>
-	<div class="flex items-center justify-center py-16 t-text-muted text-sm">Redirecting to Documents Library…</div>
+	<div />
 </template>

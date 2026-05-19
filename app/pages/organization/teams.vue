@@ -1,16 +1,18 @@
 <script setup lang="ts">
-// Teams now lives as the `teams` tab on /organization. This route exists
-// only to preserve inbound links (Spotlight, footer, in-app NuxtLinks) —
-// it redirects to the canonical destination so there's a single source
-// of truth for team management UI.
+// Teams is a slide-over panel in the apps layout. This route exists only
+// to preserve inbound links (Spotlight, footer, in-app NuxtLinks, the
+// legacy /organization/teams URL). It redirects into the apps layout
+// with the `teams` slide-over already pushed onto the stack.
 definePageMeta({
 	middleware: 'auth',
 });
 
+const target = { path: '/apps/organization', query: { floor: 'settings', slide: 'teams:_' } } as const;
+
 if (import.meta.server) {
-	await navigateTo('/organization?tab=teams', { redirectCode: 301 });
+	await navigateTo(target, { redirectCode: 301 });
 } else {
-	await navigateTo('/organization?tab=teams', { replace: true });
+	await navigateTo(target, { replace: true });
 }
 </script>
 

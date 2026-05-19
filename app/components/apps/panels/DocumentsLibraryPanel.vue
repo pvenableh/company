@@ -1,31 +1,42 @@
 <!--
-  DocumentsLibraryPanel — slide-over body for the org Documents Library
-  (reusable blocks + service offerings the proposal/contract builder
-  draws from).
+	DocumentsLibraryPanel — slide-over wrapper around `OrganizationDocumentsLibraryBody`.
 
-  Unlike the entity panels (Contact, Client, Proposal…), this is a
-  singleton settings surface: the `id` prop is repurposed as the
-  initial-tab key (`blocks` | `offerings`) so deep links can land on a
-  specific tab without inventing a second URL slot.
-
-  Wraps `<OrganizationDocumentsLibraryBody>` — same split pattern used
-  by ClientWorkspace v2.1.
+	Used at depth 1 in the universal slide-over stack. The panel's `id`
+	from the URL (`?slide=documents_library:<tab>`) maps to the initial
+	tab of the embedded body — `blocks` or `offerings`. Anything else
+	(including the placeholder `_`) falls back to `blocks`.
 -->
 <script setup lang="ts">
 import AppSlideOverShell from '../AppSlideOverShell.vue';
-import type { DocumentsLibraryTab } from '~/components/Organization/DocumentsLibraryBody.vue';
 
 const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
-const VALID: DocumentsLibraryTab[] = ['blocks', 'offerings'];
-const initialTab = computed<DocumentsLibraryTab>(() =>
-	VALID.includes(props.id as DocumentsLibraryTab) ? (props.id as DocumentsLibraryTab) : 'blocks',
+type TabKey = 'blocks' | 'offerings';
+const VALID_TABS: TabKey[] = ['blocks', 'offerings'];
+
+const initialTab = computed<TabKey>(() =>
+	VALID_TABS.includes(props.id as TabKey) ? (props.id as TabKey) : 'blocks',
 );
+
+// Keep the slide-over URL's id segment in sync with the active tab so
+// reload / bookmark restores the same view.
+const { push } = useAppSlideOverStack();
+function onTabChange(tab: TabKey) {
+	push('documents_library', tab);
+}
 </script>
 
 <template>
-	<AppSlideOverShell title="Documents Library" subtitle="Reusable blocks + service offerings" @close="$emit('close')">
-		<OrganizationDocumentsLibraryBody :initial-tab="initialTab" compact />
+	<AppSlideOverShell
+		title="Documents Library"
+		subtitle="Reusable blocks + service offerings"
+		@close="$emit('close')"
+	>
+		<OrganizationDocumentsLibraryBody
+			:initial-tab="initialTab"
+			compact
+			@update:tab="onTabChange"
+		/>
 	</AppSlideOverShell>
 </template>

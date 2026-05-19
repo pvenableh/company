@@ -1,58 +1,247 @@
 <!--
-  DocumentsLibraryBody — shared inner body for the Documents Library
-  surface. Mounted by BOTH the page redirect host (now thin, kept for
-  bookmarks) and `panels/DocumentsLibraryPanel.vue` (the slide-over) so
-  the two surfaces can't drift.
+	DocumentsLibraryBody — shared inner body for the Documents Library surface.
 
-  The two FormModals it owns (Blocks + ServiceTemplates) render through
-  UModal → shadcn-vue Dialog, which is already pinned to z-[70] (above
-  the slide-over stack's z-60). No extra teleport plumbing required.
-
-  Tab state is owned here. In panel mode the parent passes `:initial-tab`
-  and consumes `@tab-change`, but doesn't sync to the URL — the slide-
-  over stack already owns the URL slot.
+	Rendered by both the full-page `/organization/documents-library` route
+	(legacy) and the apps-layout slide-over `documents_library` panel.
+	Accepts `:initial-tab` (`'blocks' | 'offerings'`) and `:compact` to
+	skip the page-level header when embedded inside a slide-over shell.
 -->
+<template>
+	<div>
+		<div v-if="!compact" class="flex items-center justify-between mb-6">
+			<div>
+				<h2 class="text-2xl font-semibold">Documents Library</h2>
+				<p class="text-sm t-text-secondary mt-1">
+					The reusable pieces that compose into proposals and contracts — content blocks (bio, references, terms) and service offerings (scope + pricing presets).
+				</p>
+			</div>
+			<UButton color="primary" @click="openNew">
+				<UIcon name="i-heroicons-plus" class="h-4 w-4" />
+				{{ activeTab === 'blocks' ? 'New block' : 'New offering' }}
+			</UButton>
+		</div>
+
+		<UAlert
+			v-if="!selectedOrg"
+			class="mb-6"
+			title="No organization selected"
+			description="Pick an organization from the global header to manage the library."
+			color="blue"
+		/>
+
+		<template v-else>
+			<!-- Tab strip -->
+			<div class="flex items-center justify-between gap-4 border-b border-border mb-6">
+				<div class="flex items-center gap-1">
+					<button
+						v-for="t in TABS"
+						:key="t.key"
+						class="px-4 py-2 text-sm border-b-2 -mb-px transition-colors"
+						:class="activeTab === t.key
+							? 'border-primary text-foreground font-medium'
+							: 'border-transparent text-muted-foreground hover:text-foreground'"
+						@click="setTab(t.key)"
+					>
+						{{ t.label }}
+						<span class="text-xs t-text-muted ml-1">({{ t.count }})</span>
+					</button>
+				</div>
+				<UButton v-if="compact" size="xs" color="primary" @click="openNew">
+					<UIcon name="i-heroicons-plus" class="h-3.5 w-3.5" />
+					{{ activeTab === 'blocks' ? 'New block' : 'New offering' }}
+				</UButton>
+			</div>
+
+			<!-- ─── Blocks tab ─────────────────────────────────────────────── -->
+			<section v-show="activeTab === 'blocks'">
+				<div class="mb-6 flex items-center gap-2 flex-wrap">
+					<button
+						v-for="cat in BLOCK_CATEGORIES"
+						:key="cat.value"
+						class="text-xs px-3 py-1 rounded-full border transition-colors"
+						:class="activeBlockCategory === cat.value
+							? 'bg-primary text-primary-foreground border-primary'
+							: 'border-border hover:border-primary/40'"
+						@click="activeBlockCategory = cat.value"
+					>
+						{{ cat.label }} <span class="opacity-60">({{ countBlockCategory(cat.value) }})</span>
+					</button>
+				</div>
+
+				<div v-if="loadingBlocks" class="flex justify-center py-12">
+					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+				</div>
+
+				<UCard v-else-if="!filteredBlocks.length && !blocks.length" class="text-center py-10">
+					<UIcon name="i-heroicons-rectangle-group" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
+					<h3 class="text-base font-medium mb-1">No blocks yet</h3>
+					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
+						Save the boilerplate sections you reuse — studio bio, standard terms, references, case studies. Drag them into any proposal or contract.
+					</p>
+					<UButton color="primary" @click="openNew">Add your first block</UButton>
+				</UCard>
+
+				<UCard v-else-if="!filteredBlocks.length" class="text-center py-8">
+					<p class="t-text-secondary text-sm">No blocks in this category.</p>
+				</UCard>
+
+				<div v-else :class="cardGridClass">
+					<button
+						v-for="b in filteredBlocks"
+						:key="b.id"
+						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
+						:class="b.status === 'archived' ? 'opacity-60' : ''"
+						@click="openEditBlock(b)"
+					>
+						<div class="flex items-start justify-between gap-2 mb-2">
+							<div class="flex-1 min-w-0">
+								<p class="text-[10px] uppercase tracking-wider t-text-muted">{{ blockCategoryLabel(b.category) }}</p>
+								<h3 class="text-base font-semibold truncate">{{ b.name }}</h3>
+							</div>
+							<span
+								class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+								:class="statusChipClass(b.status)"
+							>{{ b.status }}</span>
+						</div>
+						<p v-if="b.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ b.description }}</p>
+						<div class="flex items-center justify-between text-xs t-text-muted">
+							<span>{{ wordCount(b.content) }} words</span>
+							<span class="flex gap-1">
+								<span v-if="b.applies_to?.includes('proposals')" class="px-1.5 py-0.5 rounded bg-success/10 text-success dark:bg-success/30 dark:text-success">P</span>
+								<span v-if="b.applies_to?.includes('contracts')" class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">C</span>
+							</span>
+						</div>
+					</button>
+				</div>
+			</section>
+
+			<!-- ─── Service offerings tab ──────────────────────────────────── -->
+			<section v-show="activeTab === 'offerings'">
+				<div v-if="loadingOfferings" class="flex justify-center py-12">
+					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+				</div>
+
+				<UCard v-else-if="!offerings.length" class="text-center py-10">
+					<UIcon name="i-heroicons-rectangle-stack" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
+					<h3 class="text-base font-medium mb-1">No offerings yet</h3>
+					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
+						Add the services you offer most often. Each captures a scope template (phased deliverables) + default pricing — the AI uses them as the spine when drafting proposals, and the in-app scope tree editor can drop them in directly.
+					</p>
+					<UButton color="primary" @click="openNew">Add your first offering</UButton>
+				</UCard>
+
+				<div v-else :class="cardGridClass">
+					<button
+						v-for="t in offerings"
+						:key="t.id"
+						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
+						:class="t.status === 'archived' ? 'opacity-60' : ''"
+						@click="openEditOffering(t)"
+					>
+						<div class="flex items-start justify-between gap-2 mb-2">
+							<div class="flex items-start gap-2 flex-1 min-w-0">
+								<span
+									v-if="t.icon"
+									class="inline-flex items-center justify-center w-8 h-8 rounded-full text-lg shrink-0"
+									:style="{ backgroundColor: t.color || 'hsl(var(--app-work) / 0.15)' }"
+								>{{ t.icon }}</span>
+								<div class="flex-1 min-w-0">
+									<span
+										class="inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5"
+										:style="categoryBadgeStyle(t.color)"
+										:title="t.color ? `Color: ${t.color}` : 'Default (Work accent)'"
+									>{{ t.category || 'other' }}</span>
+									<h3 class="text-base font-semibold truncate">{{ t.name }}</h3>
+								</div>
+							</div>
+							<span
+								class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+								:class="statusChipClass(t.status)"
+							>{{ t.status }}</span>
+						</div>
+						<p v-if="t.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ t.description }}</p>
+						<div class="flex items-center justify-between text-xs t-text-muted">
+							<span>{{ phaseCount(t) }} phases</span>
+							<div class="flex items-center gap-3">
+								<span v-if="t.default_total != null">{{ formatMoney(t.default_total) }}</span>
+								<span v-if="t.default_duration_days">{{ t.default_duration_days }} days</span>
+							</div>
+						</div>
+					</button>
+				</div>
+			</section>
+		</template>
+
+		<DocumentBlocksFormModal
+			v-model="blockModalOpen"
+			:block="selectedBlock"
+			@created="onBlockCreated"
+			@updated="onBlockUpdated"
+			@deleted="onBlockDeleted"
+		/>
+		<ServiceTemplatesFormModal
+			v-model="offeringModalOpen"
+			:template="selectedOffering"
+			@created="onOfferingCreated"
+			@updated="onOfferingUpdated"
+			@deleted="onOfferingDeleted"
+		/>
+	</div>
+</template>
+
 <script setup lang="ts">
 import type { DocumentBlock, BlockCategory } from '~/composables/useDocumentBlocks';
 import type { ServiceTemplate } from '~/composables/useServiceTemplates';
 import { legibleTextOn, legibleTextOnHsl } from '~/utils/color-contrast';
 
-export type DocumentsLibraryTab = 'blocks' | 'offerings';
+type TabKey = 'blocks' | 'offerings';
 
 const props = withDefaults(defineProps<{
-	initialTab?: DocumentsLibraryTab;
-	/** Slim mode for the slide-over: shell already shows the title chrome. */
+	initialTab?: TabKey;
 	compact?: boolean;
+	// When set, this tab is reported back via `update:tab` so the parent
+	// (e.g. the apps-layout slide-over URL) can keep itself in sync.
+	syncUrl?: boolean;
 }>(), {
 	initialTab: 'blocks',
 	compact: false,
+	syncUrl: false,
 });
 
 const emit = defineEmits<{
-	(e: 'tab-change', tab: DocumentsLibraryTab): void;
+	(e: 'update:tab', tab: TabKey): void;
 }>();
 
+const route = useRoute();
+const router = useRouter();
 const { selectedOrg } = useOrganization();
 const { list: listBlocks } = useDocumentBlocks();
 const { list: listOfferings } = useServiceTemplates();
 const { accents } = useAppAccent();
 const workAccent = computed(() => accents.value.work);
 
-const VALID_TABS: DocumentsLibraryTab[] = ['blocks', 'offerings'];
-const activeTab = ref<DocumentsLibraryTab>(
-	VALID_TABS.includes(props.initialTab) ? props.initialTab : 'blocks',
-);
+const VALID_TABS: TabKey[] = ['blocks', 'offerings'];
+const activeTab = ref<TabKey>(VALID_TABS.includes(props.initialTab) ? props.initialTab : 'blocks');
 
+// Keep activeTab in sync if the parent passes a new initialTab (e.g. when
+// the slide-over URL flips from `documents_library:blocks` to `:offerings`).
 watch(() => props.initialTab, (next) => {
 	if (next && VALID_TABS.includes(next) && next !== activeTab.value) {
 		activeTab.value = next;
 	}
 });
 
-function setTab(t: DocumentsLibraryTab) {
+function setTab(t: TabKey) {
 	activeTab.value = t;
-	emit('tab-change', t);
+	emit('update:tab', t);
+	if (props.syncUrl) {
+		router.replace({ query: { ...route.query, tab: t === 'blocks' ? undefined : t } });
+	}
 }
+
+const cardGridClass = computed(() => props.compact
+	? 'grid grid-cols-1 sm:grid-cols-2 gap-3'
+	: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4');
 
 // ─── Data ───────────────────────────────────────────────────────────────
 const blocks = ref<DocumentBlock[]>([]);
@@ -80,7 +269,7 @@ const BLOCK_CATEGORIES: Array<{ value: 'all' | BlockCategory; label: string }> =
 	{ value: 'other', label: 'Other' },
 ];
 
-const TABS = computed<Array<{ key: DocumentsLibraryTab; label: string; count: number }>>(() => [
+const TABS = computed<Array<{ key: TabKey; label: string; count: number }>>(() => [
 	{ key: 'blocks', label: 'Blocks', count: blocks.value.length },
 	{ key: 'offerings', label: 'Service offerings', count: offerings.value.length },
 ]);
@@ -167,181 +356,3 @@ watch(() => selectedOrg.value, () => {
 	fetchOfferings();
 }, { immediate: true });
 </script>
-
-<template>
-	<div :class="compact ? 'space-y-6' : ''">
-		<div class="flex items-start justify-between gap-4 mb-6">
-			<div v-if="!compact">
-				<h2 class="text-2xl font-semibold">Documents Library</h2>
-				<p class="text-sm t-text-secondary mt-1">
-					The reusable pieces that compose into proposals and contracts — content blocks (bio, references, terms) and service offerings (scope + pricing presets).
-				</p>
-			</div>
-			<div v-else />
-			<UButton color="primary" @click="openNew">
-				<UIcon name="i-heroicons-plus" class="h-4 w-4" />
-				{{ activeTab === 'blocks' ? 'New block' : 'New offering' }}
-			</UButton>
-		</div>
-
-		<UAlert
-			v-if="!selectedOrg"
-			class="mb-6"
-			title="No organization selected"
-			description="Pick an organization from the global header to manage the library."
-			color="blue"
-		/>
-
-		<template v-else>
-			<!-- Tab strip -->
-			<div class="flex items-center gap-1 border-b border-border mb-6">
-				<button
-					v-for="t in TABS"
-					:key="t.key"
-					class="px-4 py-2 text-sm border-b-2 -mb-px transition-colors"
-					:class="activeTab === t.key
-						? 'border-primary text-foreground font-medium'
-						: 'border-transparent text-muted-foreground hover:text-foreground'"
-					@click="setTab(t.key)"
-				>
-					{{ t.label }}
-					<span class="text-xs t-text-muted ml-1">({{ t.count }})</span>
-				</button>
-			</div>
-
-			<!-- ─── Blocks tab ─────────────────────────────────────────────── -->
-			<section v-show="activeTab === 'blocks'">
-				<div class="mb-6 flex items-center gap-2 flex-wrap">
-					<button
-						v-for="cat in BLOCK_CATEGORIES"
-						:key="cat.value"
-						class="text-xs px-3 py-1 rounded-full border transition-colors"
-						:class="activeBlockCategory === cat.value
-							? 'bg-primary text-primary-foreground border-primary'
-							: 'border-border hover:border-primary/40'"
-						@click="activeBlockCategory = cat.value"
-					>
-						{{ cat.label }} <span class="opacity-60">({{ countBlockCategory(cat.value) }})</span>
-					</button>
-				</div>
-
-				<div v-if="loadingBlocks" class="flex justify-center py-12">
-					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
-				</div>
-
-				<UCard v-else-if="!filteredBlocks.length && !blocks.length" class="text-center py-10">
-					<UIcon name="i-heroicons-rectangle-group" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
-					<h3 class="text-base font-medium mb-1">No blocks yet</h3>
-					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
-						Save the boilerplate sections you reuse — studio bio, standard terms, references, case studies. Drag them into any proposal or contract.
-					</p>
-					<UButton color="primary" @click="openNew">Add your first block</UButton>
-				</UCard>
-
-				<UCard v-else-if="!filteredBlocks.length" class="text-center py-8">
-					<p class="t-text-secondary text-sm">No blocks in this category.</p>
-				</UCard>
-
-				<div v-else :class="compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'">
-					<button
-						v-for="b in filteredBlocks"
-						:key="b.id"
-						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
-						:class="b.status === 'archived' ? 'opacity-60' : ''"
-						@click="openEditBlock(b)"
-					>
-						<div class="flex items-start justify-between gap-2 mb-2">
-							<div class="flex-1 min-w-0">
-								<p class="text-[10px] uppercase tracking-wider t-text-muted">{{ blockCategoryLabel(b.category) }}</p>
-								<h3 class="text-base font-semibold truncate">{{ b.name }}</h3>
-							</div>
-							<span
-								class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-								:class="statusChipClass(b.status)"
-							>{{ b.status }}</span>
-						</div>
-						<p v-if="b.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ b.description }}</p>
-						<div class="flex items-center justify-between text-xs t-text-muted">
-							<span>{{ wordCount(b.content) }} words</span>
-							<span class="flex gap-1">
-								<span v-if="b.applies_to?.includes('proposals')" class="px-1.5 py-0.5 rounded bg-success/10 text-success dark:bg-success/30 dark:text-success">P</span>
-								<span v-if="b.applies_to?.includes('contracts')" class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">C</span>
-							</span>
-						</div>
-					</button>
-				</div>
-			</section>
-
-			<!-- ─── Service offerings tab ──────────────────────────────────── -->
-			<section v-show="activeTab === 'offerings'">
-				<div v-if="loadingOfferings" class="flex justify-center py-12">
-					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
-				</div>
-
-				<UCard v-else-if="!offerings.length" class="text-center py-10">
-					<UIcon name="i-heroicons-rectangle-stack" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
-					<h3 class="text-base font-medium mb-1">No offerings yet</h3>
-					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
-						Add the services you offer most often. Each captures a scope template (phased deliverables) + default pricing — the AI uses them as the spine when drafting proposals, and the in-app scope tree editor can drop them in directly.
-					</p>
-					<UButton color="primary" @click="openNew">Add your first offering</UButton>
-				</UCard>
-
-				<div v-else :class="compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'">
-					<button
-						v-for="t in offerings"
-						:key="t.id"
-						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
-						:class="t.status === 'archived' ? 'opacity-60' : ''"
-						@click="openEditOffering(t)"
-					>
-						<div class="flex items-start justify-between gap-2 mb-2">
-							<div class="flex items-start gap-2 flex-1 min-w-0">
-								<span
-									v-if="t.icon"
-									class="inline-flex items-center justify-center w-8 h-8 rounded-full text-lg shrink-0"
-									:style="{ backgroundColor: t.color || 'hsl(var(--app-work) / 0.15)' }"
-								>{{ t.icon }}</span>
-								<div class="flex-1 min-w-0">
-									<span
-										class="inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5"
-										:style="categoryBadgeStyle(t.color)"
-										:title="t.color ? `Color: ${t.color}` : 'Default (Work accent)'"
-									>{{ t.category || 'other' }}</span>
-									<h3 class="text-base font-semibold truncate">{{ t.name }}</h3>
-								</div>
-							</div>
-							<span
-								class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-								:class="statusChipClass(t.status)"
-							>{{ t.status }}</span>
-						</div>
-						<p v-if="t.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ t.description }}</p>
-						<div class="flex items-center justify-between text-xs t-text-muted">
-							<span>{{ phaseCount(t) }} phases</span>
-							<div class="flex items-center gap-3">
-								<span v-if="t.default_total != null">{{ formatMoney(t.default_total) }}</span>
-								<span v-if="t.default_duration_days">{{ t.default_duration_days }} days</span>
-							</div>
-						</div>
-					</button>
-				</div>
-			</section>
-		</template>
-
-		<DocumentBlocksFormModal
-			v-model="blockModalOpen"
-			:block="selectedBlock"
-			@created="onBlockCreated"
-			@updated="onBlockUpdated"
-			@deleted="onBlockDeleted"
-		/>
-		<ServiceTemplatesFormModal
-			v-model="offeringModalOpen"
-			:template="selectedOffering"
-			@created="onOfferingCreated"
-			@updated="onOfferingUpdated"
-			@deleted="onOfferingDeleted"
-		/>
-	</div>
-</template>
