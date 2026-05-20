@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
 			// Stable jobId for idempotency at the queue layer too — re-running the
 			// cron same day shouldn't multiply jobs even if the worker hasn't
 			// drained the previous batch yet.
-			const jobId = `digest:${project.id}:${recipient}:${today}`;
+			const jobId = `digest-${project.id}-${recipient}-${today}`;
 			try {
 				await queue.add(
 					'digest-project',
