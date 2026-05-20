@@ -224,6 +224,7 @@ async function handleInvoiceCreated(invoiceId: string) {
   showInvoiceModal.value = false;
   selectedIds.clear();
   await fetchEntries();
+  // TODO(ios-sweep): lift /invoices/detail/[id] to InvoicePanel slide-over
   if (invoiceId) router.push(`/invoices/detail/${invoiceId}`);
 }
 

@@ -83,6 +83,7 @@ watch(() => route.query.view, (qv) => {
 
 // Compose slide-over opener for the Studio header "+ Compose" button.
 const composeSlide = useAppSlideOver('social-compose');
+const planSlide = useAppSlideOver('social-plan');
 function openCompose() {
   composeSlide.open('new');
 }
@@ -151,7 +152,12 @@ async function createPlan() {
     showNewPlan.value = false;
     resetPlanForm();
     if (r?.data?.id) {
-      router.push(`/social/plans/${r.data.id}`);
+      // Open the new plan as a slide-over panel rather than punching out to
+      // /social/plans/[id] — keeps the user inside the apps shell with the
+      // Framework7 iOS push animation. Also refresh the plan grid so the new
+      // plan appears in the list under the panel.
+      await fetchPlans();
+      planSlide.open(r.data.id);
     } else {
       await fetchPlans();
     }

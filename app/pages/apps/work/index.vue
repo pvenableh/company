@@ -381,6 +381,7 @@ function openMeetingSlideOver(meeting: any) {
             <Icon name="lucide:chevron-down" class="w-3 h-3 ml-1 text-muted-foreground" />
           </Button>
         </UDropdown>
+        <!-- TODO(ios-sweep): lift New Project to a bottom sheet (NewProjectSheet) -->
         <NuxtLink
           v-if="floor === 'projects'"
           to="/projects?new=1"

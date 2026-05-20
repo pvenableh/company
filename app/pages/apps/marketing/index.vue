@@ -34,6 +34,11 @@ definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Marketing | Earnest' });
 
 const router = useRouter();
+
+// TODO(ios-sweep): lift /email/templates/[id] to EmailTemplatePanel slide-over
+function openEmailTemplate(id: string) {
+  router.push(`/email/templates/${id}`);
+}
 const route = useRoute();
 const toast = useToast();
 
@@ -735,6 +740,7 @@ const headerAction = computed(() => {
     return {
       label: 'New Campaign',
       icon: 'lucide:rocket',
+      // TODO(ios-sweep): lift campaign planner into apps shell as a marketing floor
       onClick: () => router.push('/marketing#planner'),
     };
   }
@@ -742,6 +748,7 @@ const headerAction = computed(() => {
     return {
       label: 'New Email',
       icon: 'lucide:plus',
+      // TODO(ios-sweep): lift /email composer into NewEmailPanel slide-over or marketing floor
       onClick: () => router.push('/email'),
     };
   }
@@ -986,6 +993,7 @@ const scopeLabel = computed(() => {
               Plan one with the Campaign Planner on the classic Marketing page.
             </p>
           </div>
+          <!-- TODO(ios-sweep): lift campaign planner into apps shell -->
           <Button size="sm" variant="outline" @click="router.push('/marketing')">
             <Icon name="lucide:rocket" class="w-4 h-4 mr-1" />
             Open Planner
@@ -1190,7 +1198,7 @@ const scopeLabel = computed(() => {
                   v-for="row in emailCampaignRows"
                   :key="row.id"
                   class="border-b border-border/20 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-                  @click="router.push(`/email/templates/${row.id}`)"
+                  @click="openEmailTemplate(row.id)"
                 >
                   <td class="py-2.5 px-4 min-w-0">
                     <p class="font-medium text-foreground truncate">{{ row.name }}</p>
@@ -1273,6 +1281,7 @@ const scopeLabel = computed(() => {
             <p class="text-sm font-medium text-muted-foreground">No email templates yet</p>
             <p class="text-xs text-muted-foreground/70 mt-1">Create your first template to start sending campaigns.</p>
           </div>
+          <!-- TODO(ios-sweep): lift /email composer into NewEmailPanel slide-over -->
           <Button size="sm" @click="router.push('/email')">
             <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
             New Email
@@ -1284,7 +1293,7 @@ const scopeLabel = computed(() => {
             v-for="tpl in filteredEmailTemplates"
             :key="tpl.id"
             class="ios-card p-4 cursor-pointer group"
-            @click="router.push(`/email/templates/${tpl.id}`)"
+            @click="openEmailTemplate(tpl.id)"
           >
             <div class="flex items-start justify-between mb-3">
               <div
@@ -1555,7 +1564,7 @@ const scopeLabel = computed(() => {
             </div>
           </div>
 
-          <!-- Segments shortcut -->
+          <!-- Segments shortcut. TODO(ios-sweep): port /contacts surface into apps shell (/apps/contacts) so these NuxtLinks land inside the shell. Until then, every link below is a punch-out — tagged collectively here. -->
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Segments</h3>

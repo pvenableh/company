@@ -366,6 +366,11 @@ const contactCategoryItems = computed(() => contactCategoryChips.map((c) => ({
   label: c.label,
 })));
 
+// TODO(ios-sweep): lift /contacts/[id] to ContactPanel slide-over
+function openContact(c: { id: string }) {
+  router.push(`/contacts/${c.id}`);
+}
+
 async function fetchContacts() {
   contactsLoading.value = true;
   try {
@@ -444,6 +449,7 @@ watch(view, (next) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <Button as-child variant="outline" size="sm">
+                <!-- TODO(ios-sweep): lift /leads/automations into apps shell -->
                 <NuxtLink to="/leads/automations">
                   <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
                   Automations
@@ -740,7 +746,7 @@ watch(view, (next) => {
           :loading="contactsLoading"
           :card-desk-contact-ids="cardDeskContactIds"
           quick-edit
-          @edit="(c) => router.push(`/contacts/${c.id}`)"
+          @edit="openContact"
           @patched="fetchContacts"
         />
 
@@ -806,6 +812,7 @@ watch(view, (next) => {
           <div v-if="leadsLoading" class="flex items-center justify-center py-20">
             <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
+          <!-- TODO(ios-sweep): lift /leads/[id] to LeadPanel slide-over -->
           <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <LeadsLeadCard
               v-for="lead in allLeads"

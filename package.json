@@ -10,6 +10,7 @@
 		"typecheck": "nuxt typecheck",
 		"lint": "eslint --cache .",
 		"lint:fix": "eslint --cache . --fix",
+		"audit:ios-containment": "tsx scripts/audit-ios-containment.ts",
 		"format": "prettier --write \"**/*.{ts,js,md,y?(a)ml,json,vue}\"",
 		"clean": "rm -rf .nuxt dist .output node_modules",
 		"prepare": "husky install",

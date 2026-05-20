@@ -353,6 +353,7 @@ const integrationsList = computed(() => {
       status: 'inactive' as IntegrationStatus,
       statusLabel: 'Available as add-on',
       action: 'Learn more',
+      // TODO(ios-sweep): lift /account/subscription into apps shell as `/apps/account`
       onClick: () => router.push('/account/subscription'),
     },
     {
@@ -373,6 +374,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('instagram'),
       statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccountCount('instagram')} account(s)` : 'Not connected',
       action: 'Manage',
+      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
       onClick: () => router.push('/social/settings'),
     },
     {
@@ -383,6 +385,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('facebook'),
       statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccountCount('facebook')} account(s)` : 'Not connected',
       action: 'Manage',
+      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
       onClick: () => router.push('/social/settings'),
     },
     {
@@ -393,6 +396,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('linkedin'),
       statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccountCount('linkedin')} account(s)` : 'Not connected',
       action: 'Manage',
+      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
       onClick: () => router.push('/social/settings'),
     },
     {
@@ -403,6 +407,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('tiktok'),
       statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccountCount('tiktok')} account(s)` : 'Not connected',
       action: 'Manage',
+      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
       onClick: () => router.push('/social/settings'),
     },
     {
@@ -413,6 +418,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('threads'),
       statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccountCount('threads')} account(s)` : 'Not connected',
       action: 'Manage',
+      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
       onClick: () => router.push('/social/settings'),
     },
     {
@@ -551,6 +557,7 @@ const headerAction = computed(() => {
     return {
       label: 'Edit',
       icon: 'lucide:pencil',
+      // TODO(ios-sweep): lift to OrganizationEditPanel slide-over
       onClick: () => router.push('/organization'),
     };
   }
@@ -618,6 +625,7 @@ function onClientInvited() {
             Restore it from the classic settings page to reactivate access.
           </p>
         </div>
+        <!-- TODO(ios-sweep): lift archive-restore into an inline action; for now keep the legacy /organization redirect since this banner only renders for archived orgs (rare path) -->
         <Button size="sm" variant="outline" @click="router.push('/organization')">
           Open settings
         </Button>
@@ -1247,6 +1255,7 @@ function onClientInvited() {
             <p v-else class="text-sm text-muted-foreground mb-3">
               This organization is archived. Restore it from the classic settings page.
             </p>
+            <!-- TODO(ios-sweep): lift archive flow to a destructive confirm bottom sheet -->
             <Button size="sm" variant="outline" class="text-destructive border-destructive/30" @click="router.push('/organization?tab=overview')">
               <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
               {{ isArchived ? 'Manage archive' : 'Archive organization' }}

@@ -35,6 +35,11 @@ definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Money | Earnest' });
 
 const router = useRouter();
+
+// TODO(ios-sweep): lift /invoices/detail/[id] to InvoicePanel slide-over
+function openInvoice(invoiceId: string) {
+  router.push(`/invoices/detail/${invoiceId}`);
+}
 const route = useRoute();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
@@ -569,7 +574,7 @@ const headerAction = computed(() => {
                   v-for="inv in unpaidInvoicesPreview"
                   :key="inv.id"
                   class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
-                  @click="router.push(`/invoices/detail/${inv.id}`)"
+                  @click="openInvoice(inv.id)"
                 >
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
@@ -641,7 +646,7 @@ const headerAction = computed(() => {
                 v-for="p in cashflowPayments.slice(0, 5)"
                 :key="p.id"
                 class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
-                @click="p.invoice_id?.id && router.push(`/invoices/detail/${p.invoice_id.id}`)"
+                @click="p.invoice_id?.id && openInvoice(p.invoice_id.id)"
               >
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
@@ -724,7 +729,7 @@ const headerAction = computed(() => {
                   :key="inv.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
                   :class="{ 'opacity-50': inv.status === 'paid' || inv.status === 'archived' }"
-                  @click="router.push(`/invoices/detail/${inv.id}`)"
+                  @click="openInvoice(inv.id)"
                 >
                   <td class="py-3 px-4 font-medium">{{ inv.invoice_code || 'No Code' }}</td>
                   <td class="py-3 px-4 text-muted-foreground">{{ getInvoiceDisplayName(inv) }}</td>
@@ -824,7 +829,7 @@ const headerAction = computed(() => {
                   :key="p.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
                   :class="{ 'cursor-pointer': p.invoice_id?.id }"
-                  @click="p.invoice_id?.id && router.push(`/invoices/detail/${p.invoice_id.id}`)"
+                  @click="p.invoice_id?.id && openInvoice(p.invoice_id.id)"
                 >
                   <td class="py-3 px-4">{{ getFriendlyDateThree(p.date_received) || '—' }}</td>
                   <td class="py-3 px-4">

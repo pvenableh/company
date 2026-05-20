@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Apps-layout containment audit (universal iOS UX sweep primitive #6).
+# Fails fast if any new /apps/* file punches out to a legacy route without
+# a // TODO(ios-sweep) or // allow-legacy-link marker. See
+# scripts/audit-ios-containment.ts for the full rule.
+pnpm audit:ios-containment
