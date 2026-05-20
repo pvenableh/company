@@ -45,6 +45,8 @@ function close() {
   emit('update:modelValue', false);
 }
 
+const haptic = useHaptic();
+
 // ── Drag-to-dismiss ──────────────────────────────────────────────
 // The drag offset is in pixels; we translate the sheet by this amount
 // during a drag. On release: > DISMISS_PX OR fast downward swipe →
@@ -106,7 +108,13 @@ function onPointerUp(e: PointerEvent) {
     // down. (If we leave the inline transform in place, the leave
     // animation snaps instead of springs.)
     dragY.value = 0;
+    haptic.detentSnap();
     close();
+  } else if (dragY.value > 0) {
+    // Snap-back from a partial drag — fire detent haptic so the user feels
+    // the spring-back, but only when there was a real drag (not a tap).
+    haptic.detentSnap();
+    dragY.value = 0;
   } else {
     dragY.value = 0;
   }
