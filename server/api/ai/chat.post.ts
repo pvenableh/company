@@ -385,7 +385,7 @@ export default defineEventHandler(async (event) => {
               `data: ${JSON.stringify({ type: 'tool_start', tool: tc.name, input: tc.input })}\n\n`,
             );
 
-            const result = await executeToolCall(tc.name, tc.input, { organizationId, userId, entityType, entityId });
+            const result = await executeToolCall(tc.name, tc.input, { organizationId, userId, entityType, entityId, directus });
 
             responseWriter.write(
               `data: ${JSON.stringify({

@@ -101,13 +101,16 @@ const router = useRouter();
 const marketingPulse = useMarketingPulse();
 watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
 
-// ── View lens ("Me" lens initiative, Stage 2) ──
-// Persists per-user via `directus_users.view_lens`. Re-ranks the YOU vs US
-// bands below — same content, different emphasis. REFERENCE band is always
-// last regardless of lens.
-const { lens: viewLens, setLens: setViewLens } = useViewLens();
-const youOrder = computed(() => (viewLens.value === 'me' ? 1 : 2));
-const usOrder = computed(() => (viewLens.value === 'me' ? 2 : 1));
+// ── Band ordering ──
+// Follows the global Mine/All data scope (the header toggle in DataScopeSelect).
+// Scope='mine' → YOU/US/REFERENCE; scope='all' → US/YOU/REFERENCE. REFERENCE is
+// always last. Non-admins are clamped to 'mine' by useDataScope, so they always
+// see YOU first regardless. Previously this used a dedicated useViewLens
+// toggle that shadowed the header's Mine/All — collapsed to one source of
+// truth.
+const { isMine } = useDataScope();
+const youOrder = computed(() => (isMine.value ? 1 : 2));
+const usOrder = computed(() => (isMine.value ? 2 : 1));
 
 // ── My Goals (scope=user) for the YOU band's right column ──
 // Shares state with the rest of useGoals consumers (e.g. GoalsSummaryWidget),
@@ -328,36 +331,8 @@ watch(activeTab, (t) => {
 						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
-						<!-- Lens toggle: re-ranks YOU vs US bands. No effect on what's shown,
-						     only the emphasis. -->
-						<div
-							class="flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium"
-							role="radiogroup"
-							aria-label="Command Center lens"
-						>
-							<button
-								type="button"
-								role="radio"
-								:aria-checked="viewLens === 'me'"
-								@click="setViewLens('me')"
-								class="px-2.5 sm:px-3 py-1 rounded-full transition-colors duration-150"
-								:class="viewLens === 'me' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-							>
-								<span class="hidden sm:inline">For me</span>
-								<span class="sm:hidden">Me</span>
-							</button>
-							<button
-								type="button"
-								role="radio"
-								:aria-checked="viewLens === 'org'"
-								@click="setViewLens('org')"
-								class="px-2.5 sm:px-3 py-1 rounded-full transition-colors duration-150"
-								:class="viewLens === 'org' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-							>
-								<span class="hidden sm:inline">For org</span>
-								<span class="sm:hidden">Org</span>
-							</button>
-						</div>
+						<!-- Lens toggle removed — the header DataScopeSelect (Mine/All) is
+						     now the single source of truth for band ordering. -->
 						<button
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
 							class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"

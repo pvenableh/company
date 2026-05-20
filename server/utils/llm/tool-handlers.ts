@@ -1,14 +1,20 @@
 // server/utils/llm/tool-handlers.ts
 // Executes AI tool calls server-side with org-scoped Directus mutations.
+//
+// All writes use the caller's user-scoped Directus client so Directus's
+// built-in user_created / user_updated hooks attribute changes to the active
+// user. The admin server token (getServerDirectus) is deliberately NOT used
+// here — that would re-attribute every AI-driven write to the API Admin
+// account and break "Mine" filters and audit trails.
 
 import { readItem, readItems, updateItem, createItem } from '@directus/sdk';
-import { getServerDirectus } from '~~/server/utils/directus';
 
 interface ToolHandlerContext {
   organizationId: string;
   userId: string;
   entityType?: string;
   entityId?: string;
+  directus: any;
 }
 
 export interface ToolHandlerResult {
@@ -31,7 +37,7 @@ async function handleRescheduleProject(
     return { success: false, summary: '', error: 'Provide new_start_date or delta_days' };
   }
 
-  const directus = getServerDirectus();
+  const directus = ctx.directus;
 
   // Fetch the project (verify it belongs to this org)
   const project = await directus.request(
@@ -174,7 +180,7 @@ async function handleUpdateField(
     return { success: false, summary: '', error: `Field "${field}" cannot be updated via AI` };
   }
 
-  const directus = getServerDirectus();
+  const directus = ctx.directus;
 
   // Verify org ownership for scoped collections
   const orgField = ORG_SCOPED_COLLECTIONS[entity_type];
@@ -208,7 +214,7 @@ async function handleAddTask(
 
   if (!title) return { success: false, summary: '', error: 'title is required' };
 
-  const directus = getServerDirectus();
+  const directus = ctx.directus;
 
   // Resolve project/event from focused entity so the model doesn't have to
   // invent UUIDs. On a project page (entityType='project'), attach to that
@@ -251,9 +257,12 @@ async function handleAddTask(
   else if (event_id) category = 'event';
   else if (project_id) category = 'project';
 
+  // Note: user_created is intentionally NOT set in the payload. Because we're
+  // using the user-scoped Directus client, Directus auto-attributes the row
+  // to the active user. Explicit user_created with a non-admin token would
+  // either 403 or be silently overridden.
   const payload: Record<string, any> = {
     title,
-    user_created: ctx.userId,
     organization_id: ctx.organizationId,
     status: 'new',
     schedule: 'today',
