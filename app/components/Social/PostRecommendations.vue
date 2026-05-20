@@ -102,7 +102,7 @@
 						<div class="flex items-center gap-2 mb-2">
 							<Icon
 								:name="platformIcon(platform)"
-								class="w-4 h-4 rounded-sm shrink-0"
+								class="w-4 h-4 shrink-0"
 							/>
 							<span class="text-xs font-semibold text-foreground capitalize">{{ platform }}</span>
 							<span

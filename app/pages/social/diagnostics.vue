@@ -165,7 +165,7 @@ const requiredCounts = computed(() => {
           <template #header>
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
-                <UIcon :name="platformIcon(report.platform)" class="w-9 h-9 rounded-md shrink-0" />
+                <UIcon :name="platformIcon(report.platform)" class="w-9 h-9 shrink-0" />
                 <div>
                   <h2 class="font-semibold text-gray-900 dark:text-white">
                     {{ platformLabel(report.platform) }}

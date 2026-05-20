@@ -83,10 +83,14 @@ function activityIcon(type: string) {
             <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
               <component :is="activityIcon(a.type)" class="h-3.5 w-3.5 text-primary" />
             </div>
-            <UIcon
-              :name="getSocialPlatformIcon(a.platform)"
-              class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background p-px ring-2 ring-background"
-            />
+            <span
+              class="absolute -bottom-0.5 -right-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full bg-background p-px ring-2 ring-background"
+            >
+              <UIcon
+                :name="getSocialPlatformIcon(a.platform)"
+                class="h-full w-full"
+              />
+            </span>
           </div>
 
           <div class="min-w-0 flex-1">

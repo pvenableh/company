@@ -63,10 +63,14 @@ const composerHint = computed(() => {
                 {{ (thread.participant_name || '?').charAt(0).toUpperCase() }}
               </div>
             </div>
-            <Icon
-              :name="getSocialPlatformIcon(thread.platform)"
-              class="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-white p-px ring-2 ring-white dark:bg-gray-900 dark:ring-gray-900"
-            />
+            <span
+              class="absolute -bottom-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white p-px ring-2 ring-white dark:bg-gray-900 dark:ring-gray-900"
+            >
+              <Icon
+                :name="getSocialPlatformIcon(thread.platform)"
+                class="h-full w-full"
+              />
+            </span>
           </div>
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
