@@ -412,7 +412,7 @@ export function useNotifications() {
 			const routeMap = {
 				tickets: `${prefix}/tickets/${notification.item}`,
 				projects: `${prefix}/projects/${notification.item}`,
-				project_tasks: `${prefix}/tasks/${notification.item}`,
+				tasks: `${prefix}/tasks/${notification.item}`,
 				project_events: `${prefix}/projects/${notification.item}`,
 				comments: `${prefix}/${notification.collection}/${notification.item}`,
 				invoices: `${prefix}/invoices/${notification.item}`,

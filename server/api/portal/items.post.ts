@@ -72,24 +72,17 @@ const COLLECTION_SCOPES: Record<string, CollectionScope> = {
       { project: { client: { _in: ctx.scopedClientIds } } },
     ],
   },
-  project_tasks: {
-    // ProjectTask has no direct org/client FKs. Walk via `project` (or
-    // `event_id.project` as a fallback for tasks with no direct project link).
+  tasks: {
+    // tasks.organization_id is set directly. Scope by that plus the client_id
+    // FK or the parent project's client. Walk via project_event_id.project as
+    // a fallback for tasks linked only to an event.
     scopeConditions: (ctx) => [
+      { organization_id: { _eq: ctx.organizationId } },
       {
         _or: [
-          {
-            _and: [
-              { project: { organization: { _eq: ctx.organizationId } } },
-              { project: { client: { _in: ctx.scopedClientIds } } },
-            ],
-          },
-          {
-            _and: [
-              { event_id: { project: { organization: { _eq: ctx.organizationId } } } },
-              { event_id: { project: { client: { _in: ctx.scopedClientIds } } } },
-            ],
-          },
+          { client_id: { _in: ctx.scopedClientIds } },
+          { project_id: { client: { _in: ctx.scopedClientIds } } },
+          { project_event_id: { project: { client: { _in: ctx.scopedClientIds } } } },
         ],
       },
     ],

@@ -173,7 +173,7 @@ function itemPath(collection: string, itemId: string): string | null {
 	switch (collection) {
 		case 'tickets': return `/tickets/${itemId}`;
 		case 'projects': return `/projects/${itemId}`;
-		case 'project_tasks': return `/projects/${itemId}`;
+		case 'tasks': return `/projects/${itemId}`;
 		case 'invoices': return `/invoices/${itemId}`;
 		case 'contracts': return `/contracts/${itemId}`;
 		case 'proposals': return `/proposals/${itemId}`;

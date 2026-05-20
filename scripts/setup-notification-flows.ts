@@ -106,8 +106,8 @@ const FLOWS: FlowSpec[] = [
 		description: 'On proposal sent/accepted/rejected, notify staff.',
 	},
 	{
-		name: 'notify · project_tasks.update',
-		collection: 'project_tasks',
+		name: 'notify · tasks.update',
+		collection: 'tasks',
 		events: ['items.update'],
 		description: 'On task assignment, notify the new assignee.',
 	},

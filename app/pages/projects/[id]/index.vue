@@ -3,7 +3,7 @@ import { Button } from '~/components/ui/button';
 const { params } = useRoute();
 const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
 const invoiceItems = useDirectusItems('invoices');
 const timeEntryItems = useDirectusItems('time_entries');
 const fileItems = useDirectusItems('directus_files');
@@ -98,11 +98,11 @@ const loadStats = async () => {
 				limit: 200,
 			}),
 			taskItems.list({
-				fields: ['id', 'completed', 'status'],
+				fields: ['id', 'status'],
 				filter: {
 					_or: [
-						{ project: { _eq: params.id } },
-						{ event_id: { project: { _eq: params.id } } },
+						{ project_id: { _eq: params.id } },
+						{ project_event_id: { project: { _eq: params.id } } },
 					],
 				},
 				limit: 500,
@@ -117,7 +117,7 @@ const loadStats = async () => {
 		stats.value.ticketCount = tickets?.length || 0;
 		stats.value.openTickets = tickets?.filter(t => t.status !== 'Completed').length || 0;
 		stats.value.taskCount = tasks?.length || 0;
-		stats.value.completedTasks = tasks?.filter(t => t.completed || t.status === 'done').length || 0;
+		stats.value.completedTasks = tasks?.filter(t => t.status === 'completed').length || 0;
 		stats.value.eventCount = project?.events?.length || 0;
 		stats.value.pendingApprovals = project?.events?.filter(e => e.approval === 'Need Approval').length || 0;
 
@@ -487,7 +487,7 @@ const loadActivity = async () => {
 			orFilters.push({ _and: [{ collection: { _eq: 'tickets' } }, { item: { _in: ticketIds } }] });
 		}
 		if (taskIds.length > 0) {
-			orFilters.push({ _and: [{ collection: { _eq: 'project_tasks' } }, { item: { _in: taskIds } }] });
+			orFilters.push({ _and: [{ collection: { _eq: 'tasks' } }, { item: { _in: taskIds } }] });
 		}
 
 		const activities = await activityItems_d.list({
@@ -516,7 +516,7 @@ const activityActionLabel = (action) => {
 };
 
 const activityCollectionLabel = (col) => {
-	const labels = { projects: 'project', tickets: 'ticket', project_tasks: 'task', invoices: 'invoice' };
+	const labels = { projects: 'project', tickets: 'ticket', tasks: 'task', invoices: 'invoice' };
 	return labels[col] || col;
 };
 

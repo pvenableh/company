@@ -1489,7 +1489,7 @@ watch(() => props.clientId, () => {
 			v-if="client"
 			v-model="showAttachTaskModal"
 			:client-id="clientId"
-			collection="project_tasks"
+			collection="tasks"
 			entity-singular="Task"
 			entity-plural="tasks"
 			fk-field="client_id"

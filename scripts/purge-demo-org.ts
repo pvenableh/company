@@ -96,7 +96,8 @@ async function purgeOrg(orgId: string): Promise<void> {
 	const mailingListIds = (mailingListsRes.ok && Array.isArray(mailingListsRes.data) ? mailingListsRes.data : []).map((m: any) => m.id);
 
 	// Delete leaves first, then roots.
-	if (eventIds.length) await deleteByFilter('project_tasks', { event_id: { _in: eventIds } }, 'id', 'project_tasks');
+	if (eventIds.length) await deleteByFilter('tasks', { project_event_id: { _in: eventIds } }, 'id', 'tasks');
+	if (projectIds.length) await deleteByFilter('tasks', { project_id: { _in: projectIds } }, 'id', 'tasks');
 	if (invoiceIds.length) await deleteByFilter('line_items', { invoice_id: { _in: invoiceIds } }, 'id', 'line_items');
 	if (invoiceIds.length) await deleteByFilter('invoices_projects', { invoices_id: { _in: invoiceIds } }, 'id', 'invoices_projects');
 	if (invoiceIds.length) await deleteByFilter('invoices_products', { invoices_id: { _in: invoiceIds } }, 'id', 'invoices_products');

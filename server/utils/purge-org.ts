@@ -74,7 +74,8 @@ export async function purgeOrganization(orgId: string): Promise<PurgeReport> {
   const mailingListIds = await listIds(directus, 'mailing_lists', { organization: { _eq: orgId } });
 
   // Leaf-first deletes
-  if (eventIds.length) await deleteByFilter(directus, 'project_tasks', { event_id: { _in: eventIds } }, report);
+  if (eventIds.length) await deleteByFilter(directus, 'tasks', { project_event_id: { _in: eventIds } }, report);
+  if (projectIds.length) await deleteByFilter(directus, 'tasks', { project_id: { _in: projectIds } }, report);
   if (invoiceIds.length) {
     await deleteByFilter(directus, 'line_items', { invoice_id: { _in: invoiceIds } }, report);
     await deleteByFilter(directus, 'invoices_projects', { invoices_id: { _in: invoiceIds } }, report);

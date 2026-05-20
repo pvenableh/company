@@ -81,7 +81,7 @@
 interface Props {
 	modelValue: boolean;
 	clientId: string;
-	/** Entity collection name, e.g. 'projects', 'tickets', 'project_tasks', 'invoices', 'channels'. */
+	/** Entity collection name, e.g. 'projects', 'tickets', 'tasks', 'invoices', 'channels'. */
 	collection: string;
 	/** Singular noun for empty/title copy, e.g. 'Project'. */
 	entitySingular: string;

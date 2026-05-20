@@ -48,7 +48,7 @@ export function useAISmartPrompts() {
   const clientItems = useDirectusItems('clients');
   const invoiceItems = useDirectusItems('invoices');
   const projectItems = useDirectusItems('projects');
-  const taskItems = useDirectusItems('project_tasks');
+  const taskItems = useDirectusItems('tasks');
   const leadItems = useDirectusItems('leads');
 
   const orgFilter = () => selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
@@ -103,10 +103,10 @@ export function useAISmartPrompts() {
 
         // User's tasks
         taskItems.list({
-          filter: { assignee_id: { _eq: user.value?.id } },
-          fields: ['id', 'completed', 'due_date'],
+          filter: { assigned_to: { directus_users_id: { _eq: user.value?.id } } },
+          fields: ['id', 'status', 'due_date'],
           limit: 50,
-        }).catch(() => []) as Promise<Array<{ id: string; completed: boolean; due_date: string }>>,
+        }).catch(() => []) as Promise<Array<{ id: string; status: string; due_date: string }>>,
 
         // Open leads
         leadItems.list({
@@ -132,7 +132,7 @@ export function useAISmartPrompts() {
         .filter(p => p.due_date && new Date(p.due_date) < now)
         .map(p => ({ title: p.title }));
 
-      const pendingTasks = (tasks || []).filter(t => !t.completed);
+      const pendingTasks = (tasks || []).filter(t => t.status !== 'completed');
       const overdueTasks = pendingTasks.filter(t => t.due_date && new Date(t.due_date) < now);
 
       _smartData.value = {

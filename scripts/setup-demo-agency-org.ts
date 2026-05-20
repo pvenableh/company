@@ -508,6 +508,7 @@ async function seedProjectEvents(
 }
 
 async function seedProjectTasks(
+	orgId: string,
 	projectIds: Record<string, string>,
 	eventIds: Record<string, string>,
 	memberUserIds: string[],
@@ -545,20 +546,21 @@ async function seedProjectTasks(
 		const eventId = eventIds[t.eventKey];
 		if (!projectId || !eventId) continue;
 		await findOrCreate(
-			'project_tasks',
-			{ _and: [{ event_id: { _eq: eventId } }, { title: { _eq: t.title } }] },
+			'tasks',
+			{ _and: [{ project_event_id: { _eq: eventId } }, { title: { _eq: t.title } }] },
 			{
-				event_id: eventId,
-				project: projectId,
+				project_event_id: eventId,
+				project_id: projectId,
+				organization_id: orgId,
+				category: 'event',
+				schedule: 'unscheduled',
 				title: t.title,
 				description: t.description,
-				completed: t.completed ?? false,
-				completed_at: t.completed ? new Date().toISOString() : null,
+				status: t.completed ? 'completed' : 'new',
+				date_completed: t.completed ? new Date().toISOString() : null,
 				priority: t.priority || 'medium',
-				assigned_to: typeof t.assigneeIdx === 'number' ? pick(t.assigneeIdx) : null,
-				status: 'published',
 			},
-			`project_task "${t.title}"`,
+			`task "${t.title}"`,
 		);
 	}
 }
@@ -1292,7 +1294,7 @@ async function main() {
 	const eventIds = await seedProjectEvents(projectIds);
 
 	console.log('\n--- project tasks ---');
-	await seedProjectTasks(projectIds, eventIds, teammateIds);
+	await seedProjectTasks(org.id, projectIds, eventIds, teammateIds);
 
 	console.log('\n--- products + invoices ---');
 	const productId = await seedProduct();

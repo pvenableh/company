@@ -102,7 +102,7 @@ const { selectedTeam, visibleTeams, fetchTeams, setTeam, clearTeam } = useTeams(
 
 // ── Projects floor ──────────────────────────────────────────────────────────
 const projectItems = useDirectusItems('projects');
-const taskItemsApi = useDirectusItems('project_tasks');
+const taskItemsApi = useDirectusItems('tasks');
 const projectsList = ref<any[]>([]);
 const projectsLoading = ref(false);
 const projectStatusFilter = ref<'active' | 'completed' | 'archived' | 'all'>('active');
@@ -156,22 +156,22 @@ async function fetchProjects() {
     if (ids.length) {
       try {
         const tasks = await taskItemsApi.list({
-          fields: ['id', 'project', 'completed', 'status', 'event_id.project'],
+          fields: ['id', 'project_id', 'status', 'project_event_id.project'],
           filter: {
             _or: [
-              { project: { _in: ids } },
-              { event_id: { project: { _in: ids } } },
+              { project_id: { _in: ids } },
+              { project_event_id: { project: { _in: ids } } },
             ],
           },
           limit: -1,
         });
         const progress: Record<string, { total: number; completed: number }> = {};
         for (const t of tasks || []) {
-          const pid = t.project || t.event_id?.project;
+          const pid = t.project_id || t.project_event_id?.project;
           if (!pid) continue;
           if (!progress[pid]) progress[pid] = { total: 0, completed: 0 };
           progress[pid].total++;
-          if (t.completed || t.status === 'done') progress[pid].completed++;
+          if (t.status === 'completed') progress[pid].completed++;
         }
         projectsList.value = (raw || []).map((p: any) => ({
           ...p,

@@ -90,7 +90,7 @@ export const useAIProductivityEngine = () => {
 	const ticketItems = useDirectusItems('tickets');
 	const invoiceItems = useDirectusItems('invoices');
 	const projectItems = useDirectusItems('projects');
-	const taskItems = useDirectusItems('project_tasks');
+	const taskItems = useDirectusItems('tasks');
 	const channelItems = useDirectusItems('channels');
 	const messageItems = useDirectusItems('messages');
 	const socialPostItems = useDirectusItems('social_posts');
@@ -458,11 +458,11 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const tasks = await taskItems.list({
-				fields: ['id', 'title', 'status', 'due_date', 'completed', 'assignee_id.first_name', 'event_id.id'],
+				fields: ['id', 'title', 'status', 'due_date', 'assigned_to.directus_users_id.first_name', 'project_event_id.id'],
 				filter: {
 					_and: [
-						{ completed: { _neq: true } },
-						{ assignee_id: { _eq: '$CURRENT_USER' } },
+						{ status: { _neq: 'completed' } },
+						{ assigned_to: { directus_users_id: { _eq: '$CURRENT_USER' } } },
 					],
 				},
 				sort: ['due_date'],

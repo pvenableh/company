@@ -29,7 +29,7 @@ const commentCounts = ref({});
 
 // ── Collections we care about ──
 const trackedCollections = [
-	'projects', 'tickets', 'invoices', 'project_tasks', 'tasks',
+	'projects', 'tickets', 'invoices', 'tasks',
 	'emails', 'cd_contacts', 'cd_activities', 'contacts', 'clients',
 ];
 
@@ -37,13 +37,12 @@ const collectionLabels = {
 	projects: 'Project',
 	tickets: 'Ticket',
 	invoices: 'Invoice',
-	project_tasks: 'Task',
 	emails: 'Email',
 	cd_contacts: 'CardDesk Contact',
 	cd_activities: 'CardDesk Activity',
 	contacts: 'Contact',
 	clients: 'Client',
-	tasks: 'Quick Task',
+	tasks: 'Task',
 };
 
 // Collection icons now driven by useTimelineTheme() — see themedCollectionIcons above
@@ -53,7 +52,6 @@ const collectionColors = {
 	projects: 'text-blue-500',
 	tickets: 'text-warning',
 	invoices: 'text-success',
-	project_tasks: 'text-purple-500',
 	emails: 'text-pink-500',
 	cd_contacts: 'text-info',
 	cd_activities: 'text-info',
@@ -66,7 +64,6 @@ const collectionTagColors = {
 	projects: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 	tickets: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
 	invoices: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
-	project_tasks: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 	emails: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
 	cd_contacts: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
 	cd_activities: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
@@ -85,8 +82,7 @@ const actionLabels = {
 const actionPhrases = {
 	projects:      { create: 'Kicked off a',     update: 'Made progress on a',  delete: 'Removed a' },
 	tickets:       { create: 'Opened a',          update: 'Moved forward on a',  delete: 'Closed out a' },
-	project_tasks: { create: 'Queued up a',       update: 'Worked on a',         delete: 'Cleared a' },
-	tasks:         { create: 'Added a',           update: 'Tackled a',           delete: 'Cleared a' },
+	tasks:         { create: 'Queued up a',       update: 'Worked on a',         delete: 'Cleared a' },
 	invoices:      { create: 'Drafted an',        update: 'Updated an',          delete: 'Voided an' },
 	emails:        { create: 'Composed an',       update: 'Edited an',           delete: 'Discarded an' },
 	contacts:      { create: 'Added a',           update: 'Updated a',           delete: 'Removed a' },
@@ -172,7 +168,6 @@ const getFlavorText = (item) => {
 	const id = item.id || '';
 	// Task completed
 	if (item.collection === 'tasks' && item.itemData?.status === 'completed') return pickFlavor(flavorTexts.taskCompleted, id);
-	if (item.collection === 'project_tasks' && item.itemData?.completed) return pickFlavor(flavorTexts.taskCompleted, id);
 	// Creates
 	if (item.action === 'create') {
 		if (item.collection === 'projects') return pickFlavor(flavorTexts.projectCreated, id);
@@ -329,13 +324,6 @@ const humanizeItemTitle = (act, itemData) => {
 		return label;
 	}
 
-	// ── Project tasks ──
-	if (act.collection === 'project_tasks' && itemData) {
-		if (itemData.completed) return `${label} · Done`;
-		if (itemData.status) return `${label} · ${itemData.status.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
-		return label;
-	}
-
 	// ── Contacts ──
 	if ((act.collection === 'contacts' || act.collection === 'cd_contacts') && itemData) {
 		const fullName = [itemData.first_name, itemData.last_name].filter(Boolean).join(' ');
@@ -400,7 +388,6 @@ const enrichActivities = async (activities) => {
 		try {
 			let fields = ['id', 'title'];
 			if (collection === 'invoices') fields = ['id', 'invoice_code', 'status'];
-			if (collection === 'project_tasks') fields = ['id', 'title', 'completed', 'status'];
 			if (collection === 'tasks') fields = ['id', 'title', 'description', 'status', 'priority', 'schedule', 'date_completed'];
 			if (collection === 'emails') fields = ['id', 'name', 'subject', 'status', 'total_recipients', 'sent_at'];
 			if (collection === 'cd_contacts') fields = ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'is_client'];
@@ -715,11 +702,6 @@ watch(selectedOrg, () => {
 					<!-- Right column: detail badges -->
 					<div class="flex flex-col items-end gap-1.5 pt-1">
 						<!-- Task completion badge -->
-						<span v-if="item.collection === 'project_tasks' && item.itemData?.completed" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses('completed')">
-							<UIcon name="i-heroicons-check" class="w-3 h-3" />
-							Completed
-						</span>
-						<!-- Quick task completion badge -->
 						<span v-if="item.collection === 'tasks' && item.itemData?.status === 'completed'" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses('completed')">
 							<UIcon name="i-heroicons-check" class="w-3 h-3" />
 							Completed

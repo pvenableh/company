@@ -41,7 +41,7 @@ const projectStatusItems = [
 
 // Table view data
 const projectItems = useDirectusItems('projects');
-const taskItems = useDirectusItems('project_tasks');
+const taskItems = useDirectusItems('tasks');
 const tableProjects = ref([]);
 const tableLoading = ref(false);
 
@@ -89,11 +89,11 @@ const fetchTableProjects = async () => {
 		if (projectIds.length) {
 			try {
 				const tasks = await taskItems.list({
-					fields: ['id', 'project', 'completed', 'status', 'event_id.project'],
+					fields: ['id', 'project_id', 'status', 'project_event_id.project'],
 					filter: {
 						_or: [
-							{ project: { _in: projectIds } },
-							{ event_id: { project: { _in: projectIds } } },
+							{ project_id: { _in: projectIds } },
+							{ project_event_id: { project: { _in: projectIds } } },
 						],
 					},
 					limit: -1,
@@ -101,11 +101,11 @@ const fetchTableProjects = async () => {
 
 				const progressMap = {};
 				for (const task of (tasks || [])) {
-					const pid = task.project || task.event_id?.project;
+					const pid = task.project_id || task.project_event_id?.project;
 					if (!pid) continue;
 					if (!progressMap[pid]) progressMap[pid] = { total: 0, completed: 0 };
 					progressMap[pid].total++;
-					if (task.completed || task.status === 'done') progressMap[pid].completed++;
+					if (task.status === 'completed') progressMap[pid].completed++;
 				}
 
 				tableProjects.value = rawProjects.map(p => ({

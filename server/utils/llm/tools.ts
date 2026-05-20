@@ -47,7 +47,7 @@ export const UPDATE_FIELD_TOOL: ToolDefinition = {
       entity_type: {
         type: 'string',
         description:
-          'The Directus collection name. E.g. "projects", "tickets", "project_tasks", "invoices", "leads", "contacts".',
+          'The Directus collection name. E.g. "projects", "tickets", "tasks", "invoices", "leads", "contacts".',
       },
       entity_id: {
         type: 'string',

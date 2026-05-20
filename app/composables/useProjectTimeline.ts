@@ -22,7 +22,7 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
   const { getClientFilter } = useClients();
 
   // Portal-only users have no Directus role granting read on
-  // projects/project_events/project_tasks. Route reads through the portal
+  // projects/project_events/tasks. Route reads through the portal
   // proxy (admin token + client_portal_users scope) when `portal: true`.
   // The mutation surface (update/create/remove) only exists on
   // useDirectusItems — calling it in portal mode is a programming error

@@ -67,7 +67,7 @@ export async function resolveNotificationTargets(
 				}
 				break;
 
-			case 'project_tasks':
+			case 'tasks':
 				if (action === 'update') {
 					await resolveTaskUpdateTargets(item, itemId, userId, targets);
 				}
@@ -267,15 +267,24 @@ async function resolveTaskUpdateTargets(
 	userId: string,
 	targets: NotificationTarget[],
 ) {
-	const newAssignee = typeof item.assignee_id === 'object' ? item.assignee_id?.id : item.assignee_id;
-	if (newAssignee && newAssignee !== userId) {
+	// tasks.assigned_to is an m2m junction — the change-listener payload may
+	// arrive as either the raw array or a partial set of junction rows. We
+	// notify every new assignee that isn't the actor themselves.
+	const assignments = Array.isArray(item.assigned_to) ? item.assigned_to : [];
+	for (const assignment of assignments) {
+		const assigneeId = typeof assignment === 'string'
+			? assignment
+			: typeof assignment?.directus_users_id === 'object'
+				? assignment.directus_users_id?.id
+				: assignment?.directus_users_id;
+		if (!assigneeId || assigneeId === userId) continue;
 		targets.push({
-			recipientId: newAssignee,
+			recipientId: assigneeId,
 			category: 'projects',
 			type: 'task.assigned',
 			subject: 'You were assigned to a task',
 			message: item.title || 'New task assignment',
-			collection: 'project_tasks',
+			collection: 'tasks',
 			itemId,
 		});
 	}
@@ -689,7 +698,7 @@ function formatCollectionName(collection: string): string {
 	const names: Record<string, string> = {
 		tickets: 'ticket',
 		projects: 'project',
-		project_tasks: 'task',
+		tasks: 'task',
 		project_events: 'project',
 		comments: 'comment',
 		messages: 'message',

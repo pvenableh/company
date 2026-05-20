@@ -514,7 +514,7 @@ function getNotificationType(notification) {
 		messages: 'conversations',
 		tickets: 'tickets',
 		projects: 'projects',
-		project_tasks: 'projects',
+		tasks: 'projects',
 		project_events: 'projects',
 		invoices: 'invoices',
 		contracts: 'contracts',
