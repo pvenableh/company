@@ -7,7 +7,7 @@
 		<div class="flex items-center gap-2">
 			<Icon
 				:name="iconName"
-				class="w-8 h-8 rounded-md shrink-0"
+				class="w-8 h-8 shrink-0"
 			/>
 			<span class="text-xs font-semibold text-foreground capitalize">{{ tile.platform }}</span>
 			<span

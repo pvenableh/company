@@ -11,7 +11,7 @@
           : 'border-border bg-background hover:bg-muted'"
         @click="active = p"
       >
-        <UIcon :name="platformMeta[p].icon" class="w-4 h-4 rounded-sm shrink-0" />
+        <UIcon :name="platformMeta[p].icon" class="w-4 h-4 shrink-0" />
         {{ platformMeta[p].label }}
       </button>
     </div>

@@ -485,7 +485,7 @@ const subtitle = computed(() => {
       <UCard v-if="linkedinSelected">
         <template #header>
           <div class="flex items-center gap-2">
-            <UIcon name="logos:linkedin-icon" class="w-4 h-4 rounded-sm shrink-0" />
+            <UIcon name="logos:linkedin-icon" class="w-4 h-4 shrink-0" />
             <h2 class="font-semibold text-gray-900 dark:text-white">LinkedIn Options</h2>
           </div>
         </template>
@@ -570,11 +570,15 @@ const subtitle = computed(() => {
                       :icon="account.profile_picture_url ? undefined : platformIcons(account.platform)"
                       size="xs"
                     />
-                    <UIcon
+                    <span
                       v-if="account.profile_picture_url"
-                      :name="platformIcons(account.platform)"
-                      class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-sm bg-white dark:bg-gray-800 ring-1 ring-white dark:ring-gray-800"
-                    />
+                      class="absolute -bottom-0.5 -right-0.5 inline-flex w-3 h-3 items-center justify-center rounded-sm bg-white dark:bg-gray-800 ring-1 ring-white dark:ring-gray-800"
+                    >
+                      <UIcon
+                        :name="platformIcons(account.platform)"
+                        class="h-full w-full"
+                      />
+                    </span>
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate">

@@ -52,7 +52,7 @@
                       : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
                     @click="togglePlatform(p.value)"
                   >
-                    <Icon :name="p.icon" class="w-6 h-6 rounded-md shrink-0" />
+                    <Icon :name="p.icon" class="w-6 h-6 shrink-0" />
                     <span class="text-xs font-medium" :class="form.platforms.includes(p.value) ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'">{{ p.label }}</span>
                     <!-- Checkmark -->
                     <div
@@ -288,7 +288,7 @@
                     :value="post.platform"
                     class="flex-1 !text-[11px]"
                   >
-                    <Icon :name="getPlatformIcon(post.platform)" class="w-4 h-4 rounded-sm shrink-0" />
+                    <Icon :name="getPlatformIcon(post.platform)" class="w-4 h-4 shrink-0" />
                     {{ getPlatformLabel(post.platform) }}
                   </TabsTrigger>
                 </TabsList>

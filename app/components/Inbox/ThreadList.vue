@@ -79,10 +79,14 @@ function timeAgo(iso: string) {
             </div>
           </div>
           <!-- Platform badge -->
-          <Icon
-            :name="getSocialPlatformIcon(t.platform)"
-            class="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-white p-px ring-2 ring-white dark:bg-gray-900 dark:ring-gray-900"
-          />
+          <span
+            class="absolute -bottom-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white p-px ring-2 ring-white dark:bg-gray-900 dark:ring-gray-900"
+          >
+            <Icon
+              :name="getSocialPlatformIcon(t.platform)"
+              class="h-full w-full"
+            />
+          </span>
         </div>
 
         <!-- Body -->
