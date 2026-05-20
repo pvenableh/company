@@ -683,14 +683,7 @@ const subtitle = computed(() => {
     />
 
     <!-- Post Now confirm -->
-    <UModal v-model="showPostNowConfirm" class="sm:max-w-md">
-      <template #header>
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-send" class="w-5 h-5 text-success" />
-          <h3 class="font-semibold">Post immediately?</h3>
-        </div>
-      </template>
-
+    <AppsAppBottomSheet v-model="showPostNowConfirm" title="Post immediately?">
       <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
         This will publish to <strong>{{ selectedAccounts.length }} account{{ selectedAccounts.length !== 1 ? 's' : '' }}</strong> right now.
         You can't unpublish from inside Earnest — you'll need to delete from each platform directly if you change your mind.
@@ -707,13 +700,13 @@ const subtitle = computed(() => {
       </div>
 
       <template #footer>
-        <div class="flex justify-end gap-2">
+        <div class="flex w-full justify-end gap-2">
           <UButton variant="ghost" @click="showPostNowConfirm = false">Cancel</UButton>
           <UButton color="green" icon="i-lucide-send" :loading="isSubmitting" @click="postNow">
             Yes, Post Now
           </UButton>
         </div>
       </template>
-    </UModal>
+    </AppsAppBottomSheet>
   </AppSlideOverShell>
 </template>

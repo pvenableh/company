@@ -13,13 +13,12 @@
   would leak across orgs via the `user_created` row-perm fallback.
 -->
 <template>
-	<UModal
+	<AppsAppBottomSheet
 		v-model="isOpen"
 		:title="title"
-		:description="description"
-		:ui="{ content: 'max-w-lg' }"
+		:subtitle="description"
 	>
-		<div class="space-y-3 mt-1">
+		<div class="space-y-3">
 			<div class="relative">
 				<Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 				<input
@@ -74,10 +73,12 @@
 				</div>
 			</div>
 		</div>
-	</UModal>
+	</AppsAppBottomSheet>
 </template>
 
 <script setup lang="ts">
+import { notifyEntityChange } from '~/composables/useEntityStore';
+
 interface Props {
 	modelValue: boolean;
 	clientId: string;
@@ -184,6 +185,9 @@ async function attach(row: any) {
 	attaching.value = row.id;
 	try {
 		await items.update(row.id, { [props.fkField]: props.clientId });
+		// Notify every entity-store on this collection so the parent workspace's
+		// list view repaints without the caller needing to refetch. P1.75 hook.
+		notifyEntityChange(props.collection, { id: row.id, op: 'update' });
 		toast.add({ title: `${props.entitySingular} attached`, color: 'green' });
 		emit('attached', row.id);
 		rows.value = rows.value.filter((r) => r.id !== row.id);

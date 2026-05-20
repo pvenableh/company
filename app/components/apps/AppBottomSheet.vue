@@ -175,6 +175,13 @@ const sheetStyle = computed(() => ({
           <div class="app-bottom-sheet__body">
             <slot />
           </div>
+
+          <!-- Optional pinned footer (e.g. form submit row). Sits below
+               the scrollable body so action buttons stay visible while
+               long forms scroll. -->
+          <footer v-if="$slots.footer" class="app-bottom-sheet__footer">
+            <slot name="footer" />
+          </footer>
         </DialogContent>
       </Transition>
     </DialogPortal>
@@ -278,6 +285,25 @@ const sheetStyle = computed(() => ({
   /* Honor the iOS home-bar inset on devices that report it. */
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
+}
+
+/* When a footer is rendered, the body loses its safe-area bottom padding
+   — the footer owns it instead, so the action row sits at the device's
+   home-bar edge with comfortable spacing. */
+.app-bottom-sheet:has(.app-bottom-sheet__footer) .app-bottom-sheet__body {
+  padding-bottom: 1rem;
+}
+
+.app-bottom-sheet__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background: hsl(var(--background));
+  border-top: 1px solid hsl(var(--border) / 0.4);
 }
 
 /* ── Enter / leave transitions ── */
