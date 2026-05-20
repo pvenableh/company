@@ -41,6 +41,17 @@
 					<Icon name="lucide:notebook-pen" class="w-4 h-4" />
 				</button>
 
+				<!-- Compose button — opens the social composer slide-over.
+					 Available from any app so ad-hoc post creation doesn't pull
+					 the user out of whatever floor they're in. -->
+				<button
+					class="dock-btn"
+					title="Compose a social post"
+					@click="openCompose"
+				>
+					<Icon name="lucide:pen-line" class="w-4 h-4" />
+				</button>
+
 				<!-- Tasks button -->
 				<button
 					class="dock-btn"
@@ -328,6 +339,13 @@ watch(isMeetingRoute, (inMeeting) => {
 
 function togglePanel(panel: 'tasks' | 'timer' | 'notes') {
 	activePanel.value = activePanel.value === panel ? null : panel;
+}
+
+// Compose slide-over opener — surfaces the social composer from any app.
+const composeSlide = useAppSlideOver('social-compose');
+function openCompose() {
+	activePanel.value = null;
+	composeSlide.open('new');
 }
 
 // Auto-open timer panel when timer starts

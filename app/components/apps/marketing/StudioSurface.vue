@@ -11,6 +11,11 @@
  */
 import type { SocialPost, ApprovalState, ContentPlanRecord, ContentPlanState } from '~~/shared/social';
 import type { Project, Client } from '~~/shared/directus';
+import SocialCalendarSurface from '~/components/Social/CalendarSurface.vue';
+import SocialInboxSurface from '~/components/Social/InboxSurface.vue';
+import SocialAnalyticsSurface from '~/components/Social/AnalyticsSurface.vue';
+import StudioPostCard from './StudioPostCard.vue';
+import PlanCardStack from './PlanCardStack.vue';
 
 const toast = useToast();
 const { currentClient, selectedClient } = useClients();
@@ -24,13 +29,17 @@ const projectsById = ref<Map<string, Pick<Project, 'id' | 'title' | 'billing_typ
 const clientsById = ref<Map<string, Pick<Client, 'id' | 'name'>>>(new Map());
 const loading = ref(false);
 
-// Top-level view: 'approval' = work-in-progress drafts moving through the
-// approval workflow; 'upcoming' = future-scheduled publish queue (replaces
-// the old /social Upcoming Posts card).
-type StudioView = 'approval' | 'upcoming';
+// Top-level sub-view for the Studio floor. Approval/Upcoming are the
+// two plan-aware lenses on Studio drafts; Calendar/Inbox/Analytics
+// fold the legacy standalone /social/{calendar,inbox,analytics} pages
+// into Studio so the apps shell never remounts.
+type StudioView = 'approval' | 'upcoming' | 'calendar' | 'inbox' | 'analytics';
+const STUDIO_VIEW_KEYS: StudioView[] = ['approval', 'upcoming', 'calendar', 'inbox', 'analytics'];
 const route = useRoute();
 const router = useRouter();
-const initialView: StudioView = route.query.view === 'upcoming' ? 'upcoming' : 'approval';
+const initialView: StudioView = STUDIO_VIEW_KEYS.includes(route.query.view as StudioView)
+  ? (route.query.view as StudioView)
+  : 'approval';
 const view = ref<StudioView>(initialView);
 
 const stateFilter = ref<'all' | ApprovalState>('all');
@@ -45,7 +54,8 @@ const STATE_FILTERS: { key: 'all' | ApprovalState; label: string }[] = [
   { key: 'published', label: 'Published' },
 ];
 
-// Reflect `view` in the URL so deep-links from /social land on Upcoming.
+// Reflect `view` in the URL so deep-links from /social land on the
+// matching sub-view.
 watch(view, (next) => {
   const current = (route.query.view as string | undefined) ?? 'approval';
   if (current === next) return;
@@ -53,9 +63,17 @@ watch(view, (next) => {
 });
 // Sync the other direction too — back/forward navigation should flip the toggle.
 watch(() => route.query.view, (qv) => {
-  const next: StudioView = qv === 'upcoming' ? 'upcoming' : 'approval';
+  const next: StudioView = STUDIO_VIEW_KEYS.includes(qv as StudioView)
+    ? (qv as StudioView)
+    : 'approval';
   if (view.value !== next) view.value = next;
 });
+
+// Compose slide-over opener for the Studio header "+ Compose" button.
+const composeSlide = useAppSlideOver('social-compose');
+function openCompose() {
+  composeSlide.open('new');
+}
 
 // ── Content Plans ─────────────────────────────────────────────────
 // Plans bundle a strategy + a batch of posts under a single review link
@@ -449,6 +467,57 @@ const postsByPlan = computed<PlanBucket[]>(() => {
   return out;
 });
 
+// ── Plan group collapse (step 1 of card-stack rollout) ──────────────
+// Per-plan collapsed state persists in localStorage. Default rule: finished
+// plans (approved/archived) collapse; active workflow plans (draft/in_review/
+// requested_changes) expand. Zero-post plans always force-expand so the
+// "add posts" empty-state stays visible.
+const PLAN_COLLAPSE_STORAGE_KEY = 'studio-plan-collapsed-v1';
+const userCollapsedPlans = ref<Record<string, boolean>>({});
+
+onMounted(() => {
+  try {
+    const raw = window.localStorage.getItem(PLAN_COLLAPSE_STORAGE_KEY);
+    if (raw) userCollapsedPlans.value = JSON.parse(raw) || {};
+  } catch {
+    userCollapsedPlans.value = {};
+  }
+});
+
+function persistCollapsedPlans() {
+  try {
+    window.localStorage.setItem(
+      PLAN_COLLAPSE_STORAGE_KEY,
+      JSON.stringify(userCollapsedPlans.value),
+    );
+  } catch {
+    /* localStorage unavailable — silently no-op */
+  }
+}
+
+function planDefaultCollapsed(plan: ContentPlanRecord): boolean {
+  const s = plan.state;
+  return s === 'approved' || s === 'archived';
+}
+
+function isPlanCollapsed(bucket: PlanBucket): boolean {
+  // Orphans/unattached bucket never collapses — it has no header chevron.
+  if (!bucket.plan) return false;
+  // Zero-post plans always expand so the empty-state CTA is visible.
+  if (!bucket.posts.length) return false;
+  const override = userCollapsedPlans.value[String(bucket.plan.id)];
+  if (typeof override === 'boolean') return override;
+  return planDefaultCollapsed(bucket.plan);
+}
+
+function togglePlanCollapsed(plan: ContentPlanRecord) {
+  const key = String(plan.id);
+  const current = userCollapsedPlans.value[key];
+  const next = typeof current === 'boolean' ? !current : !planDefaultCollapsed(plan);
+  userCollapsedPlans.value = { ...userCollapsedPlans.value, [key]: next };
+  persistCollapsedPlans();
+}
+
 const totalPosts = computed(() => posts.value.length);
 
 const stateCounts = computed<Record<ApprovalState | 'all', number>>(() => {
@@ -701,13 +770,16 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <UiActionButton icon="lucide:calendar-plus" variant="primary" @click="showNewPlan = true">
+          <UiActionButton icon="lucide:pen-line" variant="primary" @click="openCompose">
+            Compose
+          </UiActionButton>
+          <UiActionButton icon="lucide:calendar-plus" @click="showNewPlan = true">
             New Plan
           </UiActionButton>
         </div>
       </div>
 
-      <div class="studio-hero__stats">
+      <div v-if="view === 'approval' || view === 'upcoming'" class="studio-hero__stats">
         <div class="studio-stat">
           <span class="studio-stat__label">Total</span>
           <span class="studio-stat__value">{{ totalPosts }}</span>
@@ -731,9 +803,10 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- View toggle — Approval Queue (workflow) vs Upcoming Publish
-         (scheduled by the publisher). Approval is the default; Upcoming
-         consolidates what used to live as an /social Upcoming Posts card. -->
+    <!-- View toggle — Approval (workflow) / Upcoming Publish / Calendar /
+         Inbox / Analytics. The latter three fold the legacy standalone
+         /social/{calendar,inbox,analytics} pages into Studio so the
+         apps shell never remounts. -->
     <div class="studio-view-toggle" role="tablist" aria-label="Studio view">
       <button
         type="button"
@@ -744,7 +817,7 @@ onMounted(() => {
         @click="view = 'approval'"
       >
         <Icon name="lucide:list-checks" class="w-3.5 h-3.5" />
-        Approval Queue
+        Approval
       </button>
       <button
         type="button"
@@ -755,7 +828,40 @@ onMounted(() => {
         @click="view = 'upcoming'"
       >
         <Icon name="lucide:calendar-clock" class="w-3.5 h-3.5" />
-        Upcoming Publish
+        Upcoming
+      </button>
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="view === 'calendar'"
+        class="studio-view-toggle__item"
+        :class="{ 'studio-view-toggle__item--active': view === 'calendar' }"
+        @click="view = 'calendar'"
+      >
+        <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+        Calendar
+      </button>
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="view === 'inbox'"
+        class="studio-view-toggle__item"
+        :class="{ 'studio-view-toggle__item--active': view === 'inbox' }"
+        @click="view = 'inbox'"
+      >
+        <Icon name="lucide:inbox" class="w-3.5 h-3.5" />
+        Inbox
+      </button>
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="view === 'analytics'"
+        class="studio-view-toggle__item"
+        :class="{ 'studio-view-toggle__item--active': view === 'analytics' }"
+        @click="view = 'analytics'"
+      >
+        <Icon name="lucide:bar-chart-2" class="w-3.5 h-3.5" />
+        Analytics
       </button>
     </div>
 
@@ -781,8 +887,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
+    <!-- Loading — only for the plan-aware views (approval/upcoming).
+         Calendar/Inbox/Analytics surfaces below own their own loading UI. -->
+    <div v-if="(view === 'approval' || view === 'upcoming') && loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
       <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
       <p class="cg-text-child text-muted-foreground">Loading content…</p>
     </div>
@@ -805,9 +912,26 @@ onMounted(() => {
 
     <!-- Grouped by plan — plans are the only top-level primitive in Approval. -->
     <div v-else-if="view === 'approval'" class="space-y-8">
-      <section v-for="bucket in postsByPlan" :key="bucket.plan?.id ?? 'orphans'" class="studio-group">
+      <section
+        v-for="bucket in postsByPlan"
+        v-show="bucket.posts.length || stateFilter === 'all'"
+        :key="bucket.plan?.id ?? 'orphans'"
+        class="studio-group"
+      >
         <div class="studio-group__header">
           <div v-if="bucket.plan" class="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              class="studio-group__chevron"
+              :aria-expanded="!isPlanCollapsed(bucket)"
+              :aria-label="isPlanCollapsed(bucket) ? `Expand ${planTitle(bucket.plan)}` : `Collapse ${planTitle(bucket.plan)}`"
+              @click="togglePlanCollapsed(bucket.plan)"
+            >
+              <Icon
+                :name="isPlanCollapsed(bucket) ? 'lucide:chevron-right' : 'lucide:chevron-down'"
+                class="w-3.5 h-3.5"
+              />
+            </button>
             <NuxtLink :to="`/social/plans/${bucket.plan.id}`" class="studio-group__chip studio-group__chip--link">
               <Icon name="lucide:layout-grid" class="w-3 h-3" />
               {{ planTitle(bucket.plan) }}
@@ -829,43 +953,22 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="bucket.posts.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <button
+        <PlanCardStack
+          v-if="bucket.plan && bucket.posts.length && isPlanCollapsed(bucket)"
+          :plan="bucket.plan"
+          :posts="bucket.posts"
+          @open-post="openDetail"
+        />
+        <div
+          v-else-if="bucket.posts.length && !isPlanCollapsed(bucket)"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          <StudioPostCard
             v-for="post in bucket.posts"
             :key="post.id"
-            type="button"
-            class="studio-card group"
-            @click="openDetail(post)"
-          >
-            <div class="studio-card__media">
-              <img
-                v-if="post.design_image_url"
-                :src="post.design_image_url"
-                :alt="post.caption.slice(0, 80)"
-                loading="lazy"
-              />
-              <img
-                v-else-if="post.media_urls && post.media_urls.length"
-                :src="post.media_urls[0]"
-                :alt="post.caption.slice(0, 80)"
-                loading="lazy"
-              />
-              <div v-else class="studio-card__placeholder">
-                <Icon name="lucide:image" class="w-9 h-9 text-muted-foreground/30" />
-              </div>
-              <span class="studio-card__state" :class="stateTone(post.approval_state)">
-                {{ stateLabel(post.approval_state) }}
-              </span>
-              <div v-if="post.figma_frame_url" class="studio-card__figma" title="Figma frame linked">
-                <Icon name="lucide:figma" class="w-3 h-3" />
-              </div>
-            </div>
-            <div class="studio-card__body">
-              <p class="studio-card__caption">
-                {{ post.caption || 'Untitled draft' }}
-              </p>
-            </div>
-          </button>
+            :post="post"
+            @click="openDetail"
+          />
         </div>
         <NuxtLink
           v-else-if="bucket.plan"
@@ -926,6 +1029,12 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Legacy /social/* page bodies folded into Studio. Each renders lazily —
+         we don't mount the others until the user switches to them. -->
+    <SocialCalendarSurface v-else-if="view === 'calendar'" />
+    <SocialInboxSurface v-else-if="view === 'inbox'" />
+    <SocialAnalyticsSurface v-else-if="view === 'analytics'" />
 
     <!-- New Plan modal -->
     <UModal v-model="showNewPlan" :ui="{ width: 'sm:max-w-lg' }">
@@ -1117,7 +1226,7 @@ onMounted(() => {
             >
               <span>No platforms picked yet — this stays a Studio draft until you wire one.</span>
               <NuxtLink
-                :to="`/social/posts/${selectedPost.id}/edit`"
+                :to="`/social/posts/${selectedPost.id}/edit?from=${encodeURIComponent($route.fullPath)}`"
                 class="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline shrink-0"
               >
                 Pick platforms
@@ -1351,6 +1460,12 @@ onMounted(() => {
     text-xs font-medium bg-muted/60 text-foreground border border-border/60;
 }
 
+.studio-group__chevron {
+  @apply inline-flex items-center justify-center w-6 h-6 rounded-md
+    text-muted-foreground hover:text-foreground hover:bg-muted/60
+    transition-colors -ml-1;
+}
+
 .studio-group__chip--link {
   @apply hover:bg-muted hover:border-foreground/30 transition-colors;
 }
@@ -1458,53 +1573,8 @@ onMounted(() => {
   );
 }
 
-.studio-card {
-  @apply flex flex-col text-left bg-card border border-border/70 rounded-xl
-    overflow-hidden transition-all duration-200
-    hover:-translate-y-0.5 hover:shadow-lg hover:shadow-foreground/5
-    hover:border-foreground/20 focus-visible:outline-none
-    focus-visible:ring-2 focus-visible:ring-primary;
-}
-
-.studio-card__media {
-  @apply relative aspect-[4/5] bg-muted/40 overflow-hidden;
-}
-
-.studio-card__media img {
-  @apply w-full h-full object-cover transition-transform duration-500 ease-out;
-}
-
-.studio-card:hover .studio-card__media img {
-  @apply scale-[1.04];
-}
-
-.studio-card__placeholder {
-  @apply absolute inset-0 flex items-center justify-center;
-  background-image:
-    linear-gradient(135deg, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.06), transparent 60%);
-}
-
-.studio-card__body {
-  @apply px-3 py-2.5;
-}
-
-.studio-card__caption {
-  @apply text-xs text-foreground line-clamp-2 leading-snug;
-}
-
-.studio-card__state {
-  @apply absolute top-2 left-2 inline-flex items-center
-    px-2 py-0.5 rounded-full
-    text-[10px] font-semibold uppercase tracking-wide
-    border backdrop-blur-sm;
-}
-
-.studio-card__figma {
-  @apply absolute top-2 right-2 inline-flex items-center justify-center
-    w-6 h-6 rounded-full bg-white/85 dark:bg-black/55
-    text-foreground backdrop-blur-sm border border-white/40 dark:border-black/40
-    shadow-sm;
-}
+/* .studio-card* — styles moved to StudioPostCard.vue (which both the grid
+   and PlanCardStack consume) so they apply inside the extracted component. */
 
 .studio-image-empty {
   @apply flex flex-col items-center justify-center gap-2

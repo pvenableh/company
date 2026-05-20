@@ -28,6 +28,7 @@
 import type { SocialPlatform, SocialAccountPublic, SocialPost } from '~~/shared/social';
 import { useDebounceFn } from '@vueuse/core';
 import { Button } from '~/components/ui/button';
+import SocialSettingsSurface from '~/components/Social/SettingsSurface.vue';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Marketing | Earnest' });
@@ -37,11 +38,13 @@ const route = useRoute();
 const toast = useToast();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'pulse' | 'campaigns' | 'email' | 'social' | 'studio' | 'audience';
-const FLOOR_KEYS: FloorKey[] = ['pulse', 'campaigns', 'email', 'social', 'studio', 'audience'];
+type FloorKey = 'pulse' | 'campaigns' | 'email' | 'accounts' | 'studio' | 'audience';
+const FLOOR_KEYS: FloorKey[] = ['pulse', 'campaigns', 'email', 'accounts', 'studio', 'audience'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
+  // Legacy `?floor=social` redirects into Accounts so old bookmarks land somewhere.
+  if (v === 'social') return 'accounts';
   return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'pulse';
 })();
 const floor = ref<FloorKey>(initialFloor);
@@ -54,10 +57,32 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'pulse', label: 'Pulse', icon: 'lucide:activity' },
   { key: 'campaigns', label: 'Campaigns', icon: 'lucide:rocket' },
   { key: 'email', label: 'Email', icon: 'lucide:mail' },
-  { key: 'social', label: 'Social', icon: 'lucide:share-2' },
+  { key: 'accounts', label: 'Accounts', icon: 'lucide:share-2' },
   { key: 'studio', label: 'Studio', icon: 'lucide:palette' },
   { key: 'audience', label: 'Audience', icon: 'lucide:users' },
 ];
+
+// Accounts floor sub-views (`?view=overview|settings`). Settings is the
+// in-app home of the legacy `/social/settings` page.
+type AccountsView = 'overview' | 'settings';
+const ACCOUNTS_VIEWS: AccountsView[] = ['overview', 'settings'];
+const accountsView = ref<AccountsView>(
+  (route.query.view === 'settings' ? 'settings' : 'overview') as AccountsView,
+);
+const accountsViewItems = [
+  { key: 'overview' as const, label: 'Overview', icon: 'lucide:layout-grid' },
+  { key: 'settings' as const, label: 'Settings', icon: 'lucide:settings' },
+];
+
+watch(accountsView, (next) => {
+  if (floor.value !== 'accounts') return;
+  router.replace({ query: { ...route.query, view: next === 'overview' ? undefined : next } });
+});
+watch(() => route.query.view, (v) => {
+  if (floor.value !== 'accounts') return;
+  const next: AccountsView = v === 'settings' ? 'settings' : 'overview';
+  if (accountsView.value !== next) accountsView.value = next;
+});
 
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { selectedOrg, currentOrg } = useOrganization();
@@ -106,13 +131,6 @@ const SOCIAL_LOGOS: Record<SocialPlatform, string> = {
   threads: 'lucide:at-sign',
 };
 
-const SOCIAL_LABELS: Record<SocialPlatform, string> = {
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  linkedin: 'LinkedIn',
-  tiktok: 'TikTok',
-  threads: 'Threads',
-};
 
 // ── Pulse floor ─────────────────────────────────────────────────────────────
 interface HealthSnapshot {
@@ -308,11 +326,18 @@ function openCampaignSlideOver(c: any) {
   campaignSlide.open(String(c.id));
 }
 
-// Social post slide-over — keeps Pulse / Social floor drilldowns inside the
-// apps layout instead of bouncing to /social.
+// Social post slide-over — keeps Pulse drilldowns inside the apps layout
+// instead of bouncing to /social.
 const socialPostSlide = useAppSlideOver('social-post');
 function openSocialPostSlideOver(post: any) {
   socialPostSlide.open(String(post.id));
+}
+
+// Compose slide-over — open from Studio header AND from the Pulse floor's
+// "New post" launch points. `useAppSlideOver` URL-binds it as `?slide=social-compose:new`.
+const composeSlide = useAppSlideOver('social-compose');
+function openComposeSlideOver() {
+  composeSlide.open('new');
 }
 
 // Mailing-list slide-over — keeps list edit inside the apps layout instead
@@ -575,37 +600,12 @@ function fmtSentAt(iso: string | null): string {
   });
 }
 
-// ── Social floor ────────────────────────────────────────────────────────────
+// ── Accounts floor ──────────────────────────────────────────────────────────
+// Renamed from "Social" — the floor is now strictly about connected channels
+// (per-account analytics + settings). Every post lives in Studio (`?floor=studio`).
 const socialLoading = ref(false);
 const socialAccounts = ref<SocialAccountPublic[]>([]);
 const socialPosts = ref<SocialPost[]>([]);
-const socialPlatformFilter = ref<'all' | SocialPlatform>('all');
-const socialStatusFilter = ref<'all' | 'scheduled' | 'published' | 'failed' | 'draft'>('all');
-const showAIWizard = ref(false);
-
-function handleAICreated(generated: { platform: SocialPlatform; caption: string }[]) {
-  showAIWizard.value = false;
-  toast.add({
-    title: `${generated.length} draft${generated.length !== 1 ? 's' : ''} created`,
-    description: `AI-generated drafts for ${generated.map((p) => p.platform).join(', ')}`,
-    icon: 'i-lucide-check-circle',
-    color: 'green',
-  });
-  fetchSocial();
-}
-
-const socialPlatformItems = computed(() => [
-  { key: 'all', label: 'All' },
-  ...PLATFORMS.map((p) => ({ key: p, label: SOCIAL_LABELS[p] })),
-]);
-
-const socialStatusItems = [
-  { key: 'all', label: 'All' },
-  { key: 'scheduled', label: 'Scheduled' },
-  { key: 'published', label: 'Published' },
-  { key: 'failed', label: 'Failed' },
-  { key: 'draft', label: 'Draft' },
-];
 
 async function fetchSocial() {
   socialLoading.value = true;
@@ -625,22 +625,8 @@ async function fetchSocial() {
   }
 }
 
-const filteredSocialPosts = computed(() => {
-  let posts = socialPosts.value;
-  if (socialStatusFilter.value !== 'all') {
-    posts = posts.filter((p) => p.status === socialStatusFilter.value);
-  }
-  if (socialPlatformFilter.value !== 'all') {
-    const p = socialPlatformFilter.value;
-    posts = posts.filter((post) => (post.platforms || []).some((pl: any) => pl.platform === p));
-  }
-  return posts;
-});
-
-// Classic /social parity: 4-stat strip + upcoming-posts list.
-// Follow-up growth + engagement rate are nominal placeholders here —
-// the classic dashboard uses the same hardcoded numbers. We'll wire
-// real values once the analytics pipeline catches them.
+// 4-stat strip on the Accounts floor. Engagement + follower growth remain
+// nominal placeholders until the analytics pipeline catches them.
 const socialStats = computed(() => {
   const todayISO = new Date().toISOString().slice(0, 10);
   const scheduled = socialPosts.value.filter((p) => p.status === 'scheduled').length;
@@ -655,53 +641,6 @@ const socialStats = computed(() => {
     followerGrowth: 248,
   };
 });
-
-const upcomingScheduledPosts = computed<SocialPost[]>(() =>
-  [...socialPosts.value]
-    .filter((p) => p.status === 'scheduled' && p.scheduled_at)
-    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
-    .slice(0, 10),
-);
-
-function formatScheduledAt(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-const socialPostsByPlatform = computed(() => {
-  const groups = new Map<SocialPlatform, SocialPost[]>();
-  for (const p of filteredSocialPosts.value) {
-    for (const target of (p.platforms || []) as any[]) {
-      const arr = groups.get(target.platform) || [];
-      if (!arr.find((existing) => existing.id === p.id)) arr.push(p);
-      groups.set(target.platform, arr);
-    }
-  }
-  return PLATFORMS
-    .map((platform) => ({ platform, posts: groups.get(platform) || [] }))
-    .filter((g) => g.posts.length);
-});
-
-function postEngagementSummary(p: any): { likes: number; comments: number; views: number } {
-  let likes = 0, comments = 0, views = 0;
-  for (const target of (p.platforms || []) as any[]) {
-    const a = target.analytics || target.metrics || {};
-    likes += Number(a.like_count ?? a.likes ?? 0) || 0;
-    comments += Number(a.comments_count ?? a.comments ?? 0) || 0;
-    views += Number(a.view_count ?? a.impressions ?? a.views ?? 0) || 0;
-  }
-  return { likes, comments, views };
-}
-
-function postPrimaryDate(p: any): string {
-  return p.published_at || p.scheduled_at || p.date_created || '';
-}
 
 // ── Audience floor ──────────────────────────────────────────────────────────
 const { getLists } = useMailingLists();
@@ -763,7 +702,7 @@ watch(
       fetchEmailTemplates();
       fetchEmailEvents();
     }
-    if (next === 'social' && !socialLoaded.value) {
+    if (next === 'accounts' && !socialLoaded.value) {
       socialLoaded.value = true;
       fetchSocial();
     }
@@ -806,11 +745,18 @@ const headerAction = computed(() => {
       onClick: () => router.push('/email'),
     };
   }
-  if (floor.value === 'social') {
+  if (floor.value === 'accounts') {
     return {
-      label: 'New Post',
-      icon: 'lucide:plus',
-      onClick: () => router.push('/social/compose'),
+      label: 'Manage',
+      icon: 'lucide:settings',
+      onClick: () => { accountsView.value = 'settings'; },
+    };
+  }
+  if (floor.value === 'studio') {
+    return {
+      label: 'Compose',
+      icon: 'lucide:pen-line',
+      onClick: openComposeSlideOver,
     };
   }
   if (floor.value === 'audience') {
@@ -964,7 +910,7 @@ const scopeLabel = computed(() => {
                   Recent Posts
                   <span v-if="pulseRecentPosts.length" class="text-foreground ml-1">({{ pulseRecentPosts.length }})</span>
                 </h3>
-                <button class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline" @click="floor = 'social'">
+                <button class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline" @click="floor = 'studio'">
                   View all
                   <Icon name="lucide:chevron-right" class="w-3 h-3" />
                 </button>
@@ -998,7 +944,7 @@ const scopeLabel = computed(() => {
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Channels
                 </h3>
-                <button class="text-xs text-primary hover:underline" @click="floor = 'social'">
+                <button class="text-xs text-primary hover:underline" @click="floor = 'accounts'">
                   Manage →
                 </button>
               </div>
@@ -1366,298 +1312,155 @@ const scopeLabel = computed(() => {
         </div>
       </template>
 
-      <!-- ── Social floor ─────────────────────────────────────────────── -->
-      <template v-else-if="floor === 'social'">
-        <!-- Onboarding banner (no accounts connected) -->
-        <div
-          v-if="!socialLoading && socialAccounts.length === 0"
-          class="mb-5 p-5 bg-gradient-to-r from-pink-50 to-violet-50 dark:from-pink-900/20 dark:to-violet-900/20 rounded-2xl border border-pink-100 dark:border-pink-800/30"
-        >
-          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-            <div class="p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-sm shrink-0">
-              <Icon name="lucide:share-2" class="w-7 h-7 text-pink-500" />
-            </div>
-            <div class="flex-1">
-              <h2 class="font-semibold text-foreground mb-0.5">Get started with Social Media</h2>
-              <p class="text-xs text-muted-foreground">Connect your social accounts to start scheduling and publishing content with AI assistance.</p>
-            </div>
-            <div class="flex gap-2">
-              <Button size="sm" variant="ghost" @click="router.push('/social/settings#setup-guide')">Setup Guide</Button>
-              <Button size="sm" @click="router.push('/social/settings')">
-                <Icon name="lucide:plug" class="w-4 h-4 mr-1" />
-                Connect Accounts
-              </Button>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div class="flex items-start gap-2 text-muted-foreground">
-              <Icon name="lucide:plug" class="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
-              <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
-            </div>
-            <div class="flex items-start gap-2 text-muted-foreground">
-              <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-              <span><strong class="text-foreground">Generate</strong> posts with Earnest tailored to your brand and audience</span>
-            </div>
-            <div class="flex items-start gap-2 text-muted-foreground">
-              <Icon name="lucide:calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-              <span><strong class="text-foreground">Schedule</strong> content across platforms from one calendar</span>
-            </div>
-          </div>
-        </div>
+      <!-- ── Accounts floor ───────────────────────────────────────────── -->
+      <template v-else-if="floor === 'accounts'">
+        <!-- Overview / Settings sub-strip -->
+        <AppFloorStrip
+          v-model="accountsView"
+          :items="accountsViewItems"
+          :sticky="false"
+          aria-label="Accounts view"
+        />
 
-        <!-- 4-stat KPI strip (parity with classic /social) -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-          <div class="ios-card p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-              <Icon name="lucide:calendar-clock" class="w-5 h-5 text-blue-500" />
-            </div>
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Scheduled</p>
-              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.scheduled }}</p>
-            </div>
-          </div>
-          <div class="ios-card p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
-              <Icon name="lucide:check-circle" class="w-5 h-5 text-success" />
-            </div>
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Published Today</p>
-              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.publishedToday }}</p>
-            </div>
-          </div>
-          <div class="ios-card p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-              <Icon name="lucide:trending-up" class="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Engagement</p>
-              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.engagementAvg }}%</p>
-            </div>
-          </div>
-          <div class="ios-card p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
-              <Icon name="lucide:users" class="w-5 h-5 text-pink-500" />
-            </div>
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Followers</p>
-              <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">+{{ socialStats.followerGrowth }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick actions row -->
-        <div class="ios-card p-3 mb-5 flex flex-wrap items-center gap-2">
-          <Button size="sm" @click="router.push('/social/compose')">
-            <Icon name="lucide:edit-3" class="w-4 h-4 mr-1" />
-            Compose
-          </Button>
-          <Button size="sm" variant="outline" @click="showAIWizard = true">
-            <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
-            Earnest Generate
-          </Button>
-          <Button size="sm" variant="outline" @click="router.push('/social/calendar')">
-            <Icon name="lucide:calendar" class="w-4 h-4 mr-1" />
-            Calendar
-          </Button>
-          <Button size="sm" variant="outline" @click="router.push('/social/analytics')">
-            <Icon name="lucide:bar-chart-2" class="w-4 h-4 mr-1" />
-            Analytics
-          </Button>
-          <Button size="sm" variant="outline" class="ml-auto" @click="router.push('/social/settings')">
-            <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
-            Settings
-          </Button>
-        </div>
-
-        <!-- Upcoming Posts (next 10 scheduled) -->
-        <div v-if="upcomingScheduledPosts.length" class="ios-card p-5 mb-5">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Upcoming Posts
-              <span class="text-foreground ml-1">({{ upcomingScheduledPosts.length }})</span>
-            </h3>
-            <button
-              type="button"
-              class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
-              @click="router.push('/social/calendar')"
-            >
-              View Calendar
-              <Icon name="lucide:chevron-right" class="w-3 h-3" />
-            </button>
-          </div>
-          <div class="divide-y divide-border/40">
-            <div
-              v-for="post in upcomingScheduledPosts"
-              :key="post.id"
-              class="flex items-center gap-3 py-2 cursor-pointer hover:bg-muted/30 rounded-md -mx-2 px-2 transition-colors"
-              @click="openSocialPostSlideOver(post)"
-            >
-              <div class="w-10 h-10 rounded-lg bg-muted/40 overflow-hidden flex-shrink-0">
-                <img
-                  v-if="post.thumbnail_url"
-                  :src="post.thumbnail_url"
-                  :alt="post.caption"
-                  class="w-full h-full object-cover"
-                />
-                <div v-else class="w-full h-full flex items-center justify-center">
-                  <Icon
-                    :name="SOCIAL_LOGOS[(post.platforms?.[0]?.platform as SocialPlatform) || 'instagram'] || 'lucide:share-2'"
-                    class="w-4 h-4 text-muted-foreground/50"
-                  />
-                </div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-foreground truncate">
-                  {{ post.caption?.slice(0, 60) || 'Untitled' }}{{ post.caption && post.caption.length > 60 ? '…' : '' }}
-                </p>
-                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
-                  <span>{{ formatScheduledAt(post.scheduled_at) }}</span>
-                  <span class="text-muted-foreground/40">·</span>
-                  <div class="flex items-center gap-1">
-                    <Icon
-                      v-for="(target, i) in (post.platforms || []).slice(0, 4)"
-                      :key="`${post.id}-pl-${i}`"
-                      :name="SOCIAL_LOGOS[target.platform as SocialPlatform] || 'lucide:share-2'"
-                      class="w-3 h-3"
-                    />
-                  </div>
-                </div>
-              </div>
-              <span
-                class="text-[10px] inline-flex items-center rounded-full px-1.5 py-0.5 font-medium capitalize"
-                :class="getStatusBadgeClasses(post.status)"
-              >
-                {{ post.status }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Account chips -->
-        <div v-if="socialAccounts.length" class="flex flex-wrap gap-2 mb-5">
+        <!-- ─── Overview sub-view ───────────────────────────────────────── -->
+        <template v-if="accountsView === 'overview'">
+          <!-- Onboarding banner (no accounts connected) -->
           <div
-            v-for="a in socialAccounts"
-            :key="a.id"
-            class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs"
+            v-if="!socialLoading && socialAccounts.length === 0"
+            class="mb-5 p-5 bg-gradient-to-r from-pink-50 to-violet-50 dark:from-pink-900/20 dark:to-violet-900/20 rounded-2xl border border-pink-100 dark:border-pink-800/30"
           >
-            <Icon :name="SOCIAL_LOGOS[a.platform] || 'lucide:share-2'" class="w-3.5 h-3.5" />
-            <span class="font-medium">{{ a.account_name }}</span>
-            <span
-              class="w-1.5 h-1.5 rounded-full"
-              :class="a.status === 'active' ? 'bg-success' : 'bg-destructive'"
-            />
-          </div>
-          <NuxtLink
-            to="/social/settings"
-            class="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Icon name="lucide:plus" class="w-3 h-3" />
-            Connect
-          </NuxtLink>
-        </div>
-
-        <!-- Filters -->
-        <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <UTabs
-            v-model="socialStatusFilter"
-            :items="socialStatusItems"
-            class="w-fit"
-          />
-          <UTabs
-            v-model="socialPlatformFilter"
-            :items="socialPlatformItems"
-            class="w-fit"
-          />
-        </div>
-
-        <div v-if="socialLoading && !socialPosts.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-          <p class="text-sm text-muted-foreground">Loading posts…</p>
-        </div>
-
-        <div v-else-if="!socialPostsByPlatform.length" class="flex flex-col items-center justify-center py-24 gap-4">
-          <Icon name="lucide:share-2" class="w-12 h-12 text-muted-foreground/40" />
-          <div class="text-center">
-            <p class="text-sm font-medium text-muted-foreground">No posts yet</p>
-            <p class="text-xs text-muted-foreground/70 mt-1">
-              {{ socialAccounts.length ? 'Compose your first post.' : 'Connect a social account to start.' }}
-            </p>
-          </div>
-          <Button size="sm" @click="router.push(socialAccounts.length ? '/social/compose' : '/social/settings')">
-            <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-            {{ socialAccounts.length ? 'New Post' : 'Connect Account' }}
-          </Button>
-        </div>
-
-        <div v-else class="space-y-6">
-          <div
-            v-for="group in socialPostsByPlatform"
-            :key="group.platform"
-            class="ios-card p-5"
-          >
-            <div class="flex items-center gap-2 mb-3">
-              <Icon :name="SOCIAL_LOGOS[group.platform]" class="w-5 h-5" />
-              <h3 class="text-sm font-semibold text-foreground">{{ SOCIAL_LABELS[group.platform] }}</h3>
-              <span class="text-[10px] text-muted-foreground ml-1">{{ group.posts.length }} {{ group.posts.length === 1 ? 'post' : 'posts' }}</span>
-            </div>
-
-            <div class="space-y-2">
-              <div
-                v-for="post in (socialPlatformFilter === group.platform ? group.posts : group.posts.slice(0, 6))"
-                :key="`${group.platform}-${post.id}`"
-                class="flex items-start gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
-                @click="openSocialPostSlideOver(post)"
-              >
-                <div class="w-10 h-10 rounded-lg bg-muted/30 overflow-hidden flex-shrink-0">
-                  <img
-                    v-if="post.thumbnail_url"
-                    :src="post.thumbnail_url"
-                    :alt="post.caption"
-                    class="w-full h-full object-cover"
-                  />
-                  <div v-else class="w-full h-full flex items-center justify-center">
-                    <Icon :name="SOCIAL_LOGOS[group.platform]" class="w-4 h-4 text-muted-foreground/50" />
-                  </div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm text-foreground line-clamp-2">{{ post.caption || 'Untitled' }}</p>
-                  <div class="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                    <span
-                      class="inline-flex items-center rounded-full px-1.5 py-0.5 font-medium capitalize"
-                      :class="getStatusBadgeClasses(post.status)"
-                    >
-                      {{ post.status }}
-                    </span>
-                    <span v-if="postPrimaryDate(post)">{{ relativeDate(postPrimaryDate(post)) }}</span>
-                    <template v-if="postEngagementSummary(post).likes || postEngagementSummary(post).views">
-                      <span v-if="postEngagementSummary(post).likes" class="inline-flex items-center gap-1">
-                        <Icon name="lucide:heart" class="w-3 h-3" />
-                        {{ formatNumber(postEngagementSummary(post).likes) }}
-                      </span>
-                      <span v-if="postEngagementSummary(post).comments" class="inline-flex items-center gap-1">
-                        <Icon name="lucide:message-circle" class="w-3 h-3" />
-                        {{ formatNumber(postEngagementSummary(post).comments) }}
-                      </span>
-                      <span v-if="postEngagementSummary(post).views" class="inline-flex items-center gap-1">
-                        <Icon name="lucide:eye" class="w-3 h-3" />
-                        {{ formatNumber(postEngagementSummary(post).views) }}
-                      </span>
-                    </template>
-                  </div>
-                </div>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+              <div class="p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-sm shrink-0">
+                <Icon name="lucide:share-2" class="w-7 h-7 text-pink-500" />
               </div>
+              <div class="flex-1">
+                <h2 class="font-semibold text-foreground mb-0.5">Get started with Social Media</h2>
+                <p class="text-xs text-muted-foreground">Connect your social accounts to start scheduling and publishing content with AI assistance.</p>
+              </div>
+              <div class="flex gap-2">
+                <Button size="sm" @click="accountsView = 'settings'">
+                  <Icon name="lucide:plug" class="w-4 h-4 mr-1" />
+                  Connect Accounts
+                </Button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div class="flex items-start gap-2 text-muted-foreground">
+                <Icon name="lucide:plug" class="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
+                <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
+              </div>
+              <div class="flex items-start gap-2 text-muted-foreground">
+                <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                <span><strong class="text-foreground">Generate</strong> posts with Earnest tailored to your brand and audience</span>
+              </div>
+              <div class="flex items-start gap-2 text-muted-foreground">
+                <Icon name="lucide:calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <span><strong class="text-foreground">Schedule</strong> content across platforms from one calendar</span>
+              </div>
+            </div>
+          </div>
 
+          <!-- 4-stat KPI strip -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <div class="ios-card p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:calendar-clock" class="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Scheduled</p>
+                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.scheduled }}</p>
+              </div>
+            </div>
+            <div class="ios-card p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:check-circle" class="w-5 h-5 text-success" />
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Published Today</p>
+                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.publishedToday }}</p>
+              </div>
+            </div>
+            <div class="ios-card p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:trending-up" class="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Engagement</p>
+                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.engagementAvg }}%</p>
+              </div>
+            </div>
+            <div class="ios-card p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:users" class="w-5 h-5 text-pink-500" />
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Followers</p>
+                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">+{{ socialStats.followerGrowth }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick actions row -->
+          <div class="ios-card p-3 mb-5 flex flex-wrap items-center gap-2">
+            <Button size="sm" @click="openComposeSlideOver">
+              <Icon name="lucide:pen-line" class="w-4 h-4 mr-1" />
+              Compose
+            </Button>
+            <Button size="sm" variant="outline" @click="floor = 'studio'">
+              <Icon name="lucide:palette" class="w-4 h-4 mr-1" />
+              Open Studio
+            </Button>
+            <Button size="sm" variant="outline" @click="router.push('/apps/marketing?floor=studio&view=calendar')">
+              <Icon name="lucide:calendar" class="w-4 h-4 mr-1" />
+              Calendar
+            </Button>
+            <Button size="sm" variant="outline" @click="router.push('/apps/marketing?floor=studio&view=analytics')">
+              <Icon name="lucide:bar-chart-2" class="w-4 h-4 mr-1" />
+              Analytics
+            </Button>
+            <Button size="sm" variant="outline" class="ml-auto" @click="accountsView = 'settings'">
+              <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
+              Settings
+            </Button>
+          </div>
+
+          <!-- Connected-accounts grid (per-platform tiles) -->
+          <div class="ios-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Connected accounts
+                <span v-if="socialAccounts.length" class="text-foreground ml-1">({{ socialAccounts.length }})</span>
+              </h3>
               <button
-                v-if="group.posts.length > 6 && socialPlatformFilter !== group.platform"
-                class="w-full inline-flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline pt-2 border-t border-border/30"
-                @click="socialPlatformFilter = group.platform"
+                type="button"
+                class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
+                @click="accountsView = 'settings'"
               >
-                View all {{ group.posts.length }} on {{ SOCIAL_LABELS[group.platform] }}
+                Manage
                 <Icon name="lucide:chevron-right" class="w-3 h-3" />
               </button>
             </div>
+            <div v-if="socialLoading && !socialAccounts.length" class="flex items-center gap-2 text-xs text-muted-foreground py-2">
+              <Icon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+              Loading accounts…
+            </div>
+            <div v-else-if="!socialAccounts.length" class="text-sm text-muted-foreground/70 py-4 text-center">
+              No accounts yet.
+            </div>
+            <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <MarketingPlatformTile
+                v-for="tile in pulsePlatformTiles"
+                :key="tile.platform"
+                :tile="tile"
+              />
+            </div>
           </div>
-        </div>
+        </template>
+
+        <!-- ─── Settings sub-view ──────────────────────────────────────── -->
+        <template v-else-if="accountsView === 'settings'">
+          <SocialSettingsSurface />
+        </template>
       </template>
 
       <!-- ── Studio floor (Phase 3 — content design + approvals) ────────── -->
@@ -1806,13 +1609,6 @@ const scopeLabel = computed(() => {
         </template>
       </template>
     </LayoutPageContainer>
-
-    <!-- AI Social Wizard (Social floor) -->
-    <SocialAISocialWizard
-      v-if="showAIWizard"
-      @close="showAIWizard = false"
-      @created="handleAICreated"
-    />
 
     <!-- New mailing list modal (Audience floor) -->
     <ListsFormModal v-model="showNewListModal" @created="onListCreated" />

@@ -22,6 +22,21 @@ const toast = useToast()
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext()
 const postId = route.params.id as string
 
+// Honor a caller-provided return path so callers (slide-over panel, plan
+// detail, etc.) don't strand the user on /social/calendar after save/back.
+const returnTo = computed(() => {
+  const raw = route.query.from
+  if (typeof raw === 'string' && raw.startsWith('/')) return raw
+  return '/social/calendar'
+})
+const backLabel = computed(() => {
+  const path = returnTo.value
+  if (path.startsWith('/social/plans/')) return 'Plan'
+  if (path.startsWith('/apps/marketing')) return 'Studio'
+  if (path.startsWith('/social/inbox')) return 'Inbox'
+  return 'Calendar'
+})
+
 // Fetch post data
 const { data: postData, error: postError } = await useFetch(`/api/social/posts/${postId}`)
 
@@ -172,7 +187,7 @@ async function savePost() {
       color: 'green',
     })
 
-    await router.push('/social/calendar')
+    await router.push(returnTo.value)
   } catch (error: any) {
     toast.add({
       title: 'Error',
@@ -197,7 +212,7 @@ async function deletePost() {
       color: 'green',
     })
 
-    await router.push('/social/calendar')
+    await router.push(returnTo.value)
   } catch (error: any) {
     toast.add({
       title: 'Error',
@@ -216,8 +231,8 @@ const minDate = today(getLocalTimeZone())
     <AppHeader
       title="Edit Post"
       :show-back="true"
-      back-to="/social/calendar"
-      back-label="Calendar"
+      :back-to="returnTo"
+      :back-label="backLabel"
     >
       <template #actions>
         <Button variant="outline" size="sm" @click="sidebarOpen = true">

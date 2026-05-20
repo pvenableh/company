@@ -20,10 +20,21 @@ import type { SocialPost, SocialPlatform } from '~~/shared/social';
 const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
+const route = useRoute();
 const post = ref<SocialPost | null>(null);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref<string | null>(null);
+
+// When the user hits "Full editor", carry the panel's invoking page so the
+// edit page's Back button returns there instead of /social/calendar.
+const fullEditorHref = computed(() => {
+	if (!post.value) return '';
+	const fromPath = route.path;
+	const q = new URLSearchParams();
+	if (fromPath) q.set('from', fromPath);
+	return `/social/posts/${post.value.id}/edit?${q.toString()}`;
+});
 
 const draft = reactive({
 	caption: '',
@@ -251,7 +262,7 @@ async function save() {
 					</NuxtLink>
 					<NuxtLink
 						v-if="isEditable"
-						:to="`/social/posts/${post.id}/edit`"
+						:to="fullEditorHref"
 						class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
 					>
 						Full editor

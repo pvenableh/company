@@ -339,11 +339,9 @@ function formatPostDate(iso: string | null | undefined): string {
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+const postSlide = useAppSlideOver('social-post')
 function openPostInStudio(id: string) {
-  // Reuse the existing Studio detail modal by jumping back to /apps/marketing?floor=studio
-  // with the post id selected. For now, just open the legacy /social/posts/[id]/edit
-  // route since that's the canonical compose surface.
-  router.push(`/social/posts/${id}/edit`)
+  postSlide.open(id)
 }
 
 // Selected post highlight in IG grid

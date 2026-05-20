@@ -1,0 +1,401 @@
+<script setup lang="ts">
+/**
+ * SocialAnalyticsSurface — body of the legacy /social/analytics page,
+ * extracted for Studio's `?view=analytics` sub-view.
+ */
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import type { SocialAccountPublic } from '~~/shared/social';
+import { getSocialPlatformIcon } from '~/utils/icons';
+
+const dateRangePresets = [
+  { label: 'Last 7 days', value: '7d' },
+  { label: 'Last 14 days', value: '14d' },
+  { label: 'Last 30 days', value: '30d' },
+  { label: 'Last 90 days', value: '90d' },
+];
+const selectedPreset = ref('30d');
+
+const dateRange = computed(() => {
+  const end = new Date();
+  let start: Date;
+  switch (selectedPreset.value) {
+    case '7d': start = subDays(end, 7); break;
+    case '14d': start = subDays(end, 14); break;
+    case '90d': start = subDays(end, 90); break;
+    default: start = subDays(end, 30);
+  }
+  return {
+    start: format(startOfDay(start), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    end: format(endOfDay(end), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+  };
+});
+
+const { clientList: clients, selectedClient: selectedClientId } = useClients();
+const selectedAccountId = ref<string | null>(null);
+
+const { data: accountsData } = useLazyFetch('/api/social/accounts');
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
+
+const filteredAccounts = computed(() => {
+  if (!selectedClientId.value) return accounts.value;
+  if (selectedClientId.value === 'org') return accounts.value.filter((a) => !a.client);
+  return accounts.value.filter((a) => a.client === selectedClientId.value);
+});
+
+const accountSelectOptions = computed(() => [
+  { label: filteredAccounts.value.length > 0 ? `All Accounts (${filteredAccounts.value.length})` : 'No accounts connected', value: null },
+  ...filteredAccounts.value.map((a) => ({
+    label: `${a.account_name} • ${a.platform}${a.account_handle ? ` (@${a.account_handle})` : ''}`,
+    value: a.id,
+  })),
+]);
+
+watch(selectedClientId, () => { selectedAccountId.value = null; });
+
+const analyticsQuery = computed(() => ({
+  account_id: selectedAccountId.value || undefined,
+  start_date: dateRange.value.start,
+  end_date: dateRange.value.end,
+}));
+const { data: analyticsData, pending: analyticsLoading } = useLazyFetch('/api/social/analytics', {
+  query: analyticsQuery,
+  watch: [analyticsQuery],
+});
+
+const defaultAnalytics = {
+  overview: {
+    followers: { current: 0, change: 0, change_pct: 0 },
+    reach: { total: 0, change_pct: 0 },
+    impressions: { total: 0, change_pct: 0 },
+    engagement_rate: { current: 0, change: 0 },
+    posts_count: 0,
+    video_views: { total: 0 },
+  },
+  followerHistory: [] as { date: string; value: number }[],
+  engagementHistory: [] as { date: string; value: number }[],
+  topPosts: [] as { id: string; thumbnail_url: string; caption: string; platform: string; engagement: number; reach: number; posted_at: string }[],
+  platformBreakdown: {} as Record<string, { followers: number; engagement_rate: number; posts: number }>,
+};
+
+const analytics = computed(() => {
+  const apiData = analyticsData.value?.data as any;
+  if (!apiData) return defaultAnalytics;
+  const overview = apiData.overview || {};
+  return {
+    overview: {
+      followers: { current: overview.total_followers ?? 0, change: 0, change_pct: 0 },
+      reach: { total: overview.total_reach ?? 0, change_pct: 0 },
+      impressions: { total: overview.total_impressions ?? 0, change_pct: 0 },
+      engagement_rate: { current: overview.avg_engagement_rate ?? 0, change: 0 },
+      posts_count: overview.total_accounts ?? 0,
+      video_views: { total: overview.total_video_views ?? 0 },
+    },
+    followerHistory: [] as { date: string; value: number }[],
+    engagementHistory: [] as { date: string; value: number }[],
+    topPosts: [] as { id: string; thumbnail_url: string; caption: string; platform: string; engagement: number; reach: number; posted_at: string }[],
+    platformBreakdown: (apiData.accounts || []).reduce((acc: Record<string, any>, a: any) => {
+      const platform = a.platform || 'unknown';
+      const metrics = a.metrics || {};
+      acc[platform] = {
+        followers: metrics.followers_count ?? metrics.follower_count ?? 0,
+        engagement_rate: metrics.engagement_rate ?? 0,
+        posts: metrics.media_count ?? metrics.video_count ?? 0,
+      };
+      return acc;
+    }, {}),
+  };
+});
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+}
+
+function formatChange(change: number, suffix = ''): string {
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change}${suffix}`;
+}
+
+const platformIcons = (p: string) => getSocialPlatformIcon(p);
+
+const hasAnyAccount = computed(() => filteredAccounts.value.length > 0);
+const hasAnySnapshot = computed(() => Object.keys(analytics.value.platformBreakdown).length > 0);
+const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount.value || !hasAnySnapshot.value));
+</script>
+
+<template>
+  <div>
+    <p class="text-xs text-muted-foreground mb-5">Track your social media performance</p>
+
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <USelectMenu
+        v-model="selectedClientId"
+        :options="[
+          { label: 'All clients', value: null },
+          { label: 'House (agency-owned)', value: 'org' },
+          ...clients.map((c) => ({ label: c.name, value: c.id })),
+        ]"
+        value-attribute="value"
+        option-attribute="label"
+        placeholder="Filter by client"
+        class="w-44"
+      />
+      <USelectMenu
+        v-model="selectedAccountId"
+        :options="accountSelectOptions"
+        value-attribute="value"
+        option-attribute="label"
+        :placeholder="filteredAccounts.length === 0 ? 'No accounts connected' : 'All Accounts'"
+        :disabled="filteredAccounts.length === 0"
+        class="w-56"
+      />
+      <UButton
+        v-if="filteredAccounts.length === 0"
+        to="/apps/marketing?floor=accounts&view=settings"
+        variant="soft"
+        size="sm"
+        icon="i-lucide-plus"
+      >
+        Connect
+      </UButton>
+
+      <div class="flex-1" />
+
+      <div class="flex items-center gap-2">
+        <USelectMenu
+          v-model="selectedPreset"
+          :options="dateRangePresets"
+          value-attribute="value"
+          option-attribute="label"
+          class="w-36"
+        />
+      </div>
+    </div>
+
+    <UCard v-if="showEmptyState" class="mb-6">
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <UIcon name="i-lucide-bar-chart-3" class="h-10 w-10 text-gray-300 dark:text-gray-700 mb-3" />
+        <p class="text-sm font-medium text-gray-900 dark:text-white">
+          {{ hasAnyAccount ? 'No metrics yet' : 'Connect a social account to start tracking' }}
+        </p>
+        <p class="mt-1 max-w-md text-sm text-gray-500 dark:text-gray-400">
+          {{ hasAnyAccount
+            ? 'The daily refresh runs at 4 AM UTC. New snapshots will appear here within 24 hours of connecting an account.'
+            : 'Once a Facebook Page, Instagram, Threads, LinkedIn, or TikTok account is connected, daily metrics snapshots will populate this dashboard.' }}
+        </p>
+        <UButton
+          v-if="!hasAnyAccount"
+          to="/apps/marketing?floor=accounts&view=settings"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-plus"
+          class="mt-4"
+        >
+          Connect account
+        </UButton>
+      </div>
+    </UCard>
+
+    <div v-show="!showEmptyState" class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Followers</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ formatNumber(analytics.overview.followers.current) }}
+          </p>
+          <p class="text-xs mt-1" :class="analytics.overview.followers.change >= 0 ? 'text-success' : 'text-destructive'">
+            {{ formatChange(analytics.overview.followers.change) }}
+            <span class="text-gray-400">({{ formatChange(analytics.overview.followers.change_pct, '%') }})</span>
+          </p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Reach</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ formatNumber(analytics.overview.reach.total) }}
+          </p>
+          <p class="text-xs mt-1" :class="analytics.overview.reach.change_pct >= 0 ? 'text-success' : 'text-destructive'">
+            {{ formatChange(analytics.overview.reach.change_pct, '%') }} vs previous
+          </p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Impressions</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ formatNumber(analytics.overview.impressions.total) }}
+          </p>
+          <p class="text-xs mt-1" :class="analytics.overview.impressions.change_pct >= 0 ? 'text-success' : 'text-destructive'">
+            {{ formatChange(analytics.overview.impressions.change_pct, '%') }} vs previous
+          </p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Engagement Rate</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ analytics.overview.engagement_rate.current }}%
+          </p>
+          <p class="text-xs mt-1" :class="analytics.overview.engagement_rate.change >= 0 ? 'text-success' : 'text-destructive'">
+            {{ formatChange(analytics.overview.engagement_rate.change, '%') }} vs previous
+          </p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Posts</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ analytics.overview.posts_count }}
+          </p>
+          <p class="text-xs text-gray-400 mt-1">this period</p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Video Views</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ formatNumber(analytics.overview.video_views.total) }}
+          </p>
+          <p class="text-xs text-gray-400 mt-1">this period</p>
+        </div>
+      </UCard>
+    </div>
+
+    <div v-show="!showEmptyState" class="grid lg:grid-cols-3 gap-6 mb-6">
+      <UCard class="lg:col-span-2">
+        <template #header>
+          <h3 class="font-semibold text-gray-900 dark:text-white">Follower Growth</h3>
+        </template>
+
+        <div class="h-64 flex items-end justify-between gap-2 px-4">
+          <div
+            v-for="point in analytics.followerHistory"
+            :key="point.date"
+            class="flex-1 flex flex-col items-center gap-2"
+          >
+            <div
+              class="w-full bg-primary rounded-t transition-all"
+              :style="{ height: `${((point.value - 12000) / 500) * 100}%` }"
+            />
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              {{ format(new Date(point.date), 'M/d') }}
+            </span>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h3 class="font-semibold text-gray-900 dark:text-white">Platform Breakdown</h3>
+        </template>
+
+        <div class="space-y-4">
+          <div
+            v-for="(data, platform) in analytics.platformBreakdown"
+            :key="platform"
+            class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+          >
+            <div class="flex items-center gap-2 mb-2">
+              <SocialPlatformIcon :platform="String(platform)" class="w-4 h-4" />
+              <span class="font-medium text-gray-900 dark:text-white capitalize">{{ platform }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p class="text-gray-500 dark:text-gray-400">Followers</p>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ formatNumber(data.followers) }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500 dark:text-gray-400">Eng. Rate</p>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ data.engagement_rate }}%</p>
+              </div>
+              <div>
+                <p class="text-gray-500 dark:text-gray-400">Posts</p>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ data.posts }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </UCard>
+    </div>
+
+    <UCard v-show="!showEmptyState">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold text-gray-900 dark:text-white">Top Performing Posts</h3>
+          <UButton variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right" class="text-[10px] font-medium uppercase tracking-wide">View all</UButton>
+        </div>
+      </template>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div
+          v-for="post in analytics.topPosts"
+          :key="post.id"
+          class="group cursor-pointer"
+        >
+          <div class="relative aspect-square rounded-lg overflow-hidden mb-3">
+            <img
+              :src="post.thumbnail_url"
+              :alt="post.caption"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div class="absolute top-2 left-2">
+              <SocialPlatformIcon :platform="post.platform" class="w-6 h-6" />
+            </div>
+          </div>
+          <p class="text-sm text-gray-900 dark:text-white line-clamp-2 mb-2">
+            {{ post.caption }}
+          </p>
+          <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1">
+              <UIcon name="i-lucide-heart" class="w-3.5 h-3.5" />
+              {{ formatNumber(post.engagement) }}
+            </span>
+            <span class="flex items-center gap-1">
+              <UIcon name="i-lucide-eye" class="w-3.5 h-3.5" />
+              {{ formatNumber(post.reach) }}
+            </span>
+            <span>{{ format(new Date(post.posted_at), 'MMM d') }}</span>
+          </div>
+        </div>
+      </div>
+    </UCard>
+
+    <UCard v-show="!showEmptyState" class="mt-6">
+      <template #header>
+        <h3 class="font-semibold text-gray-900 dark:text-white">Engagement Rate Trend</h3>
+      </template>
+
+      <div class="h-48 flex items-end justify-between gap-4 px-4">
+        <div
+          v-for="(point, index) in analytics.engagementHistory"
+          :key="point.date"
+          class="flex-1 flex flex-col items-center"
+        >
+          <div class="relative w-full flex justify-center mb-2">
+            <div class="w-3 h-3 rounded-full bg-success z-10" />
+            <svg
+              v-if="index < analytics.engagementHistory.length - 1"
+              class="absolute left-1/2 top-1.5 h-1 overflow-visible"
+              :style="{ width: '100%' }"
+            >
+              <line x1="6" y1="0" x2="100%" y2="0" stroke="currentColor" stroke-width="2" class="text-success dark:text-success" />
+            </svg>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ point.value }}%</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ format(new Date(point.date), 'M/d') }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </UCard>
+  </div>
+</template>
