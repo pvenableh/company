@@ -10,7 +10,7 @@ import type {
   ProjectWithRelations,
   ProjectEvent,
   ProjectEventWithRelations,
-  ProjectTask,
+  Task,
   CreateProjectPayload,
   CreateEventPayload,
   CreateTaskPayload,
@@ -397,7 +397,7 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     return created;
   };
 
-  const updateTask = async (taskId: string, data: Partial<ProjectTask>): Promise<any> => {
+  const updateTask = async (taskId: string, data: Partial<Task>): Promise<any> => {
     if (opts.portal) portalWriteGuard();
     const updated = await tasks.update(taskId, data as any);
     await fetchProjects();

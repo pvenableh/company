@@ -5,7 +5,7 @@
  * Used by the AI generation endpoint and the AITimelineWizard component.
  */
 
-import type { ProjectEvent, Task as ProjectTask } from '../directus';
+import type { ProjectEvent, Task } from '../directus';
 
 // ---------------------------------------------------------------------------
 // Template types
@@ -14,7 +14,7 @@ import type { ProjectEvent, Task as ProjectTask } from '../directus';
 export interface TemplateTask {
   title: string;
   description: string;
-  priority: NonNullable<ProjectTask['priority']>;
+  priority: NonNullable<Task['priority']>;
 }
 
 export interface TemplateMilestone {
@@ -52,7 +52,7 @@ export interface ProposedTask {
   id: string;
   title: string;
   description: string;
-  priority: NonNullable<ProjectTask['priority']>;
+  priority: NonNullable<Task['priority']>;
   due_date: string;
 }
 
@@ -103,7 +103,7 @@ export interface SaveEventsRequest {
     tasks: Array<{
       title: string;
       description: string | null;
-      priority: NonNullable<ProjectTask['priority']>;
+      priority: NonNullable<Task['priority']>;
       due_date: string;
     }>;
   }>;

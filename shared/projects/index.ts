@@ -5,13 +5,11 @@
  * App-level types (payloads, resolved relations, UI state, helpers) defined here.
  */
 
-// Re-export base schema types from auto-generated file. `ProjectTask` is the
-// pre-consolidation name; the row now lives in the `tasks` collection but we
-// keep the legacy alias so callers don't all need to rename at once.
+// Re-export base schema types from auto-generated file.
 export type {
   Project,
   ProjectEvent,
-  Task as ProjectTask,
+  Task,
   ProjectEventFile,
   ProjectCategory,
   ProjectEventCategory,
@@ -21,7 +19,7 @@ export type {
 import type {
   Project,
   ProjectEvent,
-  Task as ProjectTask,
+  Task,
   ProjectEventFile,
   ProjectCategory,
   ProjectEventCategory,
@@ -80,7 +78,7 @@ export interface CreateTaskPayload {
   title: string;
   description?: string | null;
   due_date?: string | null;
-  priority?: ProjectTask['priority'];
+  priority?: Task['priority'];
 }
 
 export interface ProjectWithRelations extends Omit<Project, 'user_created' | 'user_updated' | 'category_id' | 'parent_id' | 'parent_event_id' | 'events' | 'children'> {
@@ -97,13 +95,13 @@ export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_crea
   user_created: User | null;
   project: Project;
   category_id: ProjectEventCategory | null;
-  tasks: ProjectTaskWithRelations[];
+  tasks: TaskWithRelations[];
   files: (Omit<ProjectEventFile, 'directus_files_id'> & { directus_files_id: File })[];
   comment_count?: number;
   reaction_count?: number;
 }
 
-export interface ProjectTaskWithRelations extends Omit<ProjectTask, 'project_event_id' | 'project_id' | 'assigned_to'> {
+export interface TaskWithRelations extends Omit<Task, 'project_event_id' | 'project_id' | 'assigned_to'> {
   project_event_id: ProjectEvent | null;
   project_id: Project | null;
   /** First assignee from the tasks_directus_users m2m junction, for legacy single-pick UX. */

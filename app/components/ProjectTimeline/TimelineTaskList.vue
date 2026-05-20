@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ProjectTaskWithRelations } from '~~/shared/projects';
+import type { TaskWithRelations } from '~~/shared/projects';
 import { Checkbox } from '~/components/ui/checkbox';
 
 const props = defineProps<{
-  tasks: ProjectTaskWithRelations[];
+  tasks: TaskWithRelations[];
   projectColor: string;
 }>();
 

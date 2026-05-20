@@ -84,9 +84,8 @@
 							</div>
 						</div>
 
-						<!-- Assignee — tasks.assigned_to is an m2m junction; we expose
-						     the first assignee as a single-pick for backwards compatibility
-						     with the prior project_tasks UX. -->
+						<!-- Assignee — tasks.assigned_to is an m2m junction; surfaced
+						     here as a single-pick to keep the UX simple. -->
 						<div class="flex items-center gap-3">
 							<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Assignee</span>
 							<select
