@@ -60,12 +60,6 @@ const COLLECTION_SCOPES: Record<string, CollectionScope> = {
       { client: { _in: ctx.scopedClientIds } },
     ],
   },
-  tasks: {
-    scopeConditions: (ctx) => [
-      { organization_id: { _eq: ctx.organizationId } },
-      { client_id: { _in: ctx.scopedClientIds } },
-    ],
-  },
   project_events: {
     scopeConditions: (ctx) => [
       { project: { organization: { _eq: ctx.organizationId } } },
@@ -74,8 +68,8 @@ const COLLECTION_SCOPES: Record<string, CollectionScope> = {
   },
   tasks: {
     // tasks.organization_id is set directly. Scope by that plus the client_id
-    // FK or the parent project's client. Walk via project_event_id.project as
-    // a fallback for tasks linked only to an event.
+    // FK, the parent project's client, OR (for tasks migrated from the old
+    // project_tasks collection) the parent event's project's client.
     scopeConditions: (ctx) => [
       { organization_id: { _eq: ctx.organizationId } },
       {
