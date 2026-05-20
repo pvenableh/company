@@ -245,7 +245,12 @@ async function loadTasks() {
 	tasksLoading.value = true;
 	try {
 		relatedTasks.value = await taskItemsApi.list({
-			filter: { client_id: { _eq: props.clientId } },
+			filter: {
+				_or: [
+					{ client_id: { _eq: props.clientId } },
+					{ project_id: { client: { _eq: props.clientId } } },
+				],
+			},
 			fields: ['id', 'title', 'status', 'priority', 'due_date', 'date_created', 'project_id.id', 'project_id.title'],
 			sort: ['-date_created'],
 			limit: -1,

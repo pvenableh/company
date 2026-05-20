@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
 	const since = fourteenDaysAgoIso();
 	let totalEnqueued = 0;
 	let totalSkipped = 0;
-	const orgReports: Array<{ orgId: string; enqueued: number; skipped: number }> = [];
+	const orgReports: Array<{ orgId: string; enqueued: number; skipped: number; skipReasons?: Array<{ projectId: string; reason: string; detail?: string }> }> = [];
 
 	for (const org of orgs) {
 		const projects = await directus.request(
@@ -155,14 +155,19 @@ export default defineEventHandler(async (event) => {
 
 		let enqueued = 0;
 		let skipped = 0;
+		const skipReasons: Array<{ projectId: string; reason: string; detail?: string }> = [];
 
 		for (const project of projects) {
 			const recipient = (typeof project.user_created === 'object' ? project.user_created?.id : project.user_created) || ownerId;
-			if (!recipient) { skipped++; continue; }
+			if (!recipient) {
+				skipped++;
+				skipReasons.push({ projectId: project.id, reason: 'no-recipient', detail: `user_created=${JSON.stringify(project.user_created)} ownerId=${ownerId}` });
+				continue;
+			}
 
 			const cadence = cadenceByUser.get(recipient) || 'daily';
-			if (cadence === 'off') { skipped++; continue; }
-			if (cadence === 'weekly' && !isMonday) { skipped++; continue; }
+			if (cadence === 'off') { skipped++; skipReasons.push({ projectId: project.id, reason: 'cadence-off', detail: recipient }); continue; }
+			if (cadence === 'weekly' && !isMonday) { skipped++; skipReasons.push({ projectId: project.id, reason: 'weekly-not-monday', detail: recipient }); continue; }
 
 			if (dryRun) { enqueued++; continue; }
 
@@ -186,12 +191,13 @@ export default defineEventHandler(async (event) => {
 			} catch (err: any) {
 				console.warn(`[cron/project-digests] enqueue failed project=${project.id}:`, err.message);
 				skipped++;
+				skipReasons.push({ projectId: project.id, reason: 'enqueue-threw', detail: err.message });
 			}
 		}
 
 		totalEnqueued += enqueued;
 		totalSkipped += skipped;
-		orgReports.push({ orgId: org.id, enqueued, skipped });
+		orgReports.push({ orgId: org.id, enqueued, skipped, skipReasons });
 	}
 
 	console.log(`[cron/project-digests] ${dryRun ? 'DRY-RUN ' : ''}enqueued=${totalEnqueued} skipped=${totalSkipped} orgs=${orgs.length}`);

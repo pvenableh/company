@@ -609,6 +609,21 @@ watch(activeTab, (t) => {
 						<div class="flex-1 h-px bg-border/40"></div>
 					</div>
 
+					<!-- Active client + project carousels — quick access to the
+					     most-recently-active rows. Cards open the corresponding
+					     slide-over panel in apps mode. -->
+					<ClientOnly v-if="showWidget('active-clients')">
+						<CommandCenterActiveClientCarousel />
+					</ClientOnly>
+					<ClientOnly v-if="showWidget('active-projects')">
+						<CommandCenterActiveProjectCarousel />
+					</ClientOnly>
+
+					<!-- Today's Briefs (org-wide project digests) -->
+					<ClientOnly v-if="showWidget('project-digests')">
+						<CommandCenterProjectDigestsWidget />
+					</ClientOnly>
+
 					<!-- CRM Health (relocated from YOU's right column; now full width) -->
 					<div v-if="showWidget('crm-health')" :class="healthBg" class="ios-card p-5 text-center">
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
@@ -704,21 +719,6 @@ watch(activeTab, (t) => {
 								</NuxtLink>
 							</div>
 						</div>
-
-				<!-- Active client + project carousels — quick access to the
-				     most-recently-active rows. Cards open the corresponding
-				     slide-over panel in apps mode. -->
-				<ClientOnly v-if="showWidget('active-clients')">
-					<CommandCenterActiveClientCarousel />
-				</ClientOnly>
-				<ClientOnly v-if="showWidget('active-projects')">
-					<CommandCenterActiveProjectCarousel />
-				</ClientOnly>
-
-				<!-- Today's Briefs (org-wide project digests) -->
-				<ClientOnly v-if="showWidget('project-digests')">
-					<CommandCenterProjectDigestsWidget />
-				</ClientOnly>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
 				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />

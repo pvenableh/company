@@ -7,15 +7,23 @@ defineProps<{
 </script>
 
 <template>
-	<component
-		:is="to ? 'NuxtLink' : 'div'"
+	<NuxtLink
+		v-if="to"
 		:to="to"
 		class="earnest-brand"
 		:class="{ 'earnest-brand--retracted': retracted }"
 	>
 		<LogoEarnest size="md" />
 		<span v-if="tagline" class="earnest-brand__tagline">{{ tagline }}</span>
-	</component>
+	</NuxtLink>
+	<div
+		v-else
+		class="earnest-brand"
+		:class="{ 'earnest-brand--retracted': retracted }"
+	>
+		<LogoEarnest size="md" />
+		<span v-if="tagline" class="earnest-brand__tagline">{{ tagline }}</span>
+	</div>
 </template>
 
 <style scoped>
