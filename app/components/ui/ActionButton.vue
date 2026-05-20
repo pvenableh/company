@@ -1,6 +1,6 @@
 <template>
 	<button
-		class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium transition-colors"
+		class="ui-action-button inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium transition-[colors,transform] duration-150"
 		:class="variantClasses"
 		:disabled="disabled || loading"
 		@click="$emit('click', $event)"
@@ -44,3 +44,14 @@ const labelClass = computed(() => {
 	return '';
 });
 </script>
+
+<style scoped>
+/* iOS press-down: brief scale snap on active. Faster than the iOS spring
+ * (which is reserved for positional moves); 120ms ease feels like a real
+ * tap. :disabled excluded so disabled buttons don't appear to react.
+ * No hover-translate here — desktop hover + touch active would conflict. */
+.ui-action-button:not(:disabled):active {
+	transform: scale(0.96);
+	transition-duration: 120ms;
+}
+</style>
