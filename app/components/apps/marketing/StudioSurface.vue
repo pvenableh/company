@@ -47,7 +47,6 @@ const STUDIO_VIEW_TABS: { key: StudioView; label: string; icon: string }[] = [
   { key: 'analytics', label: 'Analytics', icon: 'lucide:bar-chart-2' },
 ];
 
-const viewIndex = computed(() => STUDIO_VIEW_TABS.findIndex((t) => t.key === view.value));
 const route = useRoute();
 const router = useRouter();
 const initialView: StudioView = STUDIO_VIEW_KEYS.includes(route.query.view as StudioView)
@@ -744,31 +743,17 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- iOS-style segmented control. Single track + sliding thumb driven
-         by --active-index; equal-width segments. Folds in the legacy
-         /social/{calendar,inbox,analytics} surfaces as the last 3 tabs
-         so the apps shell never remounts. -->
-    <div
-      class="studio-segmented"
-      role="tablist"
+    <!-- iOS-style segmented control. Shared <AppsAppSegmentedControl>
+         drives the same iOS spring + thumb pattern used elsewhere
+         (slide-over stack, bottom sheet). Folds the legacy
+         /social/{calendar,inbox,analytics} surfaces in as the last 3
+         tabs so the apps shell never remounts. -->
+    <AppsAppSegmentedControl
+      v-model="view"
+      :tabs="STUDIO_VIEW_TABS"
       aria-label="Studio view"
-      :style="{ '--active-index': viewIndex, '--tab-count': STUDIO_VIEW_TABS.length }"
-    >
-      <div class="studio-segmented__thumb" aria-hidden="true" />
-      <button
-        v-for="tab in STUDIO_VIEW_TABS"
-        :key="tab.key"
-        type="button"
-        role="tab"
-        :aria-selected="view === tab.key"
-        class="studio-segmented__item"
-        :class="{ 'studio-segmented__item--active': view === tab.key }"
-        @click="view = tab.key"
-      >
-        <Icon :name="tab.icon" class="w-3.5 h-3.5" />
-        <span class="studio-segmented__label">{{ tab.label }}</span>
-      </button>
-    </div>
+      class="mb-4"
+    />
 
     <!-- State pill tabs — only meaningful for the Approval Queue view -->
     <div v-if="view === 'approval'" class="studio-tabs" role="tablist" aria-label="Approval state filter">
@@ -1333,88 +1318,6 @@ onMounted(() => {
 .studio-plan-grid__orphan-header {
   @apply flex items-center gap-1.5 px-4 py-2.5 border-b border-border
     text-xs font-medium text-muted-foreground;
-}
-
-/* iOS segmented control — single rounded track + sliding thumb.
- *
- * The thumb is a single absolutely positioned pseudo-element sized to
- * (100% / --tab-count) and translated by --active-index. Spring curve
- * matches the slide-over stack (Framework7 iOS push/pop curve) so the
- * whole app's interaction language is coherent. */
-.studio-segmented {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--tab-count, 5), 1fr);
-  align-items: stretch;
-  gap: 0;
-  width: 100%;
-  margin-bottom: 1rem;
-  padding: 3px;
-  border-radius: 10px;
-  background: hsl(var(--muted) / 0.55);
-  border: 1px solid hsl(var(--border) / 0.5);
-  box-shadow: inset 0 1px 0 rgb(0 0 0 / 0.02);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.studio-segmented__thumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  bottom: 3px;
-  width: calc((100% - 6px) / var(--tab-count, 5));
-  border-radius: 7px;
-  background: hsl(var(--background));
-  box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.04),
-    0 1px 2px rgb(0 0 0 / 0.08),
-    0 2px 4px -1px rgb(0 0 0 / 0.04);
-  transform: translate3d(calc(var(--active-index, 0) * 100%), 0, 0);
-  transition: transform 400ms cubic-bezier(0.36, 0.66, 0.04, 1);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.studio-segmented__item {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.5rem;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 500;
-  color: hsl(var(--muted-foreground));
-  white-space: nowrap;
-  transition: color 200ms ease, transform 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.studio-segmented__item:active {
-  /* iOS press-down feedback — subtle scale, no overshoot. */
-  transform: scale(0.97);
-}
-
-.studio-segmented__item--active {
-  color: hsl(var(--foreground));
-  font-weight: 600;
-}
-
-.studio-segmented__label {
-  line-height: 1;
-}
-
-/* Mobile: hide the labels and rely on icons only — matches iOS Mail's
- * compact segmented bars. Tap targets stay the full segment width. */
-@media (max-width: 520px) {
-  .studio-segmented__label {
-    display: none;
-  }
-  .studio-segmented__item {
-    gap: 0;
-  }
 }
 
 .studio-tabs {

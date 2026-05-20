@@ -28,7 +28,7 @@ type HapticStyle = keyof typeof PATTERNS;
 export function useHaptic() {
 	const triggerHaptic = (patternOrStyle: number | number[] | HapticStyle = 'light') => {
 		if (typeof window === 'undefined') return;
-		if (!navigator.vibrate) return;
+		if (typeof navigator === 'undefined' || !('vibrate' in navigator) || !navigator.vibrate) return;
 
 		if (typeof patternOrStyle === 'string') {
 			const p = PATTERNS[patternOrStyle];
@@ -38,5 +38,11 @@ export function useHaptic() {
 		}
 	};
 
-	return { triggerHaptic };
+	// Named primitives used by AppSegmentedControl + AppBottomSheet. Kept as
+	// dedicated functions (not just aliases) so future tuning of these specific
+	// patterns doesn't ripple to callers using the generic `triggerHaptic`.
+	const tap = () => triggerHaptic(10);
+	const detentSnap = () => triggerHaptic(6);
+
+	return { triggerHaptic, tap, detentSnap };
 }
