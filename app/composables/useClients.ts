@@ -1,4 +1,5 @@
 import type { Client } from '~~/shared/directus';
+import { notifyEntityChange } from './useEntityStore';
 
 /**
  * useClients — Client CRUD + selection state + role-based access control
@@ -540,6 +541,7 @@ export function useClients() {
     }
 
     await fetchActiveClients();
+    notifyEntityChange<Client>('clients', { id: String((result as any)?.id), op: 'create', item: result });
     return result;
   };
 
@@ -558,12 +560,14 @@ export function useClients() {
       last_activity_at: (payload as any).last_activity_at || new Date().toISOString(),
     } as any);
     await fetchActiveClients();
+    notifyEntityChange<Client>('clients', { id, op: 'update', item: result });
     return result;
   };
 
   const deleteClient = async (id: string): Promise<boolean> => {
     const result = await items.remove(id);
     await fetchActiveClients();
+    notifyEntityChange<Client>('clients', { id, op: 'remove' });
     return result;
   };
 

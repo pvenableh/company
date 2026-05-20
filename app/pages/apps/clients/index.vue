@@ -238,6 +238,28 @@ watch(clientsViewMode, () => {
 
 const debouncedFetchClients = useDebounceFn(fetchClients, 300);
 
+// Reactive CRUD wiring (universal iOS sweep primitive #7). Subscribe to
+// the clients store so any mutation — from the slide-over panel, an inline
+// table edit, a child component's modal — triggers a list refresh +
+// optimistic row patch within ~200ms of the write.
+const clientsStore = useEntityStore<Client>('clients');
+clientsStore.onChange((event) => {
+  if (event.op === 'update' && event.item) {
+    const idx = allClients.value.findIndex((c) => c.id === event.id);
+    if (idx >= 0) {
+      // Optimistic patch — drop into the rendered list before the debounced
+      // refresh below reconciles with the authoritative server state.
+      allClients.value.splice(idx, 1, { ...allClients.value[idx], ...event.item });
+    }
+  } else if (event.op === 'remove') {
+    allClients.value = allClients.value.filter((c) => c.id !== event.id);
+  }
+  // External notifyEntityChange callers already trigger the store's own
+  // debounced refresh; we just hook our local list to the event so the
+  // page can refetch with its own filter/sort context.
+  debouncedFetchClients();
+});
+
 // Open the client as an iOS-style slide-over via the universal stack.
 // Direct deep-links to `/apps/clients/<id>` still render the full page
 // (the route wrapper mounts `<AppsPanelsClientDetailPanel>` for that case).
