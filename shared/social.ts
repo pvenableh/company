@@ -7,6 +7,7 @@ export type {
 	SocialAnalyticsSnapshot,
 	SocialActivityLog,
 	SocialComment,
+	ContentPlan,
 } from './directus';
 
 export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'threads';
@@ -39,6 +40,43 @@ export type ApprovalState =
 	| 'scheduled'
 	| 'published';
 
+// ── Content Plans ────────────────────────────────────────────────
+// A strategy + batch of social_posts grouped for client review.
+// Covers monthly retainer cadence (target_month) AND campaign/launch
+// (project_event), so future grouping concepts plug in without a
+// schema rewrite.
+
+export type ContentPlanState = 'draft' | 'in_review' | 'approved' | 'archived';
+export type ContentPlanType = 'monthly_cadence' | 'campaign' | 'launch' | 'custom';
+
+/**
+ * Frontend-friendly content plan. Mirrors the Directus row but normalizes
+ * relation fields to ids when serialized over the wire, with `posts` and
+ * `project_detail` optionally hydrated by callers that fetched deep.
+ */
+export interface ContentPlanRecord {
+	id: number;
+	organization: string;
+	title: string | null;
+	project: string | null;
+	target_client: string | null;
+	plan_type: ContentPlanType;
+	target_month: string | null;
+	project_event: string | null;
+	state: ContentPlanState;
+	objective: string | null;
+	themes: string[] | null;
+	strategy: string | null;
+	cover_image_url: string | null;
+	approval_token: string | null;
+	approved_by: string | null;
+	approved_at: string | null;
+	sent_for_review_at: string | null;
+	date_created: string | null;
+	date_updated: string | null;
+	user_created: string | null;
+}
+
 // Frontend-friendly post type (maps Directus fields to what pages expect)
 export interface SocialPost {
 	id: string;
@@ -68,6 +106,7 @@ export interface SocialPost {
 	design_image_url?: string | null;
 	figma_frame_url?: string | null;
 	target_month?: string | null;
+	content_plan?: number | null;
 }
 
 // Dashboard stats summary

@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { getSocialPosts, createSocialPost, logSocialActivity } from '~~/server/utils/social-directus';
 import { requireSocialOrg } from '~~/server/utils/social-tenancy';
+import { findOrCreateInboxPlan, getContentPlanById } from '~~/server/utils/content-plans';
 import type { SocialPostTarget } from '~~/shared/social';
 
 const platformTargetSchema = z.object({
@@ -47,6 +48,9 @@ const createPostSchema = z.object({
 	design_image_url: z.string().url().max(500).nullable().optional(),
 	figma_frame_url: z.string().url().max(500).nullable().optional(),
 	target_month: z.string().nullable().optional(),
+	/** Optional — explicit plan attachment. When omitted, the server
+	 *  finds-or-creates an Inbox plan for (organization, target_month). */
+	content_plan: z.number().int().nullable().optional(),
 }).refine(
 	(data) => {
 		if (data.status === 'scheduled') {
@@ -97,6 +101,31 @@ export default defineEventHandler(async (event) => {
 
 		const data = parsed.data;
 
+		// Auto-attach to a content plan. Explicit content_plan wins (the plan
+		// editor uses this); otherwise find-or-create the per-org Inbox plan
+		// for the post's target_month (or current month, or null if no month
+		// can be derived — matches the backfill keying so re-imports cluster
+		// cleanly). Explicit content_plan IDs are verified to live in the
+		// caller's org before we trust them.
+		let resolvedPlanId: number | null = null;
+		if (data.content_plan != null) {
+			const requested = await getContentPlanById(data.content_plan, { organization: organizationId });
+			if (!requested) {
+				throw createError({ statusCode: 400, message: 'Invalid content_plan' });
+			}
+			resolvedPlanId = requested.id;
+		} else {
+			const monthAnchor =
+				data.target_month ??
+				(data.scheduled_at ? `${data.scheduled_at.slice(0, 7)}-01` : firstOfThisMonth());
+			try {
+				const inbox = await findOrCreateInboxPlan(organizationId, monthAnchor, userId);
+				resolvedPlanId = inbox.id;
+			} catch (err) {
+				console.error('[social/posts] inbox plan find-or-create failed', err);
+			}
+		}
+
 		// Worker polls for posts with status='scheduled' and scheduled_at <= now
 		const post = await createSocialPost({
 			organization: organizationId,
@@ -121,6 +150,7 @@ export default defineEventHandler(async (event) => {
 			design_image_url: data.design_image_url ?? null,
 			figma_frame_url: data.figma_frame_url ?? null,
 			target_month: data.target_month ?? null,
+			content_plan: resolvedPlanId,
 		} as any);
 
 		// Log activity
@@ -139,3 +169,8 @@ export default defineEventHandler(async (event) => {
 
 	throw createError({ statusCode: 405, message: 'Method not allowed' });
 });
+
+function firstOfThisMonth(): string {
+	const d = new Date();
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}

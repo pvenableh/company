@@ -224,7 +224,24 @@ function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
     design_image_url: (raw as any).design_image_url ?? null,
     figma_frame_url: (raw as any).figma_frame_url ?? null,
     target_month: (raw as any).target_month ?? null,
+    content_plan: contentPlanIdOrNull((raw as any).content_plan),
   }
+}
+
+function contentPlanIdOrNull(v: unknown): number | null {
+  if (v == null) return null
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  if (typeof v === 'object' && v && 'id' in (v as any)) {
+    const id = (v as any).id
+    if (typeof id === 'number') return id
+    const n = Number(id)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
 }
 
 /**

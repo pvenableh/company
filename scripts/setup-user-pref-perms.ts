@@ -53,6 +53,7 @@ const USER_PREF_FIELDS = [
 	'industry',
 	'networking_goal',
 	'app_pref_carddesk_promo_dismissed_at',
+	'app_pref_studio_intro_dismissed_at',
 ];
 
 async function main() {

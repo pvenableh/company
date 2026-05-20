@@ -2,19 +2,14 @@
 /**
  * Content Studio surface — `?floor=studio` on /apps/marketing.
  *
- * Decouples social posts from `social_accounts` so the team can design and
- * approve content for retainer clients without a live platform connection.
- *
- * Posts are grouped by project + target_month (Phase 3 of the retainer/social
- * plan). Drilldown opens a detail modal with approve / request-changes /
- * publish-ready actions.
- *
- * Out of scope for Phase 3:
- *   - Time-entry picker on posts (Phase 4)
- *   - Portal review surface (Phase 5)
- *   - Auto-promote to publisher on approve (Phase 6)
+ * Plans are the sole top-level primitive: each post belongs to exactly one
+ * content_plan (per-org Inbox plan for unsorted drafts). Clicking a plan
+ * card opens /social/plans/[id]; clicking an individual post inside a plan
+ * opens the per-post detail modal for inline approve / request-changes /
+ * schedule actions. One-off post creation lives at /social/compose, which
+ * find-or-creates the appropriate Inbox plan automatically.
  */
-import type { SocialPost, ApprovalState } from '~~/shared/social';
+import type { SocialPost, ApprovalState, ContentPlanRecord, ContentPlanState } from '~~/shared/social';
 import type { Project, Client } from '~~/shared/directus';
 
 const toast = useToast();
@@ -62,35 +57,146 @@ watch(() => route.query.view, (qv) => {
   if (view.value !== next) view.value = next;
 });
 
-// ── Create modal ──────────────────────────────────────────────────
-const showCreate = ref(false);
-const creating = ref(false);
+// ── Content Plans ─────────────────────────────────────────────────
+// Plans bundle a strategy + a batch of posts under a single review link
+// (the monthly retainer + future campaign/launch concept). Listed at the
+// top of Studio above the loose-drafts grouping.
+const plans = ref<ContentPlanRecord[]>([]);
+const plansLoading = ref(false);
+
+async function fetchPlans() {
+  plansLoading.value = true;
+  try {
+    const query: Record<string, string> = {};
+    if (selectedClient.value && selectedClient.value !== 'org') {
+      query.target_client = String(selectedClient.value);
+    }
+    const r = await $fetch<{ data: ContentPlanRecord[] }>('/api/social/plans', { query });
+    plans.value = r?.data ?? [];
+  } catch (err) {
+    console.error('Studio fetchPlans failed', err);
+    plans.value = [];
+  } finally {
+    plansLoading.value = false;
+  }
+}
+
+const showNewPlan = ref(false);
+const creatingPlan = ref(false);
+const planForm = ref({
+  project: '' as string,
+  target_client: '' as string,
+  plan_type: 'monthly_cadence' as 'monthly_cadence' | 'campaign' | 'launch' | 'custom',
+  target_month: firstOfThisMonth(),
+  objective: '',
+});
+
+function resetPlanForm() {
+  planForm.value = {
+    project: '',
+    target_client: '',
+    plan_type: 'monthly_cadence',
+    target_month: firstOfThisMonth(),
+    objective: '',
+  };
+}
+
+async function createPlan() {
+  creatingPlan.value = true;
+  try {
+    const body: Record<string, unknown> = {
+      plan_type: planForm.value.plan_type,
+    };
+    if (planForm.value.project) body.project = planForm.value.project;
+    if (planForm.value.target_client) body.target_client = planForm.value.target_client;
+    if (planForm.value.plan_type === 'monthly_cadence' && planForm.value.target_month) {
+      body.target_month = planForm.value.target_month;
+    }
+    if (planForm.value.objective) body.objective = planForm.value.objective;
+
+    const r = await $fetch<{ data: ContentPlanRecord }>('/api/social/plans', {
+      method: 'POST',
+      body,
+    });
+    showNewPlan.value = false;
+    resetPlanForm();
+    if (r?.data?.id) {
+      router.push(`/social/plans/${r.data.id}`);
+    } else {
+      await fetchPlans();
+    }
+  } catch (err: any) {
+    console.error('Studio createPlan failed', err);
+    toast.add({
+      title: 'Could not create plan',
+      description: err?.data?.message || err?.message || 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    creatingPlan.value = false;
+  }
+}
+
+// Cross-fill: same client/project sync as the draft form.
+function syncPlanFromProject() {
+  const f = planForm.value;
+  const project = f.project ? projectsById.value.get(f.project) : null;
+  const projectClientId = project?.client?.id || null;
+  if (projectClientId && !f.target_client) f.target_client = projectClientId;
+}
+function syncPlanFromClient() {
+  const f = planForm.value;
+  if (!f.project) return;
+  const project = projectsById.value.get(f.project);
+  const projectClientId = project?.client?.id || null;
+  if (f.target_client && projectClientId && projectClientId !== f.target_client) {
+    f.project = '';
+  }
+}
+watch(() => planForm.value.project, syncPlanFromProject);
+watch(() => planForm.value.target_client, syncPlanFromClient);
+
+const planProjectOptions = computed(() =>
+  buildProjectOptions(planForm.value.target_client || pageScopedClientId.value || null),
+);
+
+function planStateTone(s: ContentPlanState | undefined): string {
+  switch (s) {
+    case 'approved': return 'bg-success/12 text-success border-success/30';
+    case 'in_review': return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
+    case 'archived': return 'bg-muted/60 text-muted-foreground border-border';
+    default: return 'bg-muted/60 text-muted-foreground border-border';
+  }
+}
+function planStateLabel(s: ContentPlanState | undefined): string {
+  if (!s) return 'Draft';
+  return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function planTitle(p: ContentPlanRecord): string {
+  if (p.title) return p.title;
+  const proj = p.project ? projectsById.value.get(p.project)?.title : null;
+  const month = p.target_month ? formatYearMonth(p.target_month) : '';
+  if (month && proj) return `${month} — ${proj}`;
+  return proj || 'Untitled Plan';
+}
+
+function planClientName(p: ContentPlanRecord): string | null {
+  if (p.target_client) {
+    const direct = clientsById.value.get(p.target_client)?.name;
+    if (direct) return direct;
+  }
+  if (p.project) {
+    const proj = projectsById.value.get(p.project);
+    return proj?.client?.name || null;
+  }
+  return null;
+}
 
 function firstOfThisMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-}
-
-const form = ref({
-  caption: '',
-  post_type: 'image' as 'image' | 'video' | 'carousel' | 'reel' | 'story',
-  project: '' as string,
-  target_client: '' as string,
-  design_image_url: '',
-  figma_frame_url: '',
-  target_month: firstOfThisMonth(),
-});
-
-function resetForm() {
-  form.value = {
-    caption: '',
-    post_type: 'image',
-    project: '',
-    target_client: '',
-    design_image_url: '',
-    figma_frame_url: '',
-    target_month: firstOfThisMonth(),
-  };
 }
 
 // ── Detail drawer ─────────────────────────────────────────────────
@@ -270,10 +376,6 @@ const pageScopedClientId = computed<string | null>(() => {
   return sel && sel !== 'org' ? sel : null;
 });
 
-const createProjectOptions = computed(() =>
-  buildProjectOptions(form.value.target_client || pageScopedClientId.value || null),
-);
-
 const editProjectOptions = computed(() =>
   buildProjectOptions(editForm.value.target_client || pageScopedClientId.value || null),
 );
@@ -282,10 +384,10 @@ const clientOptions = computed(() =>
   Array.from(clientsById.value.values()).map((c) => ({ label: c.name, value: c.id })),
 );
 
-// Cross-fill: picking a project auto-populates the client when empty,
-// and clears the project if a different client is picked.
-function syncFormFromProject(target: 'create' | 'edit') {
-  const f = target === 'create' ? form.value : editForm.value;
+// Cross-fill (edit form only): picking a project auto-populates the client
+// when empty, and clears the project if a different client is picked.
+function syncFormFromProject() {
+  const f = editForm.value;
   const project = f.project ? projectsById.value.get(f.project) : null;
   const projectClientId = project?.client?.id || null;
   if (projectClientId && !f.target_client) {
@@ -293,32 +395,18 @@ function syncFormFromProject(target: 'create' | 'edit') {
   }
 }
 
-function syncFormFromClient(target: 'create' | 'edit') {
-  const f = target === 'create' ? form.value : editForm.value;
+function syncFormFromClient() {
+  const f = editForm.value;
   if (!f.project) return;
   const project = projectsById.value.get(f.project);
   const projectClientId = project?.client?.id || null;
-  // If the user picked a client that doesn't match the project's client,
-  // drop the project so they can pick one that fits.
   if (f.target_client && projectClientId && projectClientId !== f.target_client) {
     f.project = '';
   }
 }
 
-watch(() => form.value.project, () => syncFormFromProject('create'));
-watch(() => form.value.target_client, () => syncFormFromClient('create'));
-watch(() => editForm.value.project, () => syncFormFromProject('edit'));
-watch(() => editForm.value.target_client, () => syncFormFromClient('edit'));
-
-interface PostGroup {
-  key: string;
-  projectId: string | null;
-  projectTitle: string;
-  clientName: string | null;
-  monthLabel: string;
-  monthSort: string;
-  posts: SocialPost[];
-}
+watch(() => editForm.value.project, syncFormFromProject);
+watch(() => editForm.value.target_client, syncFormFromClient);
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -334,30 +422,31 @@ function formatYearMonth(iso: string): string {
   return `${name} ${year}`;
 }
 
-const groups = computed<PostGroup[]>(() => {
-  const byKey = new Map<string, PostGroup>();
+// Posts in the Approval view bucketed by their content_plan. Plans without
+// posts still render (showing an empty state inside the card); posts with a
+// dangling content_plan FK (shouldn't happen post-backfill) get a synthesized
+// "Unattached" group so they're not silently dropped.
+interface PlanBucket {
+  plan: ContentPlanRecord | null;
+  posts: SocialPost[];
+}
+
+const postsByPlan = computed<PlanBucket[]>(() => {
+  const byId = new Map<number, SocialPost[]>();
+  const orphans: SocialPost[] = [];
   for (const post of posts.value) {
-    const projectId = post.project ?? null;
-    const monthIso = post.target_month || (post.scheduled_at ? post.scheduled_at.slice(0, 7) + '-01' : 'unknown');
-    const key = `${projectId ?? 'none'}__${monthIso}`;
-    if (!byKey.has(key)) {
-      const project = projectId ? projectsById.value.get(projectId) : null;
-      const clientId = post.target_client || project?.client?.id || null;
-      const clientName = clientId ? clientsById.value.get(clientId)?.name || project?.client?.name || null : null;
-      const monthLabel = monthIso === 'unknown' ? 'No target month' : formatYearMonth(monthIso);
-      byKey.set(key, {
-        key,
-        projectId,
-        projectTitle: project?.title || (projectId ? 'Project removed' : 'No project'),
-        clientName,
-        monthLabel,
-        monthSort: monthIso,
-        posts: [],
-      });
+    const pid = post.content_plan;
+    if (pid == null) {
+      orphans.push(post);
+      continue;
     }
-    byKey.get(key)!.posts.push(post);
+    const arr = byId.get(pid) ?? [];
+    arr.push(post);
+    byId.set(pid, arr);
   }
-  return Array.from(byKey.values()).sort((a, b) => b.monthSort.localeCompare(a.monthSort));
+  const out: PlanBucket[] = plans.value.map((p) => ({ plan: p, posts: byId.get(p.id) ?? [] }));
+  if (orphans.length) out.push({ plan: null, posts: orphans });
+  return out;
 });
 
 const totalPosts = computed(() => posts.value.length);
@@ -399,46 +488,6 @@ function stateLabel(s: ApprovalState | undefined): string {
 }
 
 // ── Actions ───────────────────────────────────────────────────────
-async function createPost() {
-  if (!form.value.caption.trim()) {
-    toast.add({ title: 'Caption required', icon: 'i-lucide-alert-circle', color: 'yellow' });
-    return;
-  }
-  creating.value = true;
-  try {
-    const body: Record<string, unknown> = {
-      caption: form.value.caption.trim(),
-      post_type: form.value.post_type,
-      platforms: [],
-      media_urls: [],
-      media_types: [],
-      status: 'draft',
-      approval_state: 'draft',
-    };
-    if (form.value.project) body.project = form.value.project;
-    if (form.value.target_client) body.target_client = form.value.target_client;
-    if (form.value.design_image_url) body.design_image_url = form.value.design_image_url;
-    if (form.value.figma_frame_url) body.figma_frame_url = form.value.figma_frame_url;
-    if (form.value.target_month) body.target_month = form.value.target_month;
-
-    await $fetch('/api/social/posts', { method: 'POST', body });
-    toast.add({ title: 'Draft created', icon: 'i-lucide-check-circle', color: 'green' });
-    showCreate.value = false;
-    resetForm();
-    await fetchPosts();
-  } catch (err: any) {
-    console.error('Studio createPost failed', err);
-    toast.add({
-      title: 'Could not create draft',
-      description: err?.data?.message || err?.message || 'Unknown error',
-      icon: 'i-lucide-alert-circle',
-      color: 'red',
-    });
-  } finally {
-    creating.value = false;
-  }
-}
-
 async function saveEdit() {
   if (!selectedPost.value) return;
   if (!editForm.value.caption.trim()) {
@@ -599,12 +648,10 @@ function cancelEditing() {
 
 // ── Media picker (Directus Files) ─────────────────────────────────
 // Single image per post: we take the first picked file's URL and
-// write it into design_image_url for whichever form is open.
+// write it into the edit form's design_image_url.
 const showMediaPicker = ref(false);
-const mediaPickerTarget = ref<'create' | 'edit'>('create');
 
-function openMediaPicker(target: 'create' | 'edit') {
-  mediaPickerTarget.value = target;
+function openMediaPicker() {
   showMediaPicker.value = true;
 }
 
@@ -612,28 +659,25 @@ function onMediaPicked(picked: { url: string; type: 'image' | 'video' }[]) {
   const first = picked[0];
   showMediaPicker.value = false;
   if (!first) return;
-  if (mediaPickerTarget.value === 'create') {
-    form.value.design_image_url = first.url;
-  } else {
-    editForm.value.design_image_url = first.url;
-  }
+  editForm.value.design_image_url = first.url;
 }
 
-function clearDesignImage(target: 'create' | 'edit') {
-  if (target === 'create') form.value.design_image_url = '';
-  else editForm.value.design_image_url = '';
+function clearDesignImage() {
+  editForm.value.design_image_url = '';
 }
 
 watch(stateFilter, fetchPosts);
 watch(selectedClient, () => {
   if (loading.value) return;
   fetchPosts();
+  fetchPlans();
 });
 
 onMounted(() => {
   fetchPosts();
   fetchProjects();
   fetchClients();
+  fetchPlans();
 });
 </script>
 
@@ -656,9 +700,11 @@ onMounted(() => {
             </template>
           </p>
         </div>
-        <UiActionButton icon="lucide:plus" variant="primary" @click="showCreate = true">
-          New Draft
-        </UiActionButton>
+        <div class="flex items-center gap-2 shrink-0">
+          <UiActionButton icon="lucide:calendar-plus" variant="primary" @click="showNewPlan = true">
+            New Plan
+          </UiActionButton>
+        </div>
       </div>
 
       <div class="studio-hero__stats">
@@ -736,46 +782,56 @@ onMounted(() => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading && !posts.length" class="flex flex-col items-center justify-center py-24 gap-3">
+    <div v-if="loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
       <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
       <p class="cg-text-child text-muted-foreground">Loading content…</p>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!groups.length" class="studio-empty">
+    <!-- Empty: no plans at all -->
+    <div v-else-if="view === 'approval' && !plans.length" class="studio-empty">
       <div class="studio-empty__mark">
         <Icon name="lucide:palette" class="w-9 h-9" />
       </div>
       <p class="text-base font-semibold text-foreground">Your studio is quiet</p>
-      <p class="text-sm text-muted-foreground/80 max-w-sm text-center">
-        Start a draft, attach a project, share it with your client for review — all without needing a connected social account.
-      </p>
-      <UiActionButton icon="lucide:plus" variant="primary" @click="showCreate = true">
-        New Draft
+      <ol class="studio-empty__steps">
+        <li><span class="studio-empty__step-num">1</span>Create a plan to bundle a month's worth of posts</li>
+        <li><span class="studio-empty__step-num">2</span>Add posts and watch the Instagram wall fill out</li>
+        <li><span class="studio-empty__step-num">3</span>Share one review link with your client for approval</li>
+      </ol>
+      <UiActionButton icon="lucide:calendar-plus" variant="primary" @click="showNewPlan = true">
+        Create your first plan
       </UiActionButton>
     </div>
 
-    <!-- Grouped list -->
-    <div v-else class="space-y-8">
-      <div v-for="g in groups" :key="g.key" class="studio-group">
+    <!-- Grouped by plan — plans are the only top-level primitive in Approval. -->
+    <div v-else-if="view === 'approval'" class="space-y-8">
+      <section v-for="bucket in postsByPlan" :key="bucket.plan?.id ?? 'orphans'" class="studio-group">
         <div class="studio-group__header">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="studio-group__chip">
-              <Icon name="lucide:folder" class="w-3 h-3" />
-              {{ g.projectTitle }}
+          <div v-if="bucket.plan" class="flex items-center gap-2 min-w-0">
+            <NuxtLink :to="`/social/plans/${bucket.plan.id}`" class="studio-group__chip studio-group__chip--link">
+              <Icon name="lucide:layout-grid" class="w-3 h-3" />
+              {{ planTitle(bucket.plan) }}
+              <Icon name="lucide:arrow-right" class="w-3 h-3 opacity-50" />
+            </NuxtLink>
+            <span v-if="planClientName(bucket.plan)" class="studio-group__client">{{ planClientName(bucket.plan) }}</span>
+            <span class="plan-card-link__state" :class="planStateTone(bucket.plan.state)">
+              {{ planStateLabel(bucket.plan.state) }}
             </span>
-            <span v-if="g.clientName" class="studio-group__client">{{ g.clientName }}</span>
+          </div>
+          <div v-else class="flex items-center gap-2 min-w-0">
+            <span class="studio-group__chip">
+              <Icon name="lucide:alert-circle" class="w-3 h-3" />
+              Unattached posts
+            </span>
           </div>
           <div class="flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
-            <span class="font-medium">{{ g.monthLabel }}</span>
-            <span class="studio-group__dot" />
-            <span>{{ g.posts.length }} {{ g.posts.length === 1 ? 'post' : 'posts' }}</span>
+            <span>{{ bucket.posts.length }} {{ bucket.posts.length === 1 ? 'post' : 'posts' }}</span>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div v-if="bucket.posts.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <button
-            v-for="post in g.posts"
+            v-for="post in bucket.posts"
             :key="post.id"
             type="button"
             class="studio-card group"
@@ -811,41 +867,94 @@ onMounted(() => {
             </div>
           </button>
         </div>
+        <NuxtLink
+          v-else-if="bucket.plan"
+          :to="`/social/plans/${bucket.plan.id}`"
+          class="studio-group__empty"
+        >
+          <Icon name="lucide:plus" class="w-4 h-4" />
+          No posts yet — add some inside the plan
+        </NuxtLink>
+      </section>
+    </div>
+
+    <!-- Upcoming Publish view — flat list of future-scheduled posts -->
+    <div v-else-if="view === 'upcoming'" class="space-y-4">
+      <div v-if="!posts.length" class="studio-empty">
+        <div class="studio-empty__mark">
+          <Icon name="lucide:calendar-clock" class="w-9 h-9" />
+        </div>
+        <p class="text-base font-semibold text-foreground">Nothing scheduled</p>
+        <p class="text-sm text-muted-foreground/80 max-w-sm text-center">
+          Approved posts with a future publish time and a connected platform will show up here.
+        </p>
+      </div>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <button
+          v-for="post in posts"
+          :key="post.id"
+          type="button"
+          class="studio-card group"
+          @click="openDetail(post)"
+        >
+          <div class="studio-card__media">
+            <img
+              v-if="post.design_image_url"
+              :src="post.design_image_url"
+              :alt="post.caption.slice(0, 80)"
+              loading="lazy"
+            />
+            <img
+              v-else-if="post.media_urls && post.media_urls.length"
+              :src="post.media_urls[0]"
+              :alt="post.caption.slice(0, 80)"
+              loading="lazy"
+            />
+            <div v-else class="studio-card__placeholder">
+              <Icon name="lucide:image" class="w-9 h-9 text-muted-foreground/30" />
+            </div>
+            <span class="studio-card__state" :class="stateTone(post.approval_state)">
+              {{ stateLabel(post.approval_state) }}
+            </span>
+          </div>
+          <div class="studio-card__body">
+            <p class="studio-card__caption">{{ post.caption || 'Untitled draft' }}</p>
+            <p v-if="post.scheduled_at" class="text-[10px] text-muted-foreground mt-1 tabular-nums">
+              {{ new Date(post.scheduled_at).toLocaleString() }}
+            </p>
+          </div>
+        </button>
       </div>
     </div>
 
-    <!-- Create modal -->
-    <UModal v-model="showCreate" :ui="{ width: 'sm:max-w-lg' }">
+    <!-- New Plan modal -->
+    <UModal v-model="showNewPlan" :ui="{ width: 'sm:max-w-lg' }">
       <div class="p-5 space-y-4">
         <div>
-          <h2 class="cg-text-header">New Content Draft</h2>
+          <h2 class="cg-text-header">New Content Plan</h2>
           <p class="cg-text-child text-muted-foreground">
-            Design a post, attach a project, share with the client for review.
+            Bundle a strategy + a month of posts under a single review link for your client.
           </p>
         </div>
 
-        <UFormGroup label="Caption" required>
-          <UTextarea
-            v-model="form.caption"
-            :rows="4"
-            placeholder="What's the post about?"
-          />
-        </UFormGroup>
-
         <div class="grid grid-cols-2 gap-3 min-w-0">
-          <UFormGroup label="Project" class="min-w-0">
+          <UFormGroup
+            label="Project"
+            description="Optional — anchors hour-pool reporting when this plan is part of a retainer."
+            class="min-w-0"
+          >
             <USelect
-              v-model="form.project"
-              :options="createProjectOptions"
+              v-model="planForm.project"
+              :options="planProjectOptions"
               option-attribute="label"
               value-attribute="value"
-              placeholder="Pick a project"
+              placeholder="Pick a retainer project"
               class="w-full"
             />
           </UFormGroup>
           <UFormGroup label="Target Client" class="min-w-0">
             <USelect
-              v-model="form.target_client"
+              v-model="planForm.target_client"
               :options="clientOptions"
               option-attribute="label"
               value-attribute="value"
@@ -856,78 +965,46 @@ onMounted(() => {
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <UFormGroup label="Type">
+          <UFormGroup label="Plan Type">
             <USelect
-              v-model="form.post_type"
+              v-model="planForm.plan_type"
               :options="[
-                { label: 'Image', value: 'image' },
-                { label: 'Video', value: 'video' },
-                { label: 'Carousel', value: 'carousel' },
-                { label: 'Reel', value: 'reel' },
-                { label: 'Story', value: 'story' },
+                { label: 'Monthly Cadence', value: 'monthly_cadence' },
+                { label: 'Campaign', value: 'campaign' },
+                { label: 'Launch', value: 'launch' },
+                { label: 'Custom', value: 'custom' },
               ]"
               option-attribute="label"
               value-attribute="value"
             />
           </UFormGroup>
-          <UFormGroup label="Target Month">
-            <UInput v-model="form.target_month" type="date" />
+          <UFormGroup
+            v-if="planForm.plan_type === 'monthly_cadence'"
+            label="Target Month"
+          >
+            <UInput v-model="planForm.target_month" type="date" />
           </UFormGroup>
         </div>
 
         <UFormGroup
-          label="Cover Image"
-          description="The hero image clients see in their review surface — upload a mockup or pick from your media library."
+          label="Objective (optional)"
+          description="One-line goal — you can fill this in later."
         >
-          <button
-            v-if="!form.design_image_url"
-            type="button"
-            class="studio-image-empty"
-            @click="openMediaPicker('create')"
-          >
-            <Icon name="lucide:image-plus" class="w-7 h-7 text-muted-foreground/60" />
-            <span class="text-xs text-muted-foreground">Choose image or upload new</span>
-          </button>
-          <div v-else class="studio-image-preview">
-            <img :src="form.design_image_url" alt="Cover preview" />
-            <div class="studio-image-preview__actions">
-              <button
-                type="button"
-                class="studio-image-preview__btn"
-                @click="openMediaPicker('create')"
-              >
-                <Icon name="lucide:image" class="w-3.5 h-3.5" />
-                Replace
-              </button>
-              <button
-                type="button"
-                class="studio-image-preview__btn studio-image-preview__btn--danger"
-                @click="clearDesignImage('create')"
-              >
-                <Icon name="lucide:x" class="w-3.5 h-3.5" />
-                Remove
-              </button>
-            </div>
-          </div>
-        </UFormGroup>
-
-        <UFormGroup
-          label="Figma Frame URL"
-          description="Link back to the source design frame so reviewers can see context."
-        >
-          <UInput v-model="form.figma_frame_url" placeholder="https://figma.com/file/…" />
+          <UInput
+            v-model="planForm.objective"
+            placeholder="e.g. Drive RSVPs to launch event."
+          />
         </UFormGroup>
 
         <div class="flex justify-end gap-2 pt-2">
-          <UiActionButton @click="showCreate = false">Cancel</UiActionButton>
+          <UiActionButton @click="showNewPlan = false">Cancel</UiActionButton>
           <UiActionButton
-            icon="lucide:check"
+            icon="lucide:arrow-right"
             variant="primary"
-            :loading="creating"
-            :disabled="!form.caption.trim()"
-            @click="createPost"
+            :loading="creatingPlan"
+            @click="createPlan"
           >
-            Create Draft
+            Create &amp; Open
           </UiActionButton>
         </div>
       </div>
@@ -1120,7 +1197,7 @@ onMounted(() => {
               v-if="!editForm.design_image_url"
               type="button"
               class="studio-image-empty"
-              @click="openMediaPicker('edit')"
+              @click="openMediaPicker()"
             >
               <Icon name="lucide:image-plus" class="w-7 h-7 text-muted-foreground/60" />
               <span class="text-xs text-muted-foreground">Choose image or upload new</span>
@@ -1131,7 +1208,7 @@ onMounted(() => {
                 <button
                   type="button"
                   class="studio-image-preview__btn"
-                  @click="openMediaPicker('edit')"
+                  @click="openMediaPicker()"
                 >
                   <Icon name="lucide:image" class="w-3.5 h-3.5" />
                   Replace
@@ -1139,7 +1216,7 @@ onMounted(() => {
                 <button
                   type="button"
                   class="studio-image-preview__btn studio-image-preview__btn--danger"
-                  @click="clearDesignImage('edit')"
+                  @click="clearDesignImage()"
                 >
                   <Icon name="lucide:x" class="w-3.5 h-3.5" />
                   Remove
@@ -1251,6 +1328,20 @@ onMounted(() => {
     text-muted-foreground/60 bg-muted/40 border border-border/60;
 }
 
+.studio-empty__steps {
+  @apply text-sm text-muted-foreground/90 space-y-2 max-w-sm;
+  list-style: none;
+}
+
+.studio-empty__steps li {
+  @apply flex items-start gap-2.5 text-left;
+}
+
+.studio-empty__step-num {
+  @apply flex shrink-0 items-center justify-center w-5 h-5 rounded-full
+    bg-muted/70 text-[10px] font-semibold text-foreground/80 mt-0.5;
+}
+
 .studio-group__header {
   @apply flex items-center justify-between mb-3 px-1 gap-2 flex-wrap;
 }
@@ -1258,6 +1349,17 @@ onMounted(() => {
 .studio-group__chip {
   @apply inline-flex items-center gap-1.5 h-6 px-2 rounded-full
     text-xs font-medium bg-muted/60 text-foreground border border-border/60;
+}
+
+.studio-group__chip--link {
+  @apply hover:bg-muted hover:border-foreground/30 transition-colors;
+}
+
+.studio-group__empty {
+  @apply flex items-center justify-center gap-2 py-6
+    rounded-xl border border-dashed border-border/60
+    text-xs text-muted-foreground hover:text-foreground
+    hover:border-foreground/30 transition-colors;
 }
 
 .studio-group__client {
@@ -1436,5 +1538,54 @@ onMounted(() => {
 
 .studio-image-preview__btn--danger {
   @apply hover:bg-rose-500/70;
+}
+
+.plan-card-link {
+  @apply flex flex-col text-left bg-card border border-border/70 rounded-xl
+    overflow-hidden transition-all duration-200
+    hover:-translate-y-0.5 hover:shadow-lg hover:shadow-foreground/5
+    hover:border-foreground/20 focus-visible:outline-none
+    focus-visible:ring-2 focus-visible:ring-primary;
+}
+
+.plan-card-link__media {
+  @apply relative aspect-[16/9] bg-muted/40 overflow-hidden;
+}
+
+.plan-card-link__media img {
+  @apply w-full h-full object-cover transition-transform duration-500 ease-out;
+}
+
+.plan-card-link:hover .plan-card-link__media img {
+  @apply scale-[1.04];
+}
+
+.plan-card-link__placeholder {
+  @apply absolute inset-0 flex items-center justify-center;
+  background-image:
+    linear-gradient(135deg, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.08), transparent 60%);
+}
+
+.plan-card-link__state {
+  @apply absolute top-2 left-2 inline-flex items-center
+    px-2 py-0.5 rounded-full
+    text-[10px] font-semibold uppercase tracking-wide
+    border backdrop-blur-sm;
+}
+
+.plan-card-link__body {
+  @apply px-3 py-3 space-y-1;
+}
+
+.plan-card-link__title {
+  @apply text-sm font-semibold text-foreground line-clamp-1;
+}
+
+.plan-card-link__meta {
+  @apply text-[11px] text-muted-foreground flex items-center flex-wrap;
+}
+
+.plan-card-link__objective {
+  @apply text-xs text-foreground/80 line-clamp-2 leading-snug mt-1;
 }
 </style>

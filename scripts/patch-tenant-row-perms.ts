@@ -78,6 +78,11 @@ const TENANT_COLLECTIONS = [
   'org_roles', 'org_memberships',
   'ai_notes', 'ai_chat_sessions', 'ai_chat_messages', 'ai_preferences',
   'ai_context_snapshots',
+  // Content plans inherit org scope from project.client.organization.
+  // Functional client/portal access goes through token-validated server
+  // routes (admin token bypasses Directus policy), so this scope only
+  // governs direct admin-UI visibility for staff.
+  'content_plans',
 ]
 const TENANT_SET = new Set(TENANT_COLLECTIONS)
 
@@ -131,6 +136,9 @@ function scopeFor(collection: string): any {
       // can list products; tenant scoping is enforced at the consumer level
       // (invoice/expense `client.organization` filters).
       return {}
+    case 'content_plans':
+      // No direct `organization` column — scope by project.client.organization.
+      return { project: { client: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } } }
     default:
       return { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } }
   }

@@ -1352,6 +1352,44 @@ export interface ContactsOrganization {
 	sort?: number | null;
 }
 
+export interface ContentPlan {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: DirectusUser | string | null;
+	/** @description Optional human-friendly title. Auto-derived from project + month/event when blank. */
+	title?: string | null;
+	/** @description Retainer (or fixed-fee) project this plan delivers against. Joins the hour pool. */
+	project?: Project | string | null;
+	/** @description Client this plan is for (denormalized for portal scoping). Should match project.client. */
+	target_client?: Client | string | null;
+	/** @description Shape of this plan. monthly_cadence is the default for retainers; campaign/launch tie to a project_event. */
+	plan_type?: 'monthly_cadence' | 'campaign' | 'launch' | 'custom';
+	/** @description First-of-month anchor for monthly_cadence plans. Null for campaign/launch. */
+	target_month?: string | null;
+	/** @description Project milestone/event this plan is built around (campaign/launch). Null for monthly cadence. */
+	project_event?: ProjectEvent | string | null;
+	/** @description Plan-level approval state. Used to gate plan-level review independently of per-post approval_state. */
+	state?: 'draft' | 'in_review' | 'approved' | 'archived';
+	/** @description One-line goal for this plan ("Drive RSVPs to launch event"). */
+	objective?: string | null;
+	/** @description Themes/pillars for the plan ("Behind the scenes", "Product hero shots", …). */
+	themes?: string[] | null;
+	/** @description Full strategy/intro shown to the client at the top of the review page. */
+	strategy?: string | null;
+	/** @description Optional hero image for the plan card in Studio and the top of the portal review page. */
+	cover_image_url?: string | null;
+	/** @description Opaque token used by the portal review surface. Server-managed. */
+	approval_token?: string | null;
+	approved_by?: DirectusUser | string | null;
+	approved_at?: string | null;
+	/** @description When the plan was first sent to the client for review. */
+	sent_for_review_at?: string | null;
+	/** @description Owning organization (tenant scope). @required */
+	organization: Organization | string;
+}
+
 export interface Contract {
 	/** @primaryKey */
 	id: number;
@@ -3709,6 +3747,8 @@ export interface SocialPost {
 	figma_frame_url?: string | null;
 	/** @description First-of-month anchor used to group posts under a retainer period. */
 	target_month?: string | null;
+	/** @description Content plan this post belongs to (monthly cadence, campaign, or launch). */
+	content_plan?: ContentPlan | string | null;
 }
 
 export interface SocialThread {
@@ -3916,6 +3956,8 @@ export interface TimeEntry {
 	date_updated?: string | null;
 	/** @description Social post this time was spent on. Joins the post into the retainer hour pool. */
 	source_social_post?: SocialPost | string | null;
+	/** @description Content plan this time entry was logged against (for "hours per deliverable" reporting on retainers). */
+	source_content_plan?: ContentPlan | string | null;
 }
 
 export interface UserPresence {
@@ -4413,6 +4455,8 @@ export interface DirectusUser {
 	dismissed_app_intros?: string[] | null;
 	/** @description CardDesk install-promo dismissal. Null = show; within 30 days = snooze; far-future (9999) = never show again. */
 	app_pref_carddesk_promo_dismissed_at?: string | null;
+	/** @description Content Studio first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
+	app_pref_studio_intro_dismissed_at?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
@@ -4660,6 +4704,7 @@ export interface Schema {
 	contact_connections: ContactConnection[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
+	content_plans: ContentPlan[];
 	contracts: Contract[];
 	courses: Course[];
 	document_blocks: DocumentBlock[];
@@ -4892,6 +4937,7 @@ export enum CollectionNames {
 	contact_connections = 'contact_connections',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
+	content_plans = 'content_plans',
 	contracts = 'contracts',
 	courses = 'courses',
 	document_blocks = 'document_blocks',
