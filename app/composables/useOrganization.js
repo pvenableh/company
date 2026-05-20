@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -213,6 +213,8 @@ export function useOrganization() {
 					address: org.address ?? null,
 					archived_at: org.archived_at ?? null,
 					whitelabel: org.whitelabel ?? false,
+					document_theme: org.document_theme ?? null,
+					document_accent: org.document_accent ?? null,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,
