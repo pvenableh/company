@@ -141,6 +141,37 @@
 							<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Sent ({{ rangeDays }}d)</p>
 						</div>
 					</div>
+
+					<!-- SendGrid engagement — opens/clicks/bounces over the active range -->
+					<div v-if="emailEngagement.totalEvents" class="pt-3 border-t border-border/30">
+						<div class="flex items-center justify-between mb-2">
+							<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Engagement</p>
+							<NuxtLink
+								to="/email/activity"
+								class="text-[10px] uppercase tracking-wider text-primary hover:underline inline-flex items-center gap-0.5"
+							>
+								Activity
+								<Icon name="lucide:chevron-right" class="w-3 h-3" />
+							</NuxtLink>
+						</div>
+						<div class="grid grid-cols-3 gap-2">
+							<div>
+								<p class="text-base font-semibold text-sky-600 dark:text-sky-400 tabular-nums">{{ emailEngagement.openRate }}%</p>
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Opens</p>
+							</div>
+							<div>
+								<p class="text-base font-semibold text-violet-600 dark:text-violet-400 tabular-nums">{{ emailEngagement.clickRate }}%</p>
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Clicks</p>
+							</div>
+							<div>
+								<p class="text-base font-semibold tabular-nums" :class="emailEngagement.bounces ? 'text-destructive' : 'text-foreground'">
+									{{ emailEngagement.bounces }}
+								</p>
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Bounces</p>
+							</div>
+						</div>
+					</div>
+
 					<div v-if="emailMetrics.subscriptionRate > 0" class="pt-3 border-t border-border/30">
 						<div class="flex items-center justify-between text-[11px] mb-1.5">
 							<span class="text-muted-foreground">Subscription rate</span>
@@ -487,6 +518,59 @@ const failedPosts = ref<any[]>([]);
 const activeCampaigns = ref<any[]>([]);
 const recommendations = ref<any[]>([]);
 const dismissingId = ref<string | null>(null);
+
+// ── Email engagement (SendGrid events over the active range) ──────────
+const emailEventsRaw = ref<any[]>([]);
+const emailEventItems = useDirectusItems('email_events');
+
+async function fetchEmailEvents() {
+	if (!selectedOrg.value) {
+		emailEventsRaw.value = [];
+		return;
+	}
+	const since = new Date(Date.now() - rangeDays.value * 86400000).toISOString();
+	try {
+		const evs = await emailEventItems.list({
+			fields: ['id', 'event', 'recipient', 'timestamp'],
+			filter: {
+				_and: [
+					{ organization: { _eq: selectedOrg.value } },
+					{ timestamp: { _gte: since } },
+				],
+			},
+			sort: ['-timestamp'],
+			limit: 500,
+		});
+		emailEventsRaw.value = (evs as any[]) || [];
+	} catch {
+		emailEventsRaw.value = [];
+	}
+}
+
+const emailEngagement = computed(() => {
+	const counts: Record<string, number> = {};
+	const uniqueOpens = new Set<string>();
+	const uniqueClicks = new Set<string>();
+	for (const e of emailEventsRaw.value) {
+		const k = e.event || 'unknown';
+		counts[k] = (counts[k] || 0) + 1;
+		if (k === 'open' && e.recipient) uniqueOpens.add(e.recipient);
+		if (k === 'click' && e.recipient) uniqueClicks.add(e.recipient);
+	}
+	const delivered = counts.delivered || 0;
+	const bounces = (counts.bounce || 0) + (counts.dropped || 0);
+	const openRate = delivered ? Math.round((uniqueOpens.size / delivered) * 100) : 0;
+	const clickRate = delivered ? Math.round((uniqueClicks.size / delivered) * 100) : 0;
+	return {
+		delivered,
+		bounces,
+		openRate,
+		clickRate,
+		uniqueOpens: uniqueOpens.size,
+		uniqueClicks: uniqueClicks.size,
+		totalEvents: emailEventsRaw.value.length,
+	};
+});
 
 // ── AI tools (kept) ────────────────────────────────────────────────────
 const aiToolsOpen = ref(false);
@@ -847,6 +931,9 @@ async function loadAll() {
 		$fetch('/api/marketing/recommendations', { query: { organizationId: orgId } })
 			.then((r: any) => { recommendations.value = (r?.recommendations ?? []) as any[]; })
 			.catch(() => { recommendations.value = []; }),
+
+		// Email engagement events
+		fetchEmailEvents(),
 	];
 
 	await Promise.allSettled(tasks);

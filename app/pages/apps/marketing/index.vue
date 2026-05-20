@@ -315,6 +315,22 @@ function openSocialPostSlideOver(post: any) {
   socialPostSlide.open(String(post.id));
 }
 
+// Mailing-list slide-over — keeps list edit inside the apps layout instead
+// of bouncing to /lists/[id]. New-list modal is rendered inline below.
+const mailingListSlide = useAppSlideOver('mailing-list');
+const showNewListModal = ref(false);
+const mailingListRefreshSignal = useState<number>('mailing-lists-refresh', () => 0);
+function openMailingListSlideOver(list: any) {
+  mailingListSlide.open(String(list.id));
+}
+function onListCreated() {
+  showNewListModal.value = false;
+  if (audienceLoaded.value) fetchAudience();
+}
+watch(mailingListRefreshSignal, () => {
+  if (audienceLoaded.value) fetchAudience();
+});
+
 watch(campaignRefreshSignal, () => {
   Promise.all([fetchCampaigns(), fetchPulse()]).catch(() => {});
 });
@@ -355,6 +371,209 @@ const emailKpis = computed(() => {
   const lists = pulseHealth.value?.metrics.mailingLists ?? 0;
   return { drafts, published, subscribers, lists };
 });
+
+// SendGrid event aggregates + per-campaign comparison rows over the
+// active range. Replaces the standalone `/email/activity` page as the
+// command-center surface for email performance.
+const emailRange = ref<7 | 30 | 90>(30);
+const EMAIL_RANGES = [
+  { value: 7, label: '7d' },
+  { value: 30, label: '30d' },
+  { value: 90, label: '90d' },
+] as const;
+
+const emailEventsRaw = ref<any[]>([]);
+const emailCampaignsRaw = ref<any[]>([]);
+const emailEventsLoading = ref(false);
+const emailEventItems = useDirectusItems('email_events');
+const emailRecordItems = useDirectusItems('emails');
+
+type EmailSort = 'sent_at' | 'total_sent' | 'openRate' | 'clickRate' | 'bounceRate';
+const emailSortBy = ref<EmailSort>('sent_at');
+const emailSortDir = ref<'asc' | 'desc'>('desc');
+
+function toggleEmailSort(column: EmailSort) {
+  if (emailSortBy.value === column) {
+    emailSortDir.value = emailSortDir.value === 'desc' ? 'asc' : 'desc';
+  } else {
+    emailSortBy.value = column;
+    emailSortDir.value = column === 'sent_at' ? 'desc' : 'desc';
+  }
+}
+
+async function fetchEmailEvents() {
+  if (!selectedOrg.value) return;
+  emailEventsLoading.value = true;
+  const since = new Date(Date.now() - emailRange.value * 86400000).toISOString();
+  try {
+    const [evs, camps] = await Promise.all([
+      emailEventItems.list({
+        fields: ['id', 'event', 'recipient', 'timestamp', 'email_id'],
+        filter: {
+          _and: [
+            { organization: { _eq: selectedOrg.value } },
+            { timestamp: { _gte: since } },
+          ],
+        },
+        sort: ['-timestamp'],
+        limit: 1000,
+      }),
+      emailRecordItems.list({
+        fields: ['id', 'name', 'subject', 'sent_at', 'total_recipients', 'total_sent', 'total_failed'],
+        filter: {
+          _and: [
+            { organization: { _eq: selectedOrg.value } },
+            { sent_at: { _gte: since } },
+          ],
+        },
+        sort: ['-sent_at'],
+        limit: 100,
+      }),
+    ]);
+    emailEventsRaw.value = (evs as any[]) || [];
+    emailCampaignsRaw.value = (camps as any[]) || [];
+  } catch {
+    emailEventsRaw.value = [];
+    emailCampaignsRaw.value = [];
+  } finally {
+    emailEventsLoading.value = false;
+  }
+}
+
+watch(emailRange, () => {
+  if (emailLoaded.value) fetchEmailEvents();
+});
+
+const emailEngagement = computed(() => {
+  const counts: Record<string, number> = {};
+  const uniqueOpens = new Set<string>();
+  const uniqueClicks = new Set<string>();
+  for (const e of emailEventsRaw.value) {
+    const k = e.event || 'unknown';
+    counts[k] = (counts[k] || 0) + 1;
+    if (k === 'open' && e.recipient) uniqueOpens.add(e.recipient);
+    if (k === 'click' && e.recipient) uniqueClicks.add(e.recipient);
+  }
+  const delivered = counts.delivered || 0;
+  const bounces = (counts.bounce || 0) + (counts.dropped || 0);
+  const openRate = delivered ? Math.round((uniqueOpens.size / delivered) * 100) : 0;
+  const clickRate = delivered ? Math.round((uniqueClicks.size / delivered) * 100) : 0;
+  return {
+    delivered,
+    bounces,
+    openRate,
+    clickRate,
+    uniqueOpens: uniqueOpens.size,
+    uniqueClicks: uniqueClicks.size,
+    totalEvents: emailEventsRaw.value.length,
+  };
+});
+
+interface EmailCampaignRow {
+  id: string | number;
+  name: string;
+  subject: string | null;
+  sent_at: string | null;
+  total_sent: number;
+  delivered: number;
+  uniqueOpens: number;
+  uniqueClicks: number;
+  bounces: number;
+  openRate: number;
+  clickRate: number;
+  bounceRate: number;
+}
+
+const emailCampaignRows = computed<EmailCampaignRow[]>(() => {
+  const byCampaign = new Map<string | number, {
+    id: string | number;
+    name: string;
+    subject: string | null;
+    sent_at: string | null;
+    total_sent: number;
+    delivered: number;
+    bounces: number;
+    uniqueOpens: Set<string>;
+    uniqueClicks: Set<string>;
+  }>();
+
+  for (const c of emailCampaignsRaw.value) {
+    byCampaign.set(c.id, {
+      id: c.id,
+      name: c.name || `Campaign #${c.id}`,
+      subject: c.subject,
+      sent_at: c.sent_at,
+      total_sent: c.total_sent || 0,
+      delivered: 0,
+      bounces: 0,
+      uniqueOpens: new Set(),
+      uniqueClicks: new Set(),
+    });
+  }
+
+  for (const ev of emailEventsRaw.value) {
+    const cid = (ev.email_id && typeof ev.email_id === 'object' ? ev.email_id.id : ev.email_id) ?? null;
+    if (cid == null) continue;
+    const row = byCampaign.get(cid);
+    if (!row) continue;
+    if (ev.event === 'delivered') row.delivered++;
+    else if (ev.event === 'open' && ev.recipient) row.uniqueOpens.add(ev.recipient);
+    else if (ev.event === 'click' && ev.recipient) row.uniqueClicks.add(ev.recipient);
+    else if (ev.event === 'bounce' || ev.event === 'dropped') row.bounces++;
+  }
+
+  const rows: EmailCampaignRow[] = Array.from(byCampaign.values()).map((row) => {
+    const denom = row.delivered || row.total_sent || 0;
+    return {
+      id: row.id,
+      name: row.name,
+      subject: row.subject,
+      sent_at: row.sent_at,
+      total_sent: row.total_sent,
+      delivered: row.delivered,
+      uniqueOpens: row.uniqueOpens.size,
+      uniqueClicks: row.uniqueClicks.size,
+      bounces: row.bounces,
+      openRate: denom ? Math.round((row.uniqueOpens.size / denom) * 100) : 0,
+      clickRate: denom ? Math.round((row.uniqueClicks.size / denom) * 100) : 0,
+      bounceRate: denom ? Math.round((row.bounces / denom) * 100) : 0,
+    };
+  });
+
+  const dir = emailSortDir.value === 'asc' ? 1 : -1;
+  const by = emailSortBy.value;
+  rows.sort((a, b) => {
+    if (by === 'sent_at') {
+      const at = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+      const bt = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+      return (at - bt) * dir;
+    }
+    return ((a[by] || 0) - (b[by] || 0)) * dir;
+  });
+  return rows;
+});
+
+const emailCampaignAverages = computed(() => {
+  const rows = emailCampaignRows.value;
+  if (!rows.length) return { openRate: 0, clickRate: 0 };
+  const sumOpen = rows.reduce((s, r) => s + r.openRate, 0);
+  const sumClick = rows.reduce((s, r) => s + r.clickRate, 0);
+  return {
+    openRate: Math.round(sumOpen / rows.length),
+    clickRate: Math.round(sumClick / rows.length),
+  };
+});
+
+function fmtSentAt(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric',
+    ...(sameYear ? {} : { year: '2-digit' }),
+  });
+}
 
 // ── Social floor ────────────────────────────────────────────────────────────
 const socialLoading = ref(false);
@@ -542,6 +761,7 @@ watch(
     if (next === 'email' && !emailLoaded.value) {
       emailLoaded.value = true;
       fetchEmailTemplates();
+      fetchEmailEvents();
     }
     if (next === 'social' && !socialLoaded.value) {
       socialLoaded.value = true;
@@ -565,7 +785,7 @@ watch(
 watch([selectedOrg, selectedClient], () => {
   if (pulseLoaded.value) fetchPulse();
   if (campaignsLoaded.value) fetchCampaigns();
-  if (emailLoaded.value) fetchEmailTemplates();
+  if (emailLoaded.value) { fetchEmailTemplates(); fetchEmailEvents(); }
   if (socialLoaded.value) fetchSocial();
   if (audienceLoaded.value) fetchAudience();
 });
@@ -597,7 +817,7 @@ const headerAction = computed(() => {
     return {
       label: 'New List',
       icon: 'lucide:plus',
-      onClick: () => router.push('/lists'),
+      onClick: () => { showNewListModal.value = true; },
     };
   }
   return null;
@@ -869,26 +1089,226 @@ const scopeLabel = computed(() => {
 
       <!-- ── Email floor ──────────────────────────────────────────────── -->
       <template v-else-if="floor === 'email'">
+        <!-- Engagement KPI strip + range toggle (performance-first) -->
+        <div class="ios-card p-5 mb-5">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Performance
+              <span class="text-[10px] text-muted-foreground/70 ml-1 normal-case tracking-normal font-normal">
+                Last {{ emailRange }} days
+              </span>
+            </h3>
+            <div class="flex items-center gap-1.5">
+              <button
+                v-for="r in EMAIL_RANGES"
+                :key="r.value"
+                type="button"
+                class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
+                :class="r.value === emailRange
+                  ? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+                  : 'border-border text-muted-foreground hover:bg-muted/60'"
+                @click="emailRange = r.value"
+              >
+                {{ r.label }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="emailEventsLoading && !emailEngagement.totalEvents" class="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-pulse">
+            <div v-for="i in 4" :key="i" class="h-16 rounded-lg bg-muted/30" />
+          </div>
+
+          <div v-else-if="!emailEngagement.totalEvents" class="py-6 text-center">
+            <Icon name="lucide:mail-x" class="w-7 h-7 text-muted-foreground/30 mx-auto mb-2" />
+            <p class="text-xs text-foreground font-medium mb-0.5">No email events yet</p>
+            <p class="text-[10px] text-muted-foreground">Send a campaign — SendGrid events surface here within minutes.</p>
+          </div>
+
+          <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Delivered</p>
+              <p class="text-2xl font-bold text-foreground tabular-nums">{{ formatNumber(emailEngagement.delivered) }}</p>
+              <p v-if="emailCampaignRows.length" class="text-[10px] text-muted-foreground mt-0.5">
+                across {{ emailCampaignRows.length }} {{ emailCampaignRows.length === 1 ? 'send' : 'sends' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Open Rate</p>
+              <p class="text-2xl font-bold text-sky-600 dark:text-sky-400 tabular-nums">{{ emailEngagement.openRate }}%</p>
+              <p class="text-[10px] text-muted-foreground mt-0.5">{{ emailEngagement.uniqueOpens }} unique</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Click Rate</p>
+              <p class="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{{ emailEngagement.clickRate }}%</p>
+              <p class="text-[10px] text-muted-foreground mt-0.5">{{ emailEngagement.uniqueClicks }} unique</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Bounces</p>
+              <p class="text-2xl font-bold tabular-nums" :class="emailEngagement.bounces ? 'text-destructive' : 'text-foreground'">
+                {{ formatNumber(emailEngagement.bounces) }}
+              </p>
+              <p v-if="emailEngagement.delivered" class="text-[10px] text-muted-foreground mt-0.5">
+                {{ Math.round((emailEngagement.bounces / (emailEngagement.delivered + emailEngagement.bounces || 1)) * 100) }}% of sends
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per-campaign comparison -->
+        <div class="ios-card mb-5 overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border/30">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Compare Sends
+              <span v-if="emailCampaignRows.length" class="text-foreground ml-1 normal-case tracking-normal">
+                ({{ emailCampaignRows.length }})
+              </span>
+            </h3>
+            <span v-if="emailCampaignAverages.openRate || emailCampaignAverages.clickRate" class="text-[10px] text-muted-foreground tabular-nums">
+              Avg open <span class="text-foreground font-medium">{{ emailCampaignAverages.openRate }}%</span>
+              <span class="mx-1 text-muted-foreground/40">·</span>
+              click <span class="text-foreground font-medium">{{ emailCampaignAverages.clickRate }}%</span>
+            </span>
+          </div>
+
+          <div v-if="emailEventsLoading && !emailCampaignRows.length" class="px-5 py-10 text-center">
+            <Icon name="lucide:loader-2" class="w-5 h-5 text-muted-foreground animate-spin mx-auto" />
+          </div>
+
+          <div v-else-if="!emailCampaignRows.length" class="px-5 py-10 text-center">
+            <Icon name="lucide:bar-chart-2" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p class="text-xs text-foreground font-medium mb-0.5">No sends in this window</p>
+            <p class="text-[10px] text-muted-foreground">Pick a wider range or ship a campaign to start comparing.</p>
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-border/30 bg-muted/20">
+                  <th class="text-left py-2.5 px-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 hover:text-foreground"
+                      @click="toggleEmailSort('sent_at')"
+                    >
+                      Campaign
+                      <Icon v-if="emailSortBy === 'sent_at'" :name="emailSortDir === 'desc' ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th class="text-right py-2.5 px-3 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 hover:text-foreground"
+                      @click="toggleEmailSort('total_sent')"
+                    >
+                      Sent
+                      <Icon v-if="emailSortBy === 'total_sent'" :name="emailSortDir === 'desc' ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th class="text-right py-2.5 px-3 font-medium text-muted-foreground text-[10px] uppercase tracking-wider hidden sm:table-cell">
+                    Delivered
+                  </th>
+                  <th class="text-right py-2.5 px-3 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 hover:text-foreground"
+                      @click="toggleEmailSort('openRate')"
+                    >
+                      Open %
+                      <Icon v-if="emailSortBy === 'openRate'" :name="emailSortDir === 'desc' ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th class="text-right py-2.5 px-3 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 hover:text-foreground"
+                      @click="toggleEmailSort('clickRate')"
+                    >
+                      Click %
+                      <Icon v-if="emailSortBy === 'clickRate'" :name="emailSortDir === 'desc' ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th class="text-right py-2.5 px-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider hidden md:table-cell">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 hover:text-foreground"
+                      @click="toggleEmailSort('bounceRate')"
+                    >
+                      Bounce %
+                      <Icon v-if="emailSortBy === 'bounceRate'" :name="emailSortDir === 'desc' ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-3 h-3" />
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in emailCampaignRows"
+                  :key="row.id"
+                  class="border-b border-border/20 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
+                  @click="router.push(`/email/templates/${row.id}`)"
+                >
+                  <td class="py-2.5 px-4 min-w-0">
+                    <p class="font-medium text-foreground truncate">{{ row.name }}</p>
+                    <p class="text-[10px] text-muted-foreground truncate">
+                      <span v-if="row.subject">{{ row.subject }} · </span>{{ fmtSentAt(row.sent_at) }}
+                    </p>
+                  </td>
+                  <td class="py-2.5 px-3 text-right tabular-nums text-foreground">{{ formatNumber(row.total_sent) }}</td>
+                  <td class="py-2.5 px-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
+                    {{ formatNumber(row.delivered) }}
+                  </td>
+                  <td class="py-2.5 px-3 text-right tabular-nums">
+                    <span class="font-semibold text-sky-600 dark:text-sky-400">{{ row.openRate }}%</span>
+                    <span
+                      v-if="emailCampaignAverages.openRate && row.openRate - emailCampaignAverages.openRate !== 0"
+                      class="ml-1 text-[10px] tabular-nums"
+                      :class="row.openRate - emailCampaignAverages.openRate > 0 ? 'text-success' : 'text-muted-foreground/70'"
+                    >
+                      {{ row.openRate - emailCampaignAverages.openRate > 0 ? '+' : '' }}{{ row.openRate - emailCampaignAverages.openRate }}
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right tabular-nums">
+                    <span class="font-semibold text-violet-600 dark:text-violet-400">{{ row.clickRate }}%</span>
+                    <span
+                      v-if="emailCampaignAverages.clickRate && row.clickRate - emailCampaignAverages.clickRate !== 0"
+                      class="ml-1 text-[10px] tabular-nums"
+                      :class="row.clickRate - emailCampaignAverages.clickRate > 0 ? 'text-success' : 'text-muted-foreground/70'"
+                    >
+                      {{ row.clickRate - emailCampaignAverages.clickRate > 0 ? '+' : '' }}{{ row.clickRate - emailCampaignAverages.clickRate }}
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-4 text-right tabular-nums hidden md:table-cell" :class="row.bounceRate ? 'text-destructive' : 'text-muted-foreground'">
+                    {{ row.bounceRate }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Secondary stat row (library counts) -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          <div class="ios-card p-4">
-            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Drafts</p>
-            <p class="text-2xl font-bold text-foreground">{{ emailKpis.drafts }}</p>
+          <div class="ios-card p-3">
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Drafts</p>
+            <p class="text-lg font-semibold text-foreground tabular-nums">{{ emailKpis.drafts }}</p>
           </div>
-          <div class="ios-card p-4">
-            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Published</p>
-            <p class="text-2xl font-bold text-foreground">{{ emailKpis.published }}</p>
+          <div class="ios-card p-3">
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Published</p>
+            <p class="text-lg font-semibold text-foreground tabular-nums">{{ emailKpis.published }}</p>
           </div>
-          <div class="ios-card p-4">
-            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Subscribers</p>
-            <p class="text-2xl font-bold text-foreground">{{ formatNumber(emailKpis.subscribers) }}</p>
+          <div class="ios-card p-3">
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Subscribers</p>
+            <p class="text-lg font-semibold text-foreground tabular-nums">{{ formatNumber(emailKpis.subscribers) }}</p>
           </div>
-          <div class="ios-card p-4">
-            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Lists</p>
-            <p class="text-2xl font-bold text-foreground">{{ emailKpis.lists }}</p>
+          <div class="ios-card p-3">
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Lists</p>
+            <p class="text-lg font-semibold text-foreground tabular-nums">{{ emailKpis.lists }}</p>
           </div>
         </div>
 
         <div class="flex gap-3 mb-5 flex-wrap items-center">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mr-1">
+            Templates
+          </h3>
           <UTabs
             v-model="emailFilter"
             :items="emailFilterItems"
@@ -1284,14 +1704,21 @@ const scopeLabel = computed(() => {
                 Mailing Lists
                 <span v-if="audienceLists.length" class="text-foreground ml-1">({{ audienceLists.length }})</span>
               </h3>
-              <NuxtLink to="/lists" class="text-xs text-primary hover:underline">Manage →</NuxtLink>
+              <button
+                type="button"
+                class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
+                @click="showNewListModal = true"
+              >
+                <Icon name="lucide:plus" class="w-3 h-3" />
+                New List
+              </button>
             </div>
 
             <div v-if="!audienceLists.length" class="py-6 text-center">
               <Icon name="lucide:list" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
               <p class="text-xs text-foreground font-medium mb-1">No mailing lists yet</p>
               <p class="text-[10px] text-muted-foreground mb-3">Build a list from your contacts to start sending.</p>
-              <Button size="sm" variant="outline" @click="router.push('/lists')">
+              <Button size="sm" variant="outline" @click="showNewListModal = true">
                 <Icon name="lucide:plus" class="w-3.5 h-3.5 mr-1" />
                 New List
               </Button>
@@ -1302,7 +1729,7 @@ const scopeLabel = computed(() => {
                 v-for="list in audienceLists"
                 :key="list.id"
                 class="rounded-xl border border-border/40 bg-card/40 p-4 cursor-pointer hover:bg-muted/30 transition-colors group"
-                @click="router.push(`/lists/${list.id}`)"
+                @click="openMailingListSlideOver(list)"
               >
                 <div class="flex items-center gap-3 mb-2">
                   <div class="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -1386,6 +1813,9 @@ const scopeLabel = computed(() => {
       @close="showAIWizard = false"
       @created="handleAICreated"
     />
+
+    <!-- New mailing list modal (Audience floor) -->
+    <ListsFormModal v-model="showNewListModal" @created="onListCreated" />
   </div>
 </template>
 

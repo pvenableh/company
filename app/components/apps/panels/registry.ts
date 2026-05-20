@@ -35,6 +35,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	documents_library: () => import('./DocumentsLibraryPanel.vue'),
 	teams: () => import('./TeamsPanel.vue'),
 	roles: () => import('./RolesPanel.vue'),
+	'mailing-list': () => import('./MailingListPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();
