@@ -1,7 +1,8 @@
 <!--
   StudioPostCard — pure visual extract of the .studio-card tile.
-  Consumed by the expanded grid in StudioSurface and by PlanCardStack (collapsed
-  view). No data fetching; the parent passes a SocialPost and listens for @click.
+  Consumed by the unattached-posts grid in StudioSurface and by the Swiper
+  effect-cards deck inside PlanGridCard. No data fetching; the parent passes a
+  SocialPost and listens for @click.
 -->
 <script setup lang="ts">
 import { Icon } from '#components';
