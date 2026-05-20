@@ -5,7 +5,7 @@
  * Used by the AI generation endpoint and the AITimelineWizard component.
  */
 
-import type { ProjectEvent, ProjectTask } from '../directus';
+import type { ProjectEvent, Task as ProjectTask } from '../directus';
 
 // ---------------------------------------------------------------------------
 // Template types

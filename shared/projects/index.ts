@@ -5,12 +5,13 @@
  * App-level types (payloads, resolved relations, UI state, helpers) defined here.
  */
 
-// Re-export base schema types from auto-generated file
+// Re-export base schema types from auto-generated file. `ProjectTask` is the
+// pre-consolidation name; the row now lives in the `tasks` collection but we
+// keep the legacy alias so callers don't all need to rename at once.
 export type {
   Project,
   ProjectEvent,
-  ProjectTask,
-  ProjectTasksWatcher as ProjectTaskWatcher,
+  Task as ProjectTask,
   ProjectEventFile,
   ProjectCategory,
   ProjectEventCategory,
@@ -20,8 +21,7 @@ export type {
 import type {
   Project,
   ProjectEvent,
-  ProjectTask,
-  ProjectTasksWatcher,
+  Task as ProjectTask,
   ProjectEventFile,
   ProjectCategory,
   ProjectEventCategory,
@@ -72,10 +72,13 @@ export interface CreateEventPayload {
 }
 
 export interface CreateTaskPayload {
-  event_id: string;
+  project_event_id: string;
+  project_id?: string | null;
+  organization_id?: string | null;
+  category?: 'event' | 'project' | 'quick' | 'ticket' | 'channel' | 'team';
+  schedule?: 'today' | 'this_week' | 'later' | 'unscheduled';
   title: string;
   description?: string | null;
-  assignee_id?: string | null;
   due_date?: string | null;
   priority?: ProjectTask['priority'];
 }
@@ -100,11 +103,11 @@ export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_crea
   reaction_count?: number;
 }
 
-export interface ProjectTaskWithRelations extends Omit<ProjectTask, 'assignee_id' | 'completed_by' | 'event_id' | 'watchers'> {
-  assignee_id: User | null;
-  completed_by: User | null;
-  event_id: ProjectEvent;
-  watchers: (Omit<ProjectTasksWatcher, 'user_id'> & { user_id: User })[];
+export interface ProjectTaskWithRelations extends Omit<ProjectTask, 'project_event_id' | 'project_id' | 'assigned_to'> {
+  project_event_id: ProjectEvent | null;
+  project_id: Project | null;
+  /** First assignee from the tasks_directus_users m2m junction, for legacy single-pick UX. */
+  assignee?: User | null;
 }
 
 export interface TimelineViewState {

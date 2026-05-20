@@ -58,22 +58,41 @@ if (!DIRECTUS_TOKEN) {
 	process.exit(1);
 }
 
+async function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
-	const r = await fetch(`${DIRECTUS_URL}${path}`, {
-		...init,
-		headers: {
-			Authorization: `Bearer ${DIRECTUS_TOKEN}`,
-			'Content-Type': 'application/json',
-			...(init.headers || {}),
-		},
-	});
-	if (!r.ok) {
+	// Directus returns 503 "Under pressure" when the API is overloaded.
+	// Retry with exponential backoff so a long-running batch survives a
+	// transient hiccup rather than aborting halfway through.
+	const maxAttempts = 6;
+	let attempt = 0;
+	while (true) {
+		attempt++;
+		const r = await fetch(`${DIRECTUS_URL}${path}`, {
+			...init,
+			headers: {
+				Authorization: `Bearer ${DIRECTUS_TOKEN}`,
+				'Content-Type': 'application/json',
+				...(init.headers || {}),
+			},
+		});
+		if (r.ok) {
+			if (r.status === 204) return undefined as any;
+			const j = await r.json();
+			return j.data ?? j;
+		}
 		const body = await r.text().catch(() => '');
+		const retryable = r.status === 503 || r.status === 429 || r.status === 502 || r.status === 504;
+		if (retryable && attempt < maxAttempts) {
+			const wait = Math.min(30000, 500 * Math.pow(2, attempt - 1));
+			console.warn(`  [retry] ${r.status} on ${init.method || 'GET'} ${path} — sleeping ${wait}ms (attempt ${attempt}/${maxAttempts})`);
+			await sleep(wait);
+			continue;
+		}
 		throw new Error(`${r.status} ${r.statusText} on ${init.method || 'GET'} ${path}\n${body}`);
 	}
-	if (r.status === 204) return undefined as any;
-	const j = await r.json();
-	return j.data ?? j;
 }
 
 interface ProjectTaskRow {
@@ -265,6 +284,10 @@ async function main() {
 				method: 'POST',
 				body: JSON.stringify(payload),
 			});
+			// Light pacing so prod Directus doesn't 503 us. ~10 writes/sec is
+			// well under what the API can handle steady-state but avoids the
+			// "Under pressure" backoff trigger.
+			await sleep(100);
 		}
 
 		if (row.assignee_id) {

@@ -3001,7 +3001,7 @@ export interface ProjectEvent {
 	/** @description Unique token for shareable approval links */
 	approval_token?: string | null;
 	comments?: ProjectEventsComment[] | string[];
-	tasks?: ProjectTask[] | string[];
+	tasks?: Task[] | string[];
 	files?: ProjectEventFile[] | string[];
 	invoices?: ProjectEventsInvoice[] | string[];
 	spawned_projects?: Project[] | string[];
@@ -3116,37 +3116,6 @@ export interface ProjectStatusUpdate {
 	text?: string | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
-}
-
-export interface ProjectTask {
-	/** @primaryKey */
-	id: string;
-	status?: 'published' | 'draft' | 'archived';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	/** @required */
-	event_id: ProjectEvent | string;
-	title?: string | null;
-	description?: string | null;
-	assignee_id?: DirectusUser | string | null;
-	completed?: boolean | null;
-	completed_at?: string | null;
-	completed_by?: DirectusUser | string | null;
-	due_date?: string | null;
-	priority?: 'low' | 'medium' | 'high' | null;
-	/** @description Direct link to project (tasks can exist without an event) */
-	project?: Project | string | null;
-	watchers?: ProjectTasksWatcher[] | string[];
-}
-
-export interface ProjectTasksWatcher {
-	/** @primaryKey */
-	id: number;
-	date_created?: string | null;
-	task_id?: ProjectTask | string | null;
-	user_id?: DirectusUser | string | null;
-	sort?: number | null;
 }
 
 export interface Prompt {
@@ -4777,8 +4746,6 @@ export interface Schema {
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
-	project_tasks: ProjectTask[];
-	project_tasks_watchers: ProjectTasksWatcher[];
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
@@ -5011,8 +4978,6 @@ export enum CollectionNames {
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',
-	project_tasks = 'project_tasks',
-	project_tasks_watchers = 'project_tasks_watchers',
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',

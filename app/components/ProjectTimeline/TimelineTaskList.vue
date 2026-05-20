@@ -15,12 +15,28 @@ const { toggleTask } = useProjectTimeline();
 const { celebrate } = useConfetti();
 const config = useRuntimeConfig();
 
+function isDone(task: any): boolean {
+  return task?.status === 'completed';
+}
+
+function firstAssignee(task: any): any | null {
+  // tasks.assigned_to is an m2m junction array of { directus_users_id }; the
+  // deep-fetch shape may return either { directus_users_id: User } or just
+  // the user id string. We surface the first assignee for legacy single-pick UX.
+  const junction = task?.assigned_to?.[0];
+  if (!junction) return null;
+  const u = junction?.directus_users_id;
+  return (u && typeof u === 'object') ? u : null;
+}
+
 const sortedTasks = computed(() => {
   return [...props.tasks].sort((a, b) => {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    const ad = isDone(a);
+    const bd = isDone(b);
+    if (ad !== bd) return ad ? 1 : -1;
     if (a.priority && b.priority) {
-      const order = { high: 0, medium: 1, low: 2 };
-      return (order[a.priority] ?? 3) - (order[b.priority] ?? 3);
+      const order: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+      return (order[a.priority] ?? 4) - (order[b.priority] ?? 4);
     }
     return 0;
   });
@@ -55,11 +71,11 @@ function formatDueDate(dateStr: string | null) {
       v-for="task in sortedTasks"
       :key="task.id"
       class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
-      :class="{ 'opacity-50': task.completed }"
+      :class="{ 'opacity-50': isDone(task) }"
     >
       <!-- Checkbox -->
       <Checkbox
-        :checked="task.completed"
+        :checked="isDone(task)"
         class="mt-0.5"
         @update:checked="(val: boolean) => handleToggle(task.id, val)"
       />
@@ -68,7 +84,7 @@ function formatDueDate(dateStr: string | null) {
       <div class="flex-1 min-w-0">
         <p
           class="text-sm leading-tight"
-          :class="{ 'line-through text-muted-foreground': task.completed }"
+          :class="{ 'line-through text-muted-foreground': isDone(task) }"
         >
           {{ task.title }}
         </p>
@@ -85,7 +101,7 @@ function formatDueDate(dateStr: string | null) {
 
           <!-- Due date -->
           <span
-            v-if="task.due_date && !task.completed"
+            v-if="task.due_date && !isDone(task)"
             class="text-[9px]"
             :class="formatDueDate(task.due_date)?.class"
           >
@@ -93,19 +109,19 @@ function formatDueDate(dateStr: string | null) {
           </span>
 
           <!-- Assignee -->
-          <div v-if="task.assignee_id && typeof task.assignee_id === 'object'" class="flex items-center gap-1">
+          <div v-if="firstAssignee(task)" class="flex items-center gap-1">
             <UserAvatar class="h-4 w-4">
               <AvatarImage
-                v-if="task.assignee_id.avatar"
-                :src="`${config.public.directusUrl}/assets/${task.assignee_id.avatar}`"
-                :alt="task.assignee_id.first_name"
+                v-if="firstAssignee(task)?.avatar"
+                :src="`${config.public.directusUrl}/assets/${firstAssignee(task).avatar}`"
+                :alt="firstAssignee(task)?.first_name"
               />
               <AvatarFallback class="text-[6px]">
-                {{ (task.assignee_id.first_name?.[0] || '') + (task.assignee_id.last_name?.[0] || '') }}
+                {{ (firstAssignee(task)?.first_name?.[0] || '') + (firstAssignee(task)?.last_name?.[0] || '') }}
               </AvatarFallback>
             </UserAvatar>
             <span class="text-[9px] text-muted-foreground">
-              {{ task.assignee_id.first_name }}
+              {{ firstAssignee(task)?.first_name }}
             </span>
           </div>
         </div>
