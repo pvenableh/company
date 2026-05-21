@@ -19,7 +19,15 @@
         >
           <Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
         </NuxtLink>
-        <h1 class="font-medium text-sm truncate">{{ template?.name || 'Template Builder' }}</h1>
+        <input
+          v-model="editableName"
+          type="text"
+          class="font-medium text-sm bg-transparent rounded px-1.5 py-0.5 min-w-0 max-w-[14rem] sm:max-w-[20rem] truncate hover:bg-muted/40 focus:bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
+          :placeholder="template?.name || 'Untitled Template'"
+          aria-label="Template name"
+          @change="builder.setTemplateName(editableName)"
+          @keyup.enter="($event.target as HTMLInputElement).blur()"
+        >
 
         <!-- Save status indicator -->
         <Transition name="fade" mode="out-in">
@@ -110,6 +118,16 @@
           </Transition>
         </div>
 
+        <!-- Email Settings (subject, name, background, fonts) -->
+        <button
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors"
+          title="Edit subject, name, background, fonts"
+          @click="showSettings = true"
+        >
+          <Icon name="lucide:sliders-horizontal" class="w-3 h-3" />
+          <span class="hidden sm:inline">Settings</span>
+        </button>
+
         <!-- Divider -->
         <div class="w-px h-5 bg-border/60 mx-0.5 hidden sm:block" />
 
@@ -124,7 +142,7 @@
           class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-success/10 text-success dark:text-success hover:bg-success/20 ios-press inline-flex items-center gap-1 transition-colors"
           @click="showSendModal = true"
         >
-          <Icon name="lucide:paper-plane" class="w-3 h-3" />
+          <Icon name="lucide:send" class="w-3 h-3" />
           <span class="hidden sm:inline">Send</span>
         </button>
 
@@ -262,22 +280,28 @@
               <div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mb-3 mx-auto">
                 <Icon name="lucide:layout-template" class="w-5 h-5 text-success" />
               </div>
-              <h3 class="text-sm font-semibold text-foreground mb-1">Seeded from a template</h3>
+              <h3 class="text-sm font-semibold text-foreground mb-1">Seeded from a starter</h3>
               <p class="text-[11px] text-muted-foreground leading-relaxed mb-4">
-                This starter ships as a complete MJML document. The preview on the right renders the original design. To edit, paste a revised MJML, replace with blocks, or add blocks alongside it.
+                The preview on the right renders the original design. Edit the MJML source directly to change copy, swap in editable blocks, or layer blocks on top.
               </p>
-              <div class="flex gap-2 justify-center">
-                <button
-                  class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
-                  @click="showPasteModal = true"
-                >
-                  <Icon name="lucide:clipboard-paste" class="w-3 h-3" /> Edit MJML
-                </button>
+              <div class="flex gap-2 justify-center flex-wrap">
                 <button
                   class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm transition-colors"
+                  @click="openEditMjml"
+                >
+                  <Icon name="lucide:pencil" class="w-3 h-3" /> Edit MJML source
+                </button>
+                <button
+                  class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
                   @click="showSidebar = true"
                 >
                   <Icon name="lucide:blocks" class="w-3 h-3" /> Add blocks
+                </button>
+                <button
+                  class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+                  @click="showSettings = true"
+                >
+                  <Icon name="lucide:sliders-horizontal" class="w-3 h-3" /> Adjust design
                 </button>
               </div>
             </div>
@@ -365,8 +389,20 @@
     <NewsletterSendNewsletterModal
       v-if="showSendModal"
       :template-id="templateId"
-      :template-name="template?.name"
+      :template-name="builder.templateName.value || template?.name"
       @close="showSendModal = false"
+    />
+
+    <!-- Email Settings drawer -->
+    <NewsletterEmailSettingsPanel
+      v-if="showSettings"
+      :template-name="builder.templateName.value"
+      :subject-template="builder.subjectTemplate.value"
+      :design-settings="builder.designSettings.value"
+      @close="showSettings = false"
+      @update:template-name="(v) => { builder.setTemplateName(v); editableName = v; }"
+      @update:subject-template="(v) => builder.setSubjectTemplate(v)"
+      @update:design="(key, value) => { builder.updateDesignSetting(key, value); debouncedPreview(); }"
     />
 
     <!-- Custom MJML Block Modal -->
@@ -470,6 +506,8 @@ const showPreview = ref(true);
 const showSidebar = ref(false);
 const showTestModal = ref(false);
 const showSendModal = ref(false);
+const showSettings = ref(false);
+const editableName = ref('');
 const showCustomBlockModal = ref(false);
 const showAIWizard = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
@@ -485,11 +523,17 @@ const debouncedPreview = useDebounceFn(() => builder.refreshPreview(), 600);
 onMounted(async () => {
   blockLibrary.value = await getBlockLibrary();
   await builder.loadBlocks();
+  editableName.value = builder.templateName.value || props.template?.name || '';
   if (builder.canvas.value.length > 0 || builder.rawMjmlSource.value) {
     await builder.refreshPreview();
   } else if (props.autoOpenAi) {
     showAIWizard.value = true;
   }
+});
+
+// Keep the inline title input in sync if the composable reloads.
+watch(() => builder.templateName.value, (v) => {
+  if (v && v !== editableName.value) editableName.value = v;
 });
 
 // ── Keyboard shortcuts ────────────────────────────────────────────
@@ -582,6 +626,14 @@ async function handleAIApply(result: { subject: string; previewText: string; sec
   builder.populateFromAI(result.sections, blockLibrary.value);
   showPreview.value = true;
   await builder.refreshPreview();
+}
+
+// Pre-populate the paste modal with the current raw MJML source so users
+// can actually edit a seeded starter inline instead of bouncing out to
+// another editor and pasting back in.
+function openEditMjml() {
+  pastedHtmlContent.value = builder.rawMjmlSource.value || '';
+  showPasteModal.value = true;
 }
 
 // ── HTML Import/Export ─────────────────────────────────────────────

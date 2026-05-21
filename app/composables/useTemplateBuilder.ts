@@ -1,11 +1,12 @@
 import { nanoid } from 'nanoid';
 import type {
   CanvasBlock,
+  EmailDesignSettings,
   EmailPartial,
   NewsletterBlock,
   TemplateBlockWithBlock,
 } from '~~/shared/email/blocks';
-import { parseVariablesSchema } from '~~/shared/email/blocks';
+import { DEFAULT_EMAIL_DESIGN, parseVariablesSchema } from '~~/shared/email/blocks';
 
 export function useTemplateBuilder(templateId: Ref<number>) {
   const { previewNewsletter } = useEmailTemplates();
@@ -32,6 +33,11 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   const footerPartial = ref<EmailPartial | null>(null);
   const webVersionBarPartial = ref<EmailPartial | null>(null);
 
+  // Header-level editable fields (subject + name + design tokens).
+  const templateName = ref<string>('');
+  const subjectTemplate = ref<string>('');
+  const designSettings = ref<Required<EmailDesignSettings>>({ ...DEFAULT_EMAIL_DESIGN });
+
   // ── Load existing template blocks + partial settings ───────────────
   const loadBlocks = async () => {
     const blocks = await templateBlockItems.list({
@@ -48,18 +54,50 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       sort: i,
     }));
 
-    // Load template partial settings
+    // Load template partial settings + design tokens. Wildcard the field
+    // list so older Directus instances without `design_settings` still
+    // return the rest of the row (the field setup script is run separately).
     const tmpl = await emailTemplateItems.get(templateId.value, {
-      fields: ['include_header', 'include_footer', 'include_web_version_bar', 'header_partial_id', 'footer_partial_id', 'mjml_source'],
+      fields: ['*'],
     }) as any;
 
     includeHeader.value = tmpl.include_header !== false;
     includeFooter.value = tmpl.include_footer !== false;
     includeWebVersionBar.value = tmpl.include_web_version_bar !== false;
     rawMjmlSource.value = tmpl.mjml_source || null;
+    templateName.value = tmpl.name || '';
+    subjectTemplate.value = tmpl.subject_template || '';
+    const saved = (tmpl.design_settings || null) as EmailDesignSettings | null;
+    designSettings.value = {
+      body_background: saved?.body_background || DEFAULT_EMAIL_DESIGN.body_background,
+      font_family: saved?.font_family || DEFAULT_EMAIL_DESIGN.font_family,
+      font_size: saved?.font_size || DEFAULT_EMAIL_DESIGN.font_size,
+      text_color: saved?.text_color || DEFAULT_EMAIL_DESIGN.text_color,
+    };
 
     // Load partials (from template or defaults)
     await loadPartials(tmpl.header_partial_id, tmpl.footer_partial_id);
+  };
+
+  /** Mutate a single design token and mark dirty. */
+  const updateDesignSetting = <K extends keyof EmailDesignSettings>(
+    key: K,
+    value: Required<EmailDesignSettings>[K],
+  ) => {
+    designSettings.value = { ...designSettings.value, [key]: value };
+    isDirty.value = true;
+  };
+
+  /** Edit the template name / subject from the builder's header bar. */
+  const setTemplateName = (name: string) => {
+    if (name === templateName.value) return;
+    templateName.value = name;
+    isDirty.value = true;
+  };
+  const setSubjectTemplate = (subject: string) => {
+    if (subject === subjectTemplate.value) return;
+    subjectTemplate.value = subject;
+    isDirty.value = true;
   };
 
   const loadPartials = async (headerId?: number | null, footerId?: number | null) => {
@@ -261,11 +299,12 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     }
 
     // Strip empty attributes before returning to prevent MJML validation errors
+    const d = designSettings.value;
     const raw = `<mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, Helvetica, sans-serif" />
-      <mj-text font-size="15px" color="#333333" line-height="1.7" />
+      <mj-all font-family="${d.font_family}" />
+      <mj-text font-size="${d.font_size}" color="${d.text_color}" line-height="1.7" />
       <mj-section padding="0" />
     </mj-attributes>
     <mj-style>
@@ -273,7 +312,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       a { color: #000000; }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#f4f4f4">
+  <mj-body background-color="${d.body_background}">
 ${sections.join('\n')}
   </mj-body>
 </mjml>`;
@@ -332,8 +371,11 @@ ${sections.join('\n')}
         });
       }
 
-      // 4. Update email_template with compiled MJML + partial settings
-      await emailTemplateItems.update(templateId.value, {
+      // 4. Update email_template with compiled MJML + partial settings.
+      // design_settings may not exist on instances that haven't run the
+      // setup-email-templates-design-fields script yet — retry without it
+      // on failure so non-migrated dev DBs still save the rest of the row.
+      const patch: Record<string, any> = {
         mjml_source: assembledMjml,
         mjml_assembled_at: new Date().toISOString(),
         block_count: canvas.value.length,
@@ -342,7 +384,21 @@ ${sections.join('\n')}
         include_web_version_bar: includeWebVersionBar.value,
         header_partial_id: headerPartial.value?.id || null,
         footer_partial_id: footerPartial.value?.id || null,
-      });
+        name: templateName.value || undefined,
+        subject_template: subjectTemplate.value || null,
+        design_settings: { ...designSettings.value },
+      };
+      try {
+        await emailTemplateItems.update(templateId.value, patch);
+      } catch (err: any) {
+        const msg = String(err?.message || '');
+        if (/design_settings/i.test(msg)) {
+          const { design_settings: _omit, ...rest } = patch;
+          await emailTemplateItems.update(templateId.value, rest);
+        } else {
+          throw err;
+        }
+      }
 
       isDirty.value = false;
     } finally {
@@ -510,6 +566,9 @@ ${sections.join('\n')}
     headerPartial,
     footerPartial,
     webVersionBarPartial,
+    templateName,
+    subjectTemplate,
+    designSettings,
     loadBlocks,
     addBlock,
     removeBlock,
@@ -522,5 +581,8 @@ ${sections.join('\n')}
     assembleMjml,
     refreshPreview,
     save,
+    setTemplateName,
+    setSubjectTemplate,
+    updateDesignSetting,
   };
 }

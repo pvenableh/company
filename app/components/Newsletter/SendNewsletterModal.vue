@@ -1,24 +1,40 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="$emit('close')">
-    <div class="ios-card w-full max-w-lg mx-4 shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div class="ios-card w-full max-w-2xl mx-4 shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between px-5 py-4 border-b border-border/30 shrink-0">
-        <h3 class="text-sm font-semibold">Send Newsletter</h3>
+        <div>
+          <h3 class="text-sm font-semibold">Send Newsletter</h3>
+          <p v-if="templateName" class="text-[10px] text-muted-foreground mt-0.5 truncate">{{ templateName }}</p>
+        </div>
         <button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">
           <Icon name="lucide:x" class="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div class="px-5 py-4 space-y-5 overflow-y-auto">
+      <div class="px-5 py-4 space-y-5 overflow-y-auto flex-1">
         <!-- Mailing Lists -->
         <div class="space-y-2">
-          <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mailing Lists</label>
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Mailing Lists</label>
+            <button
+              v-if="lists.length"
+              type="button"
+              class="text-[10px] text-primary hover:underline"
+              @click="toggleAllLists"
+            >
+              {{ allListsSelected ? 'Clear all' : 'Select all' }}
+            </button>
+          </div>
           <div v-if="listsLoading" class="text-[11px] text-muted-foreground">Loading lists…</div>
-          <div v-else-if="!lists.length" class="text-[11px] text-muted-foreground">No mailing lists yet.</div>
-          <div v-else class="space-y-1.5 max-h-40 overflow-y-auto">
+          <div v-else-if="!lists.length" class="text-[11px] text-muted-foreground italic">
+            No mailing lists yet — create one from the Marketing app.
+          </div>
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto">
             <label
               v-for="list in lists"
               :key="list.id"
-              class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted/40 cursor-pointer transition-colors"
+              class="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border/40 hover:bg-muted/40 cursor-pointer transition-colors"
+              :class="{ 'bg-primary/5 border-primary/30': selectedListIds.includes(list.id) }"
             >
               <input
                 v-model="selectedListIds"
@@ -27,7 +43,7 @@
                 class="rounded border-border h-3.5 w-3.5 cursor-pointer"
               />
               <span class="text-[12px] text-foreground flex-1 truncate">{{ list.name }}</span>
-              <span class="text-[10px] text-muted-foreground tabular-nums">{{ list.subscriber_count || 0 }}</span>
+              <span class="text-[10px] text-muted-foreground tabular-nums shrink-0">{{ list.subscriber_count || 0 }}</span>
             </label>
           </div>
         </div>
@@ -87,7 +103,7 @@
               </select>
               <button
                 class="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 ios-press transition-colors"
-                @click="segments.splice(i, 1); previewResult = null"
+                @click="removeSegment(i)"
               >
                 <Icon name="lucide:x" class="w-3 h-3" />
               </button>
@@ -95,23 +111,83 @@
           </div>
         </div>
 
-        <!-- Preview -->
-        <div class="flex items-center gap-2">
-          <button
-            class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors disabled:opacity-40"
-            :disabled="!hasTargets || previewing"
-            @click="runPreview"
-          >
-            <Icon name="lucide:users" class="w-3 h-3" />
-            {{ previewing ? 'Counting…' : 'Preview recipients' }}
-          </button>
-          <span v-if="previewResult" class="text-[11px] text-muted-foreground">
-            <span class="font-semibold text-foreground">{{ previewResult.total }}</span>
-            eligible recipient{{ previewResult.total === 1 ? '' : 's' }}
-            <span v-if="previewResult.sample_emails?.length" class="t-text-muted">
-              · e.g. {{ previewResult.sample_emails.slice(0, 2).join(', ') }}{{ previewResult.sample_emails.length > 2 ? '…' : '' }}
-            </span>
-          </span>
+        <!-- Recipients (resolved + per-contact toggle) -->
+        <div v-if="hasTargets" class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              Recipients
+              <span v-if="resolved.length" class="ml-1 text-[10px] text-muted-foreground/80">
+                ({{ excludedEmails.size }} excluded · {{ effectiveCount }} will send)
+              </span>
+            </label>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="resolved.length"
+                type="button"
+                class="text-[10px] text-primary hover:underline"
+                @click="excludedEmails.clear()"
+              >Include all</button>
+              <button
+                v-if="resolved.length"
+                type="button"
+                class="text-[10px] text-muted-foreground hover:text-foreground hover:underline"
+                @click="excludeAll"
+              >Exclude all</button>
+              <button
+                type="button"
+                class="rounded-full px-2.5 py-1 text-[10px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors disabled:opacity-40"
+                :disabled="resolving"
+                @click="resolveRecipients"
+              >
+                <Icon :name="resolving ? 'lucide:loader-2' : 'lucide:refresh-cw'" class="w-3 h-3" :class="{ 'animate-spin': resolving }" />
+                {{ resolved.length ? 'Refresh' : 'Load recipients' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="resolveError" class="rounded-lg bg-destructive/10 text-destructive px-3 py-2 text-[11px]">
+            {{ resolveError }}
+          </div>
+
+          <div v-if="resolved.length" class="space-y-2">
+            <div class="relative">
+              <Icon name="lucide:search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <input
+                v-model="recipientSearch"
+                type="text"
+                placeholder="Filter recipients…"
+                class="w-full pl-7 pr-3 py-1.5 rounded-full border border-border bg-background text-[12px] focus:ring-1 focus:ring-primary/30 outline-none"
+              >
+            </div>
+
+            <div class="rounded-xl border border-border/40 max-h-60 overflow-y-auto divide-y divide-border/30">
+              <label
+                v-for="c in filteredResolved"
+                :key="c.id || c.email"
+                class="flex items-center gap-2 px-3 py-2 hover:bg-muted/30 cursor-pointer transition-colors"
+                :class="{ 'opacity-50': excludedEmails.has(c.email) }"
+              >
+                <input
+                  type="checkbox"
+                  :checked="!excludedEmails.has(c.email)"
+                  class="rounded border-border h-3.5 w-3.5 cursor-pointer"
+                  @change="toggleExclude(c.email, ($event.target as HTMLInputElement).checked)"
+                >
+                <div class="flex-1 min-w-0">
+                  <p class="text-[12px] text-foreground truncate">
+                    {{ c.first_name || c.last_name ? `${c.first_name || ''} ${c.last_name || ''}`.trim() : c.email }}
+                  </p>
+                  <p v-if="c.first_name || c.last_name" class="text-[10px] text-muted-foreground truncate">{{ c.email }}</p>
+                </div>
+              </label>
+              <div v-if="!filteredResolved.length" class="px-3 py-4 text-center text-[11px] text-muted-foreground">
+                No recipients match "{{ recipientSearch }}".
+              </div>
+            </div>
+          </div>
+          <div v-else-if="!resolving" class="text-[11px] text-muted-foreground italic">
+            Tap <span class="font-medium">Load recipients</span> to review who'll receive this send and deselect anyone you want to skip.
+          </div>
         </div>
 
         <!-- Result -->
@@ -134,10 +210,16 @@
 
       <div class="flex items-center justify-between gap-2 px-5 py-3 border-t border-border/30 shrink-0">
         <p v-if="!hasTargets" class="text-[10px] text-muted-foreground">Pick a list or add a segment to enable send.</p>
-        <p v-else-if="!previewResult?.total && previewResult" class="text-[10px] text-warning dark:text-warning">
-          No eligible recipients — check segment filters.
+        <p v-else-if="resolved.length === 0" class="text-[10px] text-muted-foreground">
+          Lists / segments selected · load recipients to review and trim.
         </p>
-        <div v-else />
+        <p v-else-if="effectiveCount === 0" class="text-[10px] text-warning dark:text-warning">
+          Everyone is excluded — re-include at least one recipient.
+        </p>
+        <p v-else class="text-[10px] text-muted-foreground">
+          Sending to <span class="font-semibold text-foreground">{{ effectiveCount }}</span>
+          recipient{{ effectiveCount === 1 ? '' : 's' }}.
+        </p>
         <div class="flex items-center gap-2">
           <button
             class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors"
@@ -147,11 +229,11 @@
           </button>
           <button
             class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors disabled:opacity-40 inline-flex items-center gap-1"
-            :disabled="!hasTargets || sending || previewResult?.total === 0"
+            :disabled="!canSend"
             @click="send"
           >
             <Icon name="lucide:send" class="w-3 h-3" />
-            {{ sending ? 'Sending…' : 'Send Newsletter' }}
+            {{ sending ? 'Sending…' : `Send to ${effectiveCount || ''}`.trim() }}
           </button>
         </div>
       </div>
@@ -161,6 +243,7 @@
 
 <script setup lang="ts">
 import { onClickOutside } from '@vueuse/core';
+import type { Contact } from '~~/shared/email/contacts';
 
 const props = defineProps<{
   templateId: number;
@@ -174,7 +257,7 @@ type Segment =
   | { type: 'client_active' }
   | { type: 'contact_category'; category: string };
 
-const { getLists } = useMailingLists();
+const { getLists, resolveRecipients: resolveListContacts } = useMailingLists();
 const { selectedOrg } = useOrganization();
 
 const lists = ref<any[]>([]);
@@ -198,11 +281,16 @@ const segmentOptions = [
 
 function addSegment(opt: typeof segmentOptions[number]) {
   showSegmentMenu.value = false;
-  previewResult.value = null;
   if (opt.type === 'lead_stage') segments.value.push({ type: 'lead_stage', stage: 'negotiating' });
   else if (opt.type === 'lead_any_open') segments.value.push({ type: 'lead_any_open' });
   else if (opt.type === 'client_active') segments.value.push({ type: 'client_active' });
   else if (opt.type === 'contact_category') segments.value.push({ type: 'contact_category', category: 'prospect' });
+}
+
+function removeSegment(i: number) {
+  segments.value.splice(i, 1);
+  resolved.value = [];
+  excludedEmails.value.clear();
 }
 
 function segmentIcon(seg: Segment) {
@@ -218,41 +306,148 @@ function segmentLabel(seg: Segment) {
 }
 
 const hasTargets = computed(() => selectedListIds.value.length > 0 || segments.value.length > 0);
+const allListsSelected = computed(() => lists.value.length > 0 && selectedListIds.value.length === lists.value.length);
 
-const previewing = ref(false);
-const previewResult = ref<{ total: number; sample_emails?: string[] } | null>(null);
+function toggleAllLists() {
+  if (allListsSelected.value) {
+    selectedListIds.value = [];
+  } else {
+    selectedListIds.value = lists.value.map((l: any) => l.id);
+  }
+}
 
+// ── Recipient resolution ─────────────────────────────────────────────
+const resolved = ref<Contact[]>([]);
+const resolving = ref(false);
+const resolveError = ref<string | null>(null);
+const excludedEmails = ref(new Set<string>());
+const recipientSearch = ref('');
+
+const filteredResolved = computed(() => {
+  const q = recipientSearch.value.trim().toLowerCase();
+  if (!q) return resolved.value;
+  return resolved.value.filter((c) => {
+    const hay = `${c.email || ''} ${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+    return hay.includes(q);
+  });
+});
+
+const effectiveCount = computed(() => resolved.value.length - excludedEmails.value.size);
+
+function toggleExclude(email: string, include: boolean) {
+  const next = new Set(excludedEmails.value);
+  if (include) next.delete(email);
+  else next.add(email);
+  excludedEmails.value = next;
+}
+
+function excludeAll() {
+  excludedEmails.value = new Set(resolved.value.map((c) => c.email).filter(Boolean) as string[]);
+}
+
+async function resolveRecipients() {
+  if (!hasTargets.value) return;
+  resolving.value = true;
+  resolveError.value = null;
+  try {
+    // Lists: use the local resolver (already org-scoped + deduped).
+    const fromLists = selectedListIds.value.length
+      ? await resolveListContacts(selectedListIds.value)
+      : [];
+
+    // Segments: use the server dry-run which understands CRM segment types.
+    // Then read back the full contact rows so we can show name/email pairs.
+    let fromSegments: Contact[] = [];
+    if (segments.value.length) {
+      try {
+        const res = await $fetch<any>('/api/email/newsletter-send?dry_run=1', {
+          method: 'POST',
+          body: {
+            template_id: props.templateId,
+            target_segments: JSON.parse(JSON.stringify(segments.value)),
+            organization_id: selectedOrg.value || undefined,
+          },
+        });
+        const segEmails: string[] = res?.sample_emails || [];
+        // Dry-run only returns a sample preview; treat that as a hint, not
+        // the full list. Send time the server re-resolves from the segments,
+        // so per-contact opt-outs from segments are surrendered to the
+        // server unless we expand the dry-run contract. For now we show the
+        // sample + count so users at least see what they're sending into.
+        if (typeof res?.total === 'number' && res.total > segEmails.length) {
+          resolveError.value = `Segments resolve to ${res.total} recipients; per-contact opt-out is only available for mailing-list selections (showing ${segEmails.length}-row sample).`;
+        }
+        fromSegments = segEmails.map((email) => ({ id: '', email, first_name: null, last_name: null } as any));
+      } catch (err: any) {
+        resolveError.value = err?.data?.message || err?.message || 'Could not resolve segments.';
+      }
+    }
+
+    // Dedup across lists + segments.
+    const seen = new Set<string>();
+    const all: Contact[] = [];
+    for (const c of [...fromLists, ...fromSegments]) {
+      if (c.email && !seen.has(c.email)) {
+        seen.add(c.email);
+        all.push(c);
+      }
+    }
+    resolved.value = all;
+    excludedEmails.value = new Set();
+  } catch (err: any) {
+    resolveError.value = err?.data?.message || err?.message || 'Failed to resolve recipients.';
+    resolved.value = [];
+  } finally {
+    resolving.value = false;
+  }
+}
+
+// Re-resolve when targets change so the count badge stays honest.
+let resolveDebounce: ReturnType<typeof setTimeout> | null = null;
+watch([selectedListIds, segments], () => {
+  if (resolveDebounce) clearTimeout(resolveDebounce);
+  if (!hasTargets.value) {
+    resolved.value = [];
+    excludedEmails.value.clear();
+    return;
+  }
+  // Only auto-refresh when we already loaded once — otherwise the user
+  // would burn permissions every keystroke on the segment selectors.
+  if (resolved.value.length === 0 && !resolveError.value) return;
+  resolveDebounce = setTimeout(() => resolveRecipients(), 350);
+}, { deep: true });
+
+// ── Send ─────────────────────────────────────────────────────────────
 const sending = ref(false);
 const sendResult = ref<any | null>(null);
 
-// Reset preview when targets change
-watch([selectedListIds, segments], () => { previewResult.value = null; }, { deep: true });
+const canSend = computed(() => {
+  if (!hasTargets.value || sending.value) return false;
+  // If the user loaded recipients and excluded some, require at least one.
+  if (resolved.value.length > 0 && effectiveCount.value === 0) return false;
+  return true;
+});
 
 function buildBody() {
+  // If recipients are loaded AND any were excluded, send by explicit
+  // recipient_ids instead of target_lists so the server sees the trimmed
+  // set. Falls back to list-based send when no opt-outs are applied so
+  // large sends stay efficient.
+  const trimmedRecipients = resolved.value
+    .filter((c) => c.email && !excludedEmails.value.has(c.email))
+    .map((c) => c.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  const useExplicit = resolved.value.length > 0 && excludedEmails.value.size > 0 && trimmedRecipients.length > 0;
+
   return {
     template_id: props.templateId,
     name: props.templateName,
-    target_lists: selectedListIds.value.length ? selectedListIds.value : undefined,
-    target_segments: segments.value.length ? JSON.parse(JSON.stringify(segments.value)) : undefined,
+    target_lists: useExplicit ? undefined : (selectedListIds.value.length ? selectedListIds.value : undefined),
+    target_segments: useExplicit ? undefined : (segments.value.length ? JSON.parse(JSON.stringify(segments.value)) : undefined),
+    recipient_ids: useExplicit ? trimmedRecipients : undefined,
     organization_id: selectedOrg.value || undefined,
   };
-}
-
-async function runPreview() {
-  previewing.value = true;
-  sendResult.value = null;
-  try {
-    const res = await $fetch<any>('/api/email/newsletter-send?dry_run=1', {
-      method: 'POST',
-      body: buildBody(),
-    });
-    previewResult.value = { total: res.total || 0, sample_emails: res.sample_emails || [] };
-  } catch (err: any) {
-    previewResult.value = { total: 0 };
-    sendResult.value = { success: false, error: err?.data?.message || err?.message || 'Preview failed' };
-  } finally {
-    previewing.value = false;
-  }
 }
 
 async function send() {

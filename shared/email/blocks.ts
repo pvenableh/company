@@ -160,7 +160,26 @@ export interface EmailTemplate {
 
   // System-provided starter templates that users can clone as a jump-start.
   is_starter?: boolean | null;
+
+  // Per-template design tokens surfaced in the builder's Email Settings drawer.
+  // Null/missing keys fall back to defaults inside assembleMjml().
+  design_settings?: EmailDesignSettings | null;
 }
+
+/** Per-template MJML defaults the builder writes into mj-attributes / mj-body. */
+export interface EmailDesignSettings {
+  body_background?: string;
+  font_family?: string;
+  font_size?: string;
+  text_color?: string;
+}
+
+export const DEFAULT_EMAIL_DESIGN: Required<EmailDesignSettings> = {
+  body_background: '#f4f4f4',
+  font_family: 'Arial, Helvetica, sans-serif',
+  font_size: '15px',
+  text_color: '#333333',
+};
 
 export interface MjmlCompileResult {
   html: string;
