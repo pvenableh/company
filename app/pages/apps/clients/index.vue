@@ -388,9 +388,22 @@ const contactCategoryItems = computed(() => contactCategoryChips.map((c) => ({
   label: c.label,
 })));
 
-// TODO(ios-sweep): lift /contacts/[id] to ContactPanel slide-over
-function openContact(c: { id: string }) {
-  router.push(`/contacts/${c.id}`);
+const contactSlide = useAppSlideOver('contact');
+function openContact(c: { id: string }, ev?: MouseEvent) {
+  if (!c?.id) return;
+  const target = ev?.currentTarget as HTMLElement | null;
+  const row = target?.closest('.contact-row, tr, .ios-card') as HTMLElement | null;
+  const flipFrom = row ? flipPayloadFrom(row) : flipPayloadFrom(target);
+  contactSlide.open(String(c.id), { flipFrom });
+}
+
+const leadSlide = useAppSlideOver('lead');
+const automationsSlide = useAppSlideOver('lead-automations');
+function openLead(lead: { id: string | number }, ev?: MouseEvent) {
+  if (!lead?.id) return;
+  const target = ev?.currentTarget as HTMLElement | null;
+  const flipFrom = flipPayloadFrom(target);
+  leadSlide.open(String(lead.id), { flipFrom });
 }
 
 async function fetchContacts() {
@@ -470,12 +483,9 @@ watch(view, (next) => {
         <TooltipProvider v-if="view === 'leads' && isOrgManagerOrAbove" :delay-duration="200">
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button as-child variant="outline" size="sm">
-                <!-- TODO(ios-sweep): lift /leads/automations into apps shell -->
-                <NuxtLink to="/leads/automations">
-                  <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
-                  Automations
-                </NuxtLink>
+              <Button variant="outline" size="sm" @click="automationsSlide.open('_')">
+                <Icon name="lucide:zap" class="w-4 h-4 mr-1" />
+                Automations
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
@@ -834,13 +844,12 @@ watch(view, (next) => {
           <div v-if="leadsLoading" class="flex items-center justify-center py-20">
             <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
-          <!-- TODO(ios-sweep): lift /leads/[id] to LeadPanel slide-over -->
           <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <LeadsLeadCard
               v-for="lead in allLeads"
               :key="lead.id"
               :lead="lead"
-              @click="navigateTo(`/leads/${lead.id}`)"
+              @click="openLead"
             />
           </div>
           <div v-else class="text-center py-20">

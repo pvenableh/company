@@ -41,6 +41,8 @@ const REGISTRY: Record<string, PanelLoader> = {
 	task: () => import('./TaskPanel.vue'),
 	'project-event': () => import('./EventPanel.vue'),
 	'social-accounts': () => import('./SocialAccountsPanel.vue'),
+	lead: () => import('./LeadPanel.vue'),
+	'lead-automations': () => import('./LeadAutomationsPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();

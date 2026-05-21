@@ -17,7 +17,7 @@
           v-for="contact in contacts"
           :key="contact.id"
           class="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
-          @click="$emit('edit', contact)"
+          @click="$emit('edit', contact, $event)"
         >
           <td class="py-3 pr-4">
             <div>
@@ -151,7 +151,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  edit: [contact: Contact];
+  edit: [contact: Contact, ev?: MouseEvent];
   unsubscribe: [contact: Contact];
   delete: [contact: Contact];
   patched: [contact: Contact];

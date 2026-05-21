@@ -1,5 +1,5 @@
 <template>
-	<div class="ios-card p-4 cursor-pointer hover:shadow-md transition-all" @click="$emit('click', lead)">
+	<div class="ios-card p-4 cursor-pointer hover:shadow-md transition-all" @click="$emit('click', lead, $event)">
 		<div class="flex items-start justify-between mb-2">
 			<div class="flex items-center gap-2">
 				<UAvatar
@@ -58,7 +58,7 @@
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 const props = defineProps<{ lead: any }>();
-defineEmits<{ click: [lead: any] }>();
+defineEmits<{ click: [lead: any, ev?: MouseEvent] }>();
 
 const stageLabel = computed(() => LEAD_STAGE_LABELS[props.lead.stage as keyof typeof LEAD_STAGE_LABELS] || props.lead.stage);
 const stageColor = computed(() => LEAD_STAGE_COLORS[props.lead.stage as keyof typeof LEAD_STAGE_COLORS] || '#6B7280');
