@@ -36,9 +36,9 @@ useHead({ title: 'Money | Earnest' });
 
 const router = useRouter();
 
-// TODO(ios-sweep): lift /invoices/detail/[id] to InvoicePanel slide-over
+const invoiceSlide = useAppSlideOver('invoice');
 function openInvoice(invoiceId: string) {
-  router.push(`/invoices/detail/${invoiceId}`);
+  invoiceSlide.open(invoiceId);
 }
 const route = useRoute();
 
