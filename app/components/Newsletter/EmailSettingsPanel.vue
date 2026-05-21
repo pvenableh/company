@@ -111,7 +111,7 @@ function resetToDefault(key: keyof EmailDesignSettings) {
                 @blur="commitSubject"
                 @keyup.enter="commitSubject"
               >
-              <p class="text-[10px] text-muted-foreground mt-1">Supports merge tags like <code class="font-mono">{{ '{{first_name}}' }}</code>.</p>
+              <p class="text-[10px] text-muted-foreground mt-1">Supports merge tags like <code v-pre class="font-mono">{{first_name}}</code>.</p>
             </div>
           </section>
 
