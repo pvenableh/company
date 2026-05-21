@@ -1,7 +1,7 @@
 <template>
 	<div
 		class="ios-card p-4 cursor-pointer transition-all"
-		@click="$emit('select')"
+		@click="$emit('select', $event)"
 	>
 		<div class="flex items-start gap-2">
 			<!-- Inline-complete affordance (left of the title); dual-purpose with
@@ -82,7 +82,7 @@ const props = defineProps<{
 }>();
 
 defineEmits<{
-	select: [];
+	select: [event: MouseEvent];
 	'toggle-complete': [];
 }>();
 

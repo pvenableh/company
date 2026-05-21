@@ -62,7 +62,7 @@
 								<TasksCard
 									:task="task"
 									:team-members="teamMembers"
-									@select="openTaskSlideOver(task)"
+									@select="openTaskSlideOver(task, $event)"
 									@toggle-complete="toggleComplete(task)"
 								/>
 							</div>
@@ -92,8 +92,11 @@ import { subscribeToCollection } from '~/composables/useEntityStore';
 
 const taskSlide = useAppSlideOver('task');
 
-function openTaskSlideOver(task: any) {
-	taskSlide.open(task.id);
+function openTaskSlideOver(task: any, ev?: MouseEvent) {
+	// Capture the card .ios-card root for the FLIP — the card emits the
+	// click event whose currentTarget is the .ios-card div itself.
+	const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
+	taskSlide.open(task.id, { flipFrom });
 }
 
 const props = defineProps<{
