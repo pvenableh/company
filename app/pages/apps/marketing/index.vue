@@ -35,7 +35,11 @@ useHead({ title: 'Marketing | Earnest' });
 
 const router = useRouter();
 
-// TODO(ios-sweep): lift /email/templates/[id] to EmailTemplatePanel slide-over
+// allow-legacy-link: /email/templates/[id] is the NewsletterBlockBuilder — a
+// full-screen editor (drag-and-drop block palette + sidebar + AI wizard +
+// HTML import/export) that's legitimately a full-page experience, not a
+// quick-edit slide-over. Wrapping it in a panel would crush the editor
+// viewport and add no UX. The link is intentionally a navigation.
 function openEmailTemplate(id: string) {
   router.push(`/email/templates/${id}`);
 }
@@ -349,6 +353,15 @@ function openComposeSlideOver() {
 // of bouncing to /lists/[id]. New-list modal is rendered inline below.
 const mailingListSlide = useAppSlideOver('mailing-list');
 const showNewListModal = ref(false);
+
+// Campaign Planner slide-over — lifted from /marketing#planner. Singleton
+// create flow so the id is the sentinel '_'.
+const campaignPlannerSlide = useAppSlideOver('campaign-planner');
+
+// New-email bottom sheet — lifted from /email's New Template modal so the
+// user doesn't get dumped on the legacy landing page two hops before the
+// create flow.
+const showNewEmailSheet = ref(false);
 const mailingListRefreshSignal = useState<number>('mailing-lists-refresh', () => 0);
 function openMailingListSlideOver(list: any, ev?: MouseEvent) {
   const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
@@ -741,16 +754,14 @@ const headerAction = computed(() => {
     return {
       label: 'New Campaign',
       icon: 'lucide:rocket',
-      // TODO(ios-sweep): lift campaign planner into apps shell as a marketing floor
-      onClick: () => router.push('/marketing#planner'),
+      onClick: () => campaignPlannerSlide.open('_'),
     };
   }
   if (floor.value === 'email') {
     return {
       label: 'New Email',
       icon: 'lucide:plus',
-      // TODO(ios-sweep): lift /email composer into NewEmailPanel slide-over or marketing floor
-      onClick: () => router.push('/email'),
+      onClick: () => { showNewEmailSheet.value = true; },
     };
   }
   if (floor.value === 'accounts') {
@@ -994,8 +1005,7 @@ const scopeLabel = computed(() => {
               Plan one with the Campaign Planner on the classic Marketing page.
             </p>
           </div>
-          <!-- TODO(ios-sweep): lift campaign planner into apps shell -->
-          <Button size="sm" variant="outline" @click="router.push('/marketing')">
+          <Button size="sm" variant="outline" @click="campaignPlannerSlide.open('_')">
             <Icon name="lucide:rocket" class="w-4 h-4 mr-1" />
             Open Planner
           </Button>
@@ -1282,8 +1292,7 @@ const scopeLabel = computed(() => {
             <p class="text-sm font-medium text-muted-foreground">No email templates yet</p>
             <p class="text-xs text-muted-foreground/70 mt-1">Create your first template to start sending campaigns.</p>
           </div>
-          <!-- TODO(ios-sweep): lift /email composer into NewEmailPanel slide-over -->
-          <Button size="sm" @click="router.push('/email')">
+          <Button size="sm" @click="showNewEmailSheet = true">
             <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
             New Email
           </Button>
@@ -1622,6 +1631,9 @@ const scopeLabel = computed(() => {
 
     <!-- New mailing list modal (Audience floor) -->
     <ListsFormModal v-model="showNewListModal" @created="onListCreated" />
+
+    <!-- New email template sheet (Email floor + header) -->
+    <AppsMarketingNewEmailSheet v-model="showNewEmailSheet" />
   </div>
 </template>
 
