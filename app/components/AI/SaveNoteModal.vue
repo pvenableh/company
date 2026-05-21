@@ -72,19 +72,12 @@ const contentPreview = computed(() => {
 </script>
 
 <template>
-  <UModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
-    <template #header>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-          <UIcon name="i-heroicons-bookmark" class="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h3 class="text-sm font-semibold">Save AI Note</h3>
-          <p class="text-xs text-muted-foreground">Save this insight for future reference</p>
-        </div>
-      </div>
-    </template>
-
+  <AppsAppBottomSheet
+    :model-value="modelValue"
+    title="Save AI Note"
+    subtitle="Save this insight for future reference"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
     <div class="space-y-4">
       <!-- Title -->
       <UFormGroup label="Title">
@@ -106,7 +99,8 @@ const contentPreview = computed(() => {
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
+      <span />
+      <div class="flex items-center gap-2">
         <UButton
           variant="ghost"
           @click="emit('update:modelValue', false)"
@@ -123,5 +117,5 @@ const contentPreview = computed(() => {
         </UButton>
       </div>
     </template>
-  </UModal>
+  </AppsAppBottomSheet>
 </template>

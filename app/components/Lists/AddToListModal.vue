@@ -1,15 +1,11 @@
 <template>
-	<UModal :model-value="true" @update:model-value="$emit('close')">
-		<template #header>
-			<h3 class="text-lg font-semibold">Add to Mailing List</h3>
-		</template>
-
+	<AppsAppBottomSheet :model-value="true" title="Add to Mailing List" @update:model-value="$emit('close')">
 		<div class="space-y-3">
 			<p class="text-sm text-muted-foreground">
 				Select a list to add {{ contactName }} to:
 			</p>
 
-			<div class="space-y-2 max-h-64 overflow-y-auto">
+			<div class="space-y-2">
 				<label
 					v-for="list in lists"
 					:key="list.id"
@@ -33,14 +29,15 @@
 		</div>
 
 		<template #footer>
-			<div class="flex justify-end gap-2">
+			<span />
+			<div class="flex items-center gap-2">
 				<UButton variant="soft" color="gray" @click="$emit('close')">Cancel</UButton>
 				<UButton color="primary" :disabled="!selectedListId || adding" :loading="adding" @click="handleAdd">
 					Add to List
 				</UButton>
 			</div>
 		</template>
-	</UModal>
+	</AppsAppBottomSheet>
 </template>
 
 <script setup lang="ts">

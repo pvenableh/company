@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
 const open = defineModel<boolean>({ required: true });
 
 const { user } = useDirectusAuth();
@@ -56,59 +54,51 @@ watch(open, (isOpen) => {
 </script>
 
 <template>
-	<Dialog v-model:open="open">
-		<DialogContent class="max-w-md">
-			<DialogHeader>
-				<DialogTitle class="flex items-center gap-2">
-					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-primary" />
-					AI Tokens
-				</DialogTitle>
-				<DialogDescription class="text-xs">
-					Tokens power AI features across Earnest. Top up anytime.
-				</DialogDescription>
-			</DialogHeader>
+	<AppsAppBottomSheet
+		v-model="open"
+		title="AI Tokens"
+		subtitle="Tokens power AI features across Earnest. Top up anytime."
+	>
+		<!-- Usage summary -->
+		<OrganizationTokenMeter :show-cta="false" />
 
-			<!-- Usage summary -->
-			<OrganizationTokenMeter :show-cta="false" />
-
-			<!-- Buy tokens -->
-			<div v-if="canManageTokens" class="space-y-3">
-				<h4 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Buy more tokens</h4>
-				<div class="grid grid-cols-3 gap-2">
-					<button
-						v-for="pkg in tokenPackages"
-						:key="pkg.id"
-						class="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border border-border/40 bg-background hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-						:disabled="buyLoading === pkg.id"
-						@click="buyTokens(pkg.id)"
-					>
-						<span class="text-sm font-bold text-foreground">{{ pkg.name }}</span>
-						<span class="text-[10px] text-muted-foreground">tokens</span>
-						<span class="text-xs font-semibold text-primary">${{ pkg.price }}</span>
-						<UIcon
-							v-if="buyLoading === pkg.id"
-							name="i-heroicons-arrow-path"
-							class="w-3 h-3 text-primary animate-spin mt-0.5"
-						/>
-					</button>
-				</div>
-				<p class="text-[10px] text-muted-foreground text-center">
-					Tokens never expire and stack on top of your monthly allotment.
-				</p>
+		<!-- Buy tokens -->
+		<div v-if="canManageTokens" class="space-y-3">
+			<h4 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Buy more tokens</h4>
+			<div class="grid grid-cols-3 gap-2">
+				<button
+					v-for="pkg in tokenPackages"
+					:key="pkg.id"
+					class="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border border-border/40 bg-background hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					:disabled="buyLoading === pkg.id"
+					@click="buyTokens(pkg.id)"
+				>
+					<span class="text-sm font-bold text-foreground">{{ pkg.name }}</span>
+					<span class="text-[10px] text-muted-foreground">tokens</span>
+					<span class="text-xs font-semibold text-primary">${{ pkg.price }}</span>
+					<UIcon
+						v-if="buyLoading === pkg.id"
+						name="i-heroicons-arrow-path"
+						class="w-3 h-3 text-primary animate-spin mt-0.5"
+					/>
+				</button>
 			</div>
-
-			<p v-else class="text-[11px] text-muted-foreground">
-				Only organization admins can purchase tokens.
+			<p class="text-[10px] text-muted-foreground text-center">
+				Tokens never expire and stack on top of your monthly allotment.
 			</p>
+		</div>
 
-			<!-- Detailed usage link -->
-			<button
-				class="w-full text-xs text-primary hover:underline flex items-center justify-center gap-1 pt-2"
-				@click="viewDetailedUsage"
-			>
-				View detailed usage and history
-				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
-			</button>
-		</DialogContent>
-	</Dialog>
+		<p v-else class="text-[11px] text-muted-foreground">
+			Only organization admins can purchase tokens.
+		</p>
+
+		<!-- Detailed usage link -->
+		<button
+			class="w-full text-xs text-primary hover:underline flex items-center justify-center gap-1 pt-2"
+			@click="viewDetailedUsage"
+		>
+			View detailed usage and history
+			<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+		</button>
+	</AppsAppBottomSheet>
 </template>

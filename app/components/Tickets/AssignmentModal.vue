@@ -1,9 +1,9 @@
 <template>
-	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
-		<template #header>
-			<h3 class="text-lg font-medium">Manage Assignments</h3>
-		</template>
-
+	<AppsAppBottomSheet
+		:model-value="isOpen"
+		title="Manage Assignments"
+		@update:model-value="$emit('update:isOpen', $event)"
+	>
 		<div class="py-2">
 			<!-- Current Assignments -->
 			<div class="mb-4">
@@ -61,12 +61,13 @@
 		</div>
 
 		<template #footer>
-			<div class="flex justify-end gap-2">
+			<span />
+			<div class="flex items-center gap-2">
 				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
 				<UButton color="primary" @click="handleSave" :loading="isLoading">Save Assignments</UButton>
 			</div>
 		</template>
-	</UModal>
+	</AppsAppBottomSheet>
 </template>
 
 <script setup>
