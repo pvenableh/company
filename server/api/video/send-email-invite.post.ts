@@ -118,6 +118,8 @@ export default defineEventHandler(async (event) => {
 			text,
 			org,
 			categories: ['transactional', 'video-invite'],
+			sendCollection: 'video_meetings',
+			sendId: meetingId ?? null,
 		});
 
 		if (!result.sent) {

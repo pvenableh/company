@@ -325,12 +325,31 @@ export default defineEventHandler(async (event) => {
       physicalAddress,
     });
 
+    // Match the transactional sender's tagging policy (see sendBrandedEmail):
+    // every Earnest send carries the `earnest` category + an `app: 'earnest'`
+    // custom arg so the SendGrid webhook can filter foreign events from the
+    // shared SendGrid account. `email_name`, `organization`, `send_collection`,
+    // and `send_id` link each event back to its campaign row in Directus.
+    const campaignName = (name || template?.name || `template-${template_id}`) as string;
     const msg: any = {
       to: contact.email,
       from: { email: fromEmail, name: fromName },
       subject,
       html: finalHtml,
-      categories: ['marketing', `newsletter-template-${template_id}`, ...(recordedEmailId ? [`email-${recordedEmailId}`] : [])],
+      categories: [
+        'earnest',
+        'marketing',
+        `newsletter-template-${template_id}`,
+        ...(recordedEmailId ? [`email-${recordedEmailId}`] : []),
+      ],
+      customArgs: {
+        app: 'earnest',
+        ...(organization_id ? { organization: String(organization_id) } : {}),
+        email_name: campaignName,
+        send_collection: 'emails',
+        ...(recordedEmailId ? { send_id: String(recordedEmailId) } : {}),
+        ...(template_id ? { template_id: String(template_id) } : {}),
+      },
     };
 
     if (replyTo) msg.replyTo = replyTo;

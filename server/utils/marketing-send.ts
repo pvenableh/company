@@ -311,6 +311,9 @@ async function sendEmailTouch(args: {
 			text: text || body,
 			org,
 			categories: ['marketing', `campaign-${campaign.id}`, `touch-${touch.id}`],
+			emailName: `campaign-${campaign.id}-touch-${touch.id}`,
+			sendCollection: 'marketing_campaign_touches',
+			sendId: touch.id,
 		});
 		if (result.sent) sentCount++;
 		else console.error(`[marketing-send] send to ${r.email} failed:`, result.reason);

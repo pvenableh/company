@@ -177,6 +177,7 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 				config,
 				kind: emailKind as 'meeting' | 'event',
 				org: orgBrand,
+				meetingId: meeting.id ?? null,
 			};
 
 			try {

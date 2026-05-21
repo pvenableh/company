@@ -23,12 +23,18 @@ interface SendArgs {
 	org?: OrgBrandRef | null;
 	/** Convenience: resolve org from id if `org` isn't pre-loaded. */
 	orgId?: string | null;
+	/** Notification category — refines `email_name` for webhook filtering. */
+	category?: NotificationCategory | null;
+	/** Source Directus collection (e.g. 'tickets', 'projects', 'invoices'). */
+	sourceCollection?: string | null;
+	/** Source row id within `sourceCollection`. */
+	sourceId?: string | number | null;
 	/** Retained for any caller that still passes runtimeConfig; ignored. */
 	config?: any;
 }
 
 export async function sendNotificationEmail(args: SendArgs): Promise<void> {
-	const { to, recipientName, subject, heading, body, link, ctaLabel } = args;
+	const { to, recipientName, subject, heading, body, link, ctaLabel, category, sourceCollection, sourceId } = args;
 
 	let org: OrgBrandRef | null | undefined = args.org;
 	if (!org && args.orgId) {
@@ -53,7 +59,10 @@ export async function sendNotificationEmail(args: SendArgs): Promise<void> {
 		html: rendered.html,
 		text: rendered.text,
 		org,
-		categories: ['transactional', 'notification'],
+		categories: ['transactional', 'notification', ...(category ? [category] : [])],
+		emailName: category ? `notification-${category}` : 'notification',
+		sendCollection: sourceCollection ?? undefined,
+		sendId: sourceId ?? null,
 	});
 }
 

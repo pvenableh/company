@@ -27,6 +27,8 @@ interface BaseParams {
 	kind?: MeetingKind;
 	/** Org context — drives logo, brand_color, reply-to. Null → Earnest shell. */
 	org?: OrgBrandRef | null;
+	/** Video meeting id — surfaces as `send_id` on SendGrid webhook events. */
+	meetingId?: string | number | null;
 }
 
 function formatDateTime(scheduledStart: Date) {
@@ -89,7 +91,7 @@ export async function sendMeetingInvitedEmail(params: BaseParams) {
 	`;
 	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
 	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
-	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-invited'] });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-invited'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 export async function sendMeetingTimeChangedEmail(params: BaseParams & { previousStart: Date }) {
@@ -106,7 +108,7 @@ export async function sendMeetingTimeChangedEmail(params: BaseParams & { previou
 	`;
 	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
 	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
-	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-time-changed'] });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-time-changed'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 interface MinimalParams {
@@ -118,6 +120,7 @@ interface MinimalParams {
 	config?: any;
 	kind?: MeetingKind;
 	org?: OrgBrandRef | null;
+	meetingId?: string | number | null;
 }
 
 export async function sendMeetingRemovedEmail(params: MinimalParams) {
@@ -131,7 +134,7 @@ export async function sendMeetingRemovedEmail(params: MinimalParams) {
 		<p style="margin:0;font-size:13px;color:#888;">If this was a mistake, reach out to ${escapeHtml(params.hostName)} directly.</p>
 	`;
 	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
-	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-removed'] });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-removed'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 export async function sendMeetingCancelledEmail(params: MinimalParams) {
@@ -144,7 +147,7 @@ export async function sendMeetingCancelledEmail(params: MinimalParams) {
 		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> cancelled <strong>${escapeHtml(params.meetingTitle)}</strong> (${escapeHtml(date)} at ${escapeHtml(time)}).</p>
 	`;
 	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
-	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-cancelled'] });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-cancelled'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 interface ReminderParams extends BaseParams {
@@ -166,5 +169,5 @@ export async function sendMeetingReminderEmail(params: ReminderParams) {
 	`;
 	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
 	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
-	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-reminder'] });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-reminder'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }

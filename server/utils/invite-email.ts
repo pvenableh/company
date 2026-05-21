@@ -89,6 +89,9 @@ export async function sendOrgInviteEmail(params: InviteEmailParams): Promise<{ s
 		org: brand,
 		replyTo: params.inviterEmail || null,
 		categories: ['transactional', 'invite'],
+		emailName: params.clientName ? 'portal-invite' : 'team-invite',
+		sendCollection: params.clientName ? 'client_portal_users' : 'org_memberships',
+		sendId: params.membershipId,
 	});
 	if (!res.sent) {
 		console.warn('[invite-email] send failed:', res.reason);

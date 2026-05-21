@@ -26,9 +26,24 @@ interface SendArgs {
 	org?: OrgBrandRef | null;
 	/** Explicit reply-to override; otherwise falls through org.email_reply_to → global. */
 	replyTo?: string | null;
-	/** SendGrid `categories` array; passed straight through for webhook analytics. */
+	/** Extra SendGrid `categories`; auto-prepended with 'earnest'. */
 	categories?: string[];
-	/** SendGrid `custom_args`; passed straight through for webhook analytics. */
+	/**
+	 * Human-readable name of this email kind (e.g. 'invite', 'meeting-invited',
+	 * 'welcome'). Becomes the `email_name` custom arg on the webhook event so
+	 * we can filter events without joining back to Directus. When omitted we
+	 * derive it from the most-specific (last) category.
+	 */
+	emailName?: string;
+	/**
+	 * Directus collection that drove the send (e.g. 'emails' for newsletter,
+	 * 'org_memberships' for invite, 'video_meetings' for meeting). Stored as
+	 * the `send_collection` custom arg.
+	 */
+	sendCollection?: string;
+	/** Directus row id within `sendCollection`. Stored as the `send_id` custom arg. */
+	sendId?: string | number | null;
+	/** Extra SendGrid `custom_args`; merged on top of auto-attached args. */
 	customArgs?: Record<string, string>;
 }
 
@@ -72,7 +87,7 @@ export async function fetchOrgBrand(orgId: string | null | undefined): Promise<(
 }
 
 export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
-	const { to, subject, html, text, org, replyTo, categories, customArgs } = args;
+	const { to, subject, html, text, org, replyTo, categories, emailName, sendCollection, sendId, customArgs } = args;
 
 	if (!to) return { sent: false, reason: 'no recipient' };
 	if (!subject || !html) return { sent: false, reason: 'subject or html missing' };
@@ -93,6 +108,21 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
 			|| globalReplyTo
 			|| null;
 
+	// Always tag Earnest sends with the `earnest` category and an `app: 'earnest'`
+	// custom arg. The SendGrid account is shared with other systems; the webhook
+	// uses these markers to filter foreign events. `email_name` falls back to the
+	// most-specific category so existing callsites (which already use
+	// ['transactional', '<type>']) get a sensible label without a code change.
+	const extraCategories = (categories || []).filter((c) => c && c !== 'earnest');
+	const mergedCategories = ['earnest', ...extraCategories];
+	const derivedEmailName = emailName || (extraCategories.length ? extraCategories[extraCategories.length - 1] : null);
+	const autoArgs: Record<string, string> = { app: 'earnest' };
+	if (org?.id) autoArgs.organization = String(org.id);
+	if (derivedEmailName) autoArgs.email_name = derivedEmailName;
+	if (sendCollection) autoArgs.send_collection = sendCollection;
+	if (sendId != null && sendId !== '') autoArgs.send_id = String(sendId);
+	const mergedArgs = { ...autoArgs, ...(customArgs || {}) };
+
 	const message: any = {
 		to,
 		from: { email: fromEmail, name: fromName },
@@ -102,8 +132,8 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
 	if (text) message.text = text;
 	if (resolvedReplyTo) message.replyTo = resolvedReplyTo;
 	if (bcc && bcc !== to) message.bcc = bcc;
-	if (categories && categories.length) message.categories = categories;
-	if (customArgs && Object.keys(customArgs).length) message.customArgs = customArgs;
+	message.categories = mergedCategories;
+	message.customArgs = mergedArgs;
 
 	try {
 		const sgMail = await import('@sendgrid/mail');

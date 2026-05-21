@@ -349,6 +349,7 @@ export default defineEventHandler(async (event) => {
 						scheduledStart,
 						durationMinutes,
 						org: orgBrandForInvites,
+						meetingId: videoMeeting.id,
 					});
 					inviteSent = true;
 				}
@@ -426,8 +427,9 @@ async function sendEmailInvitation(params: {
 	scheduledStart: Date;
 	durationMinutes: number;
 	org: OrgBrandRef | null;
+	meetingId?: string | number | null;
 }) {
-	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, durationMinutes, org } = params;
+	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, durationMinutes, org, meetingId } = params;
 
 	const formattedDate = scheduledStart.toLocaleDateString('en-US', {
 		weekday: 'long',
@@ -469,6 +471,8 @@ async function sendEmailInvitation(params: {
 		text,
 		org,
 		categories: ['transactional', 'video-invite'],
+		sendCollection: 'video_meetings',
+		sendId: meetingId ?? null,
 	});
 }
 
