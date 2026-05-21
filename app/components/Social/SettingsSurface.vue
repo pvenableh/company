@@ -561,16 +561,11 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       </div>
     </section>
 
-    <UModal v-model="showBackfillModal">
-      <template #header>
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <UIcon name="i-lucide-history" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">Fetch historical insights</h3>
-        </div>
-      </template>
-
+    <AppsAppBottomSheet
+      v-model="showBackfillModal"
+      title="Fetch historical insights"
+      :subtitle="accountToBackfill?.account_name"
+    >
       <div class="space-y-4">
         <p class="text-gray-600 dark:text-gray-300">
           Pull daily account-level metrics and insights for up to
@@ -607,38 +602,35 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       </div>
 
       <template #footer>
-        <div class="flex justify-end gap-3">
+        <span />
+        <div class="flex items-center gap-2">
           <UButton variant="ghost" @click="showBackfillModal = false">Cancel</UButton>
           <UButton color="primary" @click="runBackfill">
             Fetch {{ backfillDays }} days of history
           </UButton>
         </div>
       </template>
-    </UModal>
+    </AppsAppBottomSheet>
 
-    <UModal v-model="showDeleteModal">
-      <template #header>
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-destructive/10 dark:bg-destructive/30 rounded-lg">
-            <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-destructive dark:text-destructive" />
-          </div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">Disconnect Account</h3>
-        </div>
-      </template>
-
+    <AppsAppBottomSheet
+      v-model="showDeleteModal"
+      title="Disconnect Account"
+      :subtitle="accountToDelete?.account_name"
+    >
       <p class="text-gray-600 dark:text-gray-300">
         Are you sure you want to disconnect <strong>{{ accountToDelete?.account_name }}</strong>?
         You'll need to reconnect to post to this account again.
       </p>
 
       <template #footer>
-        <div class="flex justify-end gap-3">
+        <span />
+        <div class="flex items-center gap-2">
           <UButton variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
           <UButton color="red" :loading="isDeleting === accountToDelete?.id" @click="disconnectAccount">
             Disconnect
           </UButton>
         </div>
       </template>
-    </UModal>
+    </AppsAppBottomSheet>
   </div>
 </template>
