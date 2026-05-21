@@ -374,8 +374,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('instagram'),
       statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccountCount('instagram')} account(s)` : 'Not connected',
       action: 'Manage',
-      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
-      onClick: () => router.push('/social/settings'),
+      onClick: () => socialAccountsSlide.open('instagram'),
     },
     {
       key: 'facebook',
@@ -385,8 +384,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('facebook'),
       statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccountCount('facebook')} account(s)` : 'Not connected',
       action: 'Manage',
-      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
-      onClick: () => router.push('/social/settings'),
+      onClick: () => socialAccountsSlide.open('facebook'),
     },
     {
       key: 'linkedin',
@@ -396,8 +394,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('linkedin'),
       statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccountCount('linkedin')} account(s)` : 'Not connected',
       action: 'Manage',
-      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
-      onClick: () => router.push('/social/settings'),
+      onClick: () => socialAccountsSlide.open('linkedin'),
     },
     {
       key: 'tiktok',
@@ -407,8 +404,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('tiktok'),
       statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccountCount('tiktok')} account(s)` : 'Not connected',
       action: 'Manage',
-      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
-      onClick: () => router.push('/social/settings'),
+      onClick: () => socialAccountsSlide.open('tiktok'),
     },
     {
       key: 'threads',
@@ -418,8 +414,7 @@ const integrationsList = computed(() => {
       status: socialStatusFor('threads'),
       statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccountCount('threads')} account(s)` : 'Not connected',
       action: 'Manage',
-      // TODO(ios-sweep): lift to SocialAccountsPanel slide-over
-      onClick: () => router.push('/social/settings'),
+      onClick: () => socialAccountsSlide.open('threads'),
     },
     {
       key: 'email-forwarding',
@@ -450,6 +445,7 @@ function statusDotClass(status: IntegrationStatus) {
 const teamsSlide = useAppSlideOver('teams');
 const rolesSlide = useAppSlideOver('roles');
 const documentsLibrarySlide = useAppSlideOver('documents_library');
+const socialAccountsSlide = useAppSlideOver('social-accounts');
 const settingsTiles = [
   { label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') },
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },

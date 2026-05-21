@@ -374,7 +374,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
     </div>
 
     <div class="space-y-8">
-      <UCard v-for="platform in platformOrder" :key="platform">
+      <UCard v-for="platform in platformOrder" :key="platform" :data-platform="platform">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
