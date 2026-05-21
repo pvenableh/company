@@ -1,28 +1,34 @@
 <!--
-  AppBottomSheet — iOS-style bottom sheet modal.
+  AppBottomSheet — iOS-style bottom sheet, custom-built on Teleport + Vue
+  reactivity + CSS transitions for enter/leave, and GSAP for the drag path.
 
-  Drop-in replacement for centered UModals on touch-first surfaces:
+  Why this stack? Reka-UI's Dialog Presence fought Vue's <Transition> and
+  left sheets stuck at enter-from on first mount. Vue's own <Transition>
+  uses a RAF callback to swap enter-from → enter-to, which can stall in
+  HMR / headless / hidden-tab scenarios. Toggling an inline transform via
+  reactive state side-steps both: the compositor drives the CSS transition
+  from the render engine, no Presence wrapper, no class-swap RAF dance.
+  GSAP earns its keep on the drag handler where the finger needs 1:1
+  tracking and a hand-tuned spring-back.
 
-  ```vue
-  <AppBottomSheet v-model="open" title="New Plan">
-    <form>…</form>
-  </AppBottomSheet>
-  ```
+  API (preserved from prior versions):
+    <AppBottomSheet v-model="open" title="…" subtitle="…">
+      <form>…</form>
+      <template #actions>… header-right buttons …</template>
+      <template #footer>… pinned action row …</template>
+    </AppBottomSheet>
 
-  Visuals match Apple's UISheetPresentationController:
-    - Rounded-top corners (14px), backdrop dim 0 → 0.4.
-    - Slides up from bottom with the iOS spring (Framework7 curve, 400ms)
-      so it reads as part of the same nav family as our slide-over stack.
-    - Grabber handle at top. Drag down on the grabber to dismiss; release
-      below 100px or with downward velocity > 0.5 px/ms closes; otherwise
-      springs back.
-    - Max-height: 88vh, content scrolls when overflowing.
-
-  Built on Reka-UI's DialogRoot so focus trap, Escape-to-close, and
-  click-outside-to-close come for free.
+  Behaviour:
+    - Rounded-top sheet (14px), backdrop dim 0 → 0.4 on the iOS spring.
+    - Drag down on the grabber: > DISMISS_PX OR velocity > DISMISS_VELOCITY
+      → closes; else springs back. Detent haptic on release of a real drag.
+    - Max-height 88vh, body scrolls when overflowing, footer pins below.
+    - Centered max-width 640px on desktop so it doesn't span 2000px wide.
+    - Escape closes; click outside the sheet (on backdrop) closes.
+    - body overflow locked while open.
 -->
 <script setup lang="ts">
-import { DialogRoot, DialogPortal, DialogOverlay, DialogContent } from 'reka-ui';
+import { gsap } from 'gsap';
 
 const props = withDefaults(
   defineProps<{
@@ -41,22 +47,98 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
 }>();
 
+const haptic = useHaptic();
+
+const sheetEl = useTemplateRef<HTMLElement>('sheetEl');
+
+const SPRING_EASE_FN = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
+const ENTER_MS = 400;
+const LEAVE_MS = 320;
+
+// `mounted` keeps the sheet in the DOM during the leave transition. `visible`
+// drives the inline transform/opacity. We can't collapse them into one ref:
+// the closed pose has to render at least one frame before flipping to the
+// open pose, otherwise the browser sees both styles in one tick and skips
+// the transition.
+const mounted = ref(false);
+const visible = ref(false);
+let leaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function openSheet() {
+  if (leaveTimer) {
+    clearTimeout(leaveTimer);
+    leaveTimer = null;
+  }
+  mounted.value = true;
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', onKeydown);
+  // Wait one frame so the closed pose paints first, then flip to open
+  // — gives the CSS transition something to interpolate from. setTimeout
+  // instead of requestAnimationFrame so this still kicks when RAF is
+  // throttled (headless preview, background tabs).
+  await nextTick();
+  setTimeout(() => {
+    visible.value = true;
+  }, 16);
+}
+
+function closeSheet() {
+  if (leaveTimer) {
+    clearTimeout(leaveTimer);
+    leaveTimer = null;
+  }
+  visible.value = false;
+  leaveTimer = setTimeout(() => {
+    mounted.value = false;
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKeydown);
+    dragY.value = 0;
+    leaveTimer = null;
+  }, LEAVE_MS);
+}
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (open) openSheet();
+    else if (mounted.value) closeSheet();
+  },
+);
+
+onMounted(() => {
+  if (props.modelValue) openSheet();
+});
+
 function close() {
   emit('update:modelValue', false);
 }
 
-const haptic = useHaptic();
+function onBackdropClick(e: MouseEvent) {
+  if ((e.target as HTMLElement).classList.contains('app-bottom-sheet__backdrop')) close();
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') close();
+}
+
+onBeforeUnmount(() => {
+  if (leaveTimer) clearTimeout(leaveTimer);
+  document.removeEventListener('keydown', onKeydown);
+  document.body.style.overflow = '';
+});
 
 // ── Drag-to-dismiss ──────────────────────────────────────────────
-// The drag offset is in pixels; we translate the sheet by this amount
-// during a drag. On release: > DISMISS_PX OR fast downward swipe →
-// close; otherwise spring back to 0.
-const sheetEl = useTemplateRef<HTMLElement>('sheetEl');
-const dragY = ref(0);
+// The grabber row captures the pointer and tracks dY 1:1. dragY is
+// applied to the sheet via the reactive inline style alongside the
+// open-state transform; on release we spring back via GSAP or close
+// the sheet.
+
 const dragging = ref(false);
+const dragY = ref(0);
 
 const DISMISS_PX = 100;
 const DISMISS_VELOCITY = 0.5; // px / ms
+const SPRING_DURATION = 0.4;
 
 let pointerStartY = 0;
 let lastY = 0;
@@ -65,7 +147,6 @@ let velocity = 0;
 let activePointerId: number | null = null;
 
 function onPointerDown(e: PointerEvent) {
-  // Left mouse / primary touch only.
   if (e.button !== 0 && e.pointerType === 'mouse') return;
   dragging.value = true;
   pointerStartY = e.clientY;
@@ -79,15 +160,10 @@ function onPointerDown(e: PointerEvent) {
 function onPointerMove(e: PointerEvent) {
   if (!dragging.value || e.pointerId !== activePointerId) return;
   const delta = e.clientY - pointerStartY;
-  // Only allow dragging the sheet DOWN — drag-up would have to compete
-  // with the body scroll inside, and iOS doesn't move the sheet up
-  // anyway in a single-detent layout.
   dragY.value = Math.max(0, delta);
   const now = performance.now();
   const dt = now - lastT;
-  if (dt > 0) {
-    velocity = (e.clientY - lastY) / dt;
-  }
+  if (dt > 0) velocity = (e.clientY - lastY) / dt;
   lastY = e.clientY;
   lastT = now;
 }
@@ -100,92 +176,106 @@ function onPointerUp(e: PointerEvent) {
   try {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   } catch {
-    /* releasePointerCapture throws if the pointer was never captured */
+    /* throws if pointer was never captured */
   }
   if (shouldDismiss) {
-    // Reset the drag so the closing animation starts from translateY(0),
-    // not from the dragged offset; the leave transition then slides it
-    // down. (If we leave the inline transform in place, the leave
-    // animation snaps instead of springs.)
-    dragY.value = 0;
     haptic.detentSnap();
+    dragY.value = 0;
     close();
   } else if (dragY.value > 0) {
-    // Snap-back from a partial drag — fire detent haptic so the user feels
-    // the spring-back, but only when there was a real drag (not a tap).
     haptic.detentSnap();
-    dragY.value = 0;
+    // Spring dragY back to 0 — GSAP if available, fallback to direct set
+    // so the snap-back still happens when the GSAP ticker is throttled.
+    const start = dragY.value;
+    const startT = performance.now();
+    if (sheetEl.value) {
+      gsap.to({ v: start }, {
+        v: 0,
+        duration: SPRING_DURATION,
+        ease: SPRING_EASE_FN,
+        onUpdate() {
+          dragY.value = (this.targets()[0] as { v: number }).v;
+        },
+        onComplete() {
+          dragY.value = 0;
+        },
+      });
+      // Belt-and-suspenders: if GSAP doesn't tick (RAF throttled), make
+      // sure dragY lands on 0 within the spring duration.
+      setTimeout(() => {
+        if (performance.now() - startT >= SPRING_DURATION * 1000) dragY.value = 0;
+      }, SPRING_DURATION * 1000 + 16);
+    } else {
+      dragY.value = 0;
+    }
   } else {
     dragY.value = 0;
   }
 }
 
-// Live transform — disable transition while dragging so the sheet
-// tracks the finger 1:1; re-enable on release for the spring-back.
+// Inline transform: dragY adds on top of the open/closed pose.
 const sheetStyle = computed(() => ({
-  transform: dragY.value ? `translate3d(0, ${dragY.value}px, 0)` : undefined,
-  transition: dragging.value ? 'none' : undefined,
+  transform: `translate3d(0, ${visible.value ? dragY.value : '100%'}${visible.value ? 'px' : ''}, 0)`,
+  transition: dragging.value
+    ? 'none'
+    : `transform ${visible.value ? ENTER_MS : LEAVE_MS}ms ${SPRING_EASE_FN}`,
 }));
 
-// Body scroll lock for non-touch (Reka-UI's DialogRoot already handles
-// this on mobile, but pinning explicitly here avoids any double-mount
-// weirdness with the slide-over stack also doing useScrollLock).
+const backdropStyle = computed(() => ({
+  opacity: visible.value ? 1 : 0,
+  transition: `opacity ${visible.value ? ENTER_MS : LEAVE_MS}ms ${SPRING_EASE_FN}`,
+}));
 </script>
 
 <template>
-  <DialogRoot :open="modelValue" @update:open="(v) => $emit('update:modelValue', v)">
-    <DialogPortal>
-      <Transition name="bottom-sheet-backdrop">
-        <DialogOverlay v-show="modelValue" class="app-bottom-sheet__backdrop" />
-      </Transition>
-      <Transition name="bottom-sheet">
-        <DialogContent
-          v-show="modelValue"
-          ref="sheetEl"
-          class="app-bottom-sheet"
-          :class="{ 'app-bottom-sheet--dragging': dragging }"
-          :style="sheetStyle"
-          @escape-key-down="close"
-          @pointer-down-outside="close"
-        >
-          <!-- Drag handle row. Captures the pointer; the rest of the
-               sheet does NOT, so form fields work normally. -->
-          <div
-            v-if="!hideGrabber"
-            class="app-bottom-sheet__handle-row"
-            @pointerdown="onPointerDown"
-            @pointermove="onPointerMove"
-            @pointerup="onPointerUp"
-            @pointercancel="onPointerUp"
-          >
-            <span class="app-bottom-sheet__grabber" aria-hidden="true" />
-          </div>
+  <Teleport to="body">
+    <div
+      v-if="mounted"
+      class="app-bottom-sheet__backdrop"
+      :style="backdropStyle"
+      @mousedown="onBackdropClick"
+    />
+    <div
+      v-if="mounted"
+      ref="sheetEl"
+      class="app-bottom-sheet"
+      :class="{ 'app-bottom-sheet--dragging': dragging }"
+      :style="sheetStyle"
+      role="dialog"
+      aria-modal="true"
+    >
+      <!-- Drag handle row — captures the pointer; the rest of the sheet
+           does NOT, so form fields work normally. -->
+      <div
+        v-if="!hideGrabber"
+        class="app-bottom-sheet__handle-row"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+      >
+        <span class="app-bottom-sheet__grabber" aria-hidden="true" />
+      </div>
 
-          <!-- Optional title bar. -->
-          <header v-if="title || subtitle || $slots.actions" class="app-bottom-sheet__header">
-            <div class="min-w-0">
-              <h2 v-if="title" class="app-bottom-sheet__title">{{ title }}</h2>
-              <p v-if="subtitle" class="app-bottom-sheet__subtitle">{{ subtitle }}</p>
-            </div>
-            <div v-if="$slots.actions" class="app-bottom-sheet__actions">
-              <slot name="actions" />
-            </div>
-          </header>
+      <header v-if="title || subtitle || $slots.actions" class="app-bottom-sheet__header">
+        <div class="min-w-0">
+          <h2 v-if="title" class="app-bottom-sheet__title">{{ title }}</h2>
+          <p v-if="subtitle" class="app-bottom-sheet__subtitle">{{ subtitle }}</p>
+        </div>
+        <div v-if="$slots.actions" class="app-bottom-sheet__actions">
+          <slot name="actions" />
+        </div>
+      </header>
 
-          <div class="app-bottom-sheet__body">
-            <slot />
-          </div>
+      <div class="app-bottom-sheet__body">
+        <slot />
+      </div>
 
-          <!-- Optional pinned footer (e.g. form submit row). Sits below
-               the scrollable body so action buttons stay visible while
-               long forms scroll. -->
-          <footer v-if="$slots.footer" class="app-bottom-sheet__footer">
-            <slot name="footer" />
-          </footer>
-        </DialogContent>
-      </Transition>
-    </DialogPortal>
-  </DialogRoot>
+      <footer v-if="$slots.footer" class="app-bottom-sheet__footer">
+        <slot name="footer" />
+      </footer>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -197,6 +287,7 @@ const sheetStyle = computed(() => ({
   z-index: 70;
   background: rgb(0 0 0 / 0.4);
   pointer-events: auto;
+  opacity: 0;
 }
 
 .app-bottom-sheet {
@@ -214,18 +305,13 @@ const sheetStyle = computed(() => ({
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
   box-shadow: 0 -8px 24px -8px rgb(0 0 0 / 0.25);
-  transform: translate3d(0, 0, 0);
-  transition: transform var(--ios-spring-duration) var(--ios-spring);
-  /* Centered max-width on desktop so the sheet doesn't span 2000px. */
   margin-inline: auto;
   max-width: 640px;
-  inset-inline: 0;
   border: 1px solid hsl(var(--border) / 0.5);
   border-bottom: 0;
-}
-
-.app-bottom-sheet--dragging {
-  transition: none;
+  will-change: transform;
+  /* Closed pose — overridden by the reactive inline transform on open. */
+  transform: translate3d(0, 100%, 0);
 }
 
 .app-bottom-sheet__handle-row {
@@ -282,14 +368,10 @@ const sheetStyle = computed(() => ({
   min-height: 0;
   overflow-y: auto;
   padding: 1rem 1.25rem 1.5rem;
-  /* Honor the iOS home-bar inset on devices that report it. */
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
 }
 
-/* When a footer is rendered, the body loses its safe-area bottom padding
-   — the footer owns it instead, so the action row sits at the device's
-   home-bar edge with comfortable spacing. */
 .app-bottom-sheet:has(.app-bottom-sheet__footer) .app-bottom-sheet__body {
   padding-bottom: 1rem;
 }
@@ -304,27 +386,5 @@ const sheetStyle = computed(() => ({
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   background: hsl(var(--background));
   border-top: 1px solid hsl(var(--border) / 0.4);
-}
-
-/* ── Enter / leave transitions ── */
-
-.bottom-sheet-backdrop-enter-active,
-.bottom-sheet-backdrop-leave-active {
-  transition: opacity var(--ios-spring-duration, 400ms) cubic-bezier(0.36, 0.66, 0.04, 1);
-}
-
-.bottom-sheet-backdrop-enter-from,
-.bottom-sheet-backdrop-leave-to {
-  opacity: 0;
-}
-
-.bottom-sheet-enter-active,
-.bottom-sheet-leave-active {
-  transition: transform var(--ios-spring-duration) var(--ios-spring);
-}
-
-.bottom-sheet-enter-from,
-.bottom-sheet-leave-to {
-  transform: translate3d(0, 100%, 0);
 }
 </style>

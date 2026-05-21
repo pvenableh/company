@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="isOpen" title="Invite Client User" :ui="{ width: 'sm:max-w-lg' }">
+	<AppsAppBottomSheet v-model="isOpen" title="Invite Client User">
 		<div class="space-y-4">
 			<p class="text-sm text-muted-foreground">
 				<template v-if="resolvedClientName">
@@ -143,19 +143,18 @@
 		</div>
 
 		<template #footer>
-			<div class="flex justify-end">
-				<UiActionButton
-					icon="lucide:send"
-					variant="primary"
-					:loading="sending"
-					:disabled="!canSubmit"
-					@click="sendInvitation"
-				>
-					Send Invitation
-				</UiActionButton>
-			</div>
+			<span />
+			<UiActionButton
+				icon="lucide:send"
+				variant="primary"
+				:loading="sending"
+				:disabled="!canSubmit"
+				@click="sendInvitation"
+			>
+				Send Invitation
+			</UiActionButton>
 		</template>
-	</UModal>
+	</AppsAppBottomSheet>
 </template>
 
 <script setup>

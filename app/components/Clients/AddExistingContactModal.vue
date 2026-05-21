@@ -1,11 +1,10 @@
 <template>
-  <UModal
+  <AppsAppBottomSheet
     v-model="isOpen"
     title="Add Existing Contact"
-    description="Search your contacts and link one to this client. Contacts already on another client move here when picked."
-    :ui="{ content: 'max-w-lg' }"
+    subtitle="Search your contacts and link one to this client. Contacts already on another client move here when picked."
   >
-    <div class="space-y-3 mt-1">
+    <div class="space-y-3">
       <div class="relative">
         <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
@@ -69,10 +68,12 @@
         </div>
       </div>
     </div>
-  </UModal>
+  </AppsAppBottomSheet>
 </template>
 
 <script setup lang="ts">
+import { notifyEntityChange } from '~/composables/useEntityStore';
+
 const props = defineProps<{
   modelValue: boolean;
   clientId: string;
@@ -144,6 +145,7 @@ async function attach(contact: any) {
     if (markAsBilling.value) payload.is_billing_contact = true;
     await contactItems.update(contact.id, payload);
     toast.add({ title: 'Contact attached', color: 'green' });
+    notifyEntityChange('contacts', { id: contact.id, op: 'update' });
     emit('attached', contact.id);
     contacts.value = contacts.value.filter((c) => c.id !== contact.id);
   } catch (err: any) {

@@ -576,6 +576,13 @@ const isEditingVideo = computed(() => !!editingMeeting.value);
 const isEditingAppointment = computed(() => !!props.appointment && !isEditingVideo.value);
 const isEditing = computed(() => isEditingVideo.value || isEditingAppointment.value);
 
+const sheetTitle = computed(() => {
+	if (isEditingVideo.value) return 'Edit Video Meeting';
+	if (isEditingAppointment.value) return 'Edit Event';
+	if (form.is_video) return 'New Video Meeting';
+	return 'New Event';
+});
+
 // ── Reset form on open ──
 watch(isOpen, async (open) => {
 	if (open) {
@@ -923,20 +930,8 @@ const sendInviteMeeting = computed(() => {
 </script>
 
 <template>
-	<UModal v-model="isOpen" :ui="{ base: 'overflow-hidden', rounded: 'rounded-2xl', shadow: 'shadow-lg', ring: '', background: 'bg-card', padding: '', width: 'max-w-lg' }">
-		<div class="flex flex-col max-h-[calc(100vh-4rem)]">
-			<!-- Header (fixed) -->
-			<div class="flex-shrink-0 px-5 py-3.5 border-b border-border/30 flex items-center">
-				<span class="text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/70">
-					<template v-if="isEditingVideo">Edit Video Meeting</template>
-					<template v-else-if="isEditingAppointment">Edit Event</template>
-					<template v-else-if="form.is_video">New Video Meeting</template>
-					<template v-else>New Event</template>
-				</span>
-			</div>
-
-			<!-- Form (scrollable) -->
-			<form @submit.prevent="handleSubmit" class="p-5 space-y-5 overflow-y-auto flex-1">
+	<AppsAppBottomSheet v-model="isOpen" :title="sheetTitle">
+		<form id="unified-event-form" @submit.prevent="handleSubmit" class="space-y-5">
 				<!-- Pinned project context (modal launched from a project page) -->
 				<div v-if="projectPinned && form.project" class="flex items-center gap-2 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
 					<UIcon name="i-heroicons-folder" class="w-4 h-4 text-info shrink-0" />
@@ -1345,65 +1340,66 @@ const sendInviteMeeting = computed(() => {
 					:meeting="sendInviteMeeting"
 					inline
 				/>
-
-				<!-- Actions -->
-				<div class="flex items-center gap-2 pt-2">
-					<!-- Edit-mode video meeting tools (left) -->
-					<template v-if="isEditingVideo && sendInviteMeeting">
-						<button
-							type="button"
-							@click="showSendInvite = !showSendInvite"
-							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors ios-press"
-							:class="showSendInvite
-								? 'bg-primary/10 text-primary'
-								: 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'"
-						>
-							<UIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
-							{{ showSendInvite ? 'Hide invite' : 'Send invite' }}
-						</button>
-						<button
-							type="button"
-							@click="deleteMeeting"
-							:disabled="deleting"
-							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
-						>
-							<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-							<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
-							Delete
-						</button>
-					</template>
-					<!-- Edit-mode non-video event: just the delete button -->
-					<template v-else-if="isEditingAppointment">
-						<button
-							type="button"
-							@click="deleteMeeting"
-							:disabled="deleting"
-							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
-						>
-							<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-							<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
-							Delete
-						</button>
-					</template>
-					<div class="ml-auto flex items-center gap-2">
-						<button
-							type="button"
-							@click="close"
-							class="px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							:disabled="saving"
-							class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
-						>
-							<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-							{{ isEditing ? 'Save' : 'Create' }}
-						</button>
-					</div>
-				</div>
 			</form>
-		</div>
-	</UModal>
+
+		<template #footer>
+			<div class="flex items-center gap-2">
+				<!-- Edit-mode video meeting tools (left) -->
+				<template v-if="isEditingVideo && sendInviteMeeting">
+					<button
+						type="button"
+						@click="showSendInvite = !showSendInvite"
+						class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors ios-press"
+						:class="showSendInvite
+							? 'bg-primary/10 text-primary'
+							: 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'"
+					>
+						<UIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
+						{{ showSendInvite ? 'Hide invite' : 'Send invite' }}
+					</button>
+					<button
+						type="button"
+						@click="deleteMeeting"
+						:disabled="deleting"
+						class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
+					>
+						<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+						Delete
+					</button>
+				</template>
+				<!-- Edit-mode non-video event: just the delete button -->
+				<template v-else-if="isEditingAppointment">
+					<button
+						type="button"
+						@click="deleteMeeting"
+						:disabled="deleting"
+						class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
+					>
+						<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+						Delete
+					</button>
+				</template>
+			</div>
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					@click="close"
+					class="px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+				>
+					Cancel
+				</button>
+				<button
+					type="submit"
+					form="unified-event-form"
+					:disabled="saving"
+					class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
+				>
+					<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+					{{ isEditing ? 'Save' : 'Create' }}
+				</button>
+			</div>
+		</template>
+	</AppsAppBottomSheet>
 </template>
