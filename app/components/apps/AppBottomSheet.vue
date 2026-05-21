@@ -18,6 +18,14 @@
       <template #footer>… pinned action row …</template>
     </AppBottomSheet>
 
+  Pull-from-anywhere mode (opt-in, P2.5):
+    Pass :flip-from="{ rect, html }" (capture via useFlipFromRow) + a
+    #hero slot. The sheet skips its slide-up entrance, mounts at open
+    pose, and a fixed-position ghost (innerHTML = flip-from.html) FLIPs
+    from rect → hero's measured position via inline-style transform
+    over 400ms. On landing the ghost cross-fades into the hero. All on
+    the compositor — no RAF dependence.
+
   Behaviour:
     - Rounded-top sheet (14px), backdrop dim 0 → 0.4 on the iOS spring.
     - Drag down on the grabber: > DISMISS_PX OR velocity > DISMISS_VELOCITY
@@ -39,8 +47,14 @@ const props = withDefaults(
     subtitle?: string;
     /** Hide the grabber bar (rare — title-only chrome). */
     hideGrabber?: boolean;
+    /**
+     * Pull-from-anywhere source. Provide via useFlipFromRow(). When set,
+     * the sheet skips its slide-up entrance and runs a FLIP from rect to
+     * the #hero slot's measured position.
+     */
+    flipFrom?: { rect: { x: number; y: number; width: number; height: number }; html: string } | null;
   }>(),
-  { title: '', subtitle: '', hideGrabber: false },
+  { title: '', subtitle: '', hideGrabber: false, flipFrom: null },
 );
 
 const emit = defineEmits<{
@@ -50,10 +64,12 @@ const emit = defineEmits<{
 const haptic = useHaptic();
 
 const sheetEl = useTemplateRef<HTMLElement>('sheetEl');
+const heroEl = useTemplateRef<HTMLElement>('heroEl');
 
 const SPRING_EASE_FN = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
 const ENTER_MS = 400;
 const LEAVE_MS = 320;
+const FLIP_LAND_MS = 100;
 
 // `mounted` keeps the sheet in the DOM during the leave transition. `visible`
 // drives the inline transform/opacity. We can't collapse them into one ref:
@@ -72,6 +88,18 @@ async function openSheet() {
   mounted.value = true;
   document.body.style.overflow = 'hidden';
   document.addEventListener('keydown', onKeydown);
+
+  if (props.flipFrom) {
+    // Pull-from-anywhere: skip the slide-up entirely and let the hero FLIP
+    // carry the entry. The sheet appears at open pose while a ghost flies
+    // from source rect into the hero slot.
+    heroLanded.value = false;
+    visible.value = true;
+    await nextTick();
+    startFlipFlight();
+    return;
+  }
+
   // Wait one frame so the closed pose paints first, then flip to open
   // — gives the CSS transition something to interpolate from. setTimeout
   // instead of requestAnimationFrame so this still kicks when RAF is
@@ -87,12 +115,15 @@ function closeSheet() {
     clearTimeout(leaveTimer);
     leaveTimer = null;
   }
+  clearFlipTimers();
+  ghostMounted.value = false;
   visible.value = false;
   leaveTimer = setTimeout(() => {
     mounted.value = false;
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKeydown);
     dragY.value = 0;
+    heroLanded.value = false;
     leaveTimer = null;
   }, LEAVE_MS);
 }
@@ -123,8 +154,100 @@ function onKeydown(e: KeyboardEvent) {
 
 onBeforeUnmount(() => {
   if (leaveTimer) clearTimeout(leaveTimer);
+  clearFlipTimers();
   document.removeEventListener('keydown', onKeydown);
   document.body.style.overflow = '';
+});
+
+// ── Pull-from-anywhere FLIP ──────────────────────────────────────
+// When the sheet opens with `flipFrom` set, we render a fixed-position
+// "ghost" (innerHTML cloned from the source row) at the source rect, then
+// transform it via inline-style + CSS transition into the #hero slot's
+// measured position. The compositor does the work — no GSAP ticker, no
+// Vue Transition class swap (both can stall in throttled environments).
+
+const ghostMounted = ref(false);
+const ghostStyle = ref<Record<string, string | number>>({});
+const heroLanded = ref(false);
+let flipTimers: ReturnType<typeof setTimeout>[] = [];
+
+function clearFlipTimers() {
+  flipTimers.forEach((t) => clearTimeout(t));
+  flipTimers = [];
+}
+
+async function startFlipFlight() {
+  if (!props.flipFrom) return;
+  clearFlipTimers();
+  const src = props.flipFrom.rect;
+  // Plant the ghost at the source rect with identity transform.
+  ghostStyle.value = {
+    position: 'fixed',
+    top: `${src.y}px`,
+    left: `${src.x}px`,
+    width: `${src.width}px`,
+    height: `${src.height}px`,
+    transform: 'translate3d(0, 0, 0) scale(1, 1)',
+    transformOrigin: 'top left',
+    transition: 'none',
+    zIndex: 72,
+    pointerEvents: 'none',
+    opacity: 1,
+    willChange: 'transform, opacity',
+  };
+  ghostMounted.value = true;
+
+  // Wait two frames: one for the ghost mount, one for the hero slot to lay
+  // out at its destination pose inside the sheet body. setTimeout-not-RAF
+  // because RAF can be throttled in headless / hidden tabs.
+  await nextTick();
+  await new Promise((r) => setTimeout(r, 16));
+  await new Promise((r) => setTimeout(r, 16));
+
+  const dest = heroEl.value?.getBoundingClientRect();
+  if (!dest || dest.width === 0 || dest.height === 0) {
+    // No hero in DOM (consumer forgot the slot) — drop the ghost and
+    // just reveal the sheet normally.
+    ghostMounted.value = false;
+    heroLanded.value = true;
+    return;
+  }
+
+  const dx = dest.left - src.x;
+  const dy = dest.top - src.y;
+  const sx = dest.width / src.width;
+  const sy = dest.height / src.height;
+
+  ghostStyle.value = {
+    ...ghostStyle.value,
+    transform: `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`,
+    transition: `transform ${ENTER_MS}ms ${SPRING_EASE_FN}`,
+  };
+
+  // Land: crossfade ghost → hero, then unmount ghost.
+  flipTimers.push(
+    setTimeout(() => {
+      heroLanded.value = true;
+      ghostStyle.value = {
+        ...ghostStyle.value,
+        transition: `opacity ${FLIP_LAND_MS}ms ease-out`,
+        opacity: 0,
+      };
+      flipTimers.push(
+        setTimeout(() => {
+          ghostMounted.value = false;
+        }, FLIP_LAND_MS + 20),
+      );
+    }, ENTER_MS + 16),
+  );
+}
+
+const heroStyle = computed(() => {
+  if (!props.flipFrom) return { opacity: 1 };
+  return {
+    opacity: heroLanded.value ? 1 : 0,
+    transition: `opacity ${FLIP_LAND_MS}ms ease-out`,
+  };
 });
 
 // ── Drag-to-dismiss ──────────────────────────────────────────────
@@ -268,6 +391,14 @@ const backdropStyle = computed(() => ({
       </header>
 
       <div class="app-bottom-sheet__body">
+        <div
+          v-if="$slots.hero"
+          ref="heroEl"
+          class="app-bottom-sheet__hero"
+          :style="heroStyle"
+        >
+          <slot name="hero" />
+        </div>
         <slot />
       </div>
 
@@ -275,6 +406,18 @@ const backdropStyle = computed(() => ({
         <slot name="footer" />
       </footer>
     </div>
+
+    <!-- Pull-from-anywhere ghost. Cloned outerHTML rides from the source
+         rect into the hero slot's position via inline-style transform.
+         Visually identical to the source row at t=0 → identical to the
+         hero at landing (crossfade hands off). -->
+    <div
+      v-if="ghostMounted && flipFrom"
+      class="app-bottom-sheet__flip-ghost"
+      :style="ghostStyle"
+      aria-hidden="true"
+      v-html="flipFrom.html"
+    />
   </Teleport>
 </template>
 
@@ -374,6 +517,23 @@ const backdropStyle = computed(() => ({
 
 .app-bottom-sheet:has(.app-bottom-sheet__footer) .app-bottom-sheet__body {
   padding-bottom: 1rem;
+}
+
+.app-bottom-sheet__hero {
+  margin: 0 -0.25rem 1rem;
+  padding: 0.5rem 0.25rem;
+  border-radius: 12px;
+  background: hsl(var(--muted) / 0.4);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.app-bottom-sheet__flip-ghost {
+  /* The clone rides on the compositor — fixed positioning + inline-style
+     transform. v-html injects the source row's outerHTML; styles inherit
+     from :root + the global Tailwind layer so the clone resembles the
+     source closely. */
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .app-bottom-sheet__footer {
