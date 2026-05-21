@@ -108,134 +108,117 @@ const formatDate = (dateStr: string) => {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 };
+
+const sheetTitle = computed(() => note.value?.title || 'Untitled Note');
+const sheetSubtitle = computed(() => formatDate((note.value as any)?.date_created));
 </script>
 
 <template>
-  <UModal
+  <AppsAppBottomSheet
     :model-value="modelValue"
-    :ui="{ content: 'max-h-[80vh] flex flex-col', body: 'px-6 py-4 flex-1 overflow-y-auto' }"
+    :title="sheetTitle"
+    :subtitle="sheetSubtitle"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 flex-1 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-heroicons-bookmark-solid" class="w-4 h-4 text-primary" />
-            </div>
-            <div class="min-w-0 flex-1" v-if="!isEditing">
-              <h3 class="text-sm font-semibold truncate">{{ note?.title || 'Untitled Note' }}</h3>
-              <p class="text-[10px] text-muted-foreground">
-                {{ formatDate((note as any)?.date_created) }}
-              </p>
-            </div>
-            <UInput
-              v-else
-              v-model="editTitle"
-              size="sm"
-              class="flex-1"
-              placeholder="Note title..."
-            />
-          </div>
-          <div class="flex items-center gap-1">
-            <button
-              @click="handlePin"
-              class="p-1.5 rounded-lg hover:bg-muted transition-colors"
-              :title="note?.is_pinned ? 'Unpin' : 'Pin'"
-            >
-              <UIcon
-                :name="note?.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
-                class="w-4 h-4"
-                :class="note?.is_pinned ? 'text-warning' : 'text-muted-foreground'"
-              />
-            </button>
-            <button
-              v-if="!isEditing"
-              @click="isEditing = true"
-              class="p-1.5 rounded-lg hover:bg-muted transition-colors"
-              title="Edit"
-            >
-              <UIcon name="i-heroicons-pencil" class="w-4 h-4 text-muted-foreground" />
-            </button>
-            <button
-              @click="handleDelete"
-              class="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
-              title="Delete"
-            >
-              <UIcon name="i-heroicons-trash" class="w-4 h-4 text-muted-foreground hover:text-destructive" />
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto">
-        <!-- Tags -->
-        <div v-if="isEditing" class="mb-4">
-          <p class="text-xs font-medium text-muted-foreground mb-1.5">Tags</p>
-          <AITagSelector v-model="editTagIds" />
-        </div>
-        <div v-else-if="noteTags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
-          <span
-            v-for="tag in noteTags"
-            :key="tag.id"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-            :style="{ backgroundColor: (tag.color || '#6366f1') + '1a', color: tag.color || '#6366f1' }"
-          >
-            <span
-              class="w-1.5 h-1.5 rounded-full"
-              :style="{ backgroundColor: tag.color || '#6366f1' }"
-            />
-            {{ tag.name }}
-            <span v-if="tag.entity_type" class="text-[9px] opacity-70">({{ tag.entity_type }})</span>
-          </span>
-        </div>
-
-        <!-- Markdown content -->
-        <div
-          class="prose prose-sm dark:prose-invert max-w-none"
-          v-html="renderedContent"
+    <template #actions>
+      <button
+        @click="handlePin"
+        class="p-1.5 rounded-lg hover:bg-muted transition-colors"
+        :title="note?.is_pinned ? 'Unpin' : 'Pin'"
+      >
+        <UIcon
+          :name="note?.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
+          class="w-4 h-4"
+          :class="note?.is_pinned ? 'text-warning' : 'text-muted-foreground'"
         />
-      </div>
-
-      <template #footer>
-        <div class="flex items-center justify-between">
-          <button
-            v-if="note?.source_session"
-            @click="goToSession"
-            class="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            <UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
-            View source conversation
-          </button>
-          <span v-else />
-
-          <div class="flex gap-2">
-            <UButton
-              v-if="isEditing"
-              variant="ghost"
-              size="sm"
-              @click="isEditing = false"
-            >
-              Cancel
-            </UButton>
-            <UButton
-              v-if="isEditing"
-              size="sm"
-              :loading="saving"
-              @click="saveEdits"
-            >
-              Save Changes
-            </UButton>
-            <UButton
-              v-else
-              variant="ghost"
-              size="sm"
-              @click="emit('update:modelValue', false)"
-            >
-              Close
-            </UButton>
-          </div>
-        </div>
+      </button>
+      <button
+        v-if="!isEditing"
+        @click="isEditing = true"
+        class="p-1.5 rounded-lg hover:bg-muted transition-colors"
+        title="Edit"
+      >
+        <UIcon name="i-heroicons-pencil" class="w-4 h-4 text-muted-foreground" />
+      </button>
+      <button
+        @click="handleDelete"
+        class="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+        title="Delete"
+      >
+        <UIcon name="i-heroicons-trash" class="w-4 h-4 text-muted-foreground hover:text-destructive" />
+      </button>
     </template>
-  </UModal>
+
+    <!-- Title editor — folded into body when editing (drops the inline header-swap UX). -->
+    <div v-if="isEditing" class="mb-4 space-y-1">
+      <p class="text-xs font-medium text-muted-foreground">Title</p>
+      <UInput v-model="editTitle" size="sm" placeholder="Note title..." />
+    </div>
+
+    <!-- Tags -->
+    <div v-if="isEditing" class="mb-4">
+      <p class="text-xs font-medium text-muted-foreground mb-1.5">Tags</p>
+      <AITagSelector v-model="editTagIds" />
+    </div>
+    <div v-else-if="noteTags.length > 0" class="flex flex-wrap gap-1.5 mb-4">
+      <span
+        v-for="tag in noteTags"
+        :key="tag.id"
+        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
+        :style="{ backgroundColor: (tag.color || '#6366f1') + '1a', color: tag.color || '#6366f1' }"
+      >
+        <span
+          class="w-1.5 h-1.5 rounded-full"
+          :style="{ backgroundColor: tag.color || '#6366f1' }"
+        />
+        {{ tag.name }}
+        <span v-if="tag.entity_type" class="text-[9px] opacity-70">({{ tag.entity_type }})</span>
+      </span>
+    </div>
+
+    <!-- Markdown content -->
+    <div
+      class="prose prose-sm dark:prose-invert max-w-none"
+      v-html="renderedContent"
+    />
+
+    <template #footer>
+      <button
+        v-if="note?.source_session"
+        @click="goToSession"
+        class="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+      >
+        <UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
+        View source conversation
+      </button>
+      <span v-else />
+
+      <div class="flex gap-2">
+        <UButton
+          v-if="isEditing"
+          variant="ghost"
+          size="sm"
+          @click="isEditing = false"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          v-if="isEditing"
+          size="sm"
+          :loading="saving"
+          @click="saveEdits"
+        >
+          Save Changes
+        </UButton>
+        <UButton
+          v-else
+          variant="ghost"
+          size="sm"
+          @click="emit('update:modelValue', false)"
+        >
+          Close
+        </UButton>
+      </div>
+    </template>
+  </AppsAppBottomSheet>
 </template>

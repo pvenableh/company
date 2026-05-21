@@ -1,4 +1,5 @@
 <template>
+  <!-- not a sheet because: multi-step wizard (preview → choice → create/link → confirm), see [[feedback_ios_native_strategy]] -->
   <UModal
     v-model="isOpen"
     title="Promote to Earnest CRM"

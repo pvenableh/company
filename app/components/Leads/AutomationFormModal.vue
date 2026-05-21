@@ -1,10 +1,9 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-lg">
-		<template #header>
-			<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Rule' : 'New Rule' }}</h3>
-		</template>
-
-		<form @submit.prevent="handleSubmit" class="space-y-4 max-h-[70vh] overflow-y-auto">
+	<AppsAppBottomSheet
+		v-model="isOpen"
+		:title="isEditing ? 'Edit Rule' : 'New Rule'"
+	>
+		<form id="automation-form" @submit.prevent="handleSubmit" class="space-y-4">
 			<!-- Stages -->
 			<div class="grid grid-cols-2 gap-4">
 				<div class="space-y-1">
@@ -78,28 +77,30 @@
 		</form>
 
 		<template #footer>
-			<div class="flex items-center justify-between w-full">
-				<div class="flex items-center gap-1">
-					<UTooltip v-if="isEditing" text="Delete">
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							class="text-destructive hover:text-destructive hover:bg-destructive/10"
-							:disabled="saving"
-							@click="handleDelete"
-						>
-							<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
-						</Button>
-					</UTooltip>
-					<Button size="sm" :disabled="saving || !canSubmit" @click="handleSubmit">
-						<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
-						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
-						{{ isEditing ? 'Save' : 'Create' }}
-					</Button>
-				</div>
-			</div>
+			<UTooltip v-if="isEditing" text="Delete">
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="text-destructive hover:text-destructive hover:bg-destructive/10"
+					:disabled="saving"
+					@click="handleDelete"
+				>
+					<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
+				</Button>
+			</UTooltip>
+			<span v-else />
+			<Button
+				type="submit"
+				form="automation-form"
+				size="sm"
+				:disabled="saving || !canSubmit"
+			>
+				<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
+				<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
+				{{ isEditing ? 'Save' : 'Create' }}
+			</Button>
 		</template>
-	</UModal>
+	</AppsAppBottomSheet>
 </template>
 
 <script setup lang="ts">

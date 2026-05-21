@@ -192,6 +192,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 </script>
 
 <template>
+	<!-- not a sheet because: multi-step weekly check-in (seed rows → batched submit → reflection), see [[feedback_ios_native_strategy]] -->
 	<UModal v-model="isOpen" class="sm:max-w-2xl">
 		<template #header>
 			<div class="w-full">
