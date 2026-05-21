@@ -62,7 +62,7 @@
 								<TasksCard
 									:task="task"
 									:team-members="teamMembers"
-									@select="selectedTask = task"
+									@select="openTaskSlideOver(task)"
 									@toggle-complete="toggleComplete(task)"
 								/>
 							</div>
@@ -83,20 +83,18 @@
 			</div>
 		</div>
 
-		<!-- Task Detail Panel -->
-		<TasksDetailPanel
-			v-if="selectedTask"
-			:task="selectedTask"
-			:team-members="teamMembers"
-			@close="selectedTask = null"
-			@update="handleTaskUpdate"
-			@delete="handleTaskDelete"
-		/>
 	</div>
 </template>
 
 <script setup lang="ts">
 import VueDraggable from 'vuedraggable';
+import { subscribeToCollection } from '~/composables/useEntityStore';
+
+const taskSlide = useAppSlideOver('task');
+
+function openTaskSlideOver(task: any) {
+	taskSlide.open(task.id);
+}
 
 const props = defineProps<{
 	projectId: string;
@@ -128,7 +126,6 @@ const { user } = useDirectusAuth();
 
 const allTasks = ref<any[]>([]);
 const loading = ref(true);
-const selectedTask = ref<any>(null);
 const newTaskTitles = reactive<Record<string, string>>({ todo: '', in_progress: '', done: '' });
 
 const isDragging = ref(false);
@@ -292,49 +289,17 @@ async function handleColumnChange(columnKey: string, evt: any) {
 	}
 }
 
-async function handleTaskUpdate(taskId: string, payload: any) {
-	try {
-		await taskItems.update(taskId, payload);
-		const idx = allTasks.value.findIndex(t => t.id === taskId);
-		if (idx === -1) return;
-		const task = allTasks.value[idx];
-		const oldColumn = statusToColumn(task.status);
-		Object.assign(task, payload);
-		// Move between columns only if the bucket actually changed —
-		// editing other fields keeps the card in place.
-		if ('status' in payload) {
-			const newColumn = statusToColumn(task.status);
-			if (newColumn !== oldColumn) {
-				const fromIdx = columnTasks[oldColumn].findIndex(t => t.id === taskId);
-				if (fromIdx !== -1) columnTasks[oldColumn].splice(fromIdx, 1);
-				columnTasks[newColumn].push(task);
-			}
-		}
-		emit('statsChanged');
-	} catch (err) {
-		console.error('Failed to update task:', err);
-	}
-}
-
-async function handleTaskDelete(taskId: string) {
-	try {
-		await taskItems.remove(taskId);
-		allTasks.value = allTasks.value.filter(t => t.id !== taskId);
-		for (const colKey of (Object.keys(columnTasks) as TaskColumn[])) {
-			const idx = columnTasks[colKey].findIndex((t: any) => t.id === taskId);
-			if (idx !== -1) columnTasks[colKey].splice(idx, 1);
-		}
-		selectedTask.value = null;
-		emit('statsChanged');
-	} catch (err) {
-		console.error('Failed to delete task:', err);
-	}
-}
-
 onMounted(fetchTasks);
 
 // Refetch when the Mine/All toggle flips so the board responds live.
 watch(isMine, () => fetchTasks());
+
+// Slide-over edits + deletes notify the entity bus; refetch so the board
+// repaints with authoritative state (status changes shuffle columns, etc).
+const unsubscribeTasks = subscribeToCollection('tasks', () => {
+	fetchTasks().then(() => emit('statsChanged'));
+});
+onBeforeUnmount(() => unsubscribeTasks());
 </script>
 
 <style scoped>

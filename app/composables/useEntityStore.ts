@@ -78,6 +78,21 @@ export function notifyEntityChange<T extends { id?: string | number }>(
   }
 }
 
+/** Lightweight subscription helper for surfaces that own their own list
+ * state and just need to react to `notifyEntityChange(collection, …)`
+ * (e.g. legacy boards/lists that haven't migrated to `useEntityStore`).
+ * Returns an unsubscribe function. */
+export function subscribeToCollection<T extends { id?: string | number }>(
+  collection: string,
+  handler: (event: { id: string; op: 'create' | 'update' | 'remove'; item?: T }) => void,
+): () => void {
+  const set = COLLECTION_HANDLERS.get(collection) ?? new Set();
+  COLLECTION_HANDLERS.set(collection, set);
+  const wrapped = (e: StoreEvent<any>) => handler(e);
+  set.add(wrapped);
+  return () => set.delete(wrapped);
+}
+
 function stableHash(value: unknown): string {
   if (value == null) return '';
   // Order-stable JSON via key sort — Directus filters are nested objects so
