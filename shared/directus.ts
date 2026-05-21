@@ -1700,6 +1700,8 @@ export interface EmailTemplate {
 	is_starter?: boolean | null;
 	/** @description Background color behind the email body (mj-body). Defaults to white. */
 	body_background_color?: string | null;
+	/** @description Per-template design tokens used by the block builder. Shape: { body_background, font_family, font_size, text_color }. Null fields fall back to defaults at MJML compile time. */
+	design_settings?: Record<string, any> | null;
 	blocks?: TemplateBlock[] | string[];
 }
 
