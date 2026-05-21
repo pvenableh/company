@@ -7,9 +7,10 @@
 -->
 <script setup lang="ts">
 import type { MailingList } from '~~/shared/email/contacts';
+import type { FlipFromPayload } from '~/composables/useFlipFromRow';
 import AppSlideOverShell from '../AppSlideOverShell.vue';
 
-const props = defineProps<{ id: string }>();
+const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const list = ref<MailingList | null>(null);
@@ -28,7 +29,31 @@ const subtitle = computed(() => {
 </script>
 
 <template>
-  <AppSlideOverShell :title="title" :subtitle="subtitle" @close="$emit('close')">
+  <AppSlideOverShell
+    :title="title"
+    :subtitle="subtitle"
+    :flip-from="flipFrom"
+    @close="$emit('close')"
+  >
+    <template #hero>
+      <div class="flex items-center justify-between gap-3 px-1 py-1.5">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-foreground truncate">
+            {{ list?.name || 'Mailing list' }}
+          </p>
+          <p v-if="list" class="text-[11px] text-muted-foreground truncate mt-0.5">
+            {{ subscriberCount }} subscriber{{ subscriberCount === 1 ? '' : 's' }}
+          </p>
+        </div>
+        <span
+          v-if="(list as any)?.default"
+          class="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider shrink-0"
+        >
+          Default
+        </span>
+      </div>
+    </template>
+
     <template v-if="list" #actions>
       <button
         type="button"

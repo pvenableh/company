@@ -350,8 +350,9 @@ function openComposeSlideOver() {
 const mailingListSlide = useAppSlideOver('mailing-list');
 const showNewListModal = ref(false);
 const mailingListRefreshSignal = useState<number>('mailing-lists-refresh', () => 0);
-function openMailingListSlideOver(list: any) {
-  mailingListSlide.open(String(list.id));
+function openMailingListSlideOver(list: any, ev?: MouseEvent) {
+  const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
+  mailingListSlide.open(String(list.id), { flipFrom });
 }
 function onListCreated() {
   showNewListModal.value = false;
@@ -1541,7 +1542,7 @@ const scopeLabel = computed(() => {
                 v-for="list in audienceLists"
                 :key="list.id"
                 class="rounded-xl border border-border/40 bg-card/40 p-4 cursor-pointer hover:bg-muted/30 transition-colors group"
-                @click="openMailingListSlideOver(list)"
+                @click="openMailingListSlideOver(list, $event)"
               >
                 <div class="flex items-center gap-3 mb-2">
                   <div class="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
