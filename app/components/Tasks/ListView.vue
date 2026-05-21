@@ -204,8 +204,9 @@
 			</template>
 		</AppsAppBottomSheet>
 
-		<!-- Empty -->
-		<div v-else class="flex flex-col items-center justify-center py-12 text-center">
+		<!-- Empty — standalone v-if (not in the loading/list chain) so the
+		     edit sheet sibling above doesn't break the v-else binding. -->
+		<div v-if="!loading && !sortedTasks.length" class="flex flex-col items-center justify-center py-12 text-center">
 			<Icon name="lucide:check-square" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 			<p class="text-sm text-muted-foreground">No tasks yet</p>
 			<p class="text-xs text-muted-foreground/60 mt-1">Add a task above to get started.</p>
