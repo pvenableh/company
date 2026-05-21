@@ -312,14 +312,20 @@ function openProject() {
         </div>
       </div>
 
-      <!-- Description -->
+      <!-- Description (Tiptap — task.description is HTML; the legacy
+           textarea displayed the raw markup). -->
       <div class="mb-5">
         <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Description</span>
-        <textarea
-          v-model="task.description"
-          rows="4"
-          class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
+        <LazyFormTiptap
+          :model-value="task.description || ''"
           placeholder="Add details..."
+          :show-char-count="false"
+          :character-limit="0"
+          height="min-h-24"
+          custom-classes="px-3 py-2"
+          :organization-id="typeof task.organization_id === 'object' ? task.organization_id?.id : task.organization_id"
+          :context="{ collection: 'tasks', itemId: task.id }"
+          @update:model-value="(val) => (task.description = val)"
           @blur="saveField('description', task.description || null)"
         />
       </div>
