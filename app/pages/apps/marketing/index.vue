@@ -358,6 +358,11 @@ const showNewListModal = ref(false);
 // create flow so the id is the sentinel '_'.
 const campaignPlannerSlide = useAppSlideOver('campaign-planner');
 
+const importContactsSlide = useAppSlideOver('import-contacts');
+function openImportContactsPanel() {
+  importContactsSlide.open('new');
+}
+
 // New-email bottom sheet — lifted from /email's New Template modal so the
 // user doesn't get dumped on the legacy landing page two hops before the
 // create flow.
@@ -1618,18 +1623,14 @@ const scopeLabel = computed(() => {
                 <span class="font-medium">Insights</span>
                 <Icon name="lucide:bar-chart-2" class="w-3.5 h-3.5 text-muted-foreground" />
               </NuxtLink>
-              <!-- allow-legacy-link: /contacts/import is a 4-step CSV wizard
-                   (file drop → column map → preview → results). Worth lifting
-                   into an ImportContactsPanel slide-over in a future pass; the
-                   page-mode UX is fine for now and the form density doesn't
-                   suit a bottom sheet. -->
-              <NuxtLink
-                to="/contacts/import"
+              <button
+                type="button"
                 class="rounded-xl border border-dashed border-border bg-transparent hover:bg-muted/20 px-3 py-2.5 transition-colors flex items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+                @click="openImportContactsPanel"
               >
                 <span class="font-medium">Import CSV</span>
                 <Icon name="lucide:upload" class="w-3.5 h-3.5" />
-              </NuxtLink>
+              </button>
             </div>
           </div>
         </template>

@@ -44,6 +44,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	lead: () => import('./LeadPanel.vue'),
 	'lead-automations': () => import('./LeadAutomationsPanel.vue'),
 	'campaign-planner': () => import('./CampaignPlannerPanel.vue'),
+	'import-contacts': () => import('./ImportContactsPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();
