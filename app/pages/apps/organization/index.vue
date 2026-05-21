@@ -353,10 +353,7 @@ const integrationsList = computed(() => {
       status: 'inactive' as IntegrationStatus,
       statusLabel: 'Available as add-on',
       action: 'Learn more',
-      // allow-legacy-link: /account/subscription is the Stripe checkout / upgrade
-      // flow page; lifting the entire /account surface into the apps shell is a
-      // separate initiative (would touch billing / plan / payment-method UI).
-      onClick: () => router.push('/account/subscription'),
+      onClick: () => accountSubscriptionSlide.open('default'),
     },
     {
       key: 'daily',
@@ -448,6 +445,7 @@ const teamsSlide = useAppSlideOver('teams');
 const rolesSlide = useAppSlideOver('roles');
 const documentsLibrarySlide = useAppSlideOver('documents_library');
 const socialAccountsSlide = useAppSlideOver('social-accounts');
+const accountSubscriptionSlide = useAppSlideOver('account-subscription');
 const settingsTiles = [
   { label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') },
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
@@ -552,18 +550,26 @@ watch(selectedOrg, () => {
   }
 });
 
+// ── Overview edit mode ──────────────────────────────────────────────────────
+// `?edit=1` flips the Overview floor into the inline OverviewEditor in place
+// of the read-only summary. The Edit / Done header button toggles it; no
+// route navigation, no shell remount.
+const editingOverview = computed(() => route.query.edit === '1');
+
+function toggleOverviewEdit() {
+  const { edit, ...rest } = route.query;
+  void edit;
+  router.replace({
+    query: editingOverview.value ? rest : { ...rest, edit: '1' },
+  });
+}
+
 // ── Header action ───────────────────────────────────────────────────────────
 const headerAction = computed(() => {
   if (floor.value === 'overview' && canManageOrg.value) {
-    return {
-      label: 'Edit',
-      icon: 'lucide:pencil',
-      // allow-legacy-link: /organization is the inline-editable settings page
-      // (pencil-toggle forms for org name / brand / contact / address / industry,
-      // plus logo upload). Porting the 2174-line surface into the apps shell is
-      // its own initiative; until then, route to the canonical editor.
-      onClick: () => router.push('/organization'),
-    };
+    return editingOverview.value
+      ? { label: 'Done', icon: 'lucide:check', onClick: toggleOverviewEdit }
+      : { label: 'Edit', icon: 'lucide:pencil', onClick: toggleOverviewEdit };
   }
   if (floor.value === 'members' && canManageOrg.value) {
     return {
@@ -589,6 +595,11 @@ const headerAction = computed(() => {
   }
   return null;
 });
+
+function openRestoreFromBanner() {
+  floor.value = 'settings';
+  showArchiveSheet.value = true;
+}
 
 function onMemberInvited() {
   showInviteMemberModal.value = false;
@@ -629,13 +640,8 @@ function onClientInvited() {
             Restore it from the classic settings page to reactivate access.
           </p>
         </div>
-        <!-- allow-legacy-link: archived-banner restore CTA. The Danger-zone
-             ArchiveOrgSheet below handles restore inside the apps shell; this
-             banner button is a redundant secondary entry point on a rare path
-             (only shown when archived_at is set), so route to the canonical
-             editor instead of duplicating sheet machinery. -->
-        <Button size="sm" variant="outline" @click="router.push('/organization')">
-          Open settings
+        <Button size="sm" variant="outline" @click="openRestoreFromBanner">
+          Restore
         </Button>
       </div>
 
@@ -645,6 +651,9 @@ function onClientInvited() {
           <Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
           <p class="text-sm text-muted-foreground">Loading organization…</p>
         </div>
+        <template v-else-if="editingOverview && canManageOrg">
+          <AppsOrganizationOverviewEditor :can-manage="canManageOrg" />
+        </template>
         <template v-else>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <!-- Left: brand + identity -->
