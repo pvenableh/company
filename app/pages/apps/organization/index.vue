@@ -353,7 +353,9 @@ const integrationsList = computed(() => {
       status: 'inactive' as IntegrationStatus,
       statusLabel: 'Available as add-on',
       action: 'Learn more',
-      // TODO(ios-sweep): lift /account/subscription into apps shell as `/apps/account`
+      // allow-legacy-link: /account/subscription is the Stripe checkout / upgrade
+      // flow page; lifting the entire /account surface into the apps shell is a
+      // separate initiative (would touch billing / plan / payment-method UI).
       onClick: () => router.push('/account/subscription'),
     },
     {
@@ -495,6 +497,9 @@ async function saveDocumentAccent() {
 
 const isArchived = computed(() => !!org.value?.archived_at);
 
+// Danger-zone archive/restore confirm sheet (Settings floor).
+const showArchiveSheet = ref(false);
+
 // ── Lazy-load per floor ─────────────────────────────────────────────────────
 const overviewLoaded = ref(false);
 const membersLoaded = ref(false);
@@ -553,7 +558,10 @@ const headerAction = computed(() => {
     return {
       label: 'Edit',
       icon: 'lucide:pencil',
-      // TODO(ios-sweep): lift to OrganizationEditPanel slide-over
+      // allow-legacy-link: /organization is the inline-editable settings page
+      // (pencil-toggle forms for org name / brand / contact / address / industry,
+      // plus logo upload). Porting the 2174-line surface into the apps shell is
+      // its own initiative; until then, route to the canonical editor.
       onClick: () => router.push('/organization'),
     };
   }
@@ -621,7 +629,11 @@ function onClientInvited() {
             Restore it from the classic settings page to reactivate access.
           </p>
         </div>
-        <!-- TODO(ios-sweep): lift archive-restore into an inline action; for now keep the legacy /organization redirect since this banner only renders for archived orgs (rare path) -->
+        <!-- allow-legacy-link: archived-banner restore CTA. The Danger-zone
+             ArchiveOrgSheet below handles restore inside the apps shell; this
+             banner button is a redundant secondary entry point on a rare path
+             (only shown when archived_at is set), so route to the canonical
+             editor instead of duplicating sheet machinery. -->
         <Button size="sm" variant="outline" @click="router.push('/organization')">
           Open settings
         </Button>
@@ -1251,8 +1263,7 @@ function onClientInvited() {
             <p v-else class="text-sm text-muted-foreground mb-3">
               This organization is archived. Restore it from the classic settings page.
             </p>
-            <!-- TODO(ios-sweep): lift archive flow to a destructive confirm bottom sheet -->
-            <Button size="sm" variant="outline" class="text-destructive border-destructive/30" @click="router.push('/organization?tab=overview')">
+            <Button size="sm" variant="outline" class="text-destructive border-destructive/30" @click="showArchiveSheet = true">
               <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
               {{ isArchived ? 'Manage archive' : 'Archive organization' }}
             </Button>
@@ -1275,6 +1286,14 @@ function onClientInvited() {
       v-model="showInviteClientModal"
       :organization-id="selectedOrg"
       @invited="onClientInvited"
+    />
+
+    <!-- Danger-zone archive / restore confirm sheet (Settings floor). -->
+    <AppsOrganizationArchiveOrgSheet
+      v-model="showArchiveSheet"
+      :org-id="org?.id ?? selectedOrg ?? null"
+      :org-name="orgName"
+      :is-archived="isArchived"
     />
   </div>
 </template>

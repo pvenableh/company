@@ -162,9 +162,13 @@ if (liftNow.length > 0) {
   process.exit(1);
 }
 
+const todos = slideOver.filter((h) => /TODO\(ios-sweep\)/.test(h.tag || ''));
+const legacyAllowed = slideOver.filter((h) => /allow-legacy-link/.test(h.tag || ''));
+
 console.log('✓ Apps-layout containment audit passed');
 console.log(`  Scanned ${files.length} files under app/pages/apps + app/components/apps.`);
-console.log(`  ${slideOver.length} known punch-out${slideOver.length === 1 ? '' : 's'} tagged for P2-P7 sweep (TODO(ios-sweep) markers).`);
+console.log(`  ${todos.length} TODO(ios-sweep) punch-out${todos.length === 1 ? '' : 's'} still to lift.`);
+console.log(`  ${legacyAllowed.length} allow-legacy-link punch-out${legacyAllowed.length === 1 ? '' : 's'} (deliberately permanent).`);
 if (slideOver.length > 0 && process.argv.includes('--verbose')) {
   console.log('');
   for (const h of slideOver) {
