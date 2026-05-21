@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import type { Client } from '~~/shared/directus';
 import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
+import { notifyEntityChange } from '~/composables/useEntityStore';
 import type { ClientTabKey } from './ClientTabsBar.vue';
 import VueDraggable from 'vuedraggable';
 
@@ -61,6 +62,8 @@ const channelItemsApi = useDirectusItems('channels');
 const ticketItemsApi = useDirectusItems('tickets');
 const taskItemsApi = useDirectusItems('tasks');
 const meetingItemsApi = useDirectusItems('video_meetings');
+const projectsContactsApi = useDirectusItems('projects_contacts');
+const toast = useToast();
 
 const client = ref<Client | null>(null);
 const loading = ref(true);
@@ -557,6 +560,38 @@ function onProjectAttached() {
 	else projectItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { projectCount.value = n; }).catch(() => {});
 }
 
+// Drag-magnet drop: a client-contact chip released onto a project row.
+// Creates the projects_contacts junction row, surfaces toast on conflict
+// (duplicate) vs error, and notifies sibling views via the entity bus.
+async function onContactDroppedOnProject(projectId: string, payload: unknown) {
+	const contact = payload as { id?: string; first_name?: string; last_name?: string } | null;
+	if (!contact?.id || !projectId) return;
+	const name = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Contact';
+	try {
+		// Check for an existing junction row first so the second drop
+		// surfaces a friendly toast instead of a 400 from Directus.
+		const existing = await projectsContactsApi.list({
+			filter: { _and: [{ project: { _eq: projectId } }, { contact: { _eq: contact.id } }] },
+			fields: ['id'],
+			limit: 1,
+		}).catch(() => []) as any[];
+		if (existing.length) {
+			toast.add({ title: `${name} is already attached`, color: 'amber' });
+			return;
+		}
+		const created = await projectsContactsApi.create({
+			project: projectId,
+			contact: contact.id,
+		});
+		toast.add({ title: `Attached ${name}`, color: 'green' });
+		const newId = (created as any)?.id ?? `${projectId}:${contact.id}`;
+		notifyEntityChange('projects_contacts', { id: String(newId), op: 'create' });
+	} catch (err: any) {
+		console.error('[ClientWorkspace] drag-attach contact failed', err);
+		toast.add({ title: `Couldn't attach ${name}`, description: err?.message, color: 'red' });
+	}
+}
+
 function onTicketCreated() {
 	showCreateTicketModal.value = false;
 	loadTickets();
@@ -862,6 +897,36 @@ watch(() => props.clientId, () => {
 							New Project
 						</button>
 					</div>
+
+					<!-- Drag-to-attach rail — drag a contact chip onto any
+					     project row to create a projects_contacts junction.
+					     Uses the useDragMagnet primitive (P2.5 slice 2). -->
+					<div
+						v-if="directContactsOrdered.length && relatedProjects.length"
+						class="contact-drag-rail mb-3"
+					>
+						<div class="flex items-center gap-2 mb-1.5 px-1">
+							<Icon name="lucide:hand" class="w-3 h-3 text-muted-foreground/70" />
+							<span class="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+								Drag onto a project to attach
+							</span>
+						</div>
+						<div class="flex flex-wrap gap-1.5">
+							<AppsAppMagnetDragChip
+								v-for="c in directContactsOrdered"
+								:key="c.id"
+								type="contact"
+								:payload="c"
+							>
+								<span class="contact-chip">
+									<span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+									<span class="text-[11px] font-medium truncate max-w-[140px]">
+										{{ c.first_name }} {{ c.last_name }}
+									</span>
+								</span>
+							</AppsAppMagnetDragChip>
+						</div>
+					</div>
 					<div v-if="projectsLoading && !relatedProjects.length" class="space-y-px" aria-busy="true" aria-label="Loading projects">
 						<div
 							v-for="i in skeletonRows(projectCount)"
@@ -877,22 +942,27 @@ watch(() => props.clientId, () => {
 						No projects linked to this client.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<AppsAppMagnetDropZone
 							v-for="project in relatedProjects"
 							:key="project.id"
-							:to="`/projects/${project.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
-							:class="project.status === 'completed' || project.status === 'archived' ? 'opacity-60' : ''"
+							accepts="contact"
+							@drop="(p) => onContactDroppedOnProject(project.id, p)"
 						>
-							<span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
-							<p class="flex-1 text-sm font-medium truncate">{{ project.title }}</p>
-							<span
-								v-if="project.status"
-								class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
-								:class="getStatusBadgeClasses(project.status)"
-							>{{ project.status }}</span>
-							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+							<NuxtLink
+								:to="`/projects/${project.id}`"
+								class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+								:class="project.status === 'completed' || project.status === 'archived' ? 'opacity-60' : ''"
+							>
+								<span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+								<p class="flex-1 text-sm font-medium truncate">{{ project.title }}</p>
+								<span
+									v-if="project.status"
+									class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+									:class="getStatusBadgeClasses(project.status)"
+								>{{ project.status }}</span>
+								<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+							</NuxtLink>
+						</AppsAppMagnetDropZone>
 					</div>
 				</div>
 
@@ -1590,5 +1660,15 @@ watch(() => props.clientId, () => {
 }
 .contact-row__drag {
 	@apply shadow-lg;
+}
+
+/* Drag-to-attach contact rail (Projects tab) — chips that travel into
+   project rows via useDragMagnet. The visible chip stays small + pill-
+   shaped; the cloned ghost inherits this shape during flight. */
+.contact-drag-rail {
+	@apply rounded-lg border border-dashed border-border/60 bg-muted/20 p-2;
+}
+.contact-chip {
+	@apply inline-flex items-center gap-1.5 rounded-full bg-background border border-border px-2 py-1;
 }
 </style>
