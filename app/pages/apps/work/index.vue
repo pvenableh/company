@@ -355,8 +355,9 @@ const meetingSlide = useAppSlideOver('work-meeting');
 function openProjectSlideOver(project: any) {
   projectSlide.open(project.id);
 }
-function openMeetingSlideOver(meeting: any) {
-  meetingSlide.open(meeting.id);
+function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
+  const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
+  meetingSlide.open(meeting.id, { flipFrom });
 }
 </script>
 
@@ -535,7 +536,7 @@ function openMeetingSlideOver(meeting: any) {
             :key="m.id"
             type="button"
             class="ios-card block px-4 py-3 hover:bg-muted/30 transition-colors w-full text-left"
-            @click="openMeetingSlideOver(m)"
+            @click="openMeetingSlideOver(m, $event)"
           >
             <div class="flex items-start gap-3">
               <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
