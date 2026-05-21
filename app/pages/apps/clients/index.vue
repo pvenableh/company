@@ -25,7 +25,11 @@ const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'leads', 'carddesk', 'intel
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
-  return typeof v === 'string' && VIEW_KEYS.includes(v as ViewKey) ? (v as ViewKey) : 'clients';
+  if (typeof v === 'string' && VIEW_KEYS.includes(v as ViewKey)) return v as ViewKey;
+  // Contacts-scoped filters in the URL imply Contacts view — keeps marketing's
+  // Segments shortcuts and any deep-linked filter URL landing on the right tab.
+  if (route.query.category || route.query.status || route.query.subview) return 'contacts';
+  return 'clients';
 })();
 const view = ref<ViewKey>(initialView);
 
@@ -362,8 +366,20 @@ const contacts = ref<Contact[]>([]);
 const contactsTotal = ref(0);
 const contactsLoading = ref(true);
 const contactSearch = ref('');
-const contactsFilterStatus = ref('');
-const contactsFilterCategory = ref<Contact['category'] | ''>('');
+// Contacts-list filters are routed via `?category=` and `?status=` so
+// marketing's Segments shortcuts and any reload preserves the selection.
+const VALID_CONTACT_CATEGORIES = new Set<Contact['category']>([
+  'client', 'prospect', 'partner', 'architect', 'developer', 'hospitality', 'media',
+]);
+const initialContactCategory: Contact['category'] | '' = (() => {
+  const q = route.query.category;
+  return typeof q === 'string' && VALID_CONTACT_CATEGORIES.has(q as Contact['category'])
+    ? (q as Contact['category'])
+    : '';
+})();
+const initialContactStatus: string = typeof route.query.status === 'string' ? route.query.status : '';
+const contactsFilterStatus = ref(initialContactStatus);
+const contactsFilterCategory = ref<Contact['category'] | ''>(initialContactCategory);
 const contactsLimit = 50;
 const contactsPage = ref(1);
 const contactsHasMore = computed(() => contactsPage.value * contactsLimit < contactsTotal.value);
@@ -424,9 +440,8 @@ async function fetchContacts() {
 }
 
 function selectContactCategory(value: Contact['category'] | '') {
+  // Single source of truth — the watch below handles URL sync + refetch.
   contactsFilterCategory.value = value;
-  contactsPage.value = 1;
-  fetchContacts();
 }
 
 const debouncedFetchContacts = useDebounceFn(() => {
@@ -434,7 +449,16 @@ const debouncedFetchContacts = useDebounceFn(() => {
   fetchContacts();
 }, 300);
 
-watch(contactsFilterStatus, () => { contactsPage.value = 1; fetchContacts(); });
+watch(contactsFilterCategory, (next) => {
+  router.replace({ query: { ...route.query, category: next || undefined } });
+  contactsPage.value = 1;
+  fetchContacts();
+});
+watch(contactsFilterStatus, (next) => {
+  router.replace({ query: { ...route.query, status: next || undefined } });
+  contactsPage.value = 1;
+  fetchContacts();
+});
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 onMounted(() => {
@@ -770,6 +794,7 @@ watch(view, (next) => {
             <option value="published">Published</option>
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>
+            <option value="unsubscribed">Unsubscribed</option>
           </select>
         </div>
 

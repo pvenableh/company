@@ -1574,48 +1574,55 @@ const scopeLabel = computed(() => {
             </div>
           </div>
 
-          <!-- Segments shortcut. TODO(ios-sweep): port /contacts surface into apps shell (/apps/contacts) so these NuxtLinks land inside the shell. Until then, every link below is a punch-out — tagged collectively here. -->
+          <!-- Segments shortcut. Lands inside the apps shell — the canonical
+               contacts surface is /apps/clients?view=contacts, which already
+               hydrates ?category= / ?status= / ?subview= into its filters. -->
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Segments</h3>
-              <NuxtLink to="/contacts" class="text-xs text-primary hover:underline">Open Contacts →</NuxtLink>
+              <NuxtLink to="/apps/clients?view=contacts" class="text-xs text-primary hover:underline">Open Contacts →</NuxtLink>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <NuxtLink
-                to="/contacts?category=prospect"
+                to="/apps/clients?view=contacts&category=prospect"
                 class="rounded-xl border border-border/40 bg-card/40 hover:bg-muted/30 px-3 py-2.5 transition-colors flex items-center justify-between text-xs"
               >
                 <span class="font-medium">Prospects</span>
                 <span class="tabular-nums text-muted-foreground">{{ formatNumber(audienceProspects) }}</span>
               </NuxtLink>
               <NuxtLink
-                to="/contacts?category=client"
+                to="/apps/clients?view=contacts&category=client"
                 class="rounded-xl border border-border/40 bg-card/40 hover:bg-muted/30 px-3 py-2.5 transition-colors flex items-center justify-between text-xs"
               >
                 <span class="font-medium">Clients</span>
                 <span class="tabular-nums text-muted-foreground">{{ formatNumber(audienceClients) }}</span>
               </NuxtLink>
               <NuxtLink
-                to="/contacts?category=partner"
+                to="/apps/clients?view=contacts&category=partner"
                 class="rounded-xl border border-border/40 bg-card/40 hover:bg-muted/30 px-3 py-2.5 transition-colors flex items-center justify-between text-xs"
               >
                 <span class="font-medium">Partners</span>
                 <span class="tabular-nums text-muted-foreground">{{ formatNumber(audiencePartners) }}</span>
               </NuxtLink>
               <NuxtLink
-                to="/contacts?status=unsubscribed"
+                to="/apps/clients?view=contacts&status=unsubscribed"
                 class="rounded-xl border border-border/40 bg-card/40 hover:bg-muted/30 px-3 py-2.5 transition-colors flex items-center justify-between text-xs"
               >
                 <span class="font-medium">Unsubscribed</span>
                 <span class="tabular-nums text-muted-foreground">{{ formatNumber(audienceUnsubscribed) }}</span>
               </NuxtLink>
               <NuxtLink
-                to="/contacts?view=insights"
+                to="/apps/clients?view=contacts&subview=insights"
                 class="rounded-xl border border-border/40 bg-card/40 hover:bg-muted/30 px-3 py-2.5 transition-colors flex items-center justify-between text-xs"
               >
                 <span class="font-medium">Insights</span>
                 <Icon name="lucide:bar-chart-2" class="w-3.5 h-3.5 text-muted-foreground" />
               </NuxtLink>
+              <!-- allow-legacy-link: /contacts/import is a 4-step CSV wizard
+                   (file drop → column map → preview → results). Worth lifting
+                   into an ImportContactsPanel slide-over in a future pass; the
+                   page-mode UX is fine for now and the form density doesn't
+                   suit a bottom sheet. -->
               <NuxtLink
                 to="/contacts/import"
                 class="rounded-xl border border-dashed border-border bg-transparent hover:bg-muted/20 px-3 py-2.5 transition-colors flex items-center justify-between text-xs text-muted-foreground hover:text-foreground"

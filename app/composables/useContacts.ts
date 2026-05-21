@@ -33,7 +33,12 @@ export function useContacts() {
       ],
     };
 
-    if (params?.status) {
+    if (params?.status === 'unsubscribed') {
+      // Special-case: 'unsubscribed' isn't a real Directus status — it maps
+      // to the email-opt-out timestamp. Keep non-archived plus opted-out.
+      filter._and.push({ email_unsubscribed_at: { _nnull: true } });
+      filter._and.push({ status: { _neq: 'archived' } });
+    } else if (params?.status) {
       filter._and.push({ status: { _eq: params.status } });
     } else {
       filter._and.push({ status: { _neq: 'archived' } });
