@@ -146,8 +146,9 @@ function fmtExpiry(d: string | null | undefined): string {
 	try { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
 	catch { return ''; }
 }
-function openPanel(id: string) {
-	proposalSlide.open(String(id));
+function openPanel(id: string, ev?: MouseEvent) {
+	const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
+	proposalSlide.open(String(id), { flipFrom });
 }
 </script>
 
@@ -193,7 +194,7 @@ function openPanel(id: string) {
 				:key="p.id"
 				type="button"
 				class="flex w-full items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group text-left"
-				@click="openPanel(p.id)"
+				@click="openPanel(p.id, $event)"
 			>
 				<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground shrink-0" />
 				<div class="flex-1 min-w-0 flex items-center gap-2">
