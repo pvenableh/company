@@ -92,9 +92,7 @@ function onProposalDeleted() {
   if (props.compact) {
     emit('back');
   } else {
-    // allow-legacy-link — non-compact mode runs from /proposals/[id], so the
-    // deleted-proposal redirect goes back to the classic list page.
-    router.push('/proposals');
+    router.push('/apps/money?floor=documents');
   }
 }
 
@@ -110,8 +108,11 @@ async function convertToContract() {
         // Push the contract panel on top of this proposal panel.
         slideOverStack.push('contract', String((res as any).id));
       } else {
-        // allow-legacy-link — non-compact mode hands off via full-page route.
-        router.push(`/contracts/${(res as any).id}`);
+        // Standalone mode → land the user in the apps shell with the new
+        // contract opened as a slide-over over the Documents floor.
+        router.push(
+          `/apps/money?floor=documents&tab=contracts&slide=contract:${(res as any).id}`,
+        );
       }
     }
   } catch (err: any) {
@@ -208,10 +209,9 @@ if (!props.compact) {
     </div>
 
     <template v-else-if="proposal">
-      <!-- allow-legacy-link — full-page mode breadcrumb to /proposals list -->
       <NuxtLink
         v-if="!compact"
-        to="/proposals"
+        to="/apps/money?floor=documents"
         class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
         <UIcon name="lucide:chevron-left" class="w-3 h-3" />

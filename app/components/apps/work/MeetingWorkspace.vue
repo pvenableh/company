@@ -284,33 +284,35 @@ const meetingClient = computed(() => {
 	return null;
 });
 
-// ─── Pivot navigation: route in full-page mode, push panel in compact mode ───
+// ─── Pivot navigation: push panel in compact mode, land the user in the
+//     apps shell with the destination slide-over already open in full-page
+//     mode. Standalone /meetings/[id] is a deep-link receiver; any pivot
+//     is the user crossing back into interactive app use.
 function openProject(id) {
 	if (!id) return;
 	if (props.compact) pushPanel('work-project', String(id));
-	// allow-legacy-link — full-page mode keeps the classic project route
-	else router.push(`/projects/${id}`);
+	else router.push(`/apps/work?slide=work-project:${id}`);
 }
 function openEvent(eventId, ev) {
 	if (!eventId || !projectId.value) return;
 	if (props.compact) {
 		const flipFrom = flipPayloadFrom(ev?.currentTarget);
 		pushPanel('project-event', String(eventId), { flipFrom });
+	} else {
+		router.push(
+			`/apps/work?slide=work-project:${projectId.value}/project-event:${eventId}`,
+		);
 	}
-	// allow-legacy-link — full-page mode keeps the classic event route
-	else router.push(`/projects/${projectId.value}/events/${eventId}`);
 }
 function openClient(id) {
 	if (!id) return;
 	if (props.compact) pushPanel('client', String(id));
-	// allow-legacy-link — full-page mode keeps the classic client route
-	else router.push(`/clients/${id}`);
+	else router.push(`/apps/clients?slide=client:${id}`);
 }
 function openContact(id) {
 	if (!id) return;
 	if (props.compact) pushPanel('contact', String(id));
-	// allow-legacy-link — full-page mode keeps the classic contact route
-	else router.push(`/contacts/${id}`);
+	else router.push(`/apps/clients?view=contacts&slide=contact:${id}`);
 }
 
 // ─── Attendee chips + contact-insight lookup ───

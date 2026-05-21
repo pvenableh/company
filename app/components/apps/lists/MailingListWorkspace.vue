@@ -90,12 +90,10 @@ function onListDeleted() {
 }
 
 function openContact(contactId: string | number) {
-  if (props.compact) {
-    pushSlideOver('contact', String(contactId));
-  } else {
-    // allow-legacy-link — full-page mode doesn't have a slide-over stack to push into.
-    pushSlideOver('contact', String(contactId));
-  }
+  // Both modes push the contact slide-over — the apps layout mounts the
+  // stack universally (the /lists/[id] deep-link wrapper renders inside
+  // the apps shell when apps-mode is on, which is the default).
+  pushSlideOver('contact', String(contactId));
 }
 
 const subscriberCount = computed(() => contacts.value.length);
@@ -119,8 +117,7 @@ defineExpose({ openEdit: () => { showEditModal.value = true; } });
     <!-- Full-page header — slide-over shell shows title + subtitle in compact mode -->
     <div v-if="!compact && list" class="flex items-start justify-between gap-3 mb-6">
       <div class="flex items-center gap-3">
-        <!-- allow-legacy-link — full-page mode breadcrumb to /lists list -->
-        <NuxtLink to="/lists" class="text-muted-foreground hover:text-foreground">
+        <NuxtLink to="/apps/marketing?floor=audience" class="text-muted-foreground hover:text-foreground">
           <Icon name="lucide:chevron-left" class="w-5 h-5" />
         </NuxtLink>
         <div>

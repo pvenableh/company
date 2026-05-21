@@ -92,9 +92,7 @@ function onContractDeleted() {
   if (props.compact) {
     emit('back');
   } else {
-    // allow-legacy-link — non-compact mode runs from /contracts/[id], so the
-    // deleted-contract redirect goes back to the classic list page.
-    router.push('/contracts');
+    router.push('/apps/money?floor=documents&tab=contracts');
   }
 }
 
@@ -213,10 +211,9 @@ if (!props.compact) {
     </div>
 
     <template v-else-if="contract">
-      <!-- allow-legacy-link — full-page mode breadcrumb to /contracts list -->
       <NuxtLink
         v-if="!compact"
-        to="/contracts"
+        to="/apps/money?floor=documents&tab=contracts"
         class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
         <UIcon name="lucide:chevron-left" class="w-3 h-3" />

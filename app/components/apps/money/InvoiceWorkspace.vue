@@ -6,10 +6,25 @@
   component fetches itself. Emits `@loaded` with the invoice record
   (panel uses it to populate the slide-over shell title).
 
-  `:compact` hides chrome that the slide-over shell already provides
-  (the back-link + the floating AI sidebar overlay, which would render
-  inside the slide-over's transformed container instead of at viewport
-  level — see [AppSlideOverShell.vue]).
+  Dual-mode contract — canonical pattern for every workspace component
+  that powers both a slide-over panel AND a `/<entity>/[id]` deep-link
+  route (Invoice / Contract / Proposal / MailingList / Event / Meeting /
+  Lead). The `:compact` prop is the single source of truth:
+
+    - `compact = true` (hosted by a slide-over panel): hide chrome the
+      shell already provides (back-link, floating AI sidebar), and
+      delegate "back to list" / cross-noun pivots to the slide-over stack
+      via `emit('back')` (the panel pops) or
+      `useAppSlideOverStack().push(type, id)` (the panel pushes another).
+    - `compact = false` (standalone deep-link route): own the chrome,
+      and route-navigate to the apps-shell equivalent of the legacy
+      page (`/apps/money` for invoices, never `/invoices`). Standalone
+      mode is exclusively for emailed/shared deep-links — apps-shell
+      users always enter through the slide-over.
+
+  This contract is what allows us to delete every `// allow-legacy-link`
+  comment in the workspace bodies: the standalone branch ALWAYS routes
+  inside `/apps/*`, the compact branch ALWAYS stays in the stack.
 -->
 <script setup lang="ts">
 import type { Invoice, PaymentsReceived } from '~~/shared/directus';
@@ -64,9 +79,7 @@ function onInvoiceDeleted() {
   if (props.compact) {
     emit('back');
   } else {
-    // allow-legacy-link — non-compact mode runs from /invoices/detail/[id],
-    // so the deleted-invoice redirect goes back to the classic list page.
-    router.push('/invoices');
+    router.push('/apps/money');
   }
 }
 
@@ -243,8 +256,7 @@ if (!props.compact) {
           <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
           Back
         </Button>
-        <!-- allow-legacy-link — non-compact error-state back-link to the classic /invoices list page -->
-        <NuxtLink v-else to="/invoices">
+        <NuxtLink v-else to="/apps/money">
           <Button variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide">
             <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
             Back to Invoices
@@ -260,10 +272,9 @@ if (!props.compact) {
     <!-- Invoice Detail -->
     <template v-else-if="invoice">
       <!-- Back link (full-page mode only — slide-over shell owns its own back chrome) -->
-      <!-- allow-legacy-link — full-page mode breadcrumb to /invoices list -->
       <NuxtLink
         v-if="!compact"
-        to="/invoices"
+        to="/apps/money"
         class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
         <Icon name="lucide:chevron-left" class="w-3 h-3" />

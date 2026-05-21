@@ -331,8 +331,7 @@ function openContactPivot() {
 	const c = lead.value?.related_contact;
 	if (!c?.id) return;
 	if (props.compact) pushPanel('contact', String(c.id));
-	// allow-legacy-link — full-page mode keeps the classic contact route
-	else router.push(`/contacts/${c.id}`);
+	else router.push(`/apps/clients?view=contacts&slide=contact:${c.id}`);
 }
 </script>
 

@@ -167,9 +167,15 @@ const projectInfo = computed(() => {
 
 function openProject() {
 	if (!projectInfo.value?.id) return;
-	if (props.compact) pushPanel('work-project', String(projectInfo.value.id));
-	// allow-legacy-link — full-page mode keeps the classic project route
-	else router.push(`/projects/${projectInfo.value.id}`);
+	if (props.compact) {
+		pushPanel('work-project', String(projectInfo.value.id));
+	} else {
+		// Standalone mode → land the user in the apps shell with the project
+		// slide-over opened over the Work floor.
+		router.push(
+			`/apps/work?slide=work-project:${projectInfo.value.id}`,
+		);
+	}
 }
 </script>
 
@@ -190,12 +196,11 @@ function openProject() {
 				class="w-full flex flex-row items-start justify-between p-4 pt-6 border-b border-border"
 			>
 				<div class="flex items-start gap-3">
-					<BackButton :to="`/projects/${projectInfo?.id}`" />
+					<BackButton :to="`/apps/work?slide=work-project:${projectInfo?.id}`" />
 					<div>
 						<div class="flex items-center gap-2 mb-0.5">
-							<!-- allow-legacy-link — full-page mode keeps the classic project crumb -->
 							<NuxtLink
-								:to="`/projects/${projectInfo?.id}`"
+								:to="`/apps/work?slide=work-project:${projectInfo?.id}`"
 								class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
 							>
 								<span
