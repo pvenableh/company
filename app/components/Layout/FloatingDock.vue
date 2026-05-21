@@ -41,10 +41,11 @@
 					<Icon name="lucide:notebook-pen" class="w-4 h-4" />
 				</button>
 
-				<!-- Compose button — opens the social composer slide-over.
-					 Available from any app so ad-hoc post creation doesn't pull
-					 the user out of whatever floor they're in. -->
+				<!-- Compose button — only inside the Social app so users in
+					 Work / Money / Marketing don't see a cross-noun shortcut
+					 that yanks them out of whatever floor they're in. -->
 				<button
+					v-if="isSocialRoute"
 					class="dock-btn"
 					title="Compose a social post"
 					@click="openCompose"
@@ -321,6 +322,13 @@ const taskCount = computed(() => activeTasks.value.length);
 
 const route = useRoute();
 const isMeetingRoute = computed(() => (route.path || '').startsWith('/meeting/'));
+// Scope the compose shortcut to the Social app (classic /social or apps-mode
+// /apps/social*) so users in other apps don't see a cross-noun trigger.
+const isSocialRoute = computed(() => {
+	const p = route.path || '';
+	if (p.startsWith('/social') || p.startsWith('/apps/social')) return true;
+	return false;
+});
 
 const panelTitle = computed(() => {
 	if (activePanel.value === 'notes') return 'Meeting Notes';

@@ -138,40 +138,47 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'Template has no compiled MJML. Save the template first.' };
   }
 
-  try {
-    const variables = {
-      first_name: 'Test',
-      last_name: 'User',
-      email: to_email,
-      year: new Date().getFullYear(),
-      app_name: config.public?.companyName || 'Your Organization',
-      unsubscribe_url: '#',
-      ...sample_variables,
-    };
+  const variables = {
+    first_name: 'Test',
+    last_name: 'User',
+    email: to_email,
+    year: new Date().getFullYear(),
+    app_name: config.public?.companyName || 'Your Organization',
+    unsubscribe_url: '#',
+    ...sample_variables,
+  };
 
-    const result = compileMjml(template.mjml_source, variables);
-    if (!result.html) {
-      return { success: false, error: `MJML compile error: ${result.errors.join(', ')}` };
-    }
-
-    const subject = template.subject_template
-      ? compileSubject(template.subject_template, variables)
-      : `[TEST] ${template.name}`;
-
-    const sgMail = await import('@sendgrid/mail');
-    sgMail.default.setApiKey(config.sendgridApiKey);
-    const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@earnest.guru';
-    const fromName = config.sendgridFromName || 'Earnest';
-    await sgMail.default.send({
-      to: to_email,
-      from: { email: fromEmail, name: `[TEST] ${fromName}` },
-      subject: `[TEST] ${subject}`,
-      html: result.html,
-    });
-
-    return { success: true, message: `Test email sent to ${to_email}` };
-  } catch (err: any) {
-    console.error('[email/test-send] Error:', err.message, err.response?.body || '');
-    return { success: false, error: err.message || 'Failed to send test email' };
+  const result = compileMjml(template.mjml_source, variables);
+  if (!result.html) {
+    return { success: false, error: `MJML compile error: ${result.errors.join(', ')}` };
   }
+
+  const subject = template.subject_template
+    ? compileSubject(template.subject_template, variables)
+    : `[TEST] ${template.name}`;
+
+  // Route through sendBrandedEmail so the same `earnest` category + custom_args
+  // policy applies as the live newsletter path — otherwise webhook events for
+  // test sends come through stripped of organization / email_name / send_id
+  // and look identical to foreign events on the shared SendGrid account.
+  const templateOrgId = typeof template.organization === 'string'
+    ? template.organization
+    : template.organization?.id;
+  const org = templateOrgId ? await fetchOrgBrand(templateOrgId) : null;
+
+  const res = await sendBrandedEmail({
+    to: to_email,
+    subject: `[TEST] ${subject}`,
+    html: result.html,
+    org,
+    categories: ['marketing', `newsletter-template-${template_id}`, 'test'],
+    emailName: `test:${template.name || `template-${template_id}`}`,
+    sendCollection: 'email_templates',
+    sendId: template_id,
+    customArgs: { template_id: String(template_id) },
+  });
+
+  return res.sent
+    ? { success: true, message: `Test email sent to ${to_email}` }
+    : { success: false, error: res.reason || 'Failed to send test email' };
 });
