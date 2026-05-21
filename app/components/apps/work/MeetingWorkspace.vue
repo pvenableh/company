@@ -291,9 +291,12 @@ function openProject(id) {
 	// allow-legacy-link — full-page mode keeps the classic project route
 	else router.push(`/projects/${id}`);
 }
-function openEvent(eventId) {
+function openEvent(eventId, ev) {
 	if (!eventId || !projectId.value) return;
-	if (props.compact) pushPanel('project-event', String(eventId));
+	if (props.compact) {
+		const flipFrom = flipPayloadFrom(ev?.currentTarget);
+		pushPanel('project-event', String(eventId), { flipFrom });
+	}
 	// allow-legacy-link — full-page mode keeps the classic event route
 	else router.push(`/projects/${projectId.value}/events/${eventId}`);
 }
@@ -881,7 +884,7 @@ const promoteActionItem = async (idx) => {
 						v-if="meeting.project_event?.id"
 						type="button"
 						class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-						@click="openEvent(meeting.project_event.id)"
+						@click="openEvent(meeting.project_event.id, $event)"
 					>
 						<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
 						{{ meeting.project_event.title }}

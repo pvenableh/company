@@ -6,9 +6,10 @@
   `/projects/[id]/events/[event]` without a full-route navigation.
 -->
 <script setup lang="ts">
+import type { FlipFromPayload } from '~/composables/useFlipFromRow';
 import AppSlideOverShell from '../AppSlideOverShell.vue';
 
-const props = defineProps<{ id: string }>();
+const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const event = ref<any | null>(null);
@@ -30,10 +31,43 @@ const projectId = computed(() => {
   if (!p) return null;
   return typeof p === 'object' ? p.id : p;
 });
+
+const statusLabel = computed(() => (event.value as any)?.status || null);
+const eventDate = computed(() => {
+  const e: any = event.value;
+  const d = e?.start_date || e?.date;
+  if (!d) return null;
+  try {
+    return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return null; }
+});
 </script>
 
 <template>
-  <AppSlideOverShell :title="title" :subtitle="subtitle" @close="$emit('close')">
+  <AppSlideOverShell
+    :title="title"
+    :subtitle="subtitle"
+    :flip-from="flipFrom"
+    @close="$emit('close')"
+  >
+    <template #hero>
+      <div class="flex items-center justify-between gap-3 px-1 py-1.5">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-foreground truncate">
+            {{ event?.title || 'Event' }}
+          </p>
+          <p v-if="eventDate || subtitle" class="text-[11px] text-muted-foreground truncate mt-0.5">
+            {{ [eventDate, subtitle].filter(Boolean).join(' · ') }}
+          </p>
+        </div>
+        <span
+          v-if="statusLabel"
+          class="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider shrink-0"
+        >
+          {{ statusLabel }}
+        </span>
+      </div>
+    </template>
     <template #actions>
       <NuxtLink
         v-if="projectId"
