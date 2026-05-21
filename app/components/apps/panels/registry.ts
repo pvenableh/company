@@ -39,6 +39,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'mailing-list': () => import('./MailingListPanel.vue'),
 	invoice: () => import('./InvoicePanel.vue'),
 	task: () => import('./TaskPanel.vue'),
+	'project-event': () => import('./EventPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();
