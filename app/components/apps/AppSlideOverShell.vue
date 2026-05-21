@@ -14,10 +14,23 @@
 -->
 <script setup lang="ts">
 import { Icon } from '#components';
+import type { FlipFromPayload } from '~/composables/useFlipFromRow';
 
-defineProps<{
+const props = defineProps<{
 	title?: string | null;
 	subtitle?: string | null;
+	/**
+	 * Pull-from-anywhere FLIP source. When set, the shell mounts a fixed-
+	 * position ghost (innerHTML = flipFrom.html) at the source rect,
+	 * animates it to the `#hero` slot's measured position via inline-style
+	 * transform + CSS transition (400ms iOS spring), then cross-fades into
+	 * the hero. Compositor-only — no GSAP ticker, no Vue Transition class
+	 * swap. See [[feedback_motion_stack_policy]].
+	 *
+	 * Pair with `useAppSlideOver(type).open(id, { flipFrom })`; the stack
+	 * threads the payload here automatically.
+	 */
+	flipFrom?: FlipFromPayload | null;
 }>();
 
 defineEmits<{
@@ -30,6 +43,111 @@ const { depth } = useAppSlideOverStack();
 // IS the stack's bottom. iOS convention: chevron only points back if
 // pressing it reveals something prior.
 const isBack = computed(() => depth.value > 1);
+
+// ── Pull-from-anywhere FLIP ──────────────────────────────────────
+// Mirrors AppBottomSheet's FLIP machinery: ghost rides on the compositor
+// from the source rect to the hero's destination. The shell sits inside
+// a transformed AppSlideOverStack__panel container, so the ghost MUST be
+// teleported to body — `position: fixed` inside a transformed ancestor
+// is positioned relative to that ancestor, not the viewport. `heroEl`'s
+// getBoundingClientRect still returns viewport coords (browser handles
+// the transform projection), so the FLIP math works out.
+
+const SPRING_EASE_FN = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
+const ENTER_MS = 400;
+const FLIP_LAND_MS = 100;
+
+const heroEl = useTemplateRef<HTMLElement>('heroEl');
+const ghostMounted = ref(false);
+const ghostStyle = ref<Record<string, string | number>>({});
+const heroLanded = ref(false);
+let flipTimers: ReturnType<typeof setTimeout>[] = [];
+
+function clearFlipTimers() {
+	flipTimers.forEach((t) => clearTimeout(t));
+	flipTimers = [];
+}
+
+async function startFlipFlight(flip: FlipFromPayload) {
+	clearFlipTimers();
+	const src = flip.rect;
+	// Plant the ghost at the source rect with identity transform.
+	ghostStyle.value = {
+		position: 'fixed',
+		top: `${src.y}px`,
+		left: `${src.x}px`,
+		width: `${src.width}px`,
+		height: `${src.height}px`,
+		transform: 'translate3d(0, 0, 0) scale(1, 1)',
+		transformOrigin: 'top left',
+		transition: 'none',
+		zIndex: 75,
+		pointerEvents: 'none',
+		opacity: 1,
+		willChange: 'transform, opacity',
+	};
+	ghostMounted.value = true;
+
+	// Wait for the ghost to mount + the hero slot to lay out in its final
+	// pose inside the panel body. setTimeout-not-RAF so this still kicks in
+	// throttled / headless environments per the motion-stack policy.
+	await nextTick();
+	await new Promise((r) => setTimeout(r, 16));
+	await new Promise((r) => setTimeout(r, 16));
+
+	const dest = heroEl.value?.getBoundingClientRect();
+	if (!dest || dest.width === 0 || dest.height === 0) {
+		// No hero in the DOM (panel forgot the slot, or it hasn't laid out
+		// yet) — drop the ghost and let the panel reveal normally.
+		ghostMounted.value = false;
+		heroLanded.value = true;
+		return;
+	}
+
+	const dx = dest.left - src.x;
+	const dy = dest.top - src.y;
+	const sx = dest.width / src.width;
+	const sy = dest.height / src.height;
+
+	ghostStyle.value = {
+		...ghostStyle.value,
+		transform: `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`,
+		transition: `transform ${ENTER_MS}ms ${SPRING_EASE_FN}`,
+	};
+
+	// Land: crossfade ghost → hero, then unmount ghost.
+	flipTimers.push(
+		setTimeout(() => {
+			heroLanded.value = true;
+			ghostStyle.value = {
+				...ghostStyle.value,
+				transition: `opacity ${FLIP_LAND_MS}ms ease-out`,
+				opacity: 0,
+			};
+			flipTimers.push(
+				setTimeout(() => {
+					ghostMounted.value = false;
+				}, FLIP_LAND_MS + 20),
+			);
+		}, ENTER_MS + 16),
+	);
+}
+
+const heroStyle = computed(() => {
+	if (!props.flipFrom) return { opacity: 1 };
+	return {
+		opacity: heroLanded.value ? 1 : 0,
+		transition: `opacity ${FLIP_LAND_MS}ms ease-out`,
+	};
+});
+
+onMounted(() => {
+	if (props.flipFrom) startFlipFlight(props.flipFrom);
+});
+
+onBeforeUnmount(() => {
+	clearFlipTimers();
+});
 </script>
 
 <template>
@@ -63,12 +181,34 @@ const isBack = computed(() => depth.value > 1);
 		</header>
 
 		<div class="app-slide-over-shell__body">
+			<div
+				v-if="flipFrom && $slots.hero"
+				ref="heroEl"
+				class="app-slide-over-shell__hero"
+				:style="heroStyle"
+			>
+				<slot name="hero" />
+			</div>
 			<slot />
 		</div>
 
 		<footer v-if="$slots.footer" class="app-slide-over-shell__footer">
 			<slot name="footer" />
 		</footer>
+
+		<!-- FLIP ghost — teleported to body so its fixed positioning is
+		     viewport-relative, NOT relative to the transformed
+		     AppSlideOverStack__panel ancestor. Kept inside the single
+		     shell root so attribute fallthrough still works. -->
+		<Teleport to="body">
+			<div
+				v-if="ghostMounted && flipFrom"
+				class="app-slide-over-shell__flip-ghost"
+				:style="ghostStyle"
+				aria-hidden="true"
+				v-html="flipFrom.html"
+			/>
+		</Teleport>
 	</div>
 </template>
 
@@ -183,6 +323,23 @@ const isBack = computed(() => depth.value > 1);
 	min-height: 0;
 	overflow-y: auto;
 	padding: 1rem 1.25rem 1.5rem;
+}
+
+.app-slide-over-shell__hero {
+	margin: 0 -0.25rem 1rem;
+	padding: 0.5rem 0.25rem;
+	border-radius: 12px;
+	background: hsl(var(--muted) / 0.4);
+	border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.app-slide-over-shell__flip-ghost {
+	/* Ghost rides on the compositor — fixed positioning + inline-style
+	   transform. v-html injects the source row's outerHTML; styles
+	   inherit from :root + the global Tailwind layer so the clone
+	   resembles the source closely. */
+	box-sizing: border-box;
+	overflow: hidden;
 }
 
 .app-slide-over-shell__footer {

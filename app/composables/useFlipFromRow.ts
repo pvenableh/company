@@ -37,11 +37,7 @@ export function useFlipFromRow() {
 			flipFrom.value = null;
 			return;
 		}
-		const r = el.getBoundingClientRect();
-		flipFrom.value = {
-			rect: { x: r.left, y: r.top, width: r.width, height: r.height },
-			html: el.outerHTML,
-		};
+		flipFrom.value = flipPayloadFrom(el) ?? null;
 	}
 
 	function clear() {
@@ -49,4 +45,21 @@ export function useFlipFromRow() {
 	}
 
 	return { flipFrom, captureFromEl, clear };
+}
+
+/**
+ * One-shot helper: build a FlipFromPayload from an element without holding
+ * any reactive state. Useful for row-click handlers that fan out into
+ * `useAppSlideOver(type).open(id, { flipFrom })` — the slide-over stack
+ * stashes the payload globally and consumes it inside the shell's
+ * onMounted hook, so there's no need for a local ref.
+ */
+export function flipPayloadFrom(el: HTMLElement | null | undefined): FlipFromPayload | undefined {
+	if (!el) return undefined;
+	const r = el.getBoundingClientRect();
+	if (r.width === 0 || r.height === 0) return undefined;
+	return {
+		rect: { x: r.left, y: r.top, width: r.width, height: r.height },
+		html: el.outerHTML,
+	};
 }

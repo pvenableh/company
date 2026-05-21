@@ -31,18 +31,46 @@
  *     with `router.replace()` so we don't dump them off the page.
  */
 
+import type { FlipFromPayload } from './useFlipFromRow';
+
 export type SlidePanel = {
 	type: string;
 	id: string;
 	mode?: string;
 };
 
+export type SlideOpenOptions = {
+	mode?: string;
+	/**
+	 * Pull-from-anywhere FLIP source. When set, the AppSlideOverStack mounts
+	 * the panel at its open pose (skipping the slide-from-right entrance) and
+	 * AppSlideOverShell FLIPs a ghost clone of this rect into its `#hero`
+	 * slot. One-shot — consumed on first mount so URL replays don't re-FLIP.
+	 */
+	flipFrom?: FlipFromPayload;
+};
+
 const STACK_KEY = 'apps-slide-over-stack';
+const FLIP_KEY = 'apps-slide-over-flips';
 const HISTORY_MARKER = '__apps_slide_pushed';
 const MAX_DEPTH = 2;
 
 function useGlobalStack() {
 	return useState<SlidePanel[]>(STACK_KEY, () => []);
+}
+
+/**
+ * In-memory store of FLIP payloads keyed by `${type}:${id}`. Not URL-bound:
+ * a FLIP is ephemeral entry animation state, not navigation state. Stashed
+ * by `push({ flipFrom })`, consumed (and deleted) by AppSlideOverStack when
+ * the panel first renders.
+ */
+export function useSlideOverFlips() {
+	return useState<Record<string, FlipFromPayload>>(FLIP_KEY, () => ({}));
+}
+
+function flipKey(type: string, id: string): string {
+	return `${type}:${id}`;
 }
 
 /**
@@ -76,7 +104,10 @@ export function useAppSlideOverStack() {
 	const route = useRoute();
 	const router = useRouter();
 
-	async function push(type: string, id: string, mode?: string) {
+	async function push(type: string, id: string, optsOrMode?: string | SlideOpenOptions) {
+		const opts: SlideOpenOptions =
+			typeof optsOrMode === 'string' ? { mode: optsOrMode } : optsOrMode ?? {};
+		const mode = opts.mode;
 		const next: SlidePanel = { type, id: String(id), ...(mode ? { mode } : {}) };
 		const existingTop = stack.value[stack.value.length - 1];
 
@@ -89,6 +120,14 @@ export function useAppSlideOverStack() {
 			newStack = [stack.value[0]!, next];
 		} else {
 			newStack = [...stack.value, next];
+		}
+
+		// Stash the FLIP payload BEFORE the URL change so the stack render
+		// sync sees it the moment the new panel enters the rendered list.
+		// Cleared on consumption by AppSlideOverStack.
+		if (opts.flipFrom) {
+			const flips = useSlideOverFlips();
+			flips.value = { ...flips.value, [flipKey(type, String(id))]: opts.flipFrom };
 		}
 
 		await router.push({
@@ -152,7 +191,8 @@ export function useAppSlideOver(type: string) {
 	return {
 		isOpen,
 		activeId,
-		open: (id: string, mode?: string) => push(type, id, mode),
+		open: (id: string, optsOrMode?: string | SlideOpenOptions) =>
+			push(type, id, optsOrMode),
 		close: () => pop(),
 	};
 }

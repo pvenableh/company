@@ -40,9 +40,11 @@
 <script setup lang="ts">
 import { FocusScope } from 'reka-ui';
 import { useScrollLock } from '@vueuse/core';
+import type { FlipFromPayload } from '~/composables/useFlipFromRow';
 import { getPanelComponent } from './panels/registry';
 
 const { stack, depth, pop } = useAppSlideOverStack();
+const flips = useSlideOverFlips();
 
 const SPRING_EASE_FN = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
 const ANIM_MS = 400;
@@ -62,6 +64,13 @@ type RenderedPanel = {
 	component: PanelComponent;
 	visible: boolean;
 	leaving: boolean;
+	/**
+	 * One-shot FLIP source consumed from the global flips map at the
+	 * moment this panel enters the rendered list. Threaded down to the
+	 * panel component as a prop so AppSlideOverShell can FLIP the
+	 * row clone into its hero slot.
+	 */
+	flipFrom: FlipFromPayload | null;
 };
 
 const rendered = ref<RenderedPanel[]>([]);
@@ -110,25 +119,36 @@ function syncRendered() {
 
 	// Add new panels at the closed (off-screen-right) pose, then flip
 	// `visible` true on the next macrotask so the compositor interpolates
-	// from translateX(100%) → translateX(0).
+	// from translateX(100%) → translateX(0). FLIP-bound entries skip the
+	// slide-from-right and mount at the open pose directly; the shell's
+	// own FLIP machinery animates the row clone into the #hero slot.
 	for (const n of next) {
 		const existing = rendered.value.find((r) => r.key === n.key);
 		if (!existing) {
+			const flipFrom = flips.value[n.key] ?? null;
+			if (flipFrom) {
+				// Consume — re-mounts (URL replay, back-nav) won't FLIP again.
+				const { [n.key]: _drop, ...rest } = flips.value;
+				flips.value = rest;
+			}
 			rendered.value.push({
 				key: n.key,
 				type: n.type,
 				id: n.id,
 				mode: n.mode,
 				component: n.component,
-				visible: false,
+				visible: !!flipFrom,
 				leaving: false,
+				flipFrom,
 			});
-			const t = setTimeout(() => {
-				const found = rendered.value.find((r) => r.key === n.key);
-				if (found) found.visible = true;
-				enterTimers.delete(n.key);
-			}, SETTLE_MS);
-			enterTimers.set(n.key, t);
+			if (!flipFrom) {
+				const t = setTimeout(() => {
+					const found = rendered.value.find((r) => r.key === n.key);
+					if (found) found.visible = true;
+					enterTimers.delete(n.key);
+				}, SETTLE_MS);
+				enterTimers.set(n.key, t);
+			}
 		} else if (existing.leaving) {
 			// Resurrected before the unmount timer fired — cancel leave,
 			// snap back to settled. (Rare: rapid pop→push of the same id.)
@@ -211,9 +231,15 @@ const renderable = computed(() => {
 			id: r.id,
 			mode: r.mode,
 			component: r.component,
+			flipFrom: r.flipFrom,
 			isTop,
 			style: {
 				...pose,
+				// FLIP-bound entries skip the slide-from-right; no need for a
+				// transform transition on their first paint. Subsequent
+				// transitions (e.g. transitioning to behind on a deeper push)
+				// still want the spring — kept always-on so the compositor
+				// handles both.
 				transition: `transform ${ANIM_MS}ms ${SPRING_EASE_FN}, opacity ${ANIM_MS}ms ${SPRING_EASE_FN}, box-shadow ${ANIM_MS}ms ${SPRING_EASE_FN}`,
 			},
 		};
@@ -341,6 +367,7 @@ function onShellClose() {
 								:is="panel.component"
 								:id="panel.id"
 								:mode="panel.mode"
+								:flip-from="panel.flipFrom"
 								@close="onShellClose"
 							/>
 						</div>
