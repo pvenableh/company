@@ -3,7 +3,17 @@
     <!-- Top bar -->
     <div class="flex items-center justify-between px-3 py-2 border-b glass sticky top-0 z-10 gap-2">
       <div class="flex items-center gap-2 min-w-0">
+        <button
+          v-if="hostedInPanel"
+          type="button"
+          class="rounded-full p-1.5 hover:bg-muted/50 text-muted-foreground hover:text-foreground ios-press transition-colors shrink-0"
+          aria-label="Close"
+          @click="emit('close')"
+        >
+          <Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
+        </button>
         <NuxtLink
+          v-else
           to="/email"
           class="rounded-full p-1.5 hover:bg-muted/50 text-muted-foreground hover:text-foreground ios-press transition-colors shrink-0"
         >
@@ -439,7 +449,17 @@ const props = defineProps<{
   templateId: number;
   template?: any;
   autoOpenAi?: boolean;
+  /**
+   * Hosted inside the universal slide-over stack (EmailTemplatePanel).
+   * When true, the top-left chevron emits `close` instead of NuxtLinking
+   * to `/email` — the stack pops the panel and returns to the apps
+   * surface that opened it. Default false preserves the existing
+   * full-page route experience at `/email/templates/[id]`.
+   */
+  hostedInPanel?: boolean;
 }>();
+
+const emit = defineEmits<{ (e: 'close'): void }>();
 
 const { getBlockLibrary } = useNewsletterBlocks();
 const builder = useTemplateBuilder(toRef(props, 'templateId'));

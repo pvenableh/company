@@ -46,6 +46,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'campaign-planner': () => import('./CampaignPlannerPanel.vue'),
 	'import-contacts': () => import('./ImportContactsPanel.vue'),
 	'account-subscription': () => import('./AccountSubscriptionPanel.vue'),
+	'email-template': () => import('./EmailTemplatePanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();

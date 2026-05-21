@@ -436,5 +436,14 @@ function onShellClose() {
 	.app-slide-over-stack__panel {
 		max-width: 42rem;
 	}
+
+	/* Fullscreen shell host — the editor inside legitimately owns its
+	 * chrome (NewsletterBlockBuilder is the canonical case: block
+	 * palette + canvas + preview pane) and would be crushed by the
+	 * 42rem column. The shell sets `data-fullscreen`; we lift the cap
+	 * via :has() so the panel spreads to the viewport. */
+	.app-slide-over-stack__panel:has(> .app-slide-over-stack__panel-inner .app-slide-over-shell[data-fullscreen]) {
+		max-width: 100vw;
+	}
 }
 </style>

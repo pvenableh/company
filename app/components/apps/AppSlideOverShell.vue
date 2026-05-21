@@ -31,6 +31,19 @@ const props = defineProps<{
 	 * threads the payload here automatically.
 	 */
 	flipFrom?: FlipFromPayload | null;
+	/**
+	 * Fullscreen variant — drops the shell's header chrome + body padding
+	 * and uncaps the stack panel's `max-w-2xl` ceiling so the hosted
+	 * surface fills the viewport. Reserved for editors that legitimately
+	 * own their full chrome (block palette + canvas + preview pane, etc.)
+	 * and would be crushed by a 42rem column. Sets `data-fullscreen` on
+	 * the shell root; the stack reads it via `:has()` to override its
+	 * desktop max-width.
+	 *
+	 * Children should emit `close` to dismiss — there's no built-in
+	 * Close affordance in this mode.
+	 */
+	fullscreen?: boolean;
 }>();
 
 defineEmits<{
@@ -151,7 +164,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div class="app-slide-over-shell">
+	<div
+		class="app-slide-over-shell"
+		:class="{ 'app-slide-over-shell--fullscreen': fullscreen }"
+		:data-fullscreen="fullscreen ? '' : null"
+	>
+		<template v-if="fullscreen">
+			<!-- Headerless fullscreen mode — caller owns the chrome. The
+			     stack panel's max-width clamp is lifted via :has() in
+			     AppSlideOverStack so the editor canvas can spread. -->
+			<slot />
+		</template>
+		<template v-else>
 		<header class="app-slide-over-shell__header">
 			<!-- Back/close row — matches AppHeader's back-button style
 			     (small uppercase) so the chrome reads as one navigation
@@ -209,6 +233,7 @@ onBeforeUnmount(() => {
 				v-html="flipFrom.html"
 			/>
 		</Teleport>
+		</template>
 	</div>
 </template>
 
@@ -221,6 +246,14 @@ onBeforeUnmount(() => {
 	height: 100%;
 	min-height: 0;
 	background: hsl(var(--background));
+}
+
+/* Fullscreen variant — caller owns the chrome. Skip the header /
+ * accent stripe / body padding so a hosted editor fills the panel
+ * cleanly. The stack's `:has()` rule lifts the desktop max-w-2xl
+ * clamp so the editor canvas can spread to the viewport. */
+.app-slide-over-shell--fullscreen {
+	padding: 0;
 }
 
 .app-slide-over-shell__header {

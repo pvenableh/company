@@ -35,13 +35,14 @@ useHead({ title: 'Marketing | Earnest' });
 
 const router = useRouter();
 
-// allow-legacy-link: /email/templates/[id] is the NewsletterBlockBuilder — a
-// full-screen editor (drag-and-drop block palette + sidebar + AI wizard +
-// HTML import/export) that's legitimately a full-page experience, not a
-// quick-edit slide-over. Wrapping it in a panel would crush the editor
-// viewport and add no UX. The link is intentionally a navigation.
+// Email template editor — lifted into the universal slide-over stack as
+// a fullscreen panel (EmailTemplatePanel + AppSlideOverShell fullscreen
+// mode). The shell drops its chrome + uncaps the panel max-width via
+// :has() so NewsletterBlockBuilder fills the viewport like a route, but
+// the user stays inside the apps shell.
+const emailTemplateSlide = useAppSlideOver('email-template');
 function openEmailTemplate(id: string) {
-  router.push(`/email/templates/${id}`);
+  emailTemplateSlide.open(String(id));
 }
 const route = useRoute();
 const toast = useToast();

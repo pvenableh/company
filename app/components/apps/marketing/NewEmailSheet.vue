@@ -3,11 +3,11 @@
 
   Mirrors the two-step modal from the legacy email landing (method
   picker → name/source picker) but as an `<AppsAppBottomSheet>`. On
-  create, navigates straight to the block editor route — the editor is
-  a legitimate full-page experience (see the allow-legacy-link comment
-  next to `openEmailTemplate` in `marketing/index.vue`). Replaces the
-  two header / empty-state punch-outs that previously dumped the user
-  on the legacy landing page two hops before the create flow.
+  create, opens the EmailTemplatePanel (fullscreen slide-over hosting
+  NewsletterBlockBuilder) so the editor lives inside the apps shell
+  instead of route-navigating out to `/email/templates/[id]`. Replaces
+  the two header / empty-state punch-outs that previously dumped the
+  user on the legacy landing page two hops before the create flow.
 -->
 <script setup lang="ts">
 import AppBottomSheet from '../AppBottomSheet.vue';
@@ -15,8 +15,8 @@ import AppBottomSheet from '../AppBottomSheet.vue';
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
 
-const router = useRouter();
 const { getTemplates, getStarterTemplates, createTemplate, duplicateTemplate } = useEmailTemplates();
+const emailTemplateSlide = useAppSlideOver('email-template');
 
 type StartMethod = 'blank' | 'existing' | 'starter' | 'ai';
 const startMethod = ref<StartMethod | null>(null);
@@ -85,8 +85,7 @@ async function handleCreate() {
 				newTemplateName.value.trim(),
 			);
 			close();
-			// allow-legacy-link: block editor is a full-page experience by design.
-			router.push(`/email/templates/${tpl.id}`);
+			emailTemplateSlide.open(String(tpl.id));
 		} else {
 			const tpl = await createTemplate({
 				name: newTemplateName.value.trim(),
@@ -94,9 +93,7 @@ async function handleCreate() {
 				status: 'draft',
 			});
 			close();
-			// allow-legacy-link: block editor is a full-page experience by design.
-			const path = `/email/templates/${tpl.id}`;
-			router.push(startMethod.value === 'ai' ? `${path}?ai=1` : path);
+			emailTemplateSlide.open(String(tpl.id), startMethod.value === 'ai' ? 'ai' : undefined);
 		}
 	} catch {
 		close();
