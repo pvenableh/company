@@ -11,7 +11,7 @@
  */
 import type { SocialPost, ApprovalState, ContentPlanRecord } from '~~/shared/social';
 import type { Project, Client } from '~~/shared/directus';
-import SocialCalendarSurface from '~/components/Social/CalendarSurface.vue';
+import SocialRiverSurface from '~/components/Social/RiverSurface.vue';
 import SocialInboxSurface from '~/components/Social/InboxSurface.vue';
 import SocialAnalyticsSurface from '~/components/Social/AnalyticsSurface.vue';
 import StudioPostCard from './StudioPostCard.vue';
@@ -42,7 +42,7 @@ const STUDIO_VIEW_KEYS: StudioView[] = ['approval', 'upcoming', 'calendar', 'inb
 const STUDIO_VIEW_TABS: { key: StudioView; label: string; icon: string }[] = [
   { key: 'approval', label: 'Approval', icon: 'lucide:list-checks' },
   { key: 'upcoming', label: 'Upcoming', icon: 'lucide:calendar-clock' },
-  { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
+  { key: 'calendar', label: 'River', icon: 'lucide:waves' },
   { key: 'inbox', label: 'Inbox', icon: 'lucide:inbox' },
   { key: 'analytics', label: 'Analytics', icon: 'lucide:bar-chart-2' },
 ];
@@ -897,7 +897,7 @@ onMounted(() => {
 
     <!-- Legacy /social/* page bodies folded into Studio. Each renders lazily —
          we don't mount the others until the user switches to them. -->
-    <SocialCalendarSurface v-else-if="view === 'calendar'" />
+    <SocialRiverSurface v-else-if="view === 'calendar'" />
     <SocialInboxSurface v-else-if="view === 'inbox'" />
     <SocialAnalyticsSurface v-else-if="view === 'analytics'" />
 
