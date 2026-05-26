@@ -2,11 +2,15 @@
 /**
  * CompositionCanvas — depth-zoom host for the Composition Canvas redesign.
  *
- * P3 Phase 3.1 + 3.2. Replaces the floor segmented control's grid hand-off
- * with a single host that ramps a `z` level. Layers:
+ * P3 Phase 3.1 + 3.2 + 3.3. Replaces the floor segmented control's grid
+ * hand-off with a single host that ramps a `z` level. Layers:
  *   z=1 (river surface)         default slot
- *   z=2 (lifted card)           LiftedCard, FLIP from the leaf's rect
- *   z=3 (composer)              CompositionComposer, in-place editor
+ *   z=2 (lifted card)           LiftedCard | EmailLiftedCard (kind-dispatched)
+ *   z=3 (composer)              CompositionComposer | EmailComposer
+ *
+ * Kind dispatch (Phase 3.3): the active id encodes the kind.
+ *   - UUID prefix → social post → LiftedCard + CompositionComposer.
+ *   - `touch:<n>` prefix → email touch → EmailLiftedCard + EmailComposer.
  *
  * The lifted card and the composer are siblings, NOT swapped. As z crosses
  * the composer threshold (2.5) the lifted card fades + dilates slightly and
@@ -23,13 +27,18 @@
  * browser zoom on the rest of the page.
  *
  * @see app/composables/useCompositionZoom.ts — state + handler installers.
- * @see app/components/Social/LiftedCard.vue — z=2 FLIP card.
- * @see app/components/Social/CompositionComposer.vue — z=3 composer.
+ * @see app/components/Social/LiftedCard.vue — z=2 FLIP card (social).
+ * @see app/components/Social/EmailLiftedCard.vue — z=2 FLIP card (email).
+ * @see app/components/Social/CompositionComposer.vue — z=3 composer (social).
+ * @see app/components/Social/EmailComposer.vue — z=3 composer (email).
  * @see project_composition_canvas_redesign — design rationale.
  */
 import type { SocialPost } from '~~/shared/social';
+import type { EmailComposition } from '~~/shared/composition';
 import LiftedCard from '~/components/Social/LiftedCard.vue';
+import EmailLiftedCard from '~/components/Social/EmailLiftedCard.vue';
 import CompositionComposer from '~/components/Social/CompositionComposer.vue';
+import EmailComposer from '~/components/Social/EmailComposer.vue';
 
 withDefaults(
 	defineProps<{
@@ -53,16 +62,29 @@ const emit = defineEmits<{
 	(e: 'update:z', n: number): void;
 	(e: 'update:activeId', id: string | null): void;
 	(e: 'post-updated', post: SocialPost): void;
+	(e: 'touch-updated', composition: EmailComposition): void;
 }>();
 
 const zoom = useCompositionZoom();
 const rootEl = ref<HTMLElement | null>(null);
+
+// ── Kind dispatch ──────────────────────────────────────────────────
+// P3.0's encoding: `touch:<n>` for email touches, UUID for social posts.
+// The canvas dispatches the lift+composer pair on this prefix; the
+// composable singleton stays kind-agnostic.
+function kindFor(id: string | null): 'social' | 'email' | null {
+	if (!id) return null;
+	return id.startsWith('touch:') ? 'email' : 'social';
+}
+
+const activeKind = computed(() => kindFor(zoom.activeId.value));
 
 // ── Active post fetch (FLIP source + composer source) ────────────────
 // The river hands us the post id (+ source rect) via useCompositionZoom.lift().
 // We hold a lightweight cache so re-targeting the same leaf is instant.
 const composition = useComposition();
 const activePost = ref<SocialPost | null>(null);
+const activeEmail = ref<EmailComposition | null>(null);
 const activePostLoading = ref(false);
 const activePostErr = ref<string | null>(null);
 
@@ -70,6 +92,20 @@ async function loadActive(id: string) {
 	activePostLoading.value = true;
 	activePostErr.value = null;
 	try {
+		const kind = kindFor(id);
+		if (kind === 'email') {
+			// Email branch (Phase 3.3) — the view-model already carries
+			// everything the lifted card needs (subject, preview, body
+			// excerpt, segment, status). No second raw-row fetch.
+			const comp = await composition.fetchById(id);
+			if (!comp || comp.kind !== 'email') {
+				throw new Error('Email not found');
+			}
+			activeEmail.value = comp;
+			activePost.value = null;
+			return;
+		}
+		// Social branch — same as Phase 3.2.
 		const comp = await composition.fetchById(id);
 		if (!comp || comp.kind !== 'social') {
 			throw new Error('Post not found');
@@ -80,9 +116,11 @@ async function loadActive(id: string) {
 			credentials: 'include',
 		});
 		activePost.value = res.data;
+		activeEmail.value = null;
 	} catch (err: any) {
 		activePostErr.value = err?.message || 'Could not load';
 		activePost.value = null;
+		activeEmail.value = null;
 	} finally {
 		activePostLoading.value = false;
 	}
@@ -94,11 +132,14 @@ watch(
 		emit('update:activeId', id);
 		if (!id) {
 			activePost.value = null;
+			activeEmail.value = null;
 			activePostErr.value = null;
 			return;
 		}
 		// Cache hit: skip refetch when re-entering the same leaf.
-		if (activePost.value?.id === id) return;
+		const kind = kindFor(id);
+		if (kind === 'social' && activePost.value?.id === id) return;
+		if (kind === 'email' && activeEmail.value?.id === id) return;
 		loadActive(id);
 	},
 	{ immediate: true },
@@ -109,6 +150,11 @@ function onComposerSaved(post: SocialPost) {
 	// place without a full refetch.
 	activePost.value = post;
 	emit('post-updated', post);
+}
+
+function onEmailComposerSaved(comp: EmailComposition) {
+	activeEmail.value = comp;
+	emit('touch-updated', comp);
 }
 
 let teardown: (() => void) | null = null;
@@ -245,6 +291,7 @@ function closeComposer() {
 				name="lifted"
 				:active-id="zoom.activeId.value"
 				:post="activePost"
+				:email="activeEmail"
 				:loading="activePostLoading"
 				:close="closeLifted"
 			>
@@ -263,6 +310,11 @@ function closeComposer() {
 						Back to river
 					</button>
 				</div>
+				<EmailLiftedCard
+					v-else-if="activeKind === 'email' && activeEmail"
+					:composition="activeEmail"
+					:source-rect="zoom.sourceRect.value"
+				/>
 				<LiftedCard
 					v-else-if="activePost"
 					:post="activePost"
@@ -281,8 +333,14 @@ function closeComposer() {
 			:style="composerStyle"
 			@click.self="closeComposer"
 		>
+			<EmailComposer
+				v-if="zoom.activeId.value && activeKind === 'email'"
+				:touch-id="zoom.activeId.value"
+				@close="closeComposer"
+				@saved="onEmailComposerSaved"
+			/>
 			<CompositionComposer
-				v-if="zoom.activeId.value"
+				v-else-if="zoom.activeId.value"
 				:post-id="zoom.activeId.value"
 				@close="closeComposer"
 				@saved="onComposerSaved"

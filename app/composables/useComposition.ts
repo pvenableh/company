@@ -24,13 +24,14 @@
  *      `MarketingTouchStatus` for email). The mapping is the only place those
  *      two five-value enums coexist.
  *
- *   4. **Email writes are stubbed in 3.0.** The contract is fully typed but
- *      `create({ kind: 'email' })` and `update({ kind: 'email' })` throw with
- *      a clear "Phase 3.3" message. Reads work because
- *      `/api/marketing/timeline` already returns touches. This is intentional
- *      — Phase 3.0 ships the *abstraction*, Phase 3.3 ships the email write
- *      path (requires a new `/api/marketing/touches` endpoint + Zod schema,
- *      mirroring `/api/social/posts`).
+ *   4. **Email writes live on `/api/marketing/touches/*`.** Phase 3.3 minted
+ *      the POST + PATCH/:id + DELETE/:id + GET/:id trio mirroring
+ *      `/api/social/posts`. Create routes through that endpoint; the
+ *      one-off-campaign helper lives server-side (POST accepts an optional
+ *      `campaign` id; when omitted, the route mints a single-touch campaign
+ *      first). Email creates and updates here just translate the
+ *      `Composition` shape into the touch's column shape and round-trip the
+ *      raw row back through `touchToComposition()`.
  *
  * @see shared/composition.ts — the view-model type contract this serves.
  * @see project_composition_canvas_redesign — the design rationale.
@@ -230,6 +231,57 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 	};
 }
 
+/** Convert an EmailComposition create input to a `/api/marketing/touches`
+ *  POST body. Keeps the canonical-status mapping co-located with the
+ *  read mapping so canvas surfaces only ever speak `CompositionStatus`. */
+function touchCreateBody(
+	input: Extract<CompositionCreate, { kind: 'email' }>,
+): Record<string, unknown> {
+	const firstTarget = input.targets[0];
+	const audienceFilter =
+		firstTarget?.kind === 'audience_segment' ? firstTarget.filter : 'all';
+	return {
+		organization: input.organization,
+		// `plan_id` doubles as `campaign` in the email half of the
+		// view-model. Omit when null so the server's one-off-campaign
+		// helper runs.
+		campaign: input.plan_id ?? null,
+		kind: 'email' as const,
+		audience_target: 'project_contact' as const,
+		audience_filter: audienceFilter,
+		send_offset_hours: 0,
+		scheduled_for: input.scheduled_at,
+		status: touchStatusFor(input.status ?? 'draft'),
+		email_subject: input.subject,
+		email_preview_text: input.preview_text ?? null,
+		email_body_markdown: input.body,
+		email_cta: input.cta ?? null,
+	};
+}
+
+/** Convert an EmailComposition patch into a `/api/marketing/touches/:id`
+ *  PATCH body. Mirrors `socialPatchBody` — only forward keys the caller
+ *  set, so partial patches stay partial. */
+function touchPatchBody(
+	patch: Extract<CompositionPatch, { kind: 'email' }>,
+): Record<string, unknown> {
+	const body: Record<string, unknown> = {};
+	if (patch.body !== undefined) body.email_body_markdown = patch.body;
+	if (patch.subject !== undefined) body.email_subject = patch.subject;
+	if (patch.preview_text !== undefined) body.email_preview_text = patch.preview_text;
+	if (patch.cta !== undefined) body.email_cta = patch.cta;
+	if (patch.targets !== undefined) {
+		const first = patch.targets[0];
+		if (first?.kind === 'audience_segment') {
+			body.audience_filter = first.filter;
+		}
+	}
+	if (patch.scheduled_at !== undefined) body.scheduled_for = patch.scheduled_at;
+	if (patch.status !== undefined) body.status = touchStatusFor(patch.status);
+	if (patch.plan_id !== undefined) body.campaign = patch.plan_id;
+	return body;
+}
+
 // ─── Composable ─────────────────────────────────────────────────────────────
 
 /**
@@ -245,17 +297,18 @@ export function useComposition() {
 	async function fetchById(id: string): Promise<Composition | null> {
 		const touchId = decodeTouchId(id);
 		if (touchId !== null) {
-			// Email read path goes through the timeline endpoint, filtered to one
-			// touch. Direct touch GET endpoint doesn't exist yet (Phase 3.3
-			// follow-up). For now, fetch the org's window and find the row.
-			//
-			// This is fine for the canvas because email leaves are always already
-			// loaded from the river (which itself uses timeline). A standalone
-			// fetch-by-id for an email touch is rare; if perf matters we add a
-			// `/api/marketing/touches/:id` endpoint in 3.3.
-			throw new Error(
-				'fetchById for email Compositions requires /api/marketing/touches/:id — slated for Phase 3.3. Use list() or fetch via /api/marketing/timeline directly.',
-			);
+			// Email read path goes through the dedicated GET endpoint minted in
+			// Phase 3.3. Direct fetch-by-id lets the canvas deep-link to any
+			// touch even if it's outside the timeline's rolling 30d window.
+			const res = await $fetch<{ data: TouchRow }>(
+				`/api/marketing/touches/${touchId}`,
+				{ credentials: 'include' },
+			).catch((err: { statusCode?: number }) => {
+				if (err?.statusCode === 404) return null;
+				throw err;
+			});
+			if (!res) return null;
+			return touchToComposition(res.data);
 		}
 
 		// Social — UUID hits the existing endpoint.
@@ -292,17 +345,20 @@ export function useComposition() {
 			return composition;
 		}
 
-		// Email — stubbed in 3.0. The Phase 3.3 implementation:
-		//   1. If `input.plan_id` is set, that's the parent campaign — skip to
-		//      step 3.
-		//   2. Otherwise, POST /api/marketing/campaigns with a synthetic title
-		//      ("One-off email — <subject>") to get a campaign_id.
-		//   3. POST /api/marketing/touches (NEW endpoint, mirrors
-		//      /api/social/posts) with the campaign_id and touch fields.
-		//   4. Map the resulting touch row through touchToComposition().
-		throw new Error(
-			'Email Composition.create() is stubbed in Phase 3.0. Implement /api/marketing/touches (mirroring /api/social/posts) and the one-off-campaign helper before enabling.',
+		// Email — the route's one-off-campaign helper kicks in when
+		// `plan_id` is null, so the canvas doesn't have to know whether
+		// the touch belongs to a real campaign or a synthetic single-touch
+		// one.
+		const body = touchCreateBody(input);
+		const res = await $fetch<{ data: TouchRow }>(
+			'/api/marketing/touches',
+			{
+				method: 'POST',
+				credentials: 'include',
+				body,
+			},
 		);
+		return touchToComposition(res.data);
 	}
 
 	/**
@@ -332,10 +388,23 @@ export function useComposition() {
 			return socialPostToComposition(res.data);
 		}
 
-		// Email — Phase 3.3.
-		throw new Error(
-			'Email Composition.update() is stubbed in Phase 3.0. See create() for the implementation plan.',
+		// Email — PATCH /api/marketing/touches/:id (Phase 3.3 endpoint).
+		// Patch.kind must match source.type, same guard as social.
+		if (patch.kind !== 'email') {
+			throw new Error(
+				`Patch kind mismatch: source is marketing_touch but patch.kind="${patch.kind}"`,
+			);
+		}
+		const body = touchPatchBody(patch);
+		const res = await $fetch<{ data: TouchRow }>(
+			`/api/marketing/touches/${source.touch_id}`,
+			{
+				method: 'PATCH',
+				credentials: 'include',
+				body,
+			},
 		);
+		return touchToComposition(res.data);
 	}
 
 	/**
@@ -350,7 +419,10 @@ export function useComposition() {
 			});
 			return;
 		}
-		throw new Error('Email Composition.remove() is stubbed in Phase 3.0.');
+		await $fetch(`/api/marketing/touches/${source.touch_id}`, {
+			method: 'DELETE',
+			credentials: 'include',
+		});
 	}
 
 	return {

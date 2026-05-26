@@ -87,8 +87,15 @@ function build() {
 	const route = useRoute();
 	const router = useRouter();
 
-	const z = ref<number>(parseUrlZ(route.query.z));
-	const activeId = ref<string | null>(parseUrlId(route.query.id));
+	// SSR-safe init. Depth-zoom is a client-only UX (the canvas surfaces
+	// — lifted card, composer, gesture handlers — all need a live DOM and
+	// session cookies for fetchById). Initialize to Z_MIN on both server
+	// and client; the `immediate: true` watcher below reconciles to the
+	// URL on the client's first tick. This also fixes the SSR hydration
+	// mismatch on `data-z` and avoids server-side mount of EmailComposer
+	// (which would 401-fail on $fetch without cookies forwarded).
+	const z = ref<number>(Z_MIN);
+	const activeId = ref<string | null>(null);
 	/** Source rect captured at lift time — drives the FLIP from-pose for the
 	 *  lifted card. NOT URL-bound: a deep-link via `?z=3&id=<uuid>` skips the
 	 *  FLIP and lands on the composer directly. */
@@ -98,21 +105,25 @@ function build() {
 	const gesturing = ref(false);
 
 	// Keep z in sync if the URL changes (back/forward, external nav).
+	// `immediate: true` reconciles z + activeId from the URL on the client's
+	// first tick — needed because we deliberately initialized to Z_MIN on
+	// the client (see initialZ above) to avoid the SSR hydration mismatch.
 	watch(
 		() => route.query.z,
 		(q) => {
 			const next = parseUrlZ(q);
 			if (Math.round(z.value) !== next) z.value = next;
 		},
+		{ immediate: true },
 	);
 
-	// Same for `?id=`. Back/forward across z=2 / z=3 should restore activeId.
 	watch(
 		() => route.query.id,
 		(q) => {
 			const next = parseUrlId(q);
 			if (activeId.value !== next) activeId.value = next;
 		},
+		{ immediate: true },
 	);
 
 	/**

@@ -1,0 +1,69 @@
+/**
+ * Fetch one marketing_touch by id.
+ *
+ * P3 Phase 3.3 (composition-canvas-redesign). The canvas's
+ * `useComposition().fetchById('touch:<n>')` calls this — pre-3.3 the
+ * adapter had to scan the timeline window to find one touch, which
+ * doesn't deep-link cleanly for a touch outside the rolling 30d window.
+ *
+ * Auth: requireOrgMembership against the touch's `organization`. We have
+ * to read the row before we can check the org id (touches have no
+ * row-level perms, so the server token does the read).
+ */
+import { readItem } from '@directus/sdk';
+
+export default defineEventHandler(async (event) => {
+	const idParam = getRouterParam(event, 'id');
+	const touchId = idParam ? Number(idParam) : NaN;
+	if (!Number.isFinite(touchId)) {
+		throw createError({ statusCode: 400, message: 'Touch ID must be numeric' });
+	}
+
+	const directus = getTypedDirectus();
+	const touch = await directus
+		.request(
+			readItem('marketing_touches', touchId, {
+				fields: [
+					'id',
+					'campaign',
+					'organization',
+					'sequence_index',
+					'kind',
+					'audience_target',
+					'audience_filter',
+					'send_offset_hours',
+					'scheduled_for',
+					'sent_at',
+					'status',
+					'email_subject',
+					'email_preview_text',
+					'email_body_markdown',
+					'email_cta',
+					'social_channel',
+					'social_caption',
+					'social_image_brief',
+					'social_image_url',
+					'source_social_post',
+					'source_email_send',
+					'personalization_state',
+					'opens_count',
+					'clicks_count',
+					'replies_count',
+					'tokens_spent',
+					'regenerate_history',
+					'generator_strategy_excerpt',
+					'date_created',
+					'date_updated',
+				],
+			}),
+		)
+		.catch(() => null) as any;
+
+	if (!touch) {
+		throw createError({ statusCode: 404, message: 'Touch not found' });
+	}
+
+	await requireOrgMembership(event, touch.organization);
+
+	return { data: touch };
+});

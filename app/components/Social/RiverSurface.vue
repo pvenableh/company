@@ -18,6 +18,7 @@
 import { Button } from '~/components/ui/button';
 import { format, startOfDay, addDays, differenceInCalendarDays, parseISO, isSameDay } from 'date-fns';
 import type { SocialPost } from '~~/shared/social';
+import type { MarketingTouch, MarketingTouchStatus } from '~~/shared/marketing-persistence';
 import { getSocialPlatformIcon } from '~/utils/icons';
 
 const toast = useToast();
@@ -77,6 +78,30 @@ const { data: postsData, refresh: refreshPosts } = useLazyFetch('/api/social/pos
 
 const allPosts = computed(() => ((postsData.value as any)?.data || []) as SocialPost[]);
 
+// P3.3 — email touches alongside social posts. `/api/marketing/timeline`
+// returns the org's 30d window pre-joined with campaigns; we filter to
+// kind='email' (the timeline can return social touches too, but those
+// would double up with social_posts so we drop them here). Org id comes
+// from useOrganization() — the same source the apps shell reads.
+const { selectedOrg } = useOrganization();
+const organizationId = computed<string | null>(() => selectedOrg.value || null);
+
+const { data: touchesData, refresh: refreshTouches } = useLazyFetch('/api/marketing/timeline', {
+  query: { organizationId },
+  watch: [organizationId],
+  // Skip the request until we have an org id — the endpoint 400s without.
+  immediate: false,
+});
+
+watch(organizationId, (id) => {
+  if (id) refreshTouches();
+}, { immediate: true });
+
+const allTouches = computed(() => {
+  const list = ((touchesData.value as any)?.touches || []) as MarketingTouch[];
+  return list.filter((t) => t.kind === 'email');
+});
+
 const filteredPosts = computed(() => {
   let list = allPosts.value;
   if (selectedPlatform.value) {
@@ -105,7 +130,11 @@ function hourFor(iso: string | null | undefined): number {
   } catch { return 12; }
 }
 
-interface PlacedLeaf {
+// Polymorphic leaf — either a social post or an email touch. The river
+// renders both as `river-leaf` boxes; channel hue + icon differ. Drag-to-
+// reschedule routes via `kind` so the right endpoint takes the PATCH.
+interface SocialLeaf {
+  kind: 'social';
   post: SocialPost;
   dayIdx: number;
   hour: number;
@@ -113,6 +142,21 @@ interface PlacedLeaf {
   hue: number;
   breath: number;
 }
+interface EmailLeaf {
+  kind: 'email';
+  touch: MarketingTouch;
+  dayIdx: number;
+  hour: number;
+  channel: 'email';
+  hue: number;
+  breath: number;
+}
+type PlacedLeaf = SocialLeaf | EmailLeaf;
+
+// Email hue: muted violet, distinct from any social channel. See
+// EmailLiftedCard.vue for the matching `--email-hue` token.
+const EMAIL_HUE = 270;
+const EMAIL_SAT = 55;
 
 // Stable hue mapping per channel for "tinted by channel" — Hue's
 // palette anchor: instagram warm-pink, tiktok cyan, linkedin marine,
@@ -145,26 +189,90 @@ function hashStr(s: string): number {
   return h;
 }
 
+// Filter touches the same way posts get filtered. Email leaves bypass
+// the platform select (they're not a platform); the status filter is
+// translated from social statuses to touch statuses where the meaning
+// lines up (`scheduled`→`scheduled`, `draft`→`pending`, `failed`→
+// `failed`; we silently drop the `published` filter for email since
+// `sent` is the closer concept but visually less interesting).
+const filteredTouches = computed(() => {
+  let list = allTouches.value;
+  // When the user picked a platform we hide email — they're filtering
+  // for social channels.
+  if (selectedPlatform.value) return [];
+  if (selectedStatus.value) {
+    const map: Record<string, MarketingTouchStatus | null> = {
+      draft: 'pending',
+      scheduled: 'scheduled',
+      published: 'sent',
+      failed: 'failed',
+    };
+    const target = map[selectedStatus.value];
+    if (target) list = list.filter((t) => t.status === target);
+    else list = [];
+  }
+  return list;
+});
+
 const leaves = computed<PlacedLeaf[]>(() => {
-  return filteredPosts.value
-    .map((post) => {
+  const socialLeaves: PlacedLeaf[] = filteredPosts.value
+    .map((post): SocialLeaf | null => {
       const dayIdx = dayIndexFor(post.scheduled_at);
       if (dayIdx < 0 || dayIdx >= TOTAL_DAYS) return null;
       const channel = (post.platforms?.[0]?.platform || 'threads').toLowerCase();
       const hue = CHANNEL_HUE[channel] ?? 220;
-      // Stable breath period 2.4-6.0s by id hash so the school doesn't strobe.
       const breath = 2.4 + (hashStr(String(post.id)) % 36) / 10;
       return {
+        kind: 'social',
         post,
         dayIdx,
         hour: hourFor(post.scheduled_at),
         channel,
         hue,
         breath,
-      } as PlacedLeaf;
+      };
     })
-    .filter((x): x is PlacedLeaf => x !== null);
+    .filter((x): x is SocialLeaf => x !== null);
+
+  const emailLeaves: PlacedLeaf[] = filteredTouches.value
+    .map((touch): EmailLeaf | null => {
+      // Touches schedule via `scheduled_for` (not `scheduled_at`).
+      const when = touch.scheduled_for ?? touch.sent_at;
+      const dayIdx = dayIndexFor(when);
+      if (dayIdx < 0 || dayIdx >= TOTAL_DAYS) return null;
+      const breath = 2.4 + (hashStr(`touch:${touch.id}`) % 36) / 10;
+      return {
+        kind: 'email',
+        touch,
+        dayIdx,
+        hour: hourFor(when),
+        channel: 'email',
+        hue: EMAIL_HUE,
+        breath,
+      };
+    })
+    .filter((x): x is EmailLeaf => x !== null);
+
+  return [...socialLeaves, ...emailLeaves];
 });
+
+function leafId(leaf: PlacedLeaf): string {
+  return leaf.kind === 'social' ? String(leaf.post.id) : `touch:${leaf.touch.id}`;
+}
+
+function leafStatus(leaf: PlacedLeaf): string {
+  return leaf.kind === 'social' ? leaf.post.status : leaf.touch.status;
+}
+
+function leafScheduledIso(leaf: PlacedLeaf): string | null {
+  if (leaf.kind === 'social') return leaf.post.scheduled_at;
+  return leaf.touch.scheduled_for ?? leaf.touch.sent_at ?? null;
+}
+
+function leafSat(leaf: PlacedLeaf): number {
+  if (leaf.kind === 'email') return EMAIL_SAT;
+  return CHANNEL_SAT[leaf.channel] ?? 60;
+}
 
 // ── Content-temperature curve ────────────────────────────────────
 // Posts-per-day mapped to an SVG path. Under-posted weeks visibly sag.
@@ -227,7 +335,8 @@ onMounted(async () => {
 // else drag. On release, compute new day+hour from final position
 // and PATCH /api/social/posts/:id. Local list optimistically updates.
 interface DragState {
-  postId: number | string;
+  leafId: string;
+  kind: 'social' | 'email';
   startX: number;
   startY: number;
   baseX: number;
@@ -241,17 +350,25 @@ interface DragState {
 }
 
 const drag = ref<DragState | null>(null);
-const savingDragId = ref<number | string | null>(null);
+const savingDragId = ref<string | null>(null);
+
+// Drag-to-reschedule mutable status sets, per kind.
+const DRAG_OK_SOCIAL = new Set(['draft', 'scheduled', 'failed']);
+const DRAG_OK_EMAIL = new Set(['pending', 'scheduled', 'failed']);
 
 function onPointerDown(e: PointerEvent, leaf: PlacedLeaf) {
   // Locked statuses can't be rescheduled by drag — but you can still
   // click them open.
-  const lockable = !['draft', 'scheduled', 'failed'].includes(leaf.post.status);
-  if (lockable) return;
+  const status = leafStatus(leaf);
+  const ok = leaf.kind === 'social'
+    ? DRAG_OK_SOCIAL.has(status)
+    : DRAG_OK_EMAIL.has(status);
+  if (!ok) return;
   const target = e.currentTarget as HTMLElement;
   target.setPointerCapture(e.pointerId);
   drag.value = {
-    postId: leaf.post.id,
+    leafId: leafId(leaf),
+    kind: leaf.kind,
     startX: e.clientX,
     startY: e.clientY,
     baseX: leaf.dayIdx * DAY_WIDTH + DAY_WIDTH / 2,
@@ -285,12 +402,15 @@ async function onPointerUp(e: PointerEvent, leaf: PlacedLeaf) {
     // FLIP from the leaf's bounding rect. Otherwise fall through to the
     // legacy modal (kept until P3.6 retires this surface).
     if (canvasOn.value) {
-      zoom.lift(String(leaf.post.id), d.sourceRect
+      zoom.lift(leafId(leaf), d.sourceRect
         ? { x: d.sourceRect.x, y: d.sourceRect.y, width: d.sourceRect.width, height: d.sourceRect.height }
         : null);
       return;
     }
-    openPost(leaf.post);
+    if (leaf.kind === 'social') openPost(leaf.post);
+    // Email leaves outside canvas mode have no legacy modal — clicks
+    // are a no-op until the user opts into `?canvas=1`. The composer is
+    // canvas-only by design (Phase 3.6 collapses the slide-over).
     return;
   }
   // Snap: each DAY_WIDTH = 1 day, each HOUR_HEIGHT = 1 hour.
@@ -298,24 +418,36 @@ async function onPointerUp(e: PointerEvent, leaf: PlacedLeaf) {
   const deltaHours = Math.round(d.dy / HOUR_HEIGHT);
   if (deltaDays === 0 && deltaHours === 0) return;
 
-  const original = parseISO(leaf.post.scheduled_at);
+  const originalIso = leafScheduledIso(leaf);
+  if (!originalIso) return;
+  const original = parseISO(originalIso);
   const target = new Date(original);
   target.setDate(target.getDate() + deltaDays);
   target.setHours(Math.max(0, Math.min(23, target.getHours() + deltaHours)));
 
-  savingDragId.value = leaf.post.id;
+  savingDragId.value = leafId(leaf);
   try {
-    await $fetch(`/api/social/posts/${leaf.post.id}`, {
-      method: 'PATCH',
-      body: { scheduled_at: target.toISOString() },
-    });
+    if (leaf.kind === 'social') {
+      await $fetch(`/api/social/posts/${leaf.post.id}`, {
+        method: 'PATCH',
+        body: { scheduled_at: target.toISOString() },
+      });
+    } else {
+      // Email touches PATCH against /api/marketing/touches/:id with
+      // the `scheduled_for` field (note: NOT scheduled_at).
+      await $fetch(`/api/marketing/touches/${leaf.touch.id}`, {
+        method: 'PATCH',
+        body: { scheduled_for: target.toISOString() },
+      });
+    }
     toast.add({
       title: 'Rescheduled',
       description: format(target, 'EEE MMM d, h:mm a'),
       icon: 'i-lucide-waves',
       color: 'green',
     });
-    await refreshPosts();
+    if (leaf.kind === 'social') await refreshPosts();
+    else await refreshTouches();
   } catch (err: any) {
     toast.add({
       title: 'Could not reschedule',
@@ -329,9 +461,9 @@ async function onPointerUp(e: PointerEvent, leaf: PlacedLeaf) {
 }
 
 // Per-leaf live transform during a drag.
-function dragTranslate(postId: number | string): string {
+function dragTranslate(id: string): string {
   const d = drag.value;
-  if (!d || d.postId !== postId) return '';
+  if (!d || d.leafId !== id) return '';
   return `translate(${d.dx}px, ${d.dy}px)`;
 }
 
@@ -350,16 +482,30 @@ function openCompose() {
 }
 
 // ── Stats strip ──────────────────────────────────────────────────
-const stats = computed(() => ({
-  total: filteredPosts.value.length,
-  scheduled: filteredPosts.value.filter((p) => p.status === 'scheduled').length,
-  published: filteredPosts.value.filter((p) => p.status === 'published').length,
-  draft: filteredPosts.value.filter((p) => p.status === 'draft').length,
-}));
+// Counts mix social + email — the river is a unified outbound view.
+const stats = computed(() => {
+  const social = filteredPosts.value;
+  const touches = filteredTouches.value;
+  const scheduledSocial = social.filter((p) => p.status === 'scheduled').length;
+  const scheduledTouches = touches.filter((t) => t.status === 'scheduled').length;
+  const publishedSocial = social.filter((p) => p.status === 'published').length;
+  const sentTouches = touches.filter((t) => t.status === 'sent').length;
+  const draftSocial = social.filter((p) => p.status === 'draft').length;
+  const pendingTouches = touches.filter((t) => t.status === 'pending').length;
+  return {
+    total: social.length + touches.length,
+    scheduled: scheduledSocial + scheduledTouches,
+    published: publishedSocial + sentTouches,
+    draft: draftSocial + pendingTouches,
+  };
+});
 
 // ── Display helpers ──────────────────────────────────────────────
-function leafLabel(post: SocialPost): string {
-  return (post.caption || 'Untitled').slice(0, 40);
+function leafLabel(leaf: PlacedLeaf): string {
+  if (leaf.kind === 'social') {
+    return (leaf.post.caption || 'Untitled').slice(0, 40);
+  }
+  return (leaf.touch.email_subject || 'Untitled email').slice(0, 40);
 }
 
 function dayLabel(d: Date) {
@@ -530,23 +676,24 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
             <span class="river-now__pulse" />
           </div>
 
-          <!-- Floating leaves: one per post -->
+          <!-- Floating leaves: one per post OR email touch -->
           <button
             v-for="leaf in leaves"
-            :key="leaf.post.id"
+            :key="leafId(leaf)"
             type="button"
             class="river-leaf"
             :class="{
-              'river-leaf--past': leaf.post.status === 'published',
-              'river-leaf--dragging': drag?.postId === leaf.post.id,
-              'river-leaf--saving': savingDragId === leaf.post.id,
+              'river-leaf--past': leaf.kind === 'social' ? leaf.post.status === 'published' : leaf.touch.status === 'sent',
+              'river-leaf--email': leaf.kind === 'email',
+              'river-leaf--dragging': drag?.leafId === leafId(leaf),
+              'river-leaf--saving': savingDragId === leafId(leaf),
             }"
             :style="{
               left: `${leaf.dayIdx * DAY_WIDTH + DAY_WIDTH / 2}px`,
               top: `${leaf.hour * HOUR_HEIGHT}px`,
-              transform: dragTranslate(leaf.post.id),
+              transform: dragTranslate(leafId(leaf)),
               '--leaf-hue': leaf.hue,
-              '--leaf-sat': `${CHANNEL_SAT[leaf.channel] ?? 60}%`,
+              '--leaf-sat': `${leafSat(leaf)}%`,
               '--leaf-breath': `${leaf.breath}s`,
             }"
             @pointerdown="onPointerDown($event, leaf)"
@@ -556,15 +703,22 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
             <span class="river-leaf__halo" aria-hidden="true" />
             <span class="river-leaf__body">
               <span class="river-leaf__chips">
+                <template v-if="leaf.kind === 'social'">
+                  <Icon
+                    v-for="(plat, pi) in [...new Set(leaf.post.platforms?.map((p) => p.platform) || [])]"
+                    :key="pi"
+                    :name="platformIcon(plat)"
+                    class="river-leaf__chip"
+                  />
+                </template>
                 <Icon
-                  v-for="(plat, pi) in [...new Set(leaf.post.platforms?.map((p) => p.platform) || [])]"
-                  :key="pi"
-                  :name="platformIcon(plat)"
+                  v-else
+                  name="lucide:mail"
                   class="river-leaf__chip"
                 />
               </span>
-              <span class="river-leaf__caption">{{ leafLabel(leaf.post) }}</span>
-              <span v-if="savingDragId === leaf.post.id" class="river-leaf__saving">
+              <span class="river-leaf__caption">{{ leafLabel(leaf) }}</span>
+              <span v-if="savingDragId === leafId(leaf)" class="river-leaf__saving">
                 <Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" />
               </span>
             </span>
@@ -595,6 +749,15 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
             }"
           />
           {{ ch }}
+        </span>
+        <span class="river-legend__chip">
+          <span
+            class="river-legend__swatch"
+            :style="{
+              background: `linear-gradient(135deg, hsl(${EMAIL_HUE} ${EMAIL_SAT}% 65%), hsl(${EMAIL_HUE} ${EMAIL_SAT}% 45%))`,
+            }"
+          />
+          email
         </span>
       </span>
     </div>
@@ -895,6 +1058,12 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
 
 .river-leaf__chip {
   @apply w-3 h-3 text-white/95;
+}
+
+.river-leaf--email .river-leaf__chip {
+  /* Subtly larger mail icon — it's the email leaf's sole identifier
+     in the river since there are no per-platform sub-icons. */
+  @apply w-3.5 h-3.5;
 }
 
 .river-leaf__caption {
