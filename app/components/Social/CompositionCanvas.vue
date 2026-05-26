@@ -2,15 +2,18 @@
 /**
  * CompositionCanvas — depth-zoom host for the Composition Canvas redesign.
  *
- * P3 Phase 3.1 + 3.2 + 3.3. Replaces the floor segmented control's grid
- * hand-off with a single host that ramps a `z` level. Layers:
+ * P3 Phase 3.1 + 3.2 + 3.3 + 3.4. Replaces the floor segmented control's
+ * grid hand-off with a single host that ramps a `z` level. Layers:
  *   z=1 (river surface)         default slot
  *   z=2 (lifted card)           LiftedCard | EmailLiftedCard (kind-dispatched)
- *   z=3 (composer)              CompositionComposer | EmailComposer
+ *   z=3 (composer)              CompositionComposer | EmailComposer (edit OR create)
  *
- * Kind dispatch (Phase 3.3): the active id encodes the kind.
+ * Kind dispatch (Phase 3.3 + 3.4): the active id encodes the kind.
  *   - UUID prefix → social post → LiftedCard + CompositionComposer.
  *   - `touch:<n>` prefix → email touch → EmailLiftedCard + EmailComposer.
+ *   - `compose:<kind>` sentinel → create mode → composer mounts empty, no
+ *     fetch. After save, the composer emits `created` and the canvas
+ *     swaps the sentinel for the real id (URL replace).
  *
  * The lifted card and the composer are siblings, NOT swapped. As z crosses
  * the composer threshold (2.5) the lifted card fades + dilates slightly and
@@ -63,6 +66,8 @@ const emit = defineEmits<{
 	(e: 'update:activeId', id: string | null): void;
 	(e: 'post-updated', post: SocialPost): void;
 	(e: 'touch-updated', composition: EmailComposition): void;
+	(e: 'post-created', post: SocialPost): void;
+	(e: 'touch-created', composition: EmailComposition): void;
 }>();
 
 const zoom = useCompositionZoom();
@@ -70,11 +75,18 @@ const rootEl = ref<HTMLElement | null>(null);
 
 // ── Kind dispatch ──────────────────────────────────────────────────
 // P3.0's encoding: `touch:<n>` for email touches, UUID for social posts.
-// The canvas dispatches the lift+composer pair on this prefix; the
-// composable singleton stays kind-agnostic.
+// P3.4 adds `compose:<kind>` sentinels for create-mode mounts; the canvas
+// reads the kind off the sentinel and skips the fetch. The composable
+// singleton stays kind-agnostic.
 function kindFor(id: string | null): 'social' | 'email' | null {
 	if (!id) return null;
+	if (id === 'compose:email') return 'email';
+	if (id === 'compose:social') return 'social';
 	return id.startsWith('touch:') ? 'email' : 'social';
+}
+
+function isComposeSentinel(id: string | null): boolean {
+	return !!id && id.startsWith('compose:');
 }
 
 const activeKind = computed(() => kindFor(zoom.activeId.value));
@@ -89,6 +101,16 @@ const activePostLoading = ref(false);
 const activePostErr = ref<string | null>(null);
 
 async function loadActive(id: string) {
+	// P3.4 — create-mode sentinel (`compose:<kind>`). Skip the fetch; the
+	// composer mounts empty and the lifted overlay stays invisible (its
+	// default content is gated on activePost/activeEmail, both null).
+	if (isComposeSentinel(id)) {
+		activePost.value = null;
+		activeEmail.value = null;
+		activePostLoading.value = false;
+		activePostErr.value = null;
+		return;
+	}
 	activePostLoading.value = true;
 	activePostErr.value = null;
 	try {
@@ -155,6 +177,27 @@ function onComposerSaved(post: SocialPost) {
 function onEmailComposerSaved(comp: EmailComposition) {
 	activeEmail.value = comp;
 	emit('touch-updated', comp);
+}
+
+/**
+ * Phase 3.4 — create-mode composer minted a real row. Swap the
+ * `compose:<kind>` sentinel for the actual id (URL replace so back
+ * skips the empty state) and emit `post-created` / `touch-created` so
+ * the host can prepend it to the river feed. We stay at z=3 with the
+ * composer still rendered — the user sees the newly-saved content,
+ * and pressing back drops them straight to z=1 (river with new leaf
+ * already there) thanks to the replace.
+ */
+function onComposerCreated(post: SocialPost) {
+	activePost.value = post;
+	zoom.replaceActiveId(post.id);
+	emit('post-created', post);
+}
+
+function onEmailComposerCreated(comp: EmailComposition) {
+	activeEmail.value = comp;
+	zoom.replaceActiveId(comp.id);
+	emit('touch-created', comp);
 }
 
 let teardown: (() => void) | null = null;
@@ -338,12 +381,14 @@ function closeComposer() {
 				:touch-id="zoom.activeId.value"
 				@close="closeComposer"
 				@saved="onEmailComposerSaved"
+				@created="onEmailComposerCreated"
 			/>
 			<CompositionComposer
 				v-else-if="zoom.activeId.value"
 				:post-id="zoom.activeId.value"
 				@close="closeComposer"
 				@saved="onComposerSaved"
+				@created="onComposerCreated"
 			/>
 		</div>
 	</div>

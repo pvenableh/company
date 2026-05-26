@@ -150,16 +150,18 @@ function socialPatchBody(
 	return body;
 }
 
-/** Convert a SocialComposition create input to `/api/social/posts` POST body. */
+/** Convert a SocialComposition create input to `/api/social/posts` POST body.
+ *  The endpoint's Zod schema treats `thumbnail_url` as `z.string().url().optional()`
+ *  — passing `null` 400s. Mirror the same omit-when-null rule for the other
+ *  optional URL/string fields so callers can pass `null` freely. */
 function socialCreateBody(
 	input: Extract<CompositionCreate, { kind: 'social' }>,
 ): Record<string, unknown> {
-	return {
+	const body: Record<string, unknown> = {
 		caption: input.body,
 		caption_variants: input.variants ?? null,
 		media_urls: input.media_urls ?? [],
 		media_types: input.media_types ?? [],
-		thumbnail_url: input.thumbnail_url,
 		platforms: input.targets.map((t) => ({
 			platform: t.platform,
 			account_id: t.account_id,
@@ -167,13 +169,15 @@ function socialCreateBody(
 			options: t.raw?.options,
 		})),
 		post_type: input.post_type,
-		scheduled_at: input.scheduled_at,
 		status: input.status ?? 'draft',
-		cta_url: input.cta_url,
-		cta_label: input.cta_label,
-		content_plan: input.plan_id,
-		project: input.project_id,
 	};
+	if (input.thumbnail_url) body.thumbnail_url = input.thumbnail_url;
+	if (input.scheduled_at) body.scheduled_at = input.scheduled_at;
+	if (input.cta_url) body.cta_url = input.cta_url;
+	if (input.cta_label) body.cta_label = input.cta_label;
+	if (input.plan_id != null) body.content_plan = input.plan_id;
+	if (input.project_id != null) body.project = input.project_id;
+	return body;
 }
 
 // ─── Email mapping (read-only in 3.0) ───────────────────────────────────────

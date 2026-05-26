@@ -2,7 +2,7 @@
 /**
  * EmailComposer — the z=3 in-canvas email composer.
  *
- * P3 Phase 3.3 (composition-canvas-redesign). Sibling of
+ * P3 Phase 3.3 + 3.4 (composition-canvas-redesign). Sibling of
  * `CompositionComposer.vue` (the social composer). The two components are
  * intentionally separate: their field shapes diverge enough that one
  * form with two configs would be more confusing than two siblings (this
@@ -12,7 +12,10 @@
  * Fields: subject, preview text, body (Markdown via UTextarea — Tiptap
  * is deferred until the body editor needs richer affordances), audience
  * segment, CTA, schedule. Save routes through `useComposition().update`
- * which PATCHes `/api/marketing/touches/:id`.
+ * (edit mode) or `useComposition().create` (P3.4 create mode — no
+ * touchId or sentinel `compose:email`). In create mode the schedule
+ * picker stays as-is; status defaults to 'draft' until the user
+ * unticks the draft checkbox.
  *
  * Coexistence: this is ADDITIVE. The legacy `MarketingTouchEditor` (if
  * any) and `/marketing/*` deep-links keep working — only canvas-internal
@@ -37,24 +40,40 @@ import type {
 } from '~~/shared/marketing-persistence';
 
 const props = defineProps<{
-  /** Active touch id (canvas activeId — `touch:<n>` form). */
-  touchId: string;
+  /** Active touch id (canvas activeId — `touch:<n>` form). When this is
+   *  null/undefined OR the `compose:email` sentinel the composer enters
+   *  create mode: skip load, blank form, save → POST instead of PATCH. */
+  touchId?: string | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'saved', composition: EmailComposition): void;
+  (e: 'created', composition: EmailComposition): void;
 }>();
 
 const toast = useToast();
-const { fetchById, update } = useComposition();
+const { fetchById, update, create } = useComposition();
+const { selectedOrg } = useOrganization();
+
+/** True while no real row has been minted yet — either no prop or the
+ *  `compose:email` sentinel. Drives the save button's label + which
+ *  endpoint we hit on submit. */
+const creating = computed(() =>
+  !props.touchId || props.touchId.startsWith('compose:'),
+);
 
 // ── Server-side state ──────────────────────────────────────────────
-const loading = ref(true);
+// `loading` starts false — only flips true while a real touchId is
+// being fetched. Create mode never sets it.
+const loading = ref(false);
 const original = ref<EmailComposition | null>(null);
 const fetchErr = ref<string | null>(null);
 
 // ── Form state ─────────────────────────────────────────────────────
+// In create mode, these starting values double as the empty-form
+// defaults (no extra hydrate step needed). Edit mode overwrites them
+// in loadTouch().
 const subject = ref('');
 const previewText = ref('');
 const body = ref('');
@@ -63,7 +82,9 @@ const audienceFilter = ref<AudienceFilter>('all');
 const scheduledAt = ref(
   format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
-const isDraft = ref(false);
+// Create mode starts as a draft — the user actively opts into scheduling
+// by unticking the checkbox. Edit mode reflects the row's status.
+const isDraft = ref(true);
 const isSubmitting = ref(false);
 
 // ── Audience segment options (from AudienceFilter type) ─────────────
@@ -119,7 +140,17 @@ async function loadTouch(id: string) {
 watch(
   () => props.touchId,
   (next) => {
-    if (next) loadTouch(next);
+    // Create mode — no fetch. Empty form refs already hold the defaults.
+    if (!next || next.startsWith('compose:')) {
+      loading.value = false;
+      return;
+    }
+    // Post-create swap: the canvas replaces `compose:email` with the
+    // real `touch:<n>` id once create() returns. Skip the refetch when
+    // the id matches the row we just minted — otherwise we'd race the
+    // POST round-trip and clobber the form state.
+    if (original.value?.id === next) return;
+    loadTouch(next);
   },
   { immediate: true },
 );
@@ -129,7 +160,10 @@ const previewCount = computed(() => previewText.value.length);
 const bodyCount = computed(() => body.value.length);
 
 const canSubmit = computed(() => {
-  if (!original.value) return false;
+  // Create mode skips the original.value guard; edit mode still
+  // requires it so we don't PATCH against a row we never loaded.
+  if (!creating.value && !original.value) return false;
+  if (creating.value && !selectedOrg.value) return false;
   if (!subject.value.trim()) return false;
   if (!body.value.trim()) return false;
   if (subjectCount.value > 998) return false;
@@ -140,9 +174,44 @@ const canSubmit = computed(() => {
 
 // ── Save ─────────────────────────────────────────────────────────
 async function save() {
-  if (!canSubmit.value || !original.value) return;
+  if (!canSubmit.value) return;
   isSubmitting.value = true;
+  const scheduledISO = new Date(scheduledAt.value).toISOString();
+  const status: 'draft' | 'scheduled' = isDraft.value ? 'draft' : 'scheduled';
   try {
+    if (creating.value) {
+      // P3.4 create path — POST /api/marketing/touches. Server's
+      // one-off-campaign helper mints the parent campaign when
+      // `plan_id` is null (which it always is here; campaign
+      // selection is a later phase).
+      const orgId = selectedOrg.value;
+      if (!orgId) throw new Error('No organization selected');
+      const result = await create({
+        kind: 'email',
+        organization: orgId,
+        scheduled_at: scheduledISO,
+        status,
+        subject: subject.value.trim(),
+        preview_text: previewText.value.trim() || null,
+        body: body.value,
+        cta: (cta.value || null) as EmailCTA | null,
+        targets: [{ kind: 'audience_segment', filter: audienceFilter.value }],
+        variants: null,
+        plan_id: null,
+      });
+      if (result.kind !== 'email') {
+        throw new Error('Unexpected non-email response from create()');
+      }
+      original.value = result;
+      emit('created', result);
+      toast.add({
+        title: status === 'scheduled' ? 'Email scheduled' : 'Draft created',
+        icon: 'i-lucide-check-circle',
+        color: 'green',
+      });
+      return;
+    }
+    if (!original.value) return;
     const patch: Extract<CompositionPatch, { kind: 'email' }> = {
       kind: 'email',
       subject: subject.value.trim(),
@@ -150,15 +219,11 @@ async function save() {
       body: body.value,
       cta: (cta.value || null) as EmailCTA | null,
       targets: [{ kind: 'audience_segment', filter: audienceFilter.value }],
-      status: isDraft.value ? 'draft' : 'scheduled',
+      status,
     };
-    if (!isDraft.value) {
-      patch.scheduled_at = new Date(scheduledAt.value).toISOString();
-    } else if (scheduledAt.value) {
-      // Drafts keep their scheduled_at as a target time the user can
-      // still edit — don't clobber on save.
-      patch.scheduled_at = new Date(scheduledAt.value).toISOString();
-    }
+    // Drafts keep their scheduled_at as a target time the user can
+    // still edit — don't clobber on save.
+    patch.scheduled_at = scheduledISO;
     const refreshed = (await update(original.value.source, patch)) as EmailComposition;
     if (refreshed.kind === 'email') {
       emit('saved', refreshed);
@@ -213,7 +278,11 @@ async function save() {
           size="sm"
           :icon="isDraft ? 'i-lucide-save' : 'i-lucide-calendar-clock'"
         >
-          {{ isDraft ? 'Save Draft' : 'Save & Schedule' }}
+          {{
+            creating
+              ? isDraft ? 'Create Draft' : 'Create & Schedule'
+              : isDraft ? 'Save Draft' : 'Save & Schedule'
+          }}
         </UButton>
       </div>
     </header>

@@ -80,6 +80,8 @@ const canvasBind = computed(() => {
     lens: canvasLens.value,
     activeId: zoom.activeId.value,
     onPostUpdated: onCanvasPostUpdated,
+    onPostCreated: onCanvasPostCreated,
+    onTouchCreated: onCanvasTouchCreated,
   } as Record<string, unknown>;
 });
 
@@ -123,10 +125,46 @@ watch(() => route.query.view, (qv) => {
 });
 
 // Compose slide-over opener for the Studio header "+ Compose" button.
+// When `?canvas=1` is on, the button is wired to `toggleComposeChooser`
+// (the popover trigger toggle); legacy mode opens the slide-over.
 const composeSlide = useAppSlideOver('social-compose');
 const planSlide = useAppSlideOver('social-plan');
 function openCompose() {
   composeSlide.open('new');
+}
+
+function toggleComposeChooser() {
+  composeChooserOpen.value = !composeChooserOpen.value;
+}
+
+// ── P3.4 — in-canvas + New chooser ────────────────────────────────
+// Canvas mode replaces the slide-over hand-off with a two-option
+// popover: social vs email. Each option drops the user straight into
+// the matching composer at z=3 with an empty form.
+const composeChooserOpen = ref(false);
+function composeKind(kind: 'social' | 'email') {
+  composeChooserOpen.value = false;
+  zoom.compose(kind);
+}
+
+// Composition Canvas wiring for `created` emits. The social river
+// surface refetches on its own via a watch on `zoom.activeId` (see
+// RiverSurface), so this handler just keeps the approval/upcoming
+// in-memory `posts.value` list in sync when the user creates from
+// those views. Email creates don't have an approval-view counterpart,
+// so the touch-created handler is a no-op at the StudioSurface level.
+function onCanvasPostCreated(post: SocialPost) {
+  if (!posts.value.some((p) => p.id === post.id)) {
+    posts.value = [post, ...posts.value];
+  }
+  // Refresh plans too, since the create may have minted a new Inbox plan
+  // server-side for the org.
+  fetchPlans();
+}
+
+function onCanvasTouchCreated(_comp: import('~~/shared/composition').EmailComposition) {
+  // River refresh happens inside RiverSurface's zoom.activeId watcher.
+  // Nothing approval/upcoming-shaped to update here.
 }
 
 // ── Content Plans ─────────────────────────────────────────────────
@@ -757,7 +795,49 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <UiActionButton icon="lucide:pen-line" variant="primary" @click="openCompose">
+          <!-- Compose entry. Legacy mode opens the slide-over; canvas
+               mode opens a kind-chooser popover. UiActionButton owns its
+               own native `@click` (re-emitting to its component event),
+               which keeps Radix's PopoverTrigger from intercepting the
+               DOM click — so we drive the popover state explicitly via
+               a toggle handler on the Vue click event. -->
+          <UPopover v-if="canvasOn" v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
+            <UiActionButton icon="lucide:pen-line" variant="primary" @click="toggleComposeChooser">
+              Compose
+            </UiActionButton>
+            <template #panel>
+              <div class="compose-chooser">
+                <p class="compose-chooser__title">What are you creating?</p>
+                <button
+                  type="button"
+                  class="compose-chooser__option"
+                  @click="composeKind('social')"
+                >
+                  <span class="compose-chooser__icon compose-chooser__icon--social">
+                    <Icon name="lucide:images" class="w-4 h-4" />
+                  </span>
+                  <span class="flex-1 min-w-0 text-left">
+                    <span class="compose-chooser__label">New social post</span>
+                    <span class="compose-chooser__hint">Caption + media for one or more channels</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="compose-chooser__option"
+                  @click="composeKind('email')"
+                >
+                  <span class="compose-chooser__icon compose-chooser__icon--email">
+                    <Icon name="lucide:mail" class="w-4 h-4" />
+                  </span>
+                  <span class="flex-1 min-w-0 text-left">
+                    <span class="compose-chooser__label">New email</span>
+                    <span class="compose-chooser__hint">One-off broadcast to a contact segment</span>
+                  </span>
+                </button>
+              </div>
+            </template>
+          </UPopover>
+          <UiActionButton v-else icon="lucide:pen-line" variant="primary" @click="openCompose">
             Compose
           </UiActionButton>
           <UiActionButton icon="lucide:calendar-plus" @click="showNewPlan = true">
@@ -1483,5 +1563,42 @@ onMounted(() => {
 
 .studio-image-preview__btn--danger {
   @apply hover:bg-rose-500/70;
+}
+
+/* ── P3.4 compose-chooser popover ───────────────────────────────────── */
+
+.compose-chooser {
+  @apply flex flex-col gap-1 min-w-[240px] p-1;
+}
+
+.compose-chooser__title {
+  @apply px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider
+    text-muted-foreground;
+}
+
+.compose-chooser__option {
+  @apply flex items-center gap-3 px-2.5 py-2 rounded-md
+    hover:bg-muted/60 transition-colors text-left;
+}
+
+.compose-chooser__icon {
+  @apply w-8 h-8 rounded-full flex items-center justify-center shrink-0
+    text-white;
+}
+
+.compose-chooser__icon--social {
+  background: linear-gradient(135deg, hsl(330 78% 60%), hsl(210 72% 50%));
+}
+
+.compose-chooser__icon--email {
+  background: linear-gradient(135deg, hsl(270 55% 60%), hsl(270 55% 45%));
+}
+
+.compose-chooser__label {
+  @apply block text-sm font-medium text-foreground;
+}
+
+.compose-chooser__hint {
+  @apply block text-[11px] text-muted-foreground leading-tight mt-0.5;
 }
 </style>

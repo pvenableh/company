@@ -3,11 +3,16 @@
  * CompositionComposer — the z=3 master-variant composer surface, rendered
  * in-place inside the Composition Canvas.
  *
- * P3 Phase 3.2. Same authoring affordances as `SocialComposePanel.vue` —
+ * P3 Phase 3.2 + 3.4. Same authoring affordances as `SocialComposePanel.vue` —
  * caption + per-platform variants + media + schedule + platform picker —
  * but mounted inside the canvas instead of a slide-over. Reads and writes
  * via the P3.0 `useComposition` adapter so the patch shape stays
  * server-canonicalized (variants collapse, scheduled_at normalization).
+ *
+ * Create mode (P3.4): when no `postId` is bound or the prop holds the
+ * `compose:social` sentinel, the composer mounts with empty form
+ * defaults. Save POSTs through `useComposition().create()` instead of
+ * PATCH and emits `created` with the resulting SocialPost row.
  *
  * Coexistence: this is ADDITIVE. `SocialComposePanel.vue` still ships as
  * the slide-over entry from outside the canvas (Pulse "New Post", apps
@@ -37,20 +42,31 @@ import { getSocialPlatformIcon } from '~/utils/icons';
 
 const props = defineProps<{
   /** Active post id (canvas activeId). MUST match a row reachable via
-   *  `useComposition.fetchById()`. */
-  postId: string;
+   *  `useComposition.fetchById()` — OR the `compose:social` sentinel
+   *  (P3.4 create mode) — OR null/undefined for plain create. */
+  postId?: string | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'saved', post: SocialPost): void;
+  (e: 'created', post: SocialPost): void;
 }>();
 
 const toast = useToast();
-const { fetchById, update } = useComposition();
+const { fetchById, update, create } = useComposition();
+const { selectedOrg } = useOrganization();
+
+/** True when no real row exists yet. Drives save-button label + which
+ *  endpoint we POST/PATCH against. */
+const creating = computed(() =>
+  !props.postId || props.postId.startsWith('compose:'),
+);
 
 // ── Server-side state ──────────────────────────────────────────────
-const loading = ref(true);
+// `loading` only flips true while a real id is being fetched. Create
+// mode never sets it.
+const loading = ref(false);
 const original = ref<SocialPost | null>(null);
 const fetchErr = ref<string | null>(null);
 
@@ -158,7 +174,18 @@ async function loadPost(id: string) {
 watch(
   () => props.postId,
   (next) => {
-    if (next) loadPost(next);
+    // Create mode (sentinel or absent) — no fetch. The form refs hold
+    // empty defaults already.
+    if (!next || next.startsWith('compose:')) {
+      loading.value = false;
+      return;
+    }
+    // Post-create swap: the canvas replaces `compose:social` with the
+    // real UUID once create() returns. Skip the refetch when the id
+    // matches the row we just minted — otherwise we'd race the POST
+    // round-trip and clobber the user's form state.
+    if (original.value?.id === next) return;
+    loadPost(next);
   },
   { immediate: true },
 );
@@ -188,6 +215,7 @@ const derivedPostType = computed<PostType>(() => {
 });
 
 const canSubmit = computed(() => {
+  if (creating.value && !selectedOrg.value) return false;
   const hasCaption = caption.value.trim().length > 0;
   const hasMedia = mediaUrls.value.length > 0;
   const hasAccounts = selectedAccounts.value.length > 0;
@@ -312,10 +340,56 @@ function buildTargets() {
 }
 
 async function save() {
-  if (!canSubmit.value || !original.value) return;
+  if (!canSubmit.value) return;
   isSubmitting.value = true;
+  const scheduledISO = new Date(scheduledAt.value).toISOString();
+  const status: 'draft' | 'scheduled' = isDraft.value ? 'draft' : 'scheduled';
+  const variantsPayload = Object.keys(captionVariants.value).length
+    ? captionVariants.value
+    : null;
+  const ctaUrlValue = ctaUrl.value.trim() || null;
+  const ctaLabelValue = ctaUrlValue ? (ctaLabel.value.trim() || null) : null;
   try {
-    const scheduledISO = new Date(scheduledAt.value).toISOString();
+    if (creating.value) {
+      // P3.4 create path — POST /api/social/posts. The endpoint
+      // find-or-creates the org's Inbox plan when no content_plan FK
+      // is set, so the new post lands somewhere visible.
+      const orgId = selectedOrg.value;
+      if (!orgId) throw new Error('No organization selected');
+      const created = await create({
+        kind: 'social',
+        organization: orgId,
+        body: caption.value,
+        variants: variantsPayload,
+        targets: buildTargets(),
+        media_urls: mediaUrls.value,
+        media_types: mediaTypes.value,
+        post_type: derivedPostType.value,
+        scheduled_at: scheduledISO,
+        status,
+        cta_url: ctaUrlValue,
+        cta_label: ctaLabelValue,
+        plan_id: null,
+        project_id: null,
+        thumbnail_url: null,
+      });
+      // Re-fetch the raw row so we can emit a SocialPost shape — the
+      // canvas + the river both bind to that, not the view-model.
+      const refreshed = await $fetch<{ data: SocialPost }>(`/api/social/posts/${created.id}`, {
+        credentials: 'include',
+      });
+      if (refreshed?.data) {
+        original.value = refreshed.data;
+        emit('created', refreshed.data);
+      }
+      toast.add({
+        title: status === 'scheduled' ? 'Post scheduled' : 'Draft created',
+        icon: 'i-lucide-check-circle',
+        color: 'green',
+      });
+      return;
+    }
+    if (!original.value) return;
     // Reuse the adapter — patch shape mirrors what `socialPatchBody`
     // expects. Server normalizes effective-master variants + auto-promotes
     // approval_state if needed (Phase 6 publisher bridge).
@@ -324,17 +398,15 @@ async function save() {
       {
         kind: 'social',
         body: caption.value,
-        variants: Object.keys(captionVariants.value).length
-          ? captionVariants.value
-          : null,
+        variants: variantsPayload,
         targets: buildTargets(),
         media_urls: mediaUrls.value,
         media_types: mediaTypes.value,
         post_type: derivedPostType.value,
         scheduled_at: scheduledISO,
-        status: isDraft.value ? 'draft' : 'scheduled',
-        cta_url: ctaUrl.value.trim() || null,
-        cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
+        status,
+        cta_url: ctaUrlValue,
+        cta_label: ctaLabelValue,
       },
     );
     // Re-fetch the raw row so the river leaf updates in place (parent
@@ -389,7 +461,11 @@ async function save() {
           size="sm"
           :icon="isDraft ? 'i-lucide-save' : 'i-lucide-calendar-clock'"
         >
-          {{ isDraft ? 'Save Draft' : 'Save & Schedule' }}
+          {{
+            creating
+              ? isDraft ? 'Create Draft' : 'Create & Schedule'
+              : isDraft ? 'Save Draft' : 'Save & Schedule'
+          }}
         </UButton>
       </div>
     </header>

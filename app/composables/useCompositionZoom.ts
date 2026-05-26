@@ -9,11 +9,11 @@
  * canvas don't move `z` and don't fight global browser zoom on the rest of
  * the page.
  *
- * Zoom levels (after P3.2):
+ * Zoom levels (after P3.4):
  *   z=1  River timeline (default).
  *   z=2  Selected leaf lifted to center via FLIP — see lift().
- *   z=3  Master-variant composer in-place.
- *   z=4-5  Block-level depth (reserved for P3.4).
+ *   z=3  Master-variant composer in-place — edit OR create (sentinel id) — see compose().
+ *   z=4-5  Block-level depth (deferred indefinitely; reclaim if blocks ever apply).
  *
  * URL binding: `?z=` + `?id=` are the canonical form when canvas mode is on.
  * `useRouter().replace` (not push) so back/forward history doesn't fill up
@@ -196,6 +196,32 @@ function build() {
 		setZ(Z_MIN, 'push');
 	}
 
+	/**
+	 * Open the composer in create mode (P3.4). Mints a synthetic
+	 * `compose:<kind>` activeId and pushes z=3 without capturing a source
+	 * rect — there's no leaf to FLIP from. The canvas's kind-dispatch
+	 * recognizes the `compose:` prefix and mounts the right composer in
+	 * create mode (no fetch). Pushes a history entry so the user's back
+	 * action drops out of the composer naturally.
+	 */
+	function compose(kind: 'social' | 'email') {
+		activeId.value = `compose:${kind}`;
+		sourceRect.value = null;
+		z.value = clampZ(3);
+		writeUrl(3, activeId.value, 'push');
+	}
+
+	/**
+	 * Swap the current activeId in place — used by the canvas after a
+	 * create-mode composer mints a real row, so the URL stops referring
+	 * to the `compose:<kind>` sentinel. Replace (not push) so back skips
+	 * the empty-composer state and lands at the river entry.
+	 */
+	function replaceActiveId(nextId: string) {
+		activeId.value = nextId;
+		writeUrl(z.value, nextId, 'replace');
+	}
+
 	function zoomIn() {
 		// Keyboard zoom is a discrete intentional step — push so back undoes.
 		setZ(Math.round(z.value) + KEYBOARD_STEP, 'push');
@@ -357,6 +383,8 @@ function build() {
 		setZ,
 		lift,
 		closeLift,
+		compose,
+		replaceActiveId,
 		zoomIn,
 		zoomOut,
 		snap,

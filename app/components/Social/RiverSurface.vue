@@ -35,6 +35,21 @@ const canvasOn = computed<boolean>(() => {
 });
 const zoom = useCompositionZoom();
 
+// P3.4 — track ids we want to "ripple" on the next render. The canvas
+// swaps `compose:<kind>` for the real id once create() returns; we
+// watch that transition, push the new id into this set, and a CSS
+// animation on the leaf plays once before we remove it ~600ms later.
+const rippleIds = ref<Set<string>>(new Set());
+
+function markRipple(id: string) {
+  rippleIds.value = new Set([...rippleIds.value, id]);
+  setTimeout(() => {
+    const next = new Set(rippleIds.value);
+    next.delete(id);
+    rippleIds.value = next;
+  }, 800);
+}
+
 // ── Range window ─────────────────────────────────────────────────
 // 21-day rolling window: 7 days back, today, 13 days forward. Enough
 // context to see what just published and what's queued without the
@@ -96,6 +111,30 @@ const { data: touchesData, refresh: refreshTouches } = useLazyFetch('/api/market
 watch(organizationId, (id) => {
   if (id) refreshTouches();
 }, { immediate: true });
+
+// P3.4 — listen for create-mode commits. When the canvas swaps a
+// `compose:<kind>` sentinel for a real id, refetch the matching feed
+// so the new leaf shows up, then queue a ripple animation on it.
+// Order matters: we await the refetch + nextTick before marking the
+// ripple, so the new leaf is in the DOM with the ripple class applied
+// before the 800ms removal timer starts.
+watch(
+  () => zoom.activeId.value,
+  async (next, prev) => {
+    if (!next) return;
+    if (next.startsWith('compose:')) return;
+    // Only treat this as a "just created" event when the previous
+    // value was a compose sentinel — otherwise this is just a lift.
+    if (!prev || !prev.startsWith('compose:')) return;
+    if (next.startsWith('touch:')) {
+      await refreshTouches();
+    } else {
+      await refreshPosts();
+    }
+    await nextTick();
+    markRipple(next);
+  },
+);
 
 const allTouches = computed(() => {
   const list = ((touchesData.value as any)?.touches || []) as MarketingTouch[];
@@ -687,6 +726,7 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
               'river-leaf--email': leaf.kind === 'email',
               'river-leaf--dragging': drag?.leafId === leafId(leaf),
               'river-leaf--saving': savingDragId === leafId(leaf),
+              'river-leaf--ripple': rippleIds.has(leafId(leaf)),
             }"
             :style="{
               left: `${leaf.dayIdx * DAY_WIDTH + DAY_WIDTH / 2}px`,
@@ -1079,8 +1119,41 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
   50% { transform: translate(-50%, -50%) scale(1.02); }
 }
 
+/* P3.4 "publish moment" — a fresh leaf grows in from scale(0) with a
+   one-off glow flash. Runs over the breathing animation; once the
+   `--ripple` class peels off (~800ms later, after the keyframes
+   settle) the breathing rhythm takes back over. */
+.river-leaf--ripple {
+  animation:
+    riverLeafRipple 700ms cubic-bezier(0.16, 1, 0.3, 1) 1,
+    riverLeafBreathe var(--leaf-breath, 4s) ease-in-out 800ms infinite;
+  z-index: 25;
+}
+
+@keyframes riverLeafRipple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    box-shadow:
+      0 0 0 0 hsl(var(--leaf-hue) var(--leaf-sat) 60% / 0.7),
+      0 6px 18px -10px hsl(var(--leaf-hue) var(--leaf-sat) 30% / 0.7);
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.12);
+    box-shadow:
+      0 0 0 14px hsl(var(--leaf-hue) var(--leaf-sat) 60% / 0.18),
+      0 12px 28px -10px hsl(var(--leaf-hue) var(--leaf-sat) 30% / 0.85);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      0 0 0 24px hsl(var(--leaf-hue) var(--leaf-sat) 60% / 0),
+      0 6px 18px -10px hsl(var(--leaf-hue) var(--leaf-sat) 30% / 0.7);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .river-leaf,
+  .river-leaf--ripple,
   .river-now__pulse {
     animation: none !important;
   }
