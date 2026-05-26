@@ -31,6 +31,10 @@ export default defineEventHandler(async (event) => {
 					'kind',
 					'audience_target',
 					'audience_filter',
+					// Expanded m2o so the canvas can render the list name on
+					// the lifted card without a second round trip.
+					'mailing_list.id',
+					'mailing_list.name',
 					'send_offset_hours',
 					'scheduled_for',
 					'sent_at',

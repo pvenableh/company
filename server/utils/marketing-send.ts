@@ -131,12 +131,68 @@ async function loadEligibleContacts(directus: any, ids: string[], organizationId
 	return rows.filter((r) => !!r.email);
 }
 
+/**
+ * Resolve recipients from a mailing_list_contacts join. Two queries: get
+ * the contact-id list off the junction (where subscribed=true), then
+ * reuse `loadEligibleContacts` which already enforces the org-membership
+ * + email-subscribed + bounced + unsubscribed filters.
+ *
+ * Why two queries instead of one nested: the server token's policy on
+ * `mailing_list_contacts` doesn't grant the deep field walk through
+ * `contact_id.organizations.organizations_id` etc. Splitting the read
+ * keeps each query inside its collection's permitted field surface.
+ */
+async function loadMailingListContacts(
+	directus: any,
+	listId: number,
+	organizationId: string,
+): Promise<ContactRow[]> {
+	const members = (await directus.request(
+		readItems('mailing_list_contacts', {
+			filter: {
+				_and: [
+					{ list_id: { _eq: listId } },
+					{ subscribed: { _eq: true } },
+				],
+			},
+			fields: ['contact_id'],
+			limit: 500,
+		}),
+	)) as Array<{ contact_id: string | { id?: string } | null }>;
+
+	const ids = members
+		.map((m) => {
+			const c = m.contact_id;
+			if (!c) return null;
+			return typeof c === 'object' ? (c.id ?? null) : c;
+		})
+		.filter((id): id is string => !!id);
+
+	return loadEligibleContacts(directus, ids, organizationId);
+}
+
 async function resolveAudience(args: {
 	directus: any;
 	touch: any;
 	campaign: CampaignRow;
 }): Promise<ContactRow[]> {
 	const { directus, touch, campaign } = args;
+
+	// Mailing-list targeting takes priority. When the canvas's email
+	// composer attaches a `mailing_list` FK, we resolve recipients from
+	// the list directly — this is the only audience path that works for
+	// one-off canvas-created emails, since their parent campaign has no
+	// `audience_snapshot` populated. See setup-touch-mailing-list-fk.ts
+	// for the schema rationale.
+	if (touch.mailing_list != null) {
+		const listId = typeof touch.mailing_list === 'object'
+			? Number((touch.mailing_list as { id?: number })?.id)
+			: Number(touch.mailing_list);
+		if (Number.isFinite(listId)) {
+			return loadMailingListContacts(directus, listId, campaign.organization);
+		}
+	}
+
 	const filter: string = touch.audience_filter || 'all';
 	const baseIds: string[] = (campaign.audience_snapshot?.contact_ids || []) as string[];
 
@@ -392,6 +448,7 @@ export async function fireDueTouch(args: SendTouchArgs): Promise<SendTouchResult
 					'kind',
 					'audience_filter',
 					'audience_target',
+					'mailing_list',
 					'scheduled_for',
 					'status',
 					'email_subject',

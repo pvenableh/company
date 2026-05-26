@@ -129,6 +129,19 @@ const audienceLabel = computed(() => {
   return 'Audience';
 });
 
+/**
+ * Per-target-kind chip icon so the audience strip reads at a glance —
+ * `lucide:list` for a named mailing list, `lucide:filter` for a dynamic
+ * segment, `lucide:users` as the generic fallback (no target).
+ */
+const audienceIcon = computed(() => {
+  const t = props.composition.targets[0];
+  if (!t) return 'lucide:users';
+  if (t.kind === 'mailing_list') return 'lucide:list';
+  if (t.kind === 'audience_segment') return 'lucide:filter';
+  return 'lucide:users';
+});
+
 const statusLabel = computed(() => {
   switch (props.composition.status) {
     case 'draft': return 'Draft';
@@ -189,7 +202,7 @@ const scheduledLabel = computed(() => {
 
       <div class="lifted-card__chips">
         <span class="lifted-card__audience">
-          <Icon name="lucide:users" class="w-3 h-3" />
+          <Icon :name="audienceIcon" class="w-3 h-3" />
           {{ audienceLabel }}
         </span>
       </div>

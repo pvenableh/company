@@ -57,6 +57,10 @@ const updateTouchSchema = z.object({
 	sequence_index: z.number().int().min(0).optional(),
 	audience_target: audienceTargetSchema.optional(),
 	audience_filter: audienceFilterSchema.optional(),
+	// XOR with audience_filter at the app layer (see index.post.ts header).
+	// Nullable so the canvas can clear a list when the user swaps back to
+	// audience_segment.
+	mailing_list: z.number().int().positive().nullable().optional(),
 	send_offset_hours: z.number().int().min(0).max(24 * 30).optional(),
 
 	scheduled_for: z.string().datetime().nullable().optional(),
@@ -148,9 +152,29 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// Same trust-boundary check for mailing_list. Setting to null is
+	// always allowed (clears the FK).
+	if (parsed.data.mailing_list != null) {
+		const list = await directus
+			.request(
+				readItem('mailing_lists', parsed.data.mailing_list, {
+					fields: ['id', 'organization'],
+				}),
+			)
+			.catch(() => null) as any;
+		if (!list || list.organization !== existing.organization) {
+			throw createError({ statusCode: 400, message: 'Invalid mailing list for this organization' });
+		}
+	}
+
 	try {
+		// Expand `mailing_list` on the response so the canvas's
+		// touchToComposition mapper can read the list name without a
+		// follow-up fetch. Other fields keep Directus's default shape.
 		const updated = await directus.request(
-			updateItem('marketing_touches', touchId, patch),
+			updateItem('marketing_touches', touchId, patch, {
+				fields: ['*', 'mailing_list.id', 'mailing_list.name'],
+			}),
 		) as any;
 		return { data: updated };
 	} catch (err: any) {

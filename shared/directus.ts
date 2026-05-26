@@ -2243,6 +2243,8 @@ export interface MarketingTouche {
 	date_updated?: string | null;
 	user_created?: string | null;
 	user_updated?: string | null;
+	/** @description Mailing list this touch targets. When set, the send path resolves recipients from mailing_list_contacts (bypasses campaign.audience_snapshot). XOR with audience_filter at the app layer. */
+	mailing_list?: MailingList | string | null;
 }
 
 export interface MarketingTouchVariant {

@@ -189,6 +189,12 @@ interface TouchRow {
 	sequence_index: number;
 	kind: 'email' | 'social';
 	audience_filter: string;
+	/** Mailing list FK. The touches/[id].get route expands this to
+	 *  `{ id, name }` so the canvas can render the list name on the
+	 *  lifted card without a follow-up fetch. POST/PATCH responses do
+	 *  the same. Bare-number form retained as a fallback for older
+	 *  callers (timeline.get is currently still bare-int by design). */
+	mailing_list: { id: number; name: string } | number | null;
 	scheduled_for: string | null;
 	sent_at: string | null;
 	status: import('~~/shared/marketing-persistence').MarketingTouchStatus;
@@ -205,9 +211,30 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 	// AudienceFilter is the right view-model type for it — no contortion needed.
 	const filter = touch.audience_filter as import('~~/shared/marketing-persistence').AudienceFilter;
 
-	const targets: EmailComposition['targets'] = [
-		{ kind: 'audience_segment', filter },
-	];
+	// Mailing-list targeting takes priority over audience_filter at the
+	// view-model layer (the canvas composer enforces the mutex when
+	// writing, so in practice only one is set at a time). When the
+	// touches/[id].get expanded the m2o we get `{ id, name }`; a stale
+	// caller that returned the bare int gets a placeholder name we'll
+	// upgrade on the next fetch.
+	let targets: EmailComposition['targets'];
+	if (touch.mailing_list != null) {
+		const list = touch.mailing_list;
+		if (typeof list === 'object' && list && 'id' in list) {
+			targets = [
+				{
+					kind: 'mailing_list',
+					list_id: String(list.id),
+					list_name: list.name || `List ${list.id}`,
+				},
+			];
+		} else {
+			const id = String(list);
+			targets = [{ kind: 'mailing_list', list_id: id, list_name: `List ${id}` }];
+		}
+	} else {
+		targets = [{ kind: 'audience_segment', filter }];
+	}
 
 	return {
 		id: encodeTouchId(touch.id),
@@ -242,8 +269,13 @@ function touchCreateBody(
 	input: Extract<CompositionCreate, { kind: 'email' }>,
 ): Record<string, unknown> {
 	const firstTarget = input.targets[0];
+	// Mutex: emit either `mailing_list` (FK) or `audience_filter` (literal),
+	// never both. The send path checks mailing_list first; if a stale caller
+	// somehow set both, the list wins, but the canvas never sends that shape.
+	const isList = firstTarget?.kind === 'mailing_list';
 	const audienceFilter =
 		firstTarget?.kind === 'audience_segment' ? firstTarget.filter : 'all';
+	const mailingList = isList ? Number(firstTarget.list_id) : null;
 	return {
 		organization: input.organization,
 		// `plan_id` doubles as `campaign` in the email half of the
@@ -253,6 +285,7 @@ function touchCreateBody(
 		kind: 'email' as const,
 		audience_target: 'project_contact' as const,
 		audience_filter: audienceFilter,
+		mailing_list: mailingList,
 		send_offset_hours: 0,
 		scheduled_for: input.scheduled_at,
 		status: touchStatusFor(input.status ?? 'draft'),
@@ -276,8 +309,14 @@ function touchPatchBody(
 	if (patch.cta !== undefined) body.email_cta = patch.cta;
 	if (patch.targets !== undefined) {
 		const first = patch.targets[0];
-		if (first?.kind === 'audience_segment') {
+		// Mutex on write — set one side and clear the other so the row
+		// doesn't carry stale state from a previous target kind.
+		if (first?.kind === 'mailing_list') {
+			body.mailing_list = Number(first.list_id);
+			body.audience_filter = 'all';
+		} else if (first?.kind === 'audience_segment') {
 			body.audience_filter = first.filter;
+			body.mailing_list = null;
 		}
 	}
 	if (patch.scheduled_at !== undefined) body.scheduled_for = patch.scheduled_at;

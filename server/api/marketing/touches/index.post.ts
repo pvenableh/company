@@ -23,6 +23,18 @@ import { z } from 'zod';
 import { createItem, readItem } from '@directus/sdk';
 import type { MarketingTouchStatus } from '~~/shared/marketing-persistence';
 
+/**
+ * Audience targeting on a marketing_touch is one of:
+ *   - `mailing_list` (FK) — send path resolves via mailing_list_contacts join
+ *   - `audience_filter` (literal | cluster:<>) — send path narrows from
+ *     campaign.audience_snapshot
+ *
+ * Both are accepted at the schema level (no XOR refine) because the canvas
+ * composer enforces mutex client-side and the send path picks
+ * mailing_list-first. Allowing both lets a future "hybrid" axis (e.g.
+ * "opened previously, from list X") slot in without a schema change.
+ */
+
 // ─── Schema (SYMMETRIC with PATCH) ──────────────────────────────────────
 
 const audienceTargetSchema = z.enum(['project_contact', 'lookalike_audience', 'public']);
@@ -78,6 +90,10 @@ const createTouchSchema = z.object({
 	sequence_index: z.number().int().min(0).default(0),
 	audience_target: audienceTargetSchema.default('project_contact'),
 	audience_filter: audienceFilterSchema.default('all'),
+	// XOR with audience_filter at the app layer. When set, the send path
+	// resolves recipients via mailing_list_contacts instead of
+	// campaign.audience_snapshot. See the comment at the top of this file.
+	mailing_list: z.number().int().positive().nullable().optional(),
 	send_offset_hours: z.number().int().min(0).max(24 * 30).default(0),
 
 	// Schedule + status.
@@ -169,7 +185,24 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// Verify mailing_list (when provided) lives in the caller's org. Same
+	// trust-boundary concern as the campaign check above — without this an
+	// org-A member could target an org-B list by guessing the integer id.
+	if (data.mailing_list != null) {
+		const list = await directus
+			.request(
+				readItem('mailing_lists', data.mailing_list, { fields: ['id', 'organization'] }),
+			)
+			.catch(() => null) as any;
+		if (!list || list.organization !== data.organization) {
+			throw createError({ statusCode: 400, message: 'Invalid mailing list for this organization' });
+		}
+	}
+
 	try {
+		// Same `mailing_list` expansion as the PATCH route — the canvas's
+		// touchToComposition mapper expects the expanded m2o so it can
+		// surface the list name on the lifted card immediately.
 		const created = await directus.request(
 			createItem('marketing_touches', {
 				campaign: campaignId,
@@ -178,6 +211,7 @@ export default defineEventHandler(async (event) => {
 				kind: data.kind,
 				audience_target: data.audience_target,
 				audience_filter: data.audience_filter,
+				mailing_list: data.mailing_list ?? null,
 				send_offset_hours: data.send_offset_hours,
 				scheduled_for: data.scheduled_for ?? null,
 				status: data.status,
@@ -193,6 +227,8 @@ export default defineEventHandler(async (event) => {
 				tokens_spent: 0,
 				regenerate_history: null,
 				generator_strategy_excerpt: null,
+			}, {
+				fields: ['*', 'mailing_list.id', 'mailing_list.name'],
 			}),
 		) as any;
 		return { data: created };
