@@ -14,6 +14,7 @@ import type { Project, Client } from '~~/shared/directus';
 import SocialRiverSurface from '~/components/Social/RiverSurface.vue';
 import SocialInboxSurface from '~/components/Social/InboxSurface.vue';
 import SocialAnalyticsSurface from '~/components/Social/AnalyticsSurface.vue';
+import CompositionCanvas from '~/components/Social/CompositionCanvas.vue';
 import StudioPostCard from './StudioPostCard.vue';
 import PlanGridCard from './PlanGridCard.vue';
 
@@ -53,6 +54,31 @@ const initialView: StudioView = STUDIO_VIEW_KEYS.includes(route.query.view as St
   ? (route.query.view as StudioView)
   : 'approval';
 const view = ref<StudioView>(initialView);
+
+// ── P3 Phase 3.1 — Composition Canvas feature flag ───────────────
+// `?canvas=1` opts into the depth-zoom wrapper. OFF (default) renders the
+// legacy surfaces unchanged. When ON, the surface body is hosted inside
+// <CompositionCanvas> so pinch / Cmd+= / wheel+modifier ramp the `z` ref.
+// See project_composition_canvas_redesign for the design context.
+const canvasOn = computed<boolean>(() => {
+  const v = route.query.canvas;
+  return v === '1' || v === 'true';
+});
+const zoom = useCompositionZoom();
+// The `lens` axis the canvas exposes is the existing StudioView — same five
+// keys, same URL contract (`?view=` keeps working). Phase 3.6 will lift the
+// segmented control entirely; for now they coexist behind the flag.
+const canvasLens = computed(() => view.value);
+// Bind bag for the <component :is> wrapper. Empty when the flag is OFF so
+// the passthrough <div> doesn't get extraneous DOM attributes / Vue warns.
+const canvasBind = computed(() => {
+  if (!canvasOn.value) return {} as Record<string, unknown>;
+  return {
+    z: zoom.z.value,
+    lens: canvasLens.value,
+    activeId: selectedPost.value?.id ?? null,
+  } as Record<string, unknown>;
+});
 
 const stateFilter = ref<'all' | ApprovalState>('all');
 
@@ -783,6 +809,16 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Surface body — wrapped in the CompositionCanvas host when
+         `?canvas=1` is on, passed through unwrapped otherwise. The flag is
+         the only opt-in that introduces the depth-zoom mechanic (Phase 3.1);
+         the legacy path stays the default until 3.6 lifts the segmented
+         control. -->
+    <component
+      :is="canvasOn ? CompositionCanvas : 'div'"
+      :class="canvasOn ? '' : 'studio-passthrough'"
+      v-bind="canvasBind"
+    >
     <!-- Loading — only for the plan-aware views (approval/upcoming).
          Calendar/Inbox/Analytics surfaces below own their own loading UI. -->
     <div v-if="(view === 'approval' || view === 'upcoming') && loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -900,6 +936,7 @@ onMounted(() => {
     <SocialRiverSurface v-else-if="view === 'calendar'" />
     <SocialInboxSurface v-else-if="view === 'inbox'" />
     <SocialAnalyticsSurface v-else-if="view === 'analytics'" />
+    </component>
 
     <!-- New Plan — iOS bottom sheet -->
     <AppsAppBottomSheet
@@ -1235,6 +1272,14 @@ onMounted(() => {
   --accent-h: var(--app-accent-h, 220);
   --accent-s: var(--app-accent-s, 10%);
   --accent-l: var(--app-accent-l, 48%);
+}
+
+/* Layout-transparent wrapper for the surface body when `?canvas=1` is OFF.
+   `display: contents` keeps the wrapper div from introducing a new
+   formatting context — the sibling-spacing rules that drove the original
+   `studio-shell > *` rhythm still apply to the inner conditionals. */
+.studio-passthrough {
+  display: contents;
 }
 
 .studio-hero {
