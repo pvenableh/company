@@ -1,6 +1,5 @@
 <script setup lang="ts">
 const { expenses, totalExpenses, expensesByCategory, isLoading } = useExpenses();
-const { EXPENSE_CATEGORIES } = await import('~/composables/useExpenses');
 const router = useRouter();
 
 const recentExpenses = computed(() => {

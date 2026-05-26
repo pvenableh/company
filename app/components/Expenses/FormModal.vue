@@ -106,7 +106,6 @@ const saving = ref(false);
 
 const toast = useToast();
 const { createExpense, updateExpense, deleteExpense } = useExpenses();
-const { EXPENSE_CATEGORIES } = await import('~/composables/useExpenses');
 
 const statusOptions = [
 	{ value: 'draft', label: 'Draft' },
