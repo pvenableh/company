@@ -62,6 +62,8 @@ const emit = defineEmits<{
 }>();
 
 const haptic = useHaptic();
+const { suspend: suspendSlideOverTrap } = useSlideOverFocusTrapSuspend();
+let releaseTrap: (() => void) | null = null;
 
 const sheetEl = useTemplateRef<HTMLElement>('sheetEl');
 const heroEl = useTemplateRef<HTMLElement>('heroEl');
@@ -88,6 +90,10 @@ async function openSheet() {
   mounted.value = true;
   document.body.style.overflow = 'hidden';
   document.addEventListener('keydown', onKeydown);
+  // Suspend the slide-over FocusScope trap while this sheet is mounted
+  // so inputs inside the teleported sheet are actually focusable when
+  // the sheet renders above an open slide-over panel.
+  if (!releaseTrap) releaseTrap = suspendSlideOverTrap();
 
   if (props.flipFrom) {
     // Pull-from-anywhere: skip the slide-up entirely and let the hero FLIP
@@ -125,6 +131,10 @@ function closeSheet() {
     dragY.value = 0;
     heroLanded.value = false;
     leaveTimer = null;
+    if (releaseTrap) {
+      releaseTrap();
+      releaseTrap = null;
+    }
   }, LEAVE_MS);
 }
 
@@ -157,6 +167,10 @@ onBeforeUnmount(() => {
   clearFlipTimers();
   document.removeEventListener('keydown', onKeydown);
   document.body.style.overflow = '';
+  if (releaseTrap) {
+    releaseTrap();
+    releaseTrap = null;
+  }
 });
 
 // ── Pull-from-anywhere FLIP ──────────────────────────────────────

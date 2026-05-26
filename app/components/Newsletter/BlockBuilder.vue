@@ -118,14 +118,16 @@
           </Transition>
         </div>
 
-        <!-- Email Settings (subject, name, background, fonts) -->
+        <!-- Email Design drawer (background, font, color tokens). The
+             other meta — subject + name — are inline in the top bar /
+             subject row above. -->
         <button
           class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors"
-          title="Edit subject, name, background, fonts"
+          title="Edit background, font, color tokens"
           @click="showSettings = true"
         >
           <Icon name="lucide:sliders-horizontal" class="w-3 h-3" />
-          <span class="hidden sm:inline">Settings</span>
+          <span class="hidden sm:inline">Design</span>
         </button>
 
         <!-- Divider -->
@@ -162,6 +164,34 @@
           <span class="hidden sm:inline">Save</span>
         </button>
       </div>
+    </div>
+
+    <!-- Subject Line — the most-edited "meta" field, surfaced inline above
+         the editor canvas like a native email composer. Less-used design
+         tokens (background, text color, font) stay in the Settings drawer. -->
+    <div class="flex items-center gap-2 px-3 py-2 border-b bg-muted/20">
+      <label
+        for="email-subject-line"
+        class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold shrink-0"
+      >
+        Subject
+      </label>
+      <input
+        id="email-subject-line"
+        v-model="editableSubject"
+        type="text"
+        class="flex-1 min-w-0 bg-transparent text-sm rounded px-1.5 py-0.5 hover:bg-background/60 focus:bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-colors placeholder:text-muted-foreground/50"
+        placeholder="What lands in the inbox preview…"
+        aria-label="Email subject line"
+        @change="builder.setSubjectTemplate(editableSubject)"
+        @keyup.enter="($event.target as HTMLInputElement).blur()"
+      >
+      <span
+        class="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0"
+        title="Merge tags like {{first_name}} are supported"
+      >
+        <span v-pre class="font-mono">{{first_name}}</span> OK
+      </span>
     </div>
 
     <div class="flex flex-1 overflow-hidden relative">
@@ -393,15 +423,12 @@
       @close="showSendModal = false"
     />
 
-    <!-- Email Settings drawer -->
+    <!-- Email Settings drawer — design tokens only. Template name and
+         subject line are edited inline in the top bar + subject row. -->
     <NewsletterEmailSettingsPanel
       v-if="showSettings"
-      :template-name="builder.templateName.value"
-      :subject-template="builder.subjectTemplate.value"
       :design-settings="builder.designSettings.value"
       @close="showSettings = false"
-      @update:template-name="(v) => { builder.setTemplateName(v); editableName = v; }"
-      @update:subject-template="(v) => builder.setSubjectTemplate(v)"
       @update:design="(key, value) => { builder.updateDesignSetting(key, value); debouncedPreview(); }"
     />
 
@@ -429,11 +456,13 @@
       @apply="handleAIApply"
     />
 
-    <!-- Paste HTML/MJML Modal -->
+    <!-- Paste HTML/MJML Modal — z-[70] so it lands above the
+         AppSlideOverStack (z-60) when the editor is hosted inside the
+         EmailTemplatePanel slide-over. -->
     <Teleport to="body">
       <div
         v-if="showPasteModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+        class="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm"
         @click.self="showPasteModal = false"
       >
         <div class="ios-card w-full max-w-2xl mx-4 shadow-xl overflow-hidden">
@@ -508,6 +537,10 @@ const showTestModal = ref(false);
 const showSendModal = ref(false);
 const showSettings = ref(false);
 const editableName = ref('');
+// Inline-edit mirror for the Subject Line. The drawer used to be the
+// only place to touch this; surfacing it in the top bar cuts the
+// round-trip for ~80% of template iterations.
+const editableSubject = ref('');
 const showCustomBlockModal = ref(false);
 const showAIWizard = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
@@ -518,12 +551,28 @@ const pastedHtmlContent = ref('');
 const importExportRef = ref<HTMLElement | null>(null);
 const copyFeedback = ref('');
 
+// Paste HTML/MJML modal teleports to body — suspend the slide-over focus
+// trap while open so the textarea is focusable when the editor is hosted
+// inside the EmailTemplatePanel slide-over.
+const { suspend: suspendSlideOverTrap } = useSlideOverFocusTrapSuspend();
+let releasePasteTrap: (() => void) | null = null;
+watch(showPasteModal, (open) => {
+  if (open) {
+    if (!releasePasteTrap) releasePasteTrap = suspendSlideOverTrap();
+  } else if (releasePasteTrap) {
+    releasePasteTrap();
+    releasePasteTrap = null;
+  }
+});
+onBeforeUnmount(() => { releasePasteTrap?.(); releasePasteTrap = null; });
+
 const debouncedPreview = useDebounceFn(() => builder.refreshPreview(), 600);
 
 onMounted(async () => {
   blockLibrary.value = await getBlockLibrary();
   await builder.loadBlocks();
   editableName.value = builder.templateName.value || props.template?.name || '';
+  editableSubject.value = builder.subjectTemplate.value || '';
   if (builder.canvas.value.length > 0 || builder.rawMjmlSource.value) {
     await builder.refreshPreview();
   } else if (props.autoOpenAi) {
@@ -534,6 +583,12 @@ onMounted(async () => {
 // Keep the inline title input in sync if the composable reloads.
 watch(() => builder.templateName.value, (v) => {
   if (v && v !== editableName.value) editableName.value = v;
+});
+
+// Same mirror for the inline subject line — covers AI-wizard apply,
+// drawer commits, and HMR reloads.
+watch(() => builder.subjectTemplate.value, (v) => {
+  if (v != null && v !== editableSubject.value) editableSubject.value = v;
 });
 
 // ── Keyboard shortcuts ────────────────────────────────────────────

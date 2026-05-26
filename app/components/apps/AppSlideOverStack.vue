@@ -45,6 +45,12 @@ import { getPanelComponent } from './panels/registry';
 
 const { stack, depth, pop } = useAppSlideOverStack();
 const flips = useSlideOverFlips();
+// When a modal/drawer mounts above the stack (FormModal sheet, settings
+// drawer, etc.) it increments this counter and we drop FocusScope.trapped.
+// Otherwise reka-ui's focusin catcher bounces focus on every input click,
+// rendering the modal effectively un-editable (see [[feedback_universal_button_hierarchy]]'s
+// neighbor: dialogs over slide-overs).
+const { count: trapSuspend } = useSlideOverFocusTrapSuspend();
 
 const SPRING_EASE_FN = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
 const ANIM_MS = 400;
@@ -361,7 +367,7 @@ function onShellClose() {
 					:role="panel.isTop ? 'dialog' : undefined"
 					:aria-modal="panel.isTop ? 'true' : undefined"
 				>
-					<FocusScope :trapped="panel.isTop" :loop="true" as-child>
+					<FocusScope :trapped="panel.isTop && trapSuspend === 0" :loop="true" as-child>
 						<div class="app-slide-over-stack__panel-inner">
 							<component
 								:is="panel.component"

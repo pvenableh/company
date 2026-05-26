@@ -48,11 +48,25 @@ const invoice = ref<Invoice | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const sendingEmail = ref(false);
-const showEditModal = ref(false);
+// Inline edit mode — replaces the old modal-over-slide-over pattern.
+// When true the workspace body swaps from the read-only detail view to
+// the InvoiceForm component and the chrome shows Cancel + Save (+ Delete)
+// instead of the Edit pencil + Record Payment quick actions.
+const editMode = ref(false);
+const editFormRef = ref<any>(null);
+const editSaving = ref(false);
+const editStatus = ref<string>('pending');
+const invoiceStatuses = [
+  { id: 'pending', name: 'Pending' },
+  { id: 'processing', name: 'Processing' },
+  { id: 'paid', name: 'Paid' },
+  { id: 'archived', name: 'Archived' },
+];
 const showPaymentModal = ref(false);
 const paymentMethodKey = ref<'check' | 'zelle' | 'venmo' | 'cash' | 'other' | 'edit'>('check');
 const editingPayment = ref<PaymentsReceived | null>(null);
 const toast = useToast();
+const { updateInvoice, deleteInvoice } = useInvoices();
 
 const { getStatusBadgeClasses } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
@@ -80,6 +94,59 @@ function onInvoiceDeleted() {
     emit('back');
   } else {
     router.push('/apps/money');
+  }
+}
+
+// ── Inline edit mode ─────────────────────────────────────────────
+// Replaces the previous "Edit → opens FormModal bottom sheet" pattern.
+// The slide-over panel itself swaps to an editing view; chrome shows
+// Cancel + Save + Delete. No more stacked modal over the slide-over.
+
+function enterEditMode() {
+  if (!invoice.value) return;
+  editStatus.value = invoice.value.status || 'pending';
+  editMode.value = true;
+}
+
+function onEditStatusChange(e: { newStatus: string }) {
+  editStatus.value = e.newStatus;
+}
+
+function cancelEdit() {
+  editMode.value = false;
+}
+
+function triggerEditSubmit() {
+  editFormRef.value?.triggerSubmit?.();
+}
+
+async function onEditFormSave(payload: any) {
+  if (!invoice.value?.id) return;
+  editSaving.value = true;
+  try {
+    const updated = await updateInvoice(invoice.value.id, { ...payload, status: editStatus.value });
+    toast.add({ title: 'Invoice updated', color: 'green' });
+    onInvoiceUpdated(updated);
+    editMode.value = false;
+  } catch (err: any) {
+    toast.add({ title: 'Failed to save invoice', description: err?.message, color: 'red' });
+  } finally {
+    editSaving.value = false;
+  }
+}
+
+async function handleInlineDelete() {
+  if (!invoice.value?.id) return;
+  if (!confirm('Delete this invoice? This cannot be undone.')) return;
+  editSaving.value = true;
+  try {
+    await deleteInvoice(invoice.value.id);
+    toast.add({ title: 'Invoice deleted', color: 'green' });
+    onInvoiceDeleted();
+  } catch (err: any) {
+    toast.add({ title: 'Failed to delete invoice', description: err?.message, color: 'red' });
+  } finally {
+    editSaving.value = false;
   }
 }
 
@@ -282,39 +349,121 @@ if (!props.compact) {
       </NuxtLink>
 
       <!-- Header — in compact mode the shell already shows title+subtitle,
-           so collapse to just the status pill + action row. -->
+           so collapse to just the status pill + action row.
+           Edit mode swaps the right-side button cluster from
+           [Ask Earnest][Edit] to [Cancel][Save] (Delete lives next to
+           the title in compact). -->
       <div class="flex items-center justify-between mb-5" :class="{ 'mt-2': compact }">
         <div>
           <div class="flex items-center gap-2">
             <h1 v-if="!compact" class="text-base font-semibold text-foreground">{{ invoice.invoice_code || 'Invoice' }}</h1>
             <span
-              v-if="invoice.status"
+              v-if="invoice.status && !editMode"
               class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
               :class="getStatusBadgeClasses(invoice.status)"
             >
               {{ invoice.status }}
             </span>
+            <span
+              v-if="editMode"
+              class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+            >
+              <Icon name="lucide:pencil" class="w-3 h-3" />
+              Editing
+            </span>
           </div>
           <p v-if="!compact" class="text-xs text-muted-foreground">{{ getClientName(invoice) }}</p>
         </div>
         <div class="flex items-center gap-1.5">
-          <button
-            v-if="!compact"
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-            @click="sidebarOpen = true"
-          >
-            <EarnestIcon class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Ask Earnest</span>
-          </button>
-          <button
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
-            @click="showEditModal = true"
-          >
-            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Edit</span>
-          </button>
+          <template v-if="!editMode">
+            <button
+              v-if="!compact"
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+              @click="sidebarOpen = true"
+            >
+              <EarnestIcon class="w-3.5 h-3.5" />
+              <span class="hidden sm:inline">Ask Earnest</span>
+            </button>
+            <button
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+              @click="enterEditMode"
+            >
+              <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+              <span class="hidden sm:inline">Edit</span>
+            </button>
+          </template>
+          <template v-else>
+            <button
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              :disabled="editSaving"
+              @click="cancelEdit"
+            >
+              Cancel
+            </button>
+            <button
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              :disabled="editSaving || !editFormRef?.hasLineItems"
+              @click="triggerEditSubmit"
+            >
+              <Icon :name="editSaving ? 'lucide:loader-2' : 'lucide:save'" class="w-3.5 h-3.5" :class="{ 'animate-spin': editSaving }" />
+              <span class="hidden sm:inline">{{ editSaving ? 'Saving…' : 'Save' }}</span>
+            </button>
+          </template>
         </div>
       </div>
+
+      <!-- ── Inline Edit Form ────────────────────────────────────────
+           When editMode is true the entire read-only body is replaced
+           by the same form the FormModal used to host. This keeps a
+           single editing surface — no stacked modal, no separate route. -->
+      <div v-if="editMode" class="space-y-4 pb-6">
+        <FormStatusTimeline
+          v-if="invoice"
+          :currentStatus="editStatus"
+          :statuses="invoiceStatuses"
+          collection="invoices"
+          :itemId="invoice.id"
+          class="mb-4"
+          @status-change="onEditStatusChange"
+        />
+        <InvoicesInvoiceForm
+          ref="editFormRef"
+          :invoice="invoice"
+          :saving="editSaving"
+          v-model:status="editStatus"
+          @save="onEditFormSave"
+        />
+        <div class="flex items-center justify-between pt-4 border-t border-border/40">
+          <button
+            class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-destructive border border-destructive/30 hover:bg-destructive/10 text-xs font-medium transition-colors disabled:opacity-50"
+            :disabled="editSaving"
+            @click="handleInlineDelete"
+          >
+            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+            Delete
+          </button>
+          <div class="flex items-center gap-2">
+            <button
+              class="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              :disabled="editSaving"
+              @click="cancelEdit"
+            >
+              Cancel
+            </button>
+            <button
+              class="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              :disabled="editSaving || !editFormRef?.hasLineItems"
+              @click="triggerEditSubmit"
+            >
+              <Icon :name="editSaving ? 'lucide:loader-2' : 'lucide:save'" class="w-3.5 h-3.5" :class="{ 'animate-spin': editSaving }" />
+              {{ editSaving ? 'Saving…' : 'Save changes' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Read-only view (default) ──────────────────────────────── -->
+      <div v-if="!editMode" class="contents">
 
       <!-- Record Payment quick-actions -->
       <div
@@ -620,15 +769,13 @@ if (!props.compact) {
         </div>
       </div>
 
-      <!-- Edit Modal -->
-      <InvoicesFormModal
-        v-model="showEditModal"
-        :invoice="invoice"
-        @updated="onInvoiceUpdated"
-        @deleted="onInvoiceDeleted"
-      />
+      </div>
+      <!-- /read-only view -->
 
-      <!-- Record Payment Modal -->
+      <!-- Record Payment Modal — kept for record-payment quick actions
+           (Check / Zelle / Venmo / Cash / Other + Edit existing) since
+           those still benefit from a focused commit step. Editing the
+           invoice itself is now inline (above). -->
       <InvoicesRecordPaymentModal
         v-model="showPaymentModal"
         :invoice="invoice"

@@ -17,15 +17,23 @@ import type { EmailDesignSettings } from '~~/shared/email/blocks';
 import { DEFAULT_EMAIL_DESIGN } from '~~/shared/email/blocks';
 
 const props = defineProps<{
-  templateName: string;
-  subjectTemplate: string;
+  /**
+   * templateName + subjectTemplate were edited here previously. Since
+   * those are now inline in the BlockBuilder top bar they're accepted as
+   * props (for backward-compat with the BlockBuilder's binding) but no
+   * longer rendered or emitted from this drawer. The drawer is design-
+   * tokens-only now.
+   */
+  templateName?: string;
+  subjectTemplate?: string;
   designSettings: Required<EmailDesignSettings>;
 }>();
 
+void props.templateName;
+void props.subjectTemplate;
+
 const emit = defineEmits<{
   close: [];
-  'update:templateName': [value: string];
-  'update:subjectTemplate': [value: string];
   'update:design': [key: keyof EmailDesignSettings, value: string];
 }>();
 
@@ -43,17 +51,14 @@ const FONT_OPTIONS = [
 
 const FONT_SIZES = ['13px', '14px', '15px', '16px', '17px', '18px', '20px'];
 
-const localName = ref(props.templateName);
-const localSubject = ref(props.subjectTemplate);
-watch(() => props.templateName, (v) => { localName.value = v; });
-watch(() => props.subjectTemplate, (v) => { localSubject.value = v; });
+// Suspend the slide-over FocusScope trap while this drawer is mounted —
+// otherwise inputs are unfocusable when the email template is itself
+// open in the universal slide-over (EmailTemplatePanel).
+const { suspend: suspendSlideOverTrap } = useSlideOverFocusTrapSuspend();
+let releaseTrap: (() => void) | null = null;
+onMounted(() => { releaseTrap = suspendSlideOverTrap(); });
+onBeforeUnmount(() => { releaseTrap?.(); releaseTrap = null; });
 
-function commitName() {
-  emit('update:templateName', localName.value.trim());
-}
-function commitSubject() {
-  emit('update:subjectTemplate', localSubject.value);
-}
 function resetToDefault(key: keyof EmailDesignSettings) {
   emit('update:design', key, DEFAULT_EMAIL_DESIGN[key]);
 }
@@ -61,8 +66,12 @@ function resetToDefault(key: keyof EmailDesignSettings) {
 
 <template>
   <Teleport to="body">
+    <!-- z-[70] (NOT z-50) so the drawer lands ABOVE the AppSlideOverStack
+         at z-60 when the email template is hosted inside EmailTemplatePanel.
+         Same pattern as [[project_slide_over_stack_v2_1]]: dialogs over a
+         slide-over need to clear the stack's z-index. -->
     <div
-      class="fixed inset-0 z-50 flex"
+      class="fixed inset-0 z-[70] flex"
       @keydown.esc="emit('close')"
     >
       <!-- Backdrop -->
@@ -72,8 +81,8 @@ function resetToDefault(key: keyof EmailDesignSettings) {
       <div class="relative ml-auto w-full max-w-sm h-full bg-card border-l border-border shadow-2xl flex flex-col">
         <div class="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
           <div>
-            <h3 class="text-sm font-semibold">Email Settings</h3>
-            <p class="text-[10px] text-muted-foreground mt-0.5">Subject, name, and design tokens</p>
+            <h3 class="text-sm font-semibold">Design</h3>
+            <p class="text-[10px] text-muted-foreground mt-0.5">Background, type, and tokens applied to every block</p>
           </div>
           <button
             class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors"
@@ -84,36 +93,13 @@ function resetToDefault(key: keyof EmailDesignSettings) {
         </div>
 
         <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-          <!-- Subject + name -->
-          <section class="space-y-3">
-            <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Identity</p>
-
-            <div>
-              <label class="text-[11px] font-medium text-muted-foreground mb-1.5 block">Template Name</label>
-              <input
-                v-model="localName"
-                type="text"
-                placeholder="March Newsletter"
-                class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
-                @blur="commitName"
-                @keyup.enter="commitName"
-              >
-              <p class="text-[10px] text-muted-foreground mt-1">Internal name shown in your templates list.</p>
-            </div>
-
-            <div>
-              <label class="text-[11px] font-medium text-muted-foreground mb-1.5 block">Subject Line</label>
-              <input
-                v-model="localSubject"
-                type="text"
-                placeholder="What lands in the inbox preview"
-                class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
-                @blur="commitSubject"
-                @keyup.enter="commitSubject"
-              >
-              <p class="text-[10px] text-muted-foreground mt-1">Supports merge tags like <code v-pre class="font-mono">{{first_name}}</code>.</p>
-            </div>
-          </section>
+          <!-- Note: Template Name + Subject Line live in the BlockBuilder
+               top bar now (the most-edited fields shouldn't need a drawer
+               trip). This drawer is design tokens only. -->
+          <p class="text-[10px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 leading-relaxed">
+            Editing the <span class="font-medium text-foreground">subject</span> or
+            <span class="font-medium text-foreground">name</span>? They're inline at the top of the editor.
+          </p>
 
           <!-- Design tokens -->
           <section class="space-y-3">

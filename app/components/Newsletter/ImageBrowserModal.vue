@@ -1,7 +1,9 @@
 <template>
   <Teleport to="body">
+    <!-- z-[70] so the modal lands above the AppSlideOverStack (z-60) when
+         opened from inside an email-template slide-over panel. -->
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       @click.self="$emit('close')"
     >
       <div class="bg-background rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
@@ -271,8 +273,15 @@ async function uploadFiles(files: FileList) {
   }
 }
 
+// Suspend slide-over FocusScope while this teleported modal is mounted —
+// otherwise the trap bounces focus on every input click when the email
+// template is being edited inside EmailTemplatePanel (slide-over).
+const { suspend: suspendSlideOverTrap } = useSlideOverFocusTrapSuspend();
+let releaseTrap: (() => void) | null = null;
+
 // Init — load root org folder name + contents
 onMounted(async () => {
+  releaseTrap = suspendSlideOverTrap();
   try {
     const rootFolder = await getFolder(props.orgFolderId);
     breadcrumbs.value = [{ id: props.orgFolderId, name: rootFolder?.name || 'Organization' }];
@@ -281,4 +290,6 @@ onMounted(async () => {
   }
   await fetchContents();
 });
+
+onBeforeUnmount(() => { releaseTrap?.(); releaseTrap = null; });
 </script>

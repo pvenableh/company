@@ -52,11 +52,40 @@ export type SlideOpenOptions = {
 
 const STACK_KEY = 'apps-slide-over-stack';
 const FLIP_KEY = 'apps-slide-over-flips';
+const TRAP_SUSPEND_KEY = 'apps-slide-over-trap-suspend';
 const HISTORY_MARKER = '__apps_slide_pushed';
 const MAX_DEPTH = 2;
 
 function useGlobalStack() {
 	return useState<SlidePanel[]>(STACK_KEY, () => []);
+}
+
+/**
+ * Trap-suspend counter — incremented while a modal/drawer renders ABOVE
+ * the slide-over stack (FormModal → AppBottomSheet, EmailSettingsPanel,
+ * RecordPaymentModal, etc.) so AppSlideOverStack can flip its FocusScope
+ * out of `trapped` mode. The trap is what makes the slide-over modal in
+ * the first place — but reka-ui's FocusScope catches focusin events at
+ * the document level, so a teleported modal child whose DOM lives at
+ * `body` is *outside* the scope and focus gets bounced back the moment
+ * the user clicks an input. Counter (not bool) because more than one
+ * modal can be open at a time (e.g. status confirm over an edit sheet).
+ *
+ * Use via `useSlideOverFocusTrapSuspend()` — call `suspend()` on the
+ * modal's mount and the returned `release()` on its unmount.
+ */
+export function useSlideOverFocusTrapSuspend() {
+	const count = useState<number>(TRAP_SUSPEND_KEY, () => 0);
+	function suspend() {
+		count.value++;
+		let released = false;
+		return () => {
+			if (released) return;
+			released = true;
+			count.value = Math.max(0, count.value - 1);
+		};
+	}
+	return { count: readonly(count), suspend };
 }
 
 /**

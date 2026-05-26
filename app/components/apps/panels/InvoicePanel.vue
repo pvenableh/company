@@ -43,16 +43,6 @@ const status = computed(() => (invoice.value as any)?.invoice_status || null);
     :flip-from="flipFrom"
     @close="$emit('close')"
   >
-    <template #actions>
-      <NuxtLink
-        :to="`/invoices/detail/${id}`"
-        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        title="Open the invoice as a full page"
-      >
-        <Icon name="lucide:external-link" class="w-3 h-3" />
-        Full Page
-      </NuxtLink>
-    </template>
 
     <template #hero>
       <div class="flex items-center justify-between gap-3 px-1 py-1.5">

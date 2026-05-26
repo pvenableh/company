@@ -3,7 +3,7 @@
 		<Transition name="modal-fade">
 			<div
 				v-if="modelValue"
-				class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+				class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
 				@click.self="close"
 			>
 				<div class="ios-card shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto p-6 space-y-5">
@@ -275,9 +275,20 @@ const remainingBalance = computed(() => {
 	return Math.max(0, Math.round((total - paid) * 100) / 100);
 });
 
+// Suspend the slide-over FocusScope trap while this modal is open —
+// teleported children sit outside the FocusScope's DOM and would
+// otherwise have focus bounced back on every input click.
+const { suspend: suspendSlideOverTrap } = useSlideOverFocusTrapSuspend();
+let releaseTrap: (() => void) | null = null;
 watch(
 	() => props.modelValue,
 	(open) => {
+		if (open) {
+			if (!releaseTrap) releaseTrap = suspendSlideOverTrap();
+		} else if (releaseTrap) {
+			releaseTrap();
+			releaseTrap = null;
+		}
 		if (!open) return;
 		// Reset/seed when opening
 		if (isEdit.value && props.payment) {
@@ -390,6 +401,8 @@ async function handleSubmit() {
 function close() {
 	emit('update:modelValue', false);
 }
+
+onBeforeUnmount(() => { releaseTrap?.(); releaseTrap = null; });
 
 function formatAmount(value: number): string {
 	return new Intl.NumberFormat('en-US', {
