@@ -38,13 +38,14 @@ const loading = ref(false);
 type StudioView = 'approval' | 'upcoming' | 'calendar' | 'inbox' | 'analytics';
 const STUDIO_VIEW_KEYS: StudioView[] = ['approval', 'upcoming', 'calendar', 'inbox', 'analytics'];
 
-// Segmented-control config. Order MUST match STUDIO_VIEW_KEYS so the
-// sliding thumb's --active-index lines up with the actual button at
-// that index.
-const STUDIO_VIEW_TABS: { key: StudioView; label: string; icon: string }[] = [
+// Lens options for the hero LensChip popover. P3.6 retired the iOS
+// segmented control; this list now drives the chip's icon/label and
+// the five-option chooser inside the popover. Order = popover render
+// order (River first since it's the canvas's home lens).
+const STUDIO_LENS_OPTIONS: { key: StudioView; label: string; icon: string }[] = [
+  { key: 'calendar', label: 'River', icon: 'lucide:waves' },
   { key: 'approval', label: 'Approval', icon: 'lucide:list-checks' },
   { key: 'upcoming', label: 'Upcoming', icon: 'lucide:calendar-clock' },
-  { key: 'calendar', label: 'River', icon: 'lucide:waves' },
   { key: 'inbox', label: 'Inbox', icon: 'lucide:inbox' },
   { key: 'analytics', label: 'Analytics', icon: 'lucide:bar-chart-2' },
 ];
@@ -124,6 +125,24 @@ function composeKind(kind: 'social' | 'email') {
   composeChooserOpen.value = false;
   zoom.compose(kind);
 }
+
+// ── P3.6 — Lens chip + popover (replaces segmented control) ───────
+// The Studio hero now carries a "Lens: <current>" chip. Clicking it
+// opens a five-option chooser that mutates `view` — the existing
+// view↔URL watchers handle ?view= sync, so this is the only DOM
+// affordance that changes lens.
+const lensChooserOpen = ref(false);
+function toggleLensChooser() {
+  lensChooserOpen.value = !lensChooserOpen.value;
+}
+function pickLens(next: StudioView) {
+  lensChooserOpen.value = false;
+  if (view.value === next) return;
+  view.value = next;
+}
+const currentLens = computed(
+  () => STUDIO_LENS_OPTIONS.find((o) => o.key === view.value) ?? STUDIO_LENS_OPTIONS[0]!,
+);
 
 // Composition Canvas wiring for `created` emits. The social river
 // surface refetches on its own via a watch on `zoom.activeId` (see
@@ -773,6 +792,40 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <!-- Lens chip — view selector. P3.6 retired the iOS segmented
+               control; the chip is the only DOM affordance that mutates
+               `view`. Same UiActionButton/UPopover trusted-event quirk
+               as the compose chooser below — drive open state via an
+               explicit toggle handler on the Vue click event. -->
+          <UPopover v-model:open="lensChooserOpen" :popper="{ placement: 'bottom-end' }">
+            <UiActionButton :icon="currentLens.icon" @click="toggleLensChooser">
+              <span>Lens: {{ currentLens.label }}</span>
+              <Icon name="lucide:chevron-down" class="w-3 h-3 ml-0.5 -mr-0.5 opacity-70" />
+            </UiActionButton>
+            <template #panel>
+              <div class="lens-chooser">
+                <p class="lens-chooser__title">Switch lens</p>
+                <button
+                  v-for="opt in STUDIO_LENS_OPTIONS"
+                  :key="opt.key"
+                  type="button"
+                  class="lens-chooser__option"
+                  :class="{ 'lens-chooser__option--active': view === opt.key }"
+                  @click="pickLens(opt.key)"
+                >
+                  <span class="lens-chooser__icon">
+                    <Icon :name="opt.icon" class="w-4 h-4" />
+                  </span>
+                  <span class="lens-chooser__label">{{ opt.label }}</span>
+                  <Icon
+                    v-if="view === opt.key"
+                    name="lucide:check"
+                    class="lens-chooser__check"
+                  />
+                </button>
+              </div>
+            </template>
+          </UPopover>
           <!-- Compose entry — kind-chooser popover (social vs email).
                UiActionButton owns its own native `@click` (re-emitting
                to its component event), which keeps Radix's PopoverTrigger
@@ -843,18 +896,6 @@ onMounted(() => {
         </div>
       </div>
     </section>
-
-    <!-- iOS-style segmented control. Shared <AppsAppSegmentedControl>
-         drives the same iOS spring + thumb pattern used elsewhere
-         (slide-over stack, bottom sheet). Folds the legacy
-         /social/{calendar,inbox,analytics} surfaces in as the last 3
-         tabs so the apps shell never remounts. -->
-    <AppsAppSegmentedControl
-      v-model="view"
-      :tabs="STUDIO_VIEW_TABS"
-      aria-label="Studio view"
-      class="mb-4"
-    />
 
     <!-- State pill tabs — only meaningful for the Approval Queue view -->
     <div v-if="view === 'approval'" class="studio-tabs" role="tablist" aria-label="Approval state filter">
@@ -1568,5 +1609,48 @@ onMounted(() => {
 
 .compose-chooser__hint {
   @apply block text-[11px] text-muted-foreground leading-tight mt-0.5;
+}
+
+/* ── P3.6 lens-chooser popover ──────────────────────────────────────── */
+
+.lens-chooser {
+  @apply flex flex-col gap-0.5 min-w-[200px] p-1;
+}
+
+.lens-chooser__title {
+  @apply px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider
+    text-muted-foreground;
+}
+
+.lens-chooser__option {
+  @apply flex items-center gap-2.5 px-2.5 py-1.5 rounded-md
+    hover:bg-muted/60 transition-colors text-left;
+}
+
+.lens-chooser__option--active {
+  @apply bg-muted/40;
+}
+
+.lens-chooser__icon {
+  @apply w-7 h-7 rounded-full flex items-center justify-center shrink-0
+    text-foreground/70 bg-muted/70;
+}
+
+.lens-chooser__option--active .lens-chooser__icon {
+  @apply text-white;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
+  );
+  box-shadow: 0 2px 8px -4px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+}
+
+.lens-chooser__label {
+  @apply text-sm font-medium text-foreground;
+}
+
+.lens-chooser__check {
+  @apply ml-auto w-4 h-4 text-success;
 }
 </style>
