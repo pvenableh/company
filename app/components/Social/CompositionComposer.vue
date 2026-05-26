@@ -1,0 +1,641 @@
+<script setup lang="ts">
+/**
+ * CompositionComposer — the z=3 master-variant composer surface, rendered
+ * in-place inside the Composition Canvas.
+ *
+ * P3 Phase 3.2. Same authoring affordances as `SocialComposePanel.vue` —
+ * caption + per-platform variants + media + schedule + platform picker —
+ * but mounted inside the canvas instead of a slide-over. Reads and writes
+ * via the P3.0 `useComposition` adapter so the patch shape stays
+ * server-canonicalized (variants collapse, scheduled_at normalization).
+ *
+ * Coexistence: this is ADDITIVE. `SocialComposePanel.vue` still ships as
+ * the slide-over entry from outside the canvas (Pulse "New Post", apps
+ * shell "+ Compose", deep-links). Only canvas-internal interactions —
+ * a click + Cmd+= from a leaf, or a `?z=3&id=<uuid>` deep-link — push to
+ * this composer. P3.6 collapses the duplication.
+ *
+ * Motion: opacity + 1.04 → 1.0 scale entry, master spring. The canvas
+ * host runs the crossfade against the lifted card; this component just
+ * paints itself once it's mounted.
+ *
+ * @see app/composables/useComposition.ts — the adapter (P3.0).
+ * @see app/components/apps/panels/SocialComposePanel.vue — the slide-over
+ *      sibling. Form bits copied (not re-imported) per handoff guidance.
+ */
+import { Icon } from '#components';
+import { format, addHours, roundToNearestMinutes } from 'date-fns';
+import draggable from 'vuedraggable';
+import type {
+  SocialAccountPublic,
+  SocialPost,
+  SocialPostTarget,
+  PostType,
+  SocialPlatform,
+} from '~~/shared/social';
+import { getSocialPlatformIcon } from '~/utils/icons';
+
+const props = defineProps<{
+  /** Active post id (canvas activeId). MUST match a row reachable via
+   *  `useComposition.fetchById()`. */
+  postId: string;
+}>();
+
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'saved', post: SocialPost): void;
+}>();
+
+const toast = useToast();
+const { fetchById, update } = useComposition();
+
+// ── Server-side state ──────────────────────────────────────────────
+const loading = ref(true);
+const original = ref<SocialPost | null>(null);
+const fetchErr = ref<string | null>(null);
+
+// ── Form state ─────────────────────────────────────────────────────
+const caption = ref('');
+const captionVariants = ref<Partial<Record<SocialPlatform, string>>>({});
+const mediaUrls = ref<string[]>([]);
+const mediaTypes = ref<('image' | 'video')[]>([]);
+const selectedAccounts = ref<string[]>([]);
+const scheduledAt = ref(
+  format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
+);
+const isDraft = ref(false);
+const ctaUrl = ref('');
+const ctaLabel = ref('');
+const linkedInVisibility = ref<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
+const mediaInput = ref('');
+const isSubmitting = ref(false);
+const showFilePicker = ref(false);
+
+const { data: accountsData } = useLazyFetch('/api/social/accounts');
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
+
+const accountGroups = computed(() => {
+  const groups: { label: string; clientId: string | null; accounts: SocialAccountPublic[] }[] = [];
+  const houseAccounts = accounts.value.filter((a) => !a.client);
+  if (houseAccounts.length) groups.push({ label: 'House (agency-owned)', clientId: null, accounts: houseAccounts });
+
+  const byClient = new Map<string, { name: string; accounts: SocialAccountPublic[] }>();
+  for (const a of accounts.value) {
+    if (!a.client) continue;
+    if (!byClient.has(a.client)) byClient.set(a.client, { name: a.client_name || 'Unnamed Client', accounts: [] });
+    byClient.get(a.client)!.accounts.push(a);
+  }
+  for (const [id, { name, accounts: list }] of byClient) {
+    groups.push({ label: name, clientId: id, accounts: list });
+  }
+  return groups;
+});
+
+const selectedAccountDetails = computed(() =>
+  accounts.value.filter((a) => selectedAccounts.value.includes(a.id)),
+);
+
+const selectedPlatforms = computed(() => {
+  const set = new Set<SocialPlatform>();
+  for (const a of selectedAccountDetails.value) set.add(a.platform);
+  return [...set];
+});
+
+const instagramSelected = computed(() => selectedPlatforms.value.includes('instagram'));
+const linkedinSelected = computed(() => selectedPlatforms.value.includes('linkedin'));
+
+const mediaItems = computed<{ url: string; type: 'image' | 'video' }[]>({
+  get: () => mediaUrls.value.map((url, i) => ({ url, type: mediaTypes.value[i] || 'image' })),
+  set: (next) => {
+    mediaUrls.value = next.map((it) => it.url);
+    mediaTypes.value = next.map((it) => it.type);
+  },
+});
+
+// ── Load row ───────────────────────────────────────────────────────
+async function loadPost(id: string) {
+  loading.value = true;
+  fetchErr.value = null;
+  try {
+    const comp = await fetchById(id);
+    if (!comp || comp.kind !== 'social') {
+      throw new Error(comp ? 'Composition is not a social post' : 'Post not found');
+    }
+    // The view-model already strips Directus-flavored shape; the form
+    // hydrates from the SocialPost row though, so fetch the raw row too
+    // (single round-trip — adapter already did it under the hood, but
+    // for the form we want the original target rows for re-emit).
+    const rawRes = await $fetch<{ data: SocialPost }>(`/api/social/posts/${id}`, {
+      credentials: 'include',
+    });
+    original.value = rawRes.data;
+    caption.value = comp.body;
+    captionVariants.value = (comp.variants ?? {}) as Partial<Record<SocialPlatform, string>>;
+    mediaUrls.value = [...comp.media_urls];
+    mediaTypes.value = [...comp.media_types];
+    selectedAccounts.value = comp.targets.map((t) => t.account_id);
+    ctaUrl.value = comp.cta_url ?? '';
+    ctaLabel.value = comp.cta_label ?? '';
+    isDraft.value = comp.status === 'draft';
+    if (comp.scheduled_at) {
+      const d = new Date(comp.scheduled_at);
+      if (!Number.isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        scheduledAt.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+    }
+    // Pull LinkedIn visibility off the original platform target options.
+    const liTarget = comp.targets.find((t) => t.platform === 'linkedin');
+    const liOpts = (liTarget?.raw?.options as { visibility?: 'PUBLIC' | 'CONNECTIONS' } | undefined);
+    if (liOpts?.visibility) linkedInVisibility.value = liOpts.visibility;
+  } catch (err: any) {
+    fetchErr.value = err?.message || 'Could not load post';
+  } finally {
+    loading.value = false;
+  }
+}
+
+watch(
+  () => props.postId,
+  (next) => {
+    if (next) loadPost(next);
+  },
+  { immediate: true },
+);
+
+// ── Char-limit guard (mirrors SocialComposePanel) ────────────────
+function effectiveCaptionFor(p: SocialPlatform): string {
+  const v = captionVariants.value[p];
+  return typeof v === 'string' ? v : caption.value;
+}
+
+const captionWarning = computed<string | null>(() => {
+  for (const p of selectedPlatforms.value) {
+    const len = effectiveCaptionFor(p).length;
+    if (p === 'instagram' && len > 2200) return 'Instagram captions max 2,200 characters';
+    if (p === 'linkedin' && len > 3000) return 'LinkedIn posts max 3,000 characters';
+    if (p === 'tiktok' && len > 4000) return 'TikTok captions max 4,000 characters';
+    if (p === 'threads' && len > 500) return 'Threads posts max 500 characters';
+  }
+  return null;
+});
+
+const derivedPostType = computed<PostType>(() => {
+  if (mediaUrls.value.length === 0) return 'text';
+  if (mediaUrls.value.length > 1) return 'carousel';
+  if (mediaTypes.value[0] === 'video') return 'reel';
+  return 'image';
+});
+
+const canSubmit = computed(() => {
+  const hasCaption = caption.value.trim().length > 0;
+  const hasMedia = mediaUrls.value.length > 0;
+  const hasAccounts = selectedAccounts.value.length > 0;
+  const noWarning = !captionWarning.value;
+  return hasCaption && (hasMedia || derivedPostType.value === 'text') && hasAccounts && noWarning;
+});
+
+// ── Media + accounts handlers ────────────────────────────────────
+function addMedia() {
+  if (!mediaInput.value.trim()) return;
+  const url = mediaInput.value.trim();
+  const isVideo = /\.(mp4|mov|webm|avi)$/i.test(url) || url.includes('video');
+  mediaUrls.value.push(url);
+  mediaTypes.value.push(isVideo ? 'video' : 'image');
+  mediaInput.value = '';
+}
+function removeMedia(index: number) {
+  mediaUrls.value.splice(index, 1);
+  mediaTypes.value.splice(index, 1);
+}
+function toggleAccount(accountId: string) {
+  const i = selectedAccounts.value.indexOf(accountId);
+  if (i === -1) selectedAccounts.value.push(accountId);
+  else selectedAccounts.value.splice(i, 1);
+}
+function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
+  for (const f of picked) {
+    mediaUrls.value.push(f.url);
+    mediaTypes.value.push(f.type);
+  }
+  showFilePicker.value = false;
+}
+
+// ── AI trim (parity with the slide-over panel) ───────────────────
+const PLATFORM_LIMIT: Record<SocialPlatform, number> = {
+  instagram: 2200,
+  linkedin: 3000,
+  tiktok: 4000,
+  threads: 500,
+  facebook: 4000,
+};
+const trimming = ref(false);
+async function handleRequestTrim(lane: SocialPlatform | 'master') {
+  if (trimming.value) return;
+  let targetPlatform: SocialPlatform;
+  let sourceText: string;
+  if (lane === 'master') {
+    if (selectedPlatforms.value.length === 0) return;
+    targetPlatform = selectedPlatforms.value.reduce((tight, p) =>
+      PLATFORM_LIMIT[p] < PLATFORM_LIMIT[tight] ? p : tight,
+    );
+    sourceText = caption.value;
+  } else {
+    targetPlatform = lane;
+    sourceText = effectiveCaptionFor(lane);
+  }
+  trimming.value = true;
+  try {
+    const res: any = await $fetch('/api/social/ai-trim', {
+      method: 'POST',
+      body: {
+        text: sourceText,
+        platform: targetPlatform,
+        target_chars: PLATFORM_LIMIT[targetPlatform],
+        cta_url: ctaUrl.value.trim() || null,
+        cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
+      },
+    });
+    const trimmed: string = String(res?.caption || '').trim();
+    if (!trimmed) {
+      toast.add({
+        title: 'No trim returned',
+        icon: 'i-lucide-alert-circle',
+        color: 'amber',
+      });
+      return;
+    }
+    captionVariants.value = { ...captionVariants.value, [targetPlatform]: trimmed };
+    toast.add({
+      title: `Trimmed for ${targetPlatform}`,
+      description: `Forked a ${trimmed.length}-char variant.`,
+      icon: 'i-lucide-sparkles',
+      color: 'green',
+    });
+  } catch (err: any) {
+    toast.add({
+      title: 'Trim failed',
+      description: err?.data?.message || 'Earnest could not trim the caption.',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    trimming.value = false;
+  }
+}
+
+// ── Save ─────────────────────────────────────────────────────────
+function buildTargets() {
+  return selectedAccountDetails.value.map((account) => ({
+    kind: 'social_account' as const,
+    platform: account.platform,
+    account_id: account.id,
+    account_name: account.account_name,
+    raw: {
+      platform: account.platform,
+      account_id: account.id,
+      account_name: account.account_name,
+      options:
+        account.platform === 'tiktok'
+          ? {
+              privacy_level: 'PUBLIC_TO_EVERYONE' as const,
+              disable_duet: false,
+              disable_stitch: false,
+              disable_comment: false,
+              post_mode: 'MEDIA_UPLOAD' as const,
+            }
+          : account.platform === 'linkedin'
+            ? { visibility: linkedInVisibility.value }
+            : undefined,
+    } as SocialPostTarget,
+  }));
+}
+
+async function save() {
+  if (!canSubmit.value || !original.value) return;
+  isSubmitting.value = true;
+  try {
+    const scheduledISO = new Date(scheduledAt.value).toISOString();
+    // Reuse the adapter — patch shape mirrors what `socialPatchBody`
+    // expects. Server normalizes effective-master variants + auto-promotes
+    // approval_state if needed (Phase 6 publisher bridge).
+    await update(
+      { type: 'social_post', post_id: original.value.id },
+      {
+        kind: 'social',
+        body: caption.value,
+        variants: Object.keys(captionVariants.value).length
+          ? captionVariants.value
+          : null,
+        targets: buildTargets(),
+        media_urls: mediaUrls.value,
+        media_types: mediaTypes.value,
+        post_type: derivedPostType.value,
+        scheduled_at: scheduledISO,
+        status: isDraft.value ? 'draft' : 'scheduled',
+        cta_url: ctaUrl.value.trim() || null,
+        cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
+      },
+    );
+    // Re-fetch the raw row so the river leaf updates in place (parent
+    // SocialPost[] is keyed on id, so emitting `saved` lets the host
+    // refresh the in-memory leaf rather than full refetch).
+    const refreshed = await $fetch<{ data: SocialPost }>(`/api/social/posts/${original.value.id}`, {
+      credentials: 'include',
+    });
+    if (refreshed?.data) emit('saved', refreshed.data);
+    toast.add({
+      title: isDraft.value ? 'Draft saved' : 'Post updated',
+      icon: 'i-lucide-check-circle',
+      color: 'green',
+    });
+  } catch (err: any) {
+    toast.add({
+      title: 'Could not save',
+      description: err?.data?.message || err?.message || 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+</script>
+
+<template>
+  <section
+    class="composer-surface"
+    role="dialog"
+    aria-modal="false"
+    aria-label="Edit composition"
+    @click.stop
+  >
+    <header class="composer-surface__header">
+      <div class="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          class="composer-surface__back"
+          @click="emit('close')"
+        >
+          <Icon name="lucide:chevron-left" class="w-4 h-4" />
+          <span>Back to lifted</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <UButton
+          @click="save"
+          :loading="isSubmitting"
+          :disabled="!canSubmit"
+          size="sm"
+          :icon="isDraft ? 'i-lucide-save' : 'i-lucide-calendar-clock'"
+        >
+          {{ isDraft ? 'Save Draft' : 'Save & Schedule' }}
+        </UButton>
+      </div>
+    </header>
+
+    <div v-if="loading" class="composer-surface__loader">
+      <Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
+      <p class="text-xs text-muted-foreground">Loading composition…</p>
+    </div>
+
+    <div v-else-if="fetchErr" class="composer-surface__error">
+      <Icon name="lucide:alert-circle" class="w-6 h-6 text-rose-500" />
+      <p class="text-sm text-foreground">{{ fetchErr }}</p>
+      <UButton size="sm" variant="soft" @click="emit('close')">Close</UButton>
+    </div>
+
+    <div v-else class="composer-surface__body">
+      <SocialMasterVariantComposer
+        v-model:caption="caption"
+        v-model:variants="captionVariants"
+        :platforms="selectedPlatforms"
+        :cta-url="ctaUrl"
+        :cta-label="ctaLabel"
+        @request-trim="handleRequestTrim"
+      />
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Media</h2>
+            <span v-if="derivedPostType === 'text'" class="text-xs text-gray-400">Optional — text-only post</span>
+          </div>
+        </template>
+
+        <div v-if="mediaUrls.length > 0">
+          <p
+            v-if="mediaUrls.length > 1"
+            class="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground"
+          >
+            <Icon name="lucide:grip-vertical" class="w-3 h-3" />
+            Drag to reorder — first slide is the cover image
+          </p>
+          <draggable
+            v-model="mediaItems"
+            item-key="url"
+            class="grid grid-cols-3 gap-3 mb-4"
+            handle=".composer-drag-handle"
+            :animation="150"
+          >
+            <template #item="{ element, index }">
+              <div class="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden group">
+                <img
+                  v-if="element.type === 'image'"
+                  :src="element.url"
+                  :alt="`Media ${index + 1}`"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <Icon name="lucide:video" class="w-8 h-8 text-gray-400" />
+                </div>
+                <div
+                  v-if="mediaUrls.length > 1"
+                  class="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 text-white text-[11px] font-semibold flex items-center justify-center backdrop-blur-sm"
+                >
+                  {{ index + 1 }}
+                </div>
+                <div
+                  class="composer-drag-handle absolute inset-0 cursor-grab active:cursor-grabbing"
+                  title="Drag to reorder"
+                />
+                <button
+                  @click="removeMedia(index)"
+                  class="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                >
+                  <Icon name="lucide:x" class="w-4 h-4" />
+                </button>
+              </div>
+            </template>
+          </draggable>
+        </div>
+
+        <div class="flex gap-2">
+          <UButton variant="soft" icon="i-lucide-folder-open" @click="showFilePicker = true">
+            Choose from Files
+          </UButton>
+          <UInput v-model="mediaInput" placeholder="…or paste a media URL" class="flex-1" @keyup.enter="addMedia" />
+          <UButton variant="ghost" @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()" />
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Add a Link</h2>
+            <span class="text-xs text-gray-400">Optional</span>
+          </div>
+        </template>
+        <div class="space-y-3">
+          <UInput v-model="ctaUrl" type="url" placeholder="https://example.com/landing-page" />
+          <UInput v-model="ctaLabel" placeholder='Short label (e.g. "Visit Website")' />
+        </div>
+      </UCard>
+
+      <UCard v-if="linkedinSelected">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <Icon name="logos:linkedin-icon" class="w-4 h-4 shrink-0" />
+            <h2 class="font-semibold text-gray-900 dark:text-white">LinkedIn Options</h2>
+          </div>
+        </template>
+        <div class="flex gap-2">
+          <UButton
+            :variant="linkedInVisibility === 'PUBLIC' ? 'solid' : 'soft'"
+            :color="linkedInVisibility === 'PUBLIC' ? 'primary' : 'gray'"
+            size="sm"
+            icon="i-lucide-globe"
+            @click="linkedInVisibility = 'PUBLIC'"
+          >
+            Public
+          </UButton>
+          <UButton
+            :variant="linkedInVisibility === 'CONNECTIONS' ? 'solid' : 'soft'"
+            :color="linkedInVisibility === 'CONNECTIONS' ? 'primary' : 'gray'"
+            size="sm"
+            icon="i-lucide-users"
+            @click="linkedInVisibility = 'CONNECTIONS'"
+          >
+            Connections Only
+          </UButton>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Post To</h2>
+            <UBadge v-if="selectedAccounts.length > 0" color="primary" variant="subtle">
+              {{ selectedAccounts.length }} selected
+            </UBadge>
+          </div>
+        </template>
+        <div v-if="accounts.length === 0" class="text-center py-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400">No accounts connected yet.</p>
+        </div>
+        <div v-else class="space-y-3 max-h-[260px] overflow-y-auto">
+          <div v-for="group in accountGroups" :key="group.clientId ?? 'house'">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 px-1">
+              {{ group.label }}
+            </p>
+            <div class="space-y-1">
+              <label
+                v-for="account in group.accounts"
+                :key="account.id"
+                class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
+                :class="
+                  selectedAccounts.includes(account.id)
+                    ? 'bg-primary/10'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                "
+              >
+                <UCheckbox
+                  :model-value="selectedAccounts.includes(account.id)"
+                  @update:model-value="toggleAccount(account.id)"
+                />
+                <UAvatar
+                  :src="account.profile_picture_url || undefined"
+                  :alt="account.account_name"
+                  :icon="account.profile_picture_url ? undefined : getSocialPlatformIcon(account.platform)"
+                  size="xs"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {{ account.account_name }}
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    @{{ account.account_handle }}
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold text-gray-900 dark:text-white">Schedule</h2>
+        </template>
+        <div class="space-y-3">
+          <UInput v-model="scheduledAt" type="datetime-local" />
+          <UCheckbox v-model="isDraft" label="Save as draft (won't auto-publish)" />
+        </div>
+      </UCard>
+
+      <div v-if="selectedAccountDetails.length > 0">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-3">Preview</h2>
+        <SocialPostPreview
+          :caption="caption"
+          :variants="captionVariants"
+          :media-urls="mediaUrls"
+          :media-types="mediaTypes"
+          :cta-url="ctaUrl"
+          :cta-label="ctaLabel"
+          :accounts="selectedAccountDetails"
+          :post-type="derivedPostType"
+        />
+      </div>
+    </div>
+
+    <SocialMediaFilePicker
+      v-if="showFilePicker"
+      @close="showFilePicker = false"
+      @picked="onPickFiles"
+    />
+  </section>
+</template>
+
+<style scoped>
+@reference "~/assets/css/tailwind.css";
+
+.composer-surface {
+  @apply flex flex-col w-full max-w-3xl mx-auto rounded-2xl border border-border
+    bg-card shadow-2xl overflow-hidden;
+  max-height: min(86vh, 900px);
+  will-change: transform, opacity;
+}
+
+.composer-surface__header {
+  @apply flex items-center justify-between gap-3 px-4 py-3
+    border-b border-border bg-card/95 backdrop-blur-md;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.composer-surface__back {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+    text-xs font-medium text-muted-foreground bg-muted/40
+    hover:text-foreground hover:bg-muted transition-colors;
+}
+
+.composer-surface__loader,
+.composer-surface__error {
+  @apply flex flex-col items-center justify-center gap-3 py-16;
+}
+
+.composer-surface__body {
+  @apply flex flex-col gap-5 px-4 py-5 overflow-y-auto;
+}
+</style>

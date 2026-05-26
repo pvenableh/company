@@ -71,14 +71,29 @@ const zoom = useCompositionZoom();
 const canvasLens = computed(() => view.value);
 // Bind bag for the <component :is> wrapper. Empty when the flag is OFF so
 // the passthrough <div> doesn't get extraneous DOM attributes / Vue warns.
+// activeId is sourced from the canvas's own zoom singleton — RiverSurface
+// hands the id over via `lift()`, the canvas reads it from there.
 const canvasBind = computed(() => {
   if (!canvasOn.value) return {} as Record<string, unknown>;
   return {
     z: zoom.z.value,
     lens: canvasLens.value,
-    activeId: selectedPost.value?.id ?? null,
+    activeId: zoom.activeId.value,
+    onPostUpdated: onCanvasPostUpdated,
   } as Record<string, unknown>;
 });
+
+/**
+ * Canvas composer saved a post. Update the in-memory list so the river
+ * leaf re-renders with the new caption / schedule / variants — no full
+ * refetch needed. The selectedPost ref (legacy bottom-sheet detail) gets
+ * the same treatment in case the user re-opens it later.
+ */
+function onCanvasPostUpdated(post: SocialPost) {
+  const idx = posts.value.findIndex((p) => p.id === post.id);
+  if (idx >= 0) posts.value[idx] = post;
+  if (selectedPost.value?.id === post.id) selectedPost.value = post;
+}
 
 const stateFilter = ref<'all' | ApprovalState>('all');
 

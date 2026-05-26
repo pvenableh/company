@@ -21,6 +21,18 @@ import type { SocialPost } from '~~/shared/social';
 import { getSocialPlatformIcon } from '~/utils/icons';
 
 const toast = useToast();
+const route = useRoute();
+
+// Composition Canvas P3.2 — `?canvas=1` reroutes leaf clicks into the
+// canvas lift path instead of opening the legacy modal. The composable
+// singleton is shared with the StudioSurface wrapper (the `?canvas=1`
+// host), so the FLIP source rect we capture here drives the same
+// lifted-card component the canvas mounts.
+const canvasOn = computed<boolean>(() => {
+  const v = route.query.canvas;
+  return v === '1' || v === 'true';
+});
+const zoom = useCompositionZoom();
 
 // ── Range window ─────────────────────────────────────────────────
 // 21-day rolling window: 7 days back, today, 13 days forward. Enough
@@ -223,6 +235,9 @@ interface DragState {
   dx: number;
   dy: number;
   moved: boolean;
+  /** Bounding rect of the leaf at pointerdown — captured so the canvas
+   *  FLIP has the source pose even after the leaf re-renders post-drag. */
+  sourceRect: DOMRect | null;
 }
 
 const drag = ref<DragState | null>(null);
@@ -244,6 +259,11 @@ function onPointerDown(e: PointerEvent, leaf: PlacedLeaf) {
     dx: 0,
     dy: 0,
     moved: false,
+    // Capture BEFORE any hover transform applies — getBoundingClientRect()
+    // here gives the leaf's current screen pose, which is what the lifted
+    // card needs to FLIP from. We stash it on pointerdown rather than click
+    // so the breathing animation's transient transforms don't perturb it.
+    sourceRect: target.getBoundingClientRect(),
   };
 }
 
@@ -260,7 +280,16 @@ async function onPointerUp(e: PointerEvent, leaf: PlacedLeaf) {
   drag.value = null;
   if (!d) return;
   if (!d.moved) {
-    // Click — open the post detail modal.
+    // Click. Under `?canvas=1`, the canvas owns the drill-in — hand the
+    // captured source rect to the zoom composable so the lifted card can
+    // FLIP from the leaf's bounding rect. Otherwise fall through to the
+    // legacy modal (kept until P3.6 retires this surface).
+    if (canvasOn.value) {
+      zoom.lift(String(leaf.post.id), d.sourceRect
+        ? { x: d.sourceRect.x, y: d.sourceRect.y, width: d.sourceRect.width, height: d.sourceRect.height }
+        : null);
+      return;
+    }
     openPost(leaf.post);
     return;
   }
