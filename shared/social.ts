@@ -107,6 +107,13 @@ export interface SocialPost {
 	figma_frame_url?: string | null;
 	target_month?: string | null;
 	content_plan?: number | null;
+	/**
+	 * Per-platform caption forks for the master-variant composer.
+	 * `null` (or omitted key) = inherit master `caption`. Present key with a
+	 * non-empty string = forked variant published in place of master for
+	 * that platform.
+	 */
+	caption_variants?: Partial<Record<SocialPlatform, string>> | null;
 }
 
 // Dashboard stats summary

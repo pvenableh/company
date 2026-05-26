@@ -3751,6 +3751,8 @@ export interface SocialPost {
 	target_month?: string | null;
 	/** @description Content plan this post belongs to (monthly cadence, campaign, or launch). */
 	content_plan?: ContentPlan | string | null;
+	/** @description Per-platform caption forks. null = all channels publish the master caption. Shape: { instagram?: string, linkedin?: string, facebook?: string, threads?: string, tiktok?: string }. */
+	caption_variants?: Record<string, any> | null;
 }
 
 export interface SocialThread {

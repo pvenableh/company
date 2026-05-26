@@ -27,8 +27,21 @@ const APPROVAL_STATES = [
 	'published',
 ] as const;
 
+/** Per-platform caption forks for the master-variant composer. */
+const captionVariantsSchema = z
+	.object({
+		instagram: z.string().max(4000).optional(),
+		tiktok: z.string().max(4000).optional(),
+		linkedin: z.string().max(4000).optional(),
+		facebook: z.string().max(4000).optional(),
+		threads: z.string().max(4000).optional(),
+	})
+	.nullable()
+	.optional();
+
 const updatePostSchema = z.object({
 	caption: z.string().min(1).max(4000).optional(),
+	caption_variants: captionVariantsSchema,
 	media_urls: z.array(z.string().url()).max(10).optional(),
 	media_types: z.array(z.enum(['image', 'video'])).optional(),
 	thumbnail_url: z.string().url().optional().nullable(),
@@ -104,6 +117,20 @@ export default defineEventHandler(async (event) => {
 		}
 
 		const patch: Record<string, unknown> = { ...parsed.data };
+
+		// Normalize caption_variants if either the variants OR the master
+		// caption is in this patch. We compare each variant against whichever
+		// master will be in effect after the write (incoming caption ?? existing
+		// caption). Variants equal to master are stripped — they're "in sync"
+		// and persisting them just bloats storage.
+		if ('caption_variants' in patch || 'caption' in patch) {
+			const effectiveMaster = (parsed.data.caption ?? existing.caption) || '';
+			const incoming = parsed.data.caption_variants;
+			// If caption changed but variants weren't sent, re-normalize existing
+			// variants against the new master so resync-by-edit works naturally.
+			const source = incoming === undefined ? (existing.caption_variants ?? null) : incoming;
+			patch.caption_variants = normalizeCaptionVariants(source as any, effectiveMaster);
+		}
 
 		// Approval-state side-effects. Server is the only writer for
 		// approval_token / approved_by / approved_at.
@@ -196,3 +223,19 @@ export default defineEventHandler(async (event) => {
 
 	throw createError({ statusCode: 405, message: 'Method not allowed' });
 });
+
+/** Mirrors the helper in posts/index.ts — strips in-sync entries and
+ *  collapses to null when nothing is forked. */
+function normalizeCaptionVariants(
+	variants: Record<string, string | undefined> | null | undefined,
+	master: string,
+): Record<string, string> | null {
+	if (!variants) return null;
+	const out: Record<string, string> = {};
+	for (const [platform, value] of Object.entries(variants)) {
+		if (typeof value !== 'string') continue;
+		if (value === master) continue;
+		out[platform] = value;
+	}
+	return Object.keys(out).length === 0 ? null : out;
+}

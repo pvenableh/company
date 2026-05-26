@@ -49,6 +49,7 @@ const { data: accountsData } = useLazyFetch('/api/social/accounts');
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
 
 const caption = ref('');
+const captionVariants = ref<Partial<Record<SocialPlatform, string>>>({});
 const mediaUrls = ref<string[]>([]);
 const mediaTypes = ref<('image' | 'video')[]>([]);
 const selectedAccounts = ref<string[]>([]);
@@ -121,17 +122,23 @@ function askEarnestForSuggestions() {
   showAIWizard.value = true;
 }
 
-const captionLength = computed(() => caption.value.length);
-const captionWarning = computed(() => {
-  if (instagramSelected.value && captionLength.value > 2200) return 'Instagram captions max 2,200 characters';
-  if (linkedinSelected.value && captionLength.value > 3000) return 'LinkedIn posts max 3,000 characters';
-  if (tiktokSelected.value && captionLength.value > 4000) return 'TikTok captions max 4,000 characters';
+/** Resolve the body that will publish to a given platform — variant when
+ *  forked, master otherwise. Used by the submit-guard and any other check
+ *  that needs the effective per-platform caption. */
+function effectiveCaptionFor(p: SocialPlatform): string {
+  const v = captionVariants.value[p];
+  return typeof v === 'string' ? v : caption.value;
+}
+
+const captionWarning = computed<string | null>(() => {
+  for (const p of selectedPlatforms.value) {
+    const len = effectiveCaptionFor(p).length;
+    if (p === 'instagram' && len > 2200) return 'Instagram captions max 2,200 characters';
+    if (p === 'linkedin' && len > 3000) return 'LinkedIn posts max 3,000 characters';
+    if (p === 'tiktok' && len > 4000) return 'TikTok captions max 4,000 characters';
+    if (p === 'threads' && len > 500) return 'Threads posts max 500 characters';
+  }
   return null;
-});
-const captionLimit = computed(() => {
-  if (instagramSelected.value) return '2,200';
-  if (linkedinSelected.value) return '3,000';
-  return '4,000';
 });
 
 const postAsStory = ref(false);
@@ -209,6 +216,93 @@ function selectAllAccounts() {
   else selectedAccounts.value = accounts.value.map((a) => a.id);
 }
 
+/** Per-platform character limits — kept in sync with the composer. */
+const PLATFORM_LIMIT: Record<SocialPlatform, number> = {
+  instagram: 2200,
+  linkedin: 3000,
+  tiktok: 4000,
+  threads: 500,
+  facebook: 4000,
+};
+
+/** Handle the seam-fix request from MasterVariantComposer. When the active
+ *  lane is `master`, we pick the most restrictive selected platform and trim
+ *  to it as a variant — the master stays intact, so other channels still
+ *  publish the original. */
+const trimming = ref(false);
+async function handleRequestTrim(lane: SocialPlatform | 'master') {
+  if (trimming.value) return;
+
+  // Figure out which platform to trim for and what text to send.
+  let targetPlatform: SocialPlatform;
+  let sourceText: string;
+  if (lane === 'master') {
+    // Pick the tightest cap among the currently selected platforms.
+    if (selectedPlatforms.value.length === 0) return;
+    targetPlatform = selectedPlatforms.value.reduce((tight, p) =>
+      PLATFORM_LIMIT[p] < PLATFORM_LIMIT[tight] ? p : tight,
+    );
+    sourceText = caption.value;
+  } else {
+    targetPlatform = lane;
+    sourceText =
+      typeof captionVariants.value[lane] === 'string'
+        ? (captionVariants.value[lane] as string)
+        : caption.value;
+  }
+
+  trimming.value = true;
+  try {
+    const res: any = await $fetch('/api/social/ai-trim', {
+      method: 'POST',
+      body: {
+        text: sourceText,
+        platform: targetPlatform,
+        target_chars: PLATFORM_LIMIT[targetPlatform],
+        cta_url: ctaUrl.value.trim() || null,
+        cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
+        client_id: inferredClient.value,
+      },
+    });
+    const trimmed: string = String(res?.caption || '').trim();
+    if (!trimmed) {
+      toast.add({
+        title: 'No trim returned',
+        description: 'Earnest could not produce a shorter version. Try editing manually.',
+        icon: 'i-lucide-alert-circle',
+        color: 'amber',
+      });
+      return;
+    }
+    captionVariants.value = { ...captionVariants.value, [targetPlatform]: trimmed };
+    toast.add({
+      title: `Trimmed for ${targetPlatform}`,
+      description: `Forked a ${trimmed.length}-char variant.`,
+      icon: 'i-lucide-sparkles',
+      color: 'green',
+    });
+  } catch (error: any) {
+    toast.add({
+      title: 'Trim failed',
+      description: error?.data?.message || 'Earnest could not trim the caption.',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    trimming.value = false;
+  }
+}
+
+/** Strip variant entries that match master — keeps the payload tight and
+ *  the server canonicalizes the same way, so this is belt-and-braces. */
+function normalizedVariantsForSubmit(): Record<string, string> | null {
+  const out: Record<string, string> = {};
+  for (const [p, v] of Object.entries(captionVariants.value)) {
+    if (typeof v === 'string' && v !== caption.value) out[p] = v;
+  }
+  return Object.keys(out).length === 0 ? null : out;
+}
+
 function buildPostBody(status: 'draft' | 'scheduled') {
   const platforms: SocialPostTarget[] = selectedAccountDetails.value.map((account) => ({
     platform: account.platform,
@@ -229,6 +323,7 @@ function buildPostBody(status: 'draft' | 'scheduled') {
   }));
   return {
     caption: caption.value,
+    caption_variants: normalizedVariantsForSubmit(),
     media_urls: mediaUrls.value,
     media_types: mediaTypes.value,
     platforms,
@@ -333,19 +428,15 @@ const subtitle = computed(() => {
     </template>
 
     <div class="space-y-6">
-      <!-- Caption -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white">Caption</h2>
-            <span class="text-xs font-mono" :class="captionWarning ? 'text-destructive' : 'text-gray-400'">
-              {{ captionLength }} / {{ captionLimit }}
-            </span>
-          </div>
-        </template>
-        <UTextarea v-model="caption" placeholder="Write your caption here..." :rows="6" autoresize class="w-full" />
-        <p v-if="captionWarning" class="text-sm text-destructive mt-2">{{ captionWarning }}</p>
-      </UCard>
+      <!-- Caption — master draft + per-channel variant lanes -->
+      <SocialMasterVariantComposer
+        v-model:caption="caption"
+        v-model:variants="captionVariants"
+        :platforms="selectedPlatforms"
+        :cta-url="ctaUrl"
+        :cta-label="ctaLabel"
+        @request-trim="handleRequestTrim"
+      />
 
       <!-- Media -->
       <UCard>
@@ -625,6 +716,7 @@ const subtitle = computed(() => {
         <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Preview</h2>
         <SocialPostPreview
           :caption="caption"
+          :variants="captionVariants"
           :media-urls="mediaUrls"
           :media-types="mediaTypes"
           :cta-url="ctaUrl"

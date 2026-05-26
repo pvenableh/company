@@ -26,8 +26,22 @@ const APPROVAL_STATES = [
 	'published',
 ] as const;
 
+/** Per-platform caption forks for the master-variant composer.
+ *  Absent key = inherit master caption. Present key = published in place. */
+const captionVariantsSchema = z
+	.object({
+		instagram: z.string().max(4000).optional(),
+		tiktok: z.string().max(4000).optional(),
+		linkedin: z.string().max(4000).optional(),
+		facebook: z.string().max(4000).optional(),
+		threads: z.string().max(4000).optional(),
+	})
+	.nullable()
+	.optional();
+
 const createPostSchema = z.object({
 	caption: z.string().min(1).max(4000),
+	caption_variants: captionVariantsSchema,
 	media_urls: z.array(z.string().url()).max(10).default([]),
 	media_types: z
 		.array(z.enum(['image', 'video']))
@@ -131,6 +145,7 @@ export default defineEventHandler(async (event) => {
 			organization: organizationId,
 			client: data.client ?? null,
 			caption: data.caption,
+			caption_variants: normalizeCaptionVariants(data.caption_variants, data.caption),
 			media_urls: data.media_urls,
 			media_types: data.media_types,
 			thumbnail_url: data.thumbnail_url || null,
@@ -173,4 +188,26 @@ export default defineEventHandler(async (event) => {
 function firstOfThisMonth(): string {
 	const d = new Date();
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+/**
+ * Strip variant entries that exactly match the master caption — these are
+ * "in sync" by definition, so persisting them just bloats storage and makes
+ * the in-sync vs forked distinction harder to read in the database.
+ *
+ * Returns `null` when the trimmed object is empty (all platforms in sync)
+ * so the DB column stays NULL in the common case.
+ */
+function normalizeCaptionVariants(
+	variants: Record<string, string | undefined> | null | undefined,
+	master: string,
+): Record<string, string> | null {
+	if (!variants) return null;
+	const out: Record<string, string> = {};
+	for (const [platform, value] of Object.entries(variants)) {
+		if (typeof value !== 'string') continue;
+		if (value === master) continue;
+		out[platform] = value;
+	}
+	return Object.keys(out).length === 0 ? null : out;
 }

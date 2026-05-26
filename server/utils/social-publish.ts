@@ -38,17 +38,30 @@ import {
 import type { SocialAccount, SocialPost, SocialPostTarget, PublishResult } from '~~/shared/social'
 
 /**
+ * Resolve the caption that should publish to a specific platform.
+ * Looks up a per-platform variant from the master-variant composer
+ * (`caption_variants[platform]`) and falls back to the master `caption` when
+ * the platform is in sync.
+ */
+function resolveCaptionForPlatform(post: SocialPost, platform: SocialPlatform): string {
+  const variant = post.caption_variants?.[platform]
+  if (typeof variant === 'string') return variant
+  return post.caption
+}
+
+/**
  * Append the optional CTA URL + label to the body that goes out to the
  * platform. Long-form platforms (LinkedIn / Facebook / Threads) auto-fetch OG
  * tags from the URL — we just need the URL in the text. Instagram and TikTok
  * don't make caption links clickable, but the URL is still useful as
  * reference text.
  */
-function buildPublishedText(post: SocialPost): string {
-  if (!post.cta_url) return post.caption
+function buildPublishedText(post: SocialPost, platform: SocialPlatform): string {
+  const caption = resolveCaptionForPlatform(post, platform)
+  if (!post.cta_url) return caption
   const label = post.cta_label?.trim()
   const suffix = label ? `${label}: ${post.cta_url}` : post.cta_url
-  return `${post.caption}\n\n${suffix}`
+  return `${caption}\n\n${suffix}`
 }
 
 async function publishToTarget(
@@ -66,7 +79,7 @@ async function publishToTarget(
     }
   }
 
-  const text = buildPublishedText(post)
+  const text = buildPublishedText(post, target.platform)
   const mediaUrls = post.media_urls || []
   const mediaTypes = post.media_types || []
 

@@ -200,6 +200,7 @@ function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
   return {
     id: raw.id,
     caption: raw.caption,
+    caption_variants: normalizeVariantsForRead((raw as any).caption_variants),
     media_urls: Array.isArray(raw.media_urls) ? raw.media_urls : [],
     media_types: Array.isArray(raw.media_types) ? raw.media_types : [],
     thumbnail_url: raw.thumbnail_url ?? null,
@@ -226,6 +227,26 @@ function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
     target_month: (raw as any).target_month ?? null,
     content_plan: contentPlanIdOrNull((raw as any).content_plan),
   }
+}
+
+/** Normalize whatever Directus hands back into a `Partial<Record<SocialPlatform, string>> | null`.
+ *  Directus' JSON column can return null, an object, or (rarely) a JSON-encoded
+ *  string when the row was written via raw SQL. Defensive parse keeps the
+ *  frontend type honest. */
+const KNOWN_PLATFORMS = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads'] as const;
+function normalizeVariantsForRead(v: unknown): SocialPost['caption_variants'] {
+  if (v == null) return null;
+  let obj: any = v;
+  if (typeof v === 'string') {
+    try { obj = JSON.parse(v); } catch { return null; }
+  }
+  if (typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const out: Record<string, string> = {};
+  for (const p of KNOWN_PLATFORMS) {
+    const val = obj[p];
+    if (typeof val === 'string') out[p] = val;
+  }
+  return Object.keys(out).length === 0 ? null : (out as SocialPost['caption_variants']);
 }
 
 function contentPlanIdOrNull(v: unknown): number | null {

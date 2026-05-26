@@ -51,9 +51,9 @@
           </div>
         </div>
 
-        <!-- Caption pill -->
-        <div v-if="caption" class="absolute bottom-16 inset-x-3">
-          <p class="text-xs text-white whitespace-pre-wrap line-clamp-3 drop-shadow-md">{{ caption }}</p>
+        <!-- Caption pill — honors the IG variant if one is forked. -->
+        <div v-if="activeCaption" class="absolute bottom-16 inset-x-3">
+          <p class="text-xs text-white whitespace-pre-wrap line-clamp-3 drop-shadow-md">{{ activeCaption }}</p>
         </div>
 
         <div class="absolute bottom-3 inset-x-3 flex items-center gap-2">
@@ -300,6 +300,9 @@ import type { SocialAccountPublic, SocialPlatform, PostType } from '~~/shared/so
 
 const props = defineProps<{
   caption: string;
+  /** Per-platform caption variants from the master-variant composer.
+   *  Absent key = the preview falls back to `caption`. */
+  variants?: Partial<Record<SocialPlatform, string>>;
   mediaUrls: string[];
   mediaTypes: ('image' | 'video')[];
   ctaUrl: string;
@@ -358,10 +361,19 @@ const ctaHost = computed(() => {
   }
 });
 
+/** The body that will actually publish to the active platform — variant when
+ *  forked, master otherwise. The bare-caption refs above still point at
+ *  `props.caption` for the Stories chrome (which always shows the master
+ *  preview pill) — the platform-specific feed cards use this. */
+const activeCaption = computed(() => {
+  const v = props.variants?.[active.value];
+  return typeof v === 'string' ? v : props.caption;
+});
+
 const displayCaption = computed(() => {
-  if (!props.ctaUrl) return props.caption;
+  if (!props.ctaUrl) return activeCaption.value;
   const label = props.ctaLabel?.trim();
   const suffix = label ? `${label}: ${props.ctaUrl}` : props.ctaUrl;
-  return `${props.caption}\n\n${suffix}`;
+  return `${activeCaption.value}\n\n${suffix}`;
 });
 </script>
