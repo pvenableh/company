@@ -152,9 +152,11 @@ const monthStats = computed(() => ({
 
 const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' });
 
-const composeSlide = useAppSlideOver('social-compose');
+// Compose entry — navigates into the Composition Canvas with a
+// create-mode social composer pre-opened. CalendarSurface isn't mounted
+// inside the canvas tree on its own, so we use the URL helper.
 function openCompose() {
-  composeSlide.open('new');
+  openCanvasCompose('social');
 }
 </script>
 
@@ -375,7 +377,7 @@ function openCompose() {
               v-if="selectedPost.status === 'scheduled' || selectedPost.status === 'draft'"
               variant="soft"
               size="sm"
-              :to="`/social/posts/${selectedPost.id}/edit?from=${encodeURIComponent($route.fullPath)}`"
+              :to="{ path: '/apps/marketing', query: { floor: 'studio', view: 'calendar', z: '3', id: selectedPost.id } }"
             >
               Edit
             </UButton>

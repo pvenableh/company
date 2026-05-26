@@ -170,8 +170,9 @@ export async function createContentPlan(input: CreateContentPlanInput): Promise<
 
 /**
  * Find-or-create an Inbox plan for (organization, target_month). Used by
- * /social/compose so every loose post lands in the right bucket without
- * forcing the user to think about plans.
+ * `POST /api/social/posts` (which the in-canvas Composer ultimately hits)
+ * so every loose post lands in the right bucket without forcing the user
+ * to think about plans.
  *
  * Match criteria mirror the backfill script so re-runs cluster cleanly:
  *   organization + plan_type=monthly_cadence + state=draft + project null

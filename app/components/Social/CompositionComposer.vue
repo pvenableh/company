@@ -1,32 +1,25 @@
 <script setup lang="ts">
 /**
  * CompositionComposer — the z=3 master-variant composer surface, rendered
- * in-place inside the Composition Canvas.
+ * in-place inside the Composition Canvas. Sole authoring surface for
+ * social posts after P3.5 (the legacy slide-over composer and edit page
+ * were retired).
  *
- * P3 Phase 3.2 + 3.4. Same authoring affordances as `SocialComposePanel.vue` —
- * caption + per-platform variants + media + schedule + platform picker —
- * but mounted inside the canvas instead of a slide-over. Reads and writes
- * via the P3.0 `useComposition` adapter so the patch shape stays
- * server-canonicalized (variants collapse, scheduled_at normalization).
+ * Authoring affordances: caption + per-platform variants + media +
+ * schedule + platform picker. Reads and writes via the P3.0
+ * `useComposition` adapter so the patch shape stays server-canonicalized
+ * (variants collapse, scheduled_at normalization).
  *
  * Create mode (P3.4): when no `postId` is bound or the prop holds the
  * `compose:social` sentinel, the composer mounts with empty form
  * defaults. Save POSTs through `useComposition().create()` instead of
  * PATCH and emits `created` with the resulting SocialPost row.
  *
- * Coexistence: this is ADDITIVE. `SocialComposePanel.vue` still ships as
- * the slide-over entry from outside the canvas (Pulse "New Post", apps
- * shell "+ Compose", deep-links). Only canvas-internal interactions —
- * a click + Cmd+= from a leaf, or a `?z=3&id=<uuid>` deep-link — push to
- * this composer. P3.6 collapses the duplication.
- *
  * Motion: opacity + 1.04 → 1.0 scale entry, master spring. The canvas
  * host runs the crossfade against the lifted card; this component just
  * paints itself once it's mounted.
  *
  * @see app/composables/useComposition.ts — the adapter (P3.0).
- * @see app/components/apps/panels/SocialComposePanel.vue — the slide-over
- *      sibling. Form bits copied (not re-imported) per handoff guidance.
  */
 import { Icon } from '#components';
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
@@ -190,7 +183,7 @@ watch(
   { immediate: true },
 );
 
-// ── Char-limit guard (mirrors SocialComposePanel) ────────────────
+// ── Char-limit guard ─────────────────────────────────────────────
 function effectiveCaptionFor(p: SocialPlatform): string {
   const v = captionVariants.value[p];
   return typeof v === 'string' ? v : caption.value;

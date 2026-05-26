@@ -402,3 +402,25 @@ export function useCompositionZoom() {
 	if (!singleton) singleton = build();
 	return singleton;
 }
+
+/**
+ * Cross-app helper: navigate into the canvas with a create-mode composer
+ * pre-opened. Use from surfaces that don't have the canvas mounted yet
+ * (Pulse floor, FloatingDock, AITray, /social/compose redirect). The
+ * canvas reconciles `?z=` + `?id=compose:<kind>` from the URL on its
+ * first tick and mounts the matching composer. Surfaces already inside
+ * the canvas tree (StudioSurface, RiverSurface) should call
+ * `useCompositionZoom().compose(kind)` directly instead.
+ */
+export async function openCanvasCompose(kind: 'social' | 'email' = 'social') {
+	const router = useRouter();
+	await router.push({
+		path: '/apps/marketing',
+		query: {
+			floor: 'studio',
+			view: 'calendar',
+			z: '3',
+			id: `compose:${kind}`,
+		},
+	});
+}

@@ -1,27 +1,18 @@
 <script setup lang="ts">
-// Legacy /social/compose — body now lives in the slide-over panel at
-// app/components/apps/panels/SocialComposePanel.vue (registered as
-// `social-compose`). The page redirects into Studio with the slide-over
-// pre-opened, carrying any prefill query params through to the panel
-// (caption / account / cta_url / cta_label).
+// Legacy /social/compose — the composer body now lives inside the
+// Composition Canvas (P3.5). This page redirects to the canvas with a
+// create-mode social composer pre-opened. Prefill query params (caption,
+// account, cta_url, cta_label) are no longer honored — the canvas
+// composer doesn't read them off the URL. File a follow-up if needed.
 definePageMeta({
 	middleware: ['auth'],
 });
 
-const route = useRoute();
-
-const carriedQuery: Record<string, string> = {
-	floor: 'studio',
-	slide: 'social-compose:new',
-};
-
-for (const [key, value] of Object.entries(route.query)) {
-	if (key === 'floor' || key === 'slide' || key === 'view') continue;
-	if (typeof value === 'string') carriedQuery[key] = value;
-}
-
 await navigateTo(
-	{ path: '/apps/marketing', query: carriedQuery },
+	{
+		path: '/apps/marketing',
+		query: { floor: 'studio', view: 'calendar', z: '3', id: 'compose:social' },
+	},
 	{ replace: true, redirectCode: 301 },
 );
 </script>

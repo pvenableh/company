@@ -27,7 +27,6 @@ const REGISTRY: Record<string, PanelLoader> = {
 	ticket: () => import('./TicketDetailPanel.vue'),
 	'marketing-campaign': () => import('./CampaignPanel.vue'),
 	'social-post': () => import('./SocialPostPanel.vue'),
-	'social-compose': () => import('./SocialComposePanel.vue'),
 	'social-plan': () => import('./PlanDetailPanel.vue'),
 	client: () => import('./ClientDetailPanel.vue'),
 	'carddesk-source': () => import('./CardDeskSourcePanel.vue'),

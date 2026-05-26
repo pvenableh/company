@@ -343,11 +343,12 @@ function openSocialPostSlideOver(post: any) {
   socialPostSlide.open(String(post.id));
 }
 
-// Compose slide-over — open from Studio header AND from the Pulse floor's
-// "New post" launch points. `useAppSlideOver` URL-binds it as `?slide=social-compose:new`.
-const composeSlide = useAppSlideOver('social-compose');
+// Compose entry — navigates into the Studio floor's Composition Canvas
+// with a create-mode social composer pre-opened. From the Pulse floor
+// the canvas isn't mounted, so the URL helper handles both the floor
+// switch and the z=3 reconcile in one push.
 function openComposeSlideOver() {
-  composeSlide.open('new');
+  openCanvasCompose('social');
 }
 
 // Mailing-list slide-over — keeps list edit inside the apps layout instead

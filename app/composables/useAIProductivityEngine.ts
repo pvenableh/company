@@ -752,7 +752,7 @@ export const useAIProductivityEngine = () => {
 						title: `Failed Post: ${(post.caption || '').substring(0, 40)}...`,
 						description: `This social post failed to publish`,
 						actionLabel: 'Fix & Retry',
-						actionRoute: `/social/posts/${post.id}/edit`,
+						actionRoute: `/apps/marketing?floor=studio&view=calendar&z=3&id=${post.id}`,
 						category: 'social',
 						timestamp: new Date(),
 						score: 65,

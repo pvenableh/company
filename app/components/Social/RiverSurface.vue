@@ -22,17 +22,11 @@ import type { MarketingTouch, MarketingTouchStatus } from '~~/shared/marketing-p
 import { getSocialPlatformIcon } from '~/utils/icons';
 
 const toast = useToast();
-const route = useRoute();
 
-// Composition Canvas P3.2 — `?canvas=1` reroutes leaf clicks into the
-// canvas lift path instead of opening the legacy modal. The composable
-// singleton is shared with the StudioSurface wrapper (the `?canvas=1`
-// host), so the FLIP source rect we capture here drives the same
+// Composition Canvas (always on after P3.5) — leaf clicks lift into z=2.
+// The composable singleton is shared with the StudioSurface wrapper (the
+// canvas host), so the FLIP source rect we capture here drives the same
 // lifted-card component the canvas mounts.
-const canvasOn = computed<boolean>(() => {
-  const v = route.query.canvas;
-  return v === '1' || v === 'true';
-});
 const zoom = useCompositionZoom();
 
 // P3.4 — track ids we want to "ripple" on the next render. The canvas
@@ -436,20 +430,11 @@ async function onPointerUp(e: PointerEvent, leaf: PlacedLeaf) {
   drag.value = null;
   if (!d) return;
   if (!d.moved) {
-    // Click. Under `?canvas=1`, the canvas owns the drill-in — hand the
-    // captured source rect to the zoom composable so the lifted card can
-    // FLIP from the leaf's bounding rect. Otherwise fall through to the
-    // legacy modal (kept until P3.6 retires this surface).
-    if (canvasOn.value) {
-      zoom.lift(leafId(leaf), d.sourceRect
-        ? { x: d.sourceRect.x, y: d.sourceRect.y, width: d.sourceRect.width, height: d.sourceRect.height }
-        : null);
-      return;
-    }
-    if (leaf.kind === 'social') openPost(leaf.post);
-    // Email leaves outside canvas mode have no legacy modal — clicks
-    // are a no-op until the user opts into `?canvas=1`. The composer is
-    // canvas-only by design (Phase 3.6 collapses the slide-over).
+    // Click — hand the captured source rect to the zoom composable so
+    // the lifted card can FLIP from the leaf's bounding rect.
+    zoom.lift(leafId(leaf), d.sourceRect
+      ? { x: d.sourceRect.x, y: d.sourceRect.y, width: d.sourceRect.width, height: d.sourceRect.height }
+      : null);
     return;
   }
   // Snap: each DAY_WIDTH = 1 day, each HOUR_HEIGHT = 1 hour.
@@ -506,18 +491,8 @@ function dragTranslate(id: string): string {
   return `translate(${d.dx}px, ${d.dy}px)`;
 }
 
-// ── Post modal ───────────────────────────────────────────────────
-const selectedPost = ref<SocialPost | null>(null);
-const showPostModal = ref(false);
-
-function openPost(post: SocialPost) {
-  selectedPost.value = post;
-  showPostModal.value = true;
-}
-
-const composeSlide = useAppSlideOver('social-compose');
 function openCompose() {
-  composeSlide.open('new');
+  zoom.compose('social');
 }
 
 // ── Stats strip ──────────────────────────────────────────────────
@@ -802,54 +777,6 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
       </span>
     </div>
 
-    <!-- Post detail (kept simple — reuse the Studio detail pattern in a
-         later phase; for now the bare UModal preserves parity with the
-         legacy calendar surface so deep-links keep working). -->
-    <UModal v-model="showPostModal" class="sm:max-w-xl">
-      <template v-if="selectedPost" #header>
-        <div class="flex items-center gap-2">
-          <UBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
-            {{ selectedPost.status }}
-          </UBadge>
-          <span class="text-sm text-muted-foreground">
-            {{ format(parseISO(selectedPost.scheduled_at), 'EEE MMM d, h:mm a') }}
-          </span>
-        </div>
-      </template>
-      <template v-if="selectedPost">
-        <div v-if="selectedPost.thumbnail_url || selectedPost.media_urls?.length" class="mb-4">
-          <img
-            :src="selectedPost.thumbnail_url || selectedPost.media_urls[0]"
-            :alt="selectedPost.caption"
-            class="w-full max-h-72 object-cover rounded-lg"
-          />
-        </div>
-        <p class="text-foreground whitespace-pre-wrap mb-4">{{ selectedPost.caption }}</p>
-        <div class="flex flex-wrap gap-2 mb-4">
-          <div
-            v-for="t in selectedPost.platforms"
-            :key="t.account_id"
-            class="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-full text-xs"
-          >
-            <Icon :name="platformIcon(t.platform)" class="w-3 h-3" />
-            {{ t.account_name }}
-          </div>
-        </div>
-      </template>
-      <template v-if="selectedPost" #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            v-if="['scheduled', 'draft', 'failed'].includes(selectedPost.status)"
-            variant="soft"
-            size="sm"
-            :to="`/social/posts/${selectedPost.id}/edit?from=${encodeURIComponent($route.fullPath)}`"
-          >
-            Edit
-          </UButton>
-          <UButton size="sm" @click="showPostModal = false">Close</UButton>
-        </div>
-      </template>
-    </UModal>
   </div>
 </template>
 

@@ -349,11 +349,12 @@ function togglePanel(panel: 'tasks' | 'timer' | 'notes') {
 	activePanel.value = activePanel.value === panel ? null : panel;
 }
 
-// Compose slide-over opener — surfaces the social composer from any app.
-const composeSlide = useAppSlideOver('social-compose');
+// Compose entry — navigates into the Composition Canvas with a
+// create-mode social composer pre-opened. Cross-app surfaces use the URL
+// helper because the canvas isn't mounted from here.
 function openCompose() {
 	activePanel.value = null;
-	composeSlide.open('new');
+	openCanvasCompose('social');
 }
 
 // Auto-open timer panel when timer starts

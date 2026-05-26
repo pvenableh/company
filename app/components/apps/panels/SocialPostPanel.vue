@@ -2,10 +2,11 @@
 	SocialPostPanel — slide-over for viewing/lightly editing a single social
 	post without bouncing off the apps layout.
 
-	Scope: this is the quick-edit surface. Big composer work (re-arranging
-	carousel media, platform-specific options) still lives at
-	/social/posts/[id]/edit — we provide a deep-link button. Studio posts
-	get an additional "Open in Studio" link to /apps/marketing?floor=studio.
+	Scope: this is the quick-edit surface. Big composer work (carousel
+	reorder, platform-specific options, media swap) lives in the
+	Composition Canvas at /apps/marketing?floor=studio — the "Full editor"
+	link below deep-links into z=3 with the composer pre-opened. Studio
+	posts also get an "Open in Studio" link to the Studio floor.
 
 	What you can do inline:
 	  - Quick-edit caption + scheduled_at (status='scheduled' posts)
@@ -20,20 +21,17 @@ import type { SocialPost, SocialPlatform } from '~~/shared/social';
 const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
-const route = useRoute();
 const post = ref<SocialPost | null>(null);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref<string | null>(null);
 
-// When the user hits "Full editor", carry the panel's invoking page so the
-// edit page's Back button returns there instead of /social/calendar.
+// "Full editor" deep-links into the Composition Canvas at z=3 with the
+// post id pre-loaded — the canvas's URL watcher mounts the composer
+// directly. Browser back drops the user out of the composer naturally.
 const fullEditorHref = computed(() => {
 	if (!post.value) return '';
-	const fromPath = route.path;
-	const q = new URLSearchParams();
-	if (fromPath) q.set('from', fromPath);
-	return `/social/posts/${post.value.id}/edit?${q.toString()}`;
+	return `/apps/marketing?floor=studio&view=calendar&z=3&id=${post.value.id}`;
 });
 
 const draft = reactive({

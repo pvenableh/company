@@ -6,8 +6,9 @@
  * content_plan (per-org Inbox plan for unsorted drafts). Clicking a plan
  * card opens /social/plans/[id]; clicking an individual post inside a plan
  * opens the per-post detail modal for inline approve / request-changes /
- * schedule actions. One-off post creation lives at /social/compose, which
- * find-or-creates the appropriate Inbox plan automatically.
+ * schedule actions. New posts are minted via the Compose chooser (social
+ * or email), which drops the user into the in-canvas composer at z=3 and
+ * find-or-creates the appropriate Inbox plan automatically server-side.
  */
 import type { SocialPost, ApprovalState, ContentPlanRecord } from '~~/shared/social';
 import type { Project, Client } from '~~/shared/directus';
@@ -55,35 +56,17 @@ const initialView: StudioView = STUDIO_VIEW_KEYS.includes(route.query.view as St
   : 'approval';
 const view = ref<StudioView>(initialView);
 
-// ── P3 Phase 3.1 — Composition Canvas feature flag ───────────────
-// `?canvas=1` opts into the depth-zoom wrapper. OFF (default) renders the
-// legacy surfaces unchanged. When ON, the surface body is hosted inside
-// <CompositionCanvas> so pinch / Cmd+= / wheel+modifier ramp the `z` ref.
-// See project_composition_canvas_redesign for the design context.
-const canvasOn = computed<boolean>(() => {
-  const v = route.query.canvas;
-  return v === '1' || v === 'true';
-});
+// ── Composition Canvas (P3 — always on after P3.5) ───────────────
+// The depth-zoom canvas wraps the entire Studio body unconditionally.
+// `<RiverSurface>` lifts leaves into z=2 and the kind-chooser popover
+// below mints z=3 composers in create mode. The `?canvas=` query-string
+// gate from P3.1–P3.4 was retired in P3.5; any stale `?canvas=0/1` URLs
+// are silently ignored.
 const zoom = useCompositionZoom();
-// The `lens` axis the canvas exposes is the existing StudioView — same five
-// keys, same URL contract (`?view=` keeps working). Phase 3.6 will lift the
-// segmented control entirely; for now they coexist behind the flag.
+// The `lens` axis the canvas exposes is the existing StudioView — same
+// five keys, same URL contract (`?view=` keeps working). Phase 3.6 will
+// lift the segmented control entirely.
 const canvasLens = computed(() => view.value);
-// Bind bag for the <component :is> wrapper. Empty when the flag is OFF so
-// the passthrough <div> doesn't get extraneous DOM attributes / Vue warns.
-// activeId is sourced from the canvas's own zoom singleton — RiverSurface
-// hands the id over via `lift()`, the canvas reads it from there.
-const canvasBind = computed(() => {
-  if (!canvasOn.value) return {} as Record<string, unknown>;
-  return {
-    z: zoom.z.value,
-    lens: canvasLens.value,
-    activeId: zoom.activeId.value,
-    onPostUpdated: onCanvasPostUpdated,
-    onPostCreated: onCanvasPostCreated,
-    onTouchCreated: onCanvasTouchCreated,
-  } as Record<string, unknown>;
-});
 
 /**
  * Canvas composer saved a post. Update the in-memory list so the river
@@ -124,14 +107,9 @@ watch(() => route.query.view, (qv) => {
   if (view.value !== next) view.value = next;
 });
 
-// Compose slide-over opener for the Studio header "+ Compose" button.
-// When `?canvas=1` is on, the button is wired to `toggleComposeChooser`
-// (the popover trigger toggle); legacy mode opens the slide-over.
-const composeSlide = useAppSlideOver('social-compose');
+// Plan slide-over opener — still backed by useAppSlideOver since plans
+// remain a slide-over panel (only the compose slide-over was retired).
 const planSlide = useAppSlideOver('social-plan');
-function openCompose() {
-  composeSlide.open('new');
-}
 
 function toggleComposeChooser() {
   composeChooserOpen.value = !composeChooserOpen.value;
@@ -795,13 +773,12 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <!-- Compose entry. Legacy mode opens the slide-over; canvas
-               mode opens a kind-chooser popover. UiActionButton owns its
-               own native `@click` (re-emitting to its component event),
-               which keeps Radix's PopoverTrigger from intercepting the
-               DOM click — so we drive the popover state explicitly via
-               a toggle handler on the Vue click event. -->
-          <UPopover v-if="canvasOn" v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
+          <!-- Compose entry — kind-chooser popover (social vs email).
+               UiActionButton owns its own native `@click` (re-emitting
+               to its component event), which keeps Radix's PopoverTrigger
+               from intercepting the DOM click — so we drive the popover
+               state explicitly via a toggle handler on the Vue click event. -->
+          <UPopover v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
             <UiActionButton icon="lucide:pen-line" variant="primary" @click="toggleComposeChooser">
               Compose
             </UiActionButton>
@@ -837,9 +814,6 @@ onMounted(() => {
               </div>
             </template>
           </UPopover>
-          <UiActionButton v-else icon="lucide:pen-line" variant="primary" @click="openCompose">
-            Compose
-          </UiActionButton>
           <UiActionButton icon="lucide:calendar-plus" @click="showNewPlan = true">
             New Plan
           </UiActionButton>
@@ -904,15 +878,17 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Surface body — wrapped in the CompositionCanvas host when
-         `?canvas=1` is on, passed through unwrapped otherwise. The flag is
-         the only opt-in that introduces the depth-zoom mechanic (Phase 3.1);
-         the legacy path stays the default until 3.6 lifts the segmented
-         control. -->
-    <component
-      :is="canvasOn ? CompositionCanvas : 'div'"
-      :class="canvasOn ? '' : 'studio-passthrough'"
-      v-bind="canvasBind"
+    <!-- Surface body — always hosted inside <CompositionCanvas> (P3.5
+         retired the `?canvas=` opt-in). The canvas overlays a lifted
+         card at z=2 and the master-variant composer at z=3 on top of
+         whichever view is active below. -->
+    <CompositionCanvas
+      :z="zoom.z.value"
+      :lens="canvasLens"
+      :active-id="zoom.activeId.value"
+      @post-updated="onCanvasPostUpdated"
+      @post-created="onCanvasPostCreated"
+      @touch-created="onCanvasTouchCreated"
     >
     <!-- Loading — only for the plan-aware views (approval/upcoming).
          Calendar/Inbox/Analytics surfaces below own their own loading UI. -->
@@ -1031,7 +1007,7 @@ onMounted(() => {
     <SocialRiverSurface v-else-if="view === 'calendar'" />
     <SocialInboxSurface v-else-if="view === 'inbox'" />
     <SocialAnalyticsSurface v-else-if="view === 'analytics'" />
-    </component>
+    </CompositionCanvas>
 
     <!-- New Plan — iOS bottom sheet -->
     <AppsAppBottomSheet
@@ -1220,7 +1196,7 @@ onMounted(() => {
             >
               <span>No platforms picked yet — this stays a Studio draft until you wire one.</span>
               <NuxtLink
-                :to="`/social/posts/${selectedPost.id}/edit?from=${encodeURIComponent($route.fullPath)}`"
+                :to="{ path: '/apps/marketing', query: { floor: 'studio', view: 'calendar', z: '3', id: selectedPost.id } }"
                 class="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline shrink-0"
               >
                 Pick platforms
@@ -1367,14 +1343,6 @@ onMounted(() => {
   --accent-h: var(--app-accent-h, 220);
   --accent-s: var(--app-accent-s, 10%);
   --accent-l: var(--app-accent-l, 48%);
-}
-
-/* Layout-transparent wrapper for the surface body when `?canvas=1` is OFF.
-   `display: contents` keeps the wrapper div from introducing a new
-   formatting context — the sibling-spacing rules that drove the original
-   `studio-shell > *` rhythm still apply to the inner conditionals. */
-.studio-passthrough {
-  display: contents;
 }
 
 .studio-hero {
