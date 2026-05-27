@@ -187,10 +187,28 @@ export interface SocialComposition extends CompositionBase {
 
 // ─── Email ──────────────────────────────────────────────────────────────────
 
-/** Email variant axis. For Phase 3.0 we expose only the segment-based axis
- * (audience_filter). Per-contact personalization (`marketing_touch_variants`)
- * is a separate read-only surface today — we'll bring it into the canvas in a
- * later phase when the variant chip row needs to disclose per-contact diffs. */
+/**
+ * Per-target email variant (P4 Item A.2). The lane axis is the target —
+ * the same string keys returned by `targetKeyOf` (e.g. `list:10` for
+ * mailing list 10, `segment:opened_previous` for the corresponding
+ * audience filter). Both `subject` and `body_markdown` are forkable;
+ * `subject` is optional so a lane that overrides only the body inherits
+ * the master subject (and vice versa).
+ *
+ * Normalization rule (enforced server-side on write): a lane collapses
+ * (gets dropped from the JSON object) when its body matches master AND
+ * `subject` is either undefined OR matches master. Drop-empty-lanes
+ * keeps the column NULL in the common case.
+ */
+export interface EmailBodyVariant {
+	subject?: string;
+	body_markdown: string;
+}
+
+/** @deprecated since P4.1 — kept exported until the next phase to avoid
+ *  breaking imports. The lane axis is no longer the audience_filter
+ *  literal — it's the target's stable string id. New code should use
+ *  `targetKeyOf(target)` directly. */
 export type EmailVariantAxis = AudienceFilter;
 
 export interface EmailComposition extends CompositionBase {
@@ -202,16 +220,73 @@ export interface EmailComposition extends CompositionBase {
 	subject: string;
 	preview_text: string | null;
 	cta: EmailCTA | null;
-	/** Per-segment forks. Keyed by `audience_filter` literal (e.g.
-	 * `'unopened_previous'`, `'cluster:dormant'`). Phase 3.0 leaves this null
-	 * for new compositions — the variant chip row populates it in 3.4. */
-	variants: Partial<Record<EmailVariantAxis, string>> | null;
+	/** Per-target body + subject forks (P4 Item A.2). Keyed by
+	 *  `targetKeyOf(target)` — `list:<id>` or `segment:<filter>`. Null
+	 *  when the touch has no forks (the common case). The send path
+	 *  reads `variants[targetKey] ?? master` when fanning out per
+	 *  recipient. */
+	variants: Partial<Record<string, EmailBodyVariant>> | null;
 	targets: Extract<
 		CompositionTarget,
 		{ kind: 'mailing_list' } | { kind: 'audience_segment' }
 	>[];
 	raw_status: MarketingTouchStatus;
 	source: { type: 'marketing_touch'; touch_id: number; campaign_id: number };
+}
+
+/**
+ * Stable string key for an email target — used as the JSON object key
+ * in `EmailComposition.variants` and the lookup key in the send path.
+ *
+ *   mailing_list      → `list:<list_id>`
+ *   audience_segment  → `segment:<filter>`  (filter may include `cluster:` prefix)
+ *
+ * Pure function so the server and the UI compute the same keys without
+ * coordination.
+ */
+export function targetKeyOf(
+	t: Extract<
+		CompositionTarget,
+		{ kind: 'mailing_list' } | { kind: 'audience_segment' }
+	>,
+): string {
+	if (t.kind === 'mailing_list') return `list:${t.list_id}`;
+	return `segment:${t.filter}`;
+}
+
+/**
+ * Drop lanes from `variants` whose effective subject + body match master.
+ * Mirrors `normalizeCaptionVariants` in `server/api/social/posts/index.ts`
+ * — keep the column NULL in the common case (touch with no forks).
+ *
+ * Pure function so it can run client-side (defensive normalization
+ * before save) and server-side (authoritative collapse before write).
+ */
+export function normalizeBodyVariants(
+	variants: Partial<Record<string, EmailBodyVariant>> | null | undefined,
+	masterSubject: string,
+	masterBody: string,
+): Partial<Record<string, EmailBodyVariant>> | null {
+	if (!variants) return null;
+	const out: Record<string, EmailBodyVariant> = {};
+	for (const [key, lane] of Object.entries(variants)) {
+		if (!lane || typeof lane !== 'object') continue;
+		const subjectEqualsMaster =
+			lane.subject === undefined || lane.subject === masterSubject;
+		const bodyEqualsMaster = lane.body_markdown === masterBody;
+		if (subjectEqualsMaster && bodyEqualsMaster) continue;
+		// Preserve only fields that differ from master — a subject that
+		// matches master gets dropped from the lane (so the read-side
+		// `lane.subject ?? master` lookup stays correct).
+		const collapsedLane: EmailBodyVariant = {
+			body_markdown: lane.body_markdown,
+		};
+		if (lane.subject !== undefined && lane.subject !== masterSubject) {
+			collapsedLane.subject = lane.subject;
+		}
+		out[key] = collapsedLane;
+	}
+	return Object.keys(out).length === 0 ? null : out;
 }
 
 // ─── Union ──────────────────────────────────────────────────────────────────
@@ -251,7 +326,7 @@ export type CompositionPatch =
 			subject?: string;
 			preview_text?: string | null;
 			cta?: EmailCTA | null;
-			variants?: Partial<Record<EmailVariantAxis, string>> | null;
+			variants?: Partial<Record<string, EmailBodyVariant>> | null;
 			targets?: Extract<
 				CompositionTarget,
 				{ kind: 'mailing_list' } | { kind: 'audience_segment' }
@@ -300,7 +375,7 @@ export type CompositionCreate =
 			status?: Extract<CompositionStatus, 'draft' | 'scheduled'>;
 			preview_text?: string | null;
 			cta?: EmailCTA | null;
-			variants?: Partial<Record<EmailVariantAxis, string>> | null;
+			variants?: Partial<Record<string, EmailBodyVariant>> | null;
 			plan_id?: number | null;
 			/** If omitted, the adapter creates a single-touch campaign behind
 			 * the scenes (one-off email). */

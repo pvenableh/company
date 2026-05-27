@@ -22,6 +22,7 @@
 import { z } from 'zod';
 import { createItem, createItems, readItem, readItems } from '@directus/sdk';
 import type { MarketingTouchStatus } from '~~/shared/marketing-persistence';
+import { normalizeBodyVariants } from '~~/shared/composition';
 
 /**
  * Audience targeting on a marketing_touch is one of:
@@ -127,6 +128,15 @@ const createTouchSchema = z.object({
 	 *  omitted, falls back to the legacy single-target shape (mailing_list
 	 *  OR audience_filter). */
 	targets: z.array(targetEntrySchema).max(20).optional(),
+
+	/** P4 Item A.2 — per-target body + subject variants. Keyed by
+	 *  `targetKeyOf(target)` (`list:<id>` or `segment:<filter>`). The
+	 *  server normalizer drops lanes matching master before write so the
+	 *  column stays NULL in the common case. */
+	body_variants: z.record(z.string(), z.object({
+		subject: z.string().max(998).optional(),
+		body_markdown: z.string().max(50_000),
+	})).nullable().optional(),
 
 	// Schedule + status.
 	scheduled_for: z.string().datetime().nullable().optional(),
@@ -273,6 +283,15 @@ export default defineEventHandler(async (event) => {
 		// Same `mailing_list` expansion as the PATCH route — the canvas's
 		// touchToComposition mapper expects the expanded m2o so it can
 		// surface the list name on the lifted card immediately.
+		// P4 Item A.2 — normalize body_variants against master before write
+		// so the column stays NULL in the common case (touch with no forks).
+		// The shared helper handles the drop-lane-if-equal-to-master rule.
+		const normalizedVariants = normalizeBodyVariants(
+			data.body_variants ?? null,
+			data.email_subject ?? '',
+			data.email_body_markdown ?? '',
+		);
+
 		const created = await directus.request(
 			createItem('marketing_touches', {
 				campaign: campaignId,
@@ -289,6 +308,7 @@ export default defineEventHandler(async (event) => {
 				email_preview_text: data.email_preview_text ?? null,
 				email_body_markdown: data.email_body_markdown ?? null,
 				email_cta: data.email_cta ?? null,
+				body_variants: normalizedVariants,
 				social_channel: data.social_channel ?? null,
 				social_caption: data.social_caption ?? null,
 				social_image_brief: data.social_image_brief ?? null,

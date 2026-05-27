@@ -34,7 +34,9 @@ import type {
   EmailComposition,
   CompositionPatch,
   CompositionTarget,
+  EmailBodyVariant,
 } from '~~/shared/composition';
+import { targetKeyOf, normalizeBodyVariants } from '~~/shared/composition';
 import type {
   EmailCTA,
   AudienceFilter,
@@ -95,6 +97,17 @@ const targets = ref<EmailTarget[]>([]);
 const pickerMode = ref<'mailing_list' | 'audience_segment'>('mailing_list');
 const pickerListId = ref<number | null>(null);
 const pickerSegment = ref<AudienceFilter>('all');
+
+// P4 Item A.2: per-target subject + body variants. Keyed by
+// `targetKeyOf(target)`. Lanes are stored as a complete shape (subject
+// always defined, body always defined) — the save handler normalizes
+// against master before writing so lanes matching master collapse out.
+// Empty record + no master diffs = column stays NULL.
+const variantLanes = ref<Record<string, EmailBodyVariant>>({});
+// Which target row is open for editing in the disclosure (null = no
+// disclosure open). Mutex — editing one lane at a time matches the
+// composer's "one thing on screen" principle from the canvas.
+const editingTargetKey = ref<string | null>(null);
 const scheduledAt = ref(
   format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
@@ -145,6 +158,23 @@ async function loadTouch(id: string) {
       }
       return { kind: 'audience_segment', filter: t.filter };
     });
+    // P4 Item A.2 — hydrate per-target variants. Server returns the
+    // normalized shape (only forked lanes present); we reconstitute the
+    // full shape for in-memory editing (subject inherits master if the
+    // saved lane only forked the body, etc).
+    const masterSubject = comp.subject;
+    const masterBody = comp.body;
+    const incomingVariants = (comp.variants ?? {}) as Partial<Record<string, EmailBodyVariant>>;
+    const reconstituted: Record<string, EmailBodyVariant> = {};
+    for (const [key, lane] of Object.entries(incomingVariants)) {
+      if (!lane) continue;
+      reconstituted[key] = {
+        subject: lane.subject ?? masterSubject,
+        body_markdown: lane.body_markdown ?? masterBody,
+      };
+    }
+    variantLanes.value = reconstituted;
+    editingTargetKey.value = null;
     isDraft.value = comp.status === 'draft';
     if (comp.scheduled_at) {
       const d = new Date(comp.scheduled_at);
@@ -233,6 +263,84 @@ function addSegmentTarget() {
     { kind: 'audience_segment', filter },
   ];
 }
+
+// ── P4 Item A.2 helpers ────────────────────────────────────────────
+function targetKeyForChip(t: EmailTarget): string {
+  return targetKeyOf(t);
+}
+
+function isLaneForked(key: string): boolean {
+  const lane = variantLanes.value[key];
+  if (!lane) return false;
+  return (
+    (lane.subject !== undefined && lane.subject !== subject.value)
+    || lane.body_markdown !== body.value
+  );
+}
+
+/** Open the disclosure for editing this target's lane. Seeds the lane
+ *  with master content if not already present so the editor inputs
+ *  bind to a real lane object from the first keystroke. */
+function editLane(key: string) {
+  if (!variantLanes.value[key]) {
+    variantLanes.value = {
+      ...variantLanes.value,
+      [key]: { subject: subject.value, body_markdown: body.value },
+    };
+  }
+  editingTargetKey.value = editingTargetKey.value === key ? null : key;
+}
+
+function resetLaneToMaster(key: string) {
+  const { [key]: _dropped, ...rest } = variantLanes.value;
+  variantLanes.value = rest;
+  if (editingTargetKey.value === key) editingTargetKey.value = null;
+}
+
+/** Two-way binding helpers so the template can `v-model="laneFieldFor(key, 'subject')"`. */
+function laneSubject(key: string): string {
+  return variantLanes.value[key]?.subject ?? subject.value;
+}
+
+function setLaneSubject(key: string, value: string) {
+  const existing = variantLanes.value[key] ?? { subject: subject.value, body_markdown: body.value };
+  variantLanes.value = {
+    ...variantLanes.value,
+    [key]: { ...existing, subject: value },
+  };
+}
+
+function laneBody(key: string): string {
+  return variantLanes.value[key]?.body_markdown ?? body.value;
+}
+
+function setLaneBody(key: string, value: string) {
+  const existing = variantLanes.value[key] ?? { subject: subject.value, body_markdown: body.value };
+  variantLanes.value = {
+    ...variantLanes.value,
+    [key]: { ...existing, body_markdown: value },
+  };
+}
+
+/** Strip lanes for targets that have been removed from the chip row.
+ *  Prevents zombie variants from clinging when the user adds a target,
+ *  forks it, then removes the chip. */
+function pruneOrphanLanes() {
+  const liveKeys = new Set(targets.value.map(targetKeyForChip));
+  const pruned: Record<string, EmailBodyVariant> = {};
+  for (const [key, lane] of Object.entries(variantLanes.value)) {
+    if (liveKeys.has(key)) pruned[key] = lane;
+  }
+  variantLanes.value = pruned;
+}
+
+watch(targets, pruneOrphanLanes, { deep: false });
+
+/** Targets that have a forked (non-master) lane — used for the
+ *  "n variants" pill on the disclosure header. */
+const forkedLaneCount = computed(() =>
+  Object.keys(variantLanes.value).filter((key) => isLaneForked(key)).length,
+);
 
 // ── Mailing-list fetch ─────────────────────────────────────────────
 // Org-scoped list of mailing_lists for the picker. Fetched once per
@@ -334,6 +442,14 @@ async function save() {
       const orgId = selectedOrg.value;
       if (!orgId) throw new Error('No organization selected');
       if (targets.value.length === 0) throw new Error('Pick at least one mailing list or audience segment');
+      // P4 Item A.2: normalize variants against master before send.
+      // Server re-normalizes authoritatively but we do it client-side
+      // too so the on-wire payload is the minimum shape.
+      const normalizedVariants = normalizeBodyVariants(
+        variantLanes.value,
+        subject.value.trim(),
+        body.value,
+      );
       const result = await create({
         kind: 'email',
         organization: orgId,
@@ -347,7 +463,9 @@ async function save() {
         // marketing_touch_targets junction + mirrors first target into
         // back-compat columns).
         targets: targets.value,
-        variants: null,
+        // P4 Item A.2: per-target subject + body variants (null when
+        // no lanes diverge from master).
+        variants: normalizedVariants,
         plan_id: null,
       });
       if (result.kind !== 'email') {
@@ -364,6 +482,12 @@ async function save() {
     }
     if (!original.value) return;
     if (targets.value.length === 0) throw new Error('Pick at least one mailing list or audience segment');
+    // P4 Item A.2: normalize variants against the just-edited master.
+    const normalizedVariants = normalizeBodyVariants(
+      variantLanes.value,
+      subject.value.trim(),
+      body.value,
+    );
     const patch: Extract<CompositionPatch, { kind: 'email' }> = {
       kind: 'email',
       subject: subject.value.trim(),
@@ -371,6 +495,7 @@ async function save() {
       body: body.value,
       cta: (cta.value || null) as EmailCTA | null,
       targets: targets.value,
+      variants: normalizedVariants,
       status,
     };
     // Drafts keep their scheduled_at as a target time the user can
@@ -509,6 +634,95 @@ async function save() {
         <p class="mt-2 text-[11px] text-muted-foreground">
           Markdown is rendered on send. Use plain prose for short, conversational notes.
         </p>
+      </UCard>
+
+      <!-- P4 Item A.2 — Per-target variants. Hidden when targets.length
+           is 0 or 1 (variants only deliver value with multi-target). -->
+      <UCard v-if="targets.length > 1">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <Icon name="lucide:git-branch" class="w-4 h-4 text-muted-foreground" />
+              <h2 class="font-semibold text-gray-900 dark:text-white">Per-target variants</h2>
+            </div>
+            <span
+              v-if="forkedLaneCount > 0"
+              class="text-[11px] tabular-nums px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
+            >
+              {{ forkedLaneCount }} forked
+            </span>
+            <span v-else class="text-[11px] text-muted-foreground">
+              All targets use the master
+            </span>
+          </div>
+        </template>
+        <div class="space-y-2">
+          <p class="text-[11px] text-muted-foreground">
+            Customize the subject or body for individual lists or segments.
+            Targets not customized inherit the master.
+          </p>
+          <div
+            v-for="t in targets"
+            :key="targetKeyForChip(t)"
+            class="composer-lane"
+          >
+            <div class="composer-lane__header">
+              <span class="composer-tag" :class="t.kind === 'mailing_list' ? 'composer-tag--list' : 'composer-tag--segment'">
+                <Icon :name="chipIconFor(t)" class="w-3.5 h-3.5" />
+                <span class="truncate max-w-[200px]">{{ chipLabelFor(t) }}</span>
+              </span>
+              <span
+                v-if="isLaneForked(targetKeyForChip(t))"
+                class="text-[11px] text-primary font-medium inline-flex items-center gap-1"
+              >
+                <Icon name="lucide:git-branch" class="w-3 h-3" />
+                Forked
+              </span>
+              <span v-else class="text-[11px] text-muted-foreground">
+                Uses master
+              </span>
+              <div class="flex-1" />
+              <button
+                v-if="isLaneForked(targetKeyForChip(t))"
+                type="button"
+                class="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                @click="resetLaneToMaster(targetKeyForChip(t))"
+              >
+                Reset to master
+              </button>
+              <button
+                type="button"
+                class="text-[11px] font-medium text-primary hover:text-primary/80"
+                @click="editLane(targetKeyForChip(t))"
+              >
+                {{ editingTargetKey === targetKeyForChip(t) ? 'Close' : 'Customize' }}
+              </button>
+            </div>
+            <div
+              v-if="editingTargetKey === targetKeyForChip(t)"
+              class="composer-lane__editor"
+            >
+              <div class="space-y-1">
+                <label class="composer-lane__label">Subject</label>
+                <UInput
+                  :model-value="laneSubject(targetKeyForChip(t))"
+                  :placeholder="subject || 'Subject (inherits master)'"
+                  @update:model-value="setLaneSubject(targetKeyForChip(t), String($event))"
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="composer-lane__label">Body</label>
+                <UTextarea
+                  :model-value="laneBody(targetKeyForChip(t))"
+                  :rows="10"
+                  :placeholder="body || 'Body (inherits master)'"
+                  class="font-mono text-sm"
+                  @update:model-value="setLaneBody(targetKeyForChip(t), String($event))"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </UCard>
 
       <UCard>
@@ -791,5 +1005,22 @@ async function save() {
 
 .composer-picker {
   @apply space-y-3 pt-3 border-t border-border;
+}
+
+/* P4 Item A.2 — per-target variant lane row. */
+.composer-lane {
+  @apply rounded-lg border border-border bg-muted/20;
+}
+
+.composer-lane__header {
+  @apply flex items-center gap-2 px-3 py-2;
+}
+
+.composer-lane__editor {
+  @apply space-y-2 px-3 pb-3 border-t border-border;
+}
+
+.composer-lane__label {
+  @apply text-[11px] font-medium uppercase tracking-wide text-muted-foreground;
 }
 </style>

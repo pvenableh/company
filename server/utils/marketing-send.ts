@@ -31,6 +31,7 @@
 
 import { createItem, readItem, readItems, updateItem } from '@directus/sdk';
 import type { MarketingTouchVariant } from '~~/shared/marketing-persistence';
+import type { EmailBodyVariant } from '~~/shared/composition';
 import { renderOrgEmail } from './email-shell';
 import { fetchOrgBrand, sendBrandedEmail } from './email-send';
 import { buildUnsubscribeUrl } from './unsubscribe';
@@ -63,6 +64,23 @@ interface ContactRow {
 	email_unsubscribed_at: string | null;
 	email_bounced: boolean | null;
 	unsubscribe_token: string | null;
+}
+
+/**
+ * Recipient + the target key that first captured them (P4 Item A.2).
+ *
+ * When a touch has body_variants, the send loop looks up
+ * `body_variants[sourceTargetKey]` for each recipient. Contacts that come
+ * from the legacy single-FK fallback path get sourceTargetKey=null →
+ * always reads master.
+ *
+ * Order matters: when a contact is in multiple targets, the FIRST target
+ * (by junction `sort` order) is the one that captures them. This matches
+ * the user's mental model — chip-row order = variant precedence.
+ */
+interface RecipientWithSource {
+	contact: ContactRow;
+	sourceTargetKey: string | null;
 }
 
 function mdToHtml(md: string): string {
@@ -266,11 +284,31 @@ async function resolveTargetRow(args: {
 	return resolveSegmentRecipients({ directus, touch, campaign, filter });
 }
 
+/** Compute the stable string key for a junction row — mirrors
+ *  `targetKeyOf` on the client (`shared/composition.ts`). The send-path
+ *  doesn't import the client helper because it works in raw row shape
+ *  (bare ids, not the CompositionTarget view-model). */
+function targetKeyFromJunctionRow(row: {
+	target_kind: 'mailing_list' | 'audience_segment';
+	mailing_list: number | { id?: number } | null;
+	audience_filter: string | null;
+}): string | null {
+	if (row.target_kind === 'mailing_list') {
+		const listId = typeof row.mailing_list === 'object'
+			? Number((row.mailing_list as { id?: number } | null)?.id)
+			: Number(row.mailing_list);
+		if (!Number.isFinite(listId)) return null;
+		return `list:${listId}`;
+	}
+	const filter = row.audience_filter || 'all';
+	return `segment:${filter}`;
+}
+
 async function resolveAudience(args: {
 	directus: any;
 	touch: any;
 	campaign: CampaignRow;
-}): Promise<ContactRow[]> {
+}): Promise<RecipientWithSource[]> {
 	const { directus, touch, campaign } = args;
 
 	// P4 Item A.1: try the junction first. When rows exist, union all
@@ -300,14 +338,21 @@ async function resolveAudience(args: {
 
 	if (junctionRows.length > 0) {
 		const buckets = await Promise.all(
-			junctionRows.map((row) => resolveTargetRow({ directus, row, touch, campaign })),
+			junctionRows.map(async (row) => ({
+				row,
+				key: targetKeyFromJunctionRow(row),
+				contacts: await resolveTargetRow({ directus, row, touch, campaign }),
+			})),
 		);
-		// Dedupe by contact id — same contact across multiple lists/segments
-		// is emailed exactly once per touch.
-		const merged = new Map<string, ContactRow>();
+		// Dedupe by contact id — same contact across multiple targets is
+		// emailed exactly once per touch. FIRST target wins for variant
+		// selection (chip-row order = variant precedence, per Item A.2).
+		const merged = new Map<string, RecipientWithSource>();
 		for (const bucket of buckets) {
-			for (const r of bucket) {
-				if (!merged.has(r.id)) merged.set(r.id, r);
+			for (const contact of bucket.contacts) {
+				if (!merged.has(contact.id)) {
+					merged.set(contact.id, { contact, sourceTargetKey: bucket.key });
+				}
 			}
 		}
 		return Array.from(merged.values());
@@ -316,18 +361,23 @@ async function resolveAudience(args: {
 	// Legacy fallback for pre-junction rows: mailing-list FK takes priority,
 	// then audience_filter. Same behavior as P4.2 — kept until every touch
 	// has at least one junction row (back-compat columns get cleared in a
-	// later cleanup phase).
+	// later cleanup phase). Variant lookup returns null sourceTargetKey →
+	// always reads master.
 	if (touch.mailing_list != null) {
 		const listId = typeof touch.mailing_list === 'object'
 			? Number((touch.mailing_list as { id?: number })?.id)
 			: Number(touch.mailing_list);
 		if (Number.isFinite(listId)) {
-			return loadMailingListContacts(directus, listId, campaign.organization);
+			const contacts = await loadMailingListContacts(directus, listId, campaign.organization);
+			const key = `list:${listId}`;
+			return contacts.map((contact) => ({ contact, sourceTargetKey: key }));
 		}
 	}
 
 	const filter: string = touch.audience_filter || 'all';
-	return resolveSegmentRecipients({ directus, touch, campaign, filter });
+	const contacts = await resolveSegmentRecipients({ directus, touch, campaign, filter });
+	const key = `segment:${filter}`;
+	return contacts.map((contact) => ({ contact, sourceTargetKey: key }));
 }
 
 async function loadVariantsByContact(
@@ -365,8 +415,8 @@ async function sendEmailTouch(args: {
 }): Promise<SendTouchResult> {
 	const { directus, touch, campaign, dryRun } = args;
 
-	const recipients = await resolveAudience({ directus, touch, campaign });
-	if (recipients.length === 0) {
+	const recipientsBundle = await resolveAudience({ directus, touch, campaign });
+	if (recipientsBundle.length === 0) {
 		return {
 			touchId: touch.id,
 			kind: 'email',
@@ -376,23 +426,42 @@ async function sendEmailTouch(args: {
 		};
 	}
 
-	// Per-recipient variants override the base content. Variants store the
-	// already-personalized strings — no {{first_name}} substitution needed
-	// when reading them.
-	const variants = await loadVariantsByContact(
+	// P4 Item A.2 — per-target body + subject variants. JSON object keyed
+	// by targetKey (`list:<id>` / `segment:<filter>`). Send-time read:
+	// `bodyVariants[sourceTargetKey] ?? master`. Null when the touch has
+	// no forks (common case).
+	const bodyVariants: Partial<Record<string, EmailBodyVariant>> | null =
+		(touch.body_variants as Partial<Record<string, EmailBodyVariant>> | null) ?? null;
+
+	// Per-recipient personalized variants (marketing_touch_variants — the
+	// pre-existing AI-personalization surface, separate from the new
+	// per-target body_variants). Per-recipient overrides take priority
+	// over per-target which takes priority over master.
+	const perContactVariants = await loadVariantsByContact(
 		directus,
 		touch.id,
-		recipients.map((r) => r.id),
+		recipientsBundle.map((r) => r.contact.id),
 	);
-	const variantCount = variants.size;
+	const perContactCount = perContactVariants.size;
 
 	if (dryRun) {
+		// Bucket recipients by sourceTargetKey for debugging the new
+		// multi-target + variants plumbing.
+		const buckets = new Map<string, number>();
+		for (const r of recipientsBundle) {
+			const key = r.sourceTargetKey ?? '(legacy)';
+			buckets.set(key, (buckets.get(key) ?? 0) + 1);
+		}
+		const bucketStr = Array.from(buckets.entries())
+			.map(([k, n]) => `${k}=${n}`)
+			.join(', ');
+		const variantLanes = bodyVariants ? Object.keys(bodyVariants).length : 0;
 		console.info(
-			`[marketing-send] DRY RUN — would send touch ${touch.id} to ${recipients.length} recipients ` +
-			`(${variantCount} via personalized variant, ${recipients.length - variantCount} via base) ` +
-			`(campaign ${campaign.id}, subject: "${touch.email_subject}")`,
+			`[marketing-send] DRY RUN — would send touch ${touch.id} to ${recipientsBundle.length} recipients ` +
+			`(${perContactCount} per-contact variants, ${variantLanes} per-target body_variant lanes) ` +
+			`(campaign ${campaign.id}, subject: "${touch.email_subject}", targets: ${bucketStr})`,
 		);
-		return { touchId: touch.id, kind: 'email', status: 'dry_run', recipients: recipients.length };
+		return { touchId: touch.id, kind: 'email', status: 'dry_run', recipients: recipientsBundle.length };
 	}
 
 	const config = useRuntimeConfig();
@@ -402,7 +471,7 @@ async function sendEmailTouch(args: {
 			touchId: touch.id,
 			kind: 'email',
 			status: 'failed',
-			recipients: recipients.length,
+			recipients: recipientsBundle.length,
 			reason: 'SendGrid API key not configured',
 		};
 	}
@@ -413,18 +482,26 @@ async function sendEmailTouch(args: {
 	const siteUrl = (config.public as any)?.siteUrl || 'https://app.earnest.guru';
 	const physicalAddress = org?.mailing_address || null;
 
-	const subjectTemplate = touch.email_subject || '';
+	const masterSubject = touch.email_subject || '';
 	const previewTemplate = touch.email_preview_text || '';
-	const bodyTemplate = touch.email_body_markdown || '';
+	const masterBody = touch.email_body_markdown || '';
 
 	let sentCount = 0;
-	for (const r of recipients) {
-		const variant = variants.get(r.id);
-		// Variant strings are already personalized — no {{first_name}} swap.
-		// Base strings still go through personalize() for the legacy mail-merge.
-		const subject = variant?.email_subject ?? personalize(subjectTemplate, r);
-		const preview = variant?.email_preview_text ?? personalize(previewTemplate, r);
-		const body = variant?.email_body_markdown ?? personalize(bodyTemplate, r);
+	for (const { contact: r, sourceTargetKey } of recipientsBundle) {
+		// Three-layer precedence: per-contact variant (highest, already
+		// personalized) → per-target body_variant (P4 A.2) → master.
+		const perContact = perContactVariants.get(r.id);
+		const perTargetLane = sourceTargetKey ? bodyVariants?.[sourceTargetKey] : null;
+
+		const effectiveSubjectTemplate = perTargetLane?.subject ?? masterSubject;
+		const effectiveBodyTemplate = perTargetLane?.body_markdown ?? masterBody;
+
+		// Per-contact variants store already-personalized strings — no
+		// {{first_name}} swap. Master + per-target templates still go
+		// through personalize() for the legacy mail-merge.
+		const subject = perContact?.email_subject ?? personalize(effectiveSubjectTemplate, r);
+		const preview = perContact?.email_preview_text ?? personalize(previewTemplate, r);
+		const body = perContact?.email_body_markdown ?? personalize(effectiveBodyTemplate, r);
 
 		const unsubscribeUrl = r.unsubscribe_token
 			? buildUnsubscribeUrl(r.unsubscribe_token, siteUrl)
@@ -534,6 +611,7 @@ export async function fireDueTouch(args: SendTouchArgs): Promise<SendTouchResult
 					'email_subject',
 					'email_preview_text',
 					'email_body_markdown',
+					'body_variants',
 					'social_channel',
 					'social_caption',
 					'social_image_brief',

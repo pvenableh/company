@@ -19,6 +19,7 @@
  */
 import { z } from 'zod';
 import { createItems, deleteItems, readItem, readItems, updateItem } from '@directus/sdk';
+import { normalizeBodyVariants } from '~~/shared/composition';
 
 // ─── Schema (SYMMETRIC with POST) ───────────────────────────────────────
 
@@ -84,6 +85,15 @@ const updateTouchSchema = z.object({
 	 *  back-compat columns to a default 'all' segment). */
 	targets: z.array(targetEntrySchema).max(20).optional(),
 
+	/** P4 Item A.2 — per-target body + subject variants. Same shape as
+	 *  the POST schema; pass null to clear the JSON column. Server
+	 *  normalizes against master before write (drops lanes matching
+	 *  master). */
+	body_variants: z.record(z.string(), z.object({
+		subject: z.string().max(998).optional(),
+		body_markdown: z.string().max(50_000),
+	})).nullable().optional(),
+
 	scheduled_for: z.string().datetime().nullable().optional(),
 	status: z.enum(['pending', 'scheduled', 'cancelled']).optional(),
 
@@ -111,7 +121,18 @@ export default defineEventHandler(async (event) => {
 	const existing = await directus
 		.request(
 			readItem('marketing_touches', touchId, {
-				fields: ['id', 'organization', 'status', 'campaign', 'scheduled_for'],
+				fields: [
+					'id',
+					'organization',
+					'status',
+					'campaign',
+					'scheduled_for',
+					// P4 Item A.2: need the current master subject + body so the
+					// body_variants normalizer can collapse lanes that match
+					// the effective master (patch values OR existing values).
+					'email_subject',
+					'email_body_markdown',
+				],
 			}),
 		)
 		.catch(() => null) as any;
@@ -145,6 +166,27 @@ export default defineEventHandler(async (event) => {
 	// `patch` would cause Directus to 400 on an unknown field.
 	const { targets: incomingTargets, ...patchableData } = parsed.data;
 	const patch: Record<string, unknown> = { ...patchableData };
+
+	// P4 Item A.2 — normalize body_variants against the effective master
+	// (patch values win; otherwise the existing row). Drop-lane-if-equal-
+	// to-master keeps the column NULL in the common case. The composer
+	// always sends the full state on save, so partial patches that touch
+	// only the master subject/body without resending variants will leave
+	// stale lanes in place — acceptable since the send-time read still
+	// uses `lane.body_markdown ?? master` correctly.
+	if ('body_variants' in patchableData) {
+		const effectiveSubject =
+			(patch.email_subject as string | undefined)
+			?? (existing.email_subject ?? '');
+		const effectiveBody =
+			(patch.email_body_markdown as string | undefined)
+			?? (existing.email_body_markdown ?? '');
+		patch.body_variants = normalizeBodyVariants(
+			patchableData.body_variants ?? null,
+			effectiveSubject,
+			effectiveBody,
+		);
+	}
 
 	// If the caller flips status=scheduled they need a scheduled_for —
 	// either in this same patch or already on the row. Mirrors the social

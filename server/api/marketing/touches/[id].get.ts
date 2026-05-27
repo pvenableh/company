@@ -43,6 +43,8 @@ export default defineEventHandler(async (event) => {
 					'email_preview_text',
 					'email_body_markdown',
 					'email_cta',
+					// P4 Item A.2: per-target body + subject variants.
+					'body_variants',
 					'social_channel',
 					'social_caption',
 					'social_image_brief',

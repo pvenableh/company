@@ -202,6 +202,9 @@ interface TouchRow {
 	email_preview_text: string | null;
 	email_body_markdown: string | null;
 	email_cta: import('~~/shared/marketing-persistence').EmailCTA | null;
+	/** P4 Item A.2: per-target subject + body forks. JSON object keyed
+	 *  by `targetKeyOf(target)`. Null when the touch has no forks. */
+	body_variants: Partial<Record<string, import('~~/shared/composition').EmailBodyVariant>> | null;
 	date_created: string;
 	date_updated: string;
 	/** P4 Item A.1: junction-row expansion. Present when the GET/POST/PATCH
@@ -297,7 +300,10 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 		subject: touch.email_subject ?? '',
 		preview_text: touch.email_preview_text,
 		cta: touch.email_cta,
-		variants: null,
+		// P4 Item A.2 — per-target subject + body forks. Null in the
+		// common case; non-null when at least one lane diverges from
+		// master after server-side normalization.
+		variants: touch.body_variants ?? null,
 		targets,
 		source: { type: 'marketing_touch', touch_id: touch.id, campaign_id: touch.campaign },
 	};
@@ -364,6 +370,10 @@ function touchCreateBody(
 		email_preview_text: input.preview_text ?? null,
 		email_body_markdown: input.body,
 		email_cta: input.cta ?? null,
+		// P4 Item A.2: per-target variants pass-through. Server normalizes
+		// against master before write (drops lanes matching master) — we
+		// just forward whatever the caller set.
+		body_variants: input.variants ?? null,
 	};
 }
 
@@ -398,6 +408,11 @@ function touchPatchBody(
 			body.audience_filter = 'all';
 		}
 	}
+	// P4 Item A.2: pass variants through. Server normalizes against the
+	// effective master before write — we just forward the caller's shape.
+	// `null` clears the column; `undefined` leaves it untouched (partial
+	// patch semantics).
+	if (patch.variants !== undefined) body.body_variants = patch.variants;
 	if (patch.scheduled_at !== undefined) body.scheduled_for = patch.scheduled_at;
 	if (patch.status !== undefined) body.status = touchStatusFor(patch.status);
 	if (patch.plan_id !== undefined) body.campaign = patch.plan_id;
