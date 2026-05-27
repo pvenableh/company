@@ -1697,14 +1697,13 @@ onMounted(() => {
     text-foreground/70 bg-muted/70;
 }
 
+/* Reka-UI teleports the popover panel outside `.studio-shell`, so the
+   --accent-h/s/l vars scoped there don't resolve here. Use the global
+   --primary token instead so the icon stays visible regardless of where
+   the panel mounts in the DOM. */
 .lens-chooser__option--active .lens-chooser__icon {
-  @apply text-white;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
-  );
-  box-shadow: 0 2px 8px -4px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+  @apply bg-primary text-primary-foreground;
+  box-shadow: 0 2px 8px -4px hsl(var(--primary) / 0.55);
 }
 
 .lens-chooser__label {
