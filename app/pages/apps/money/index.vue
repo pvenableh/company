@@ -536,30 +536,31 @@ const headerAction = computed(() => {
         </div>
 
         <template v-else>
-          <!-- KPI strip -->
+          <!-- KPI strip — tabular-nums on every big number so the cards
+               don't visually jitter as values refresh. -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Outstanding</p>
-              <p class="text-2xl font-bold" :class="cashflowKpis.outstanding > 0 ? 'text-warning' : 'text-foreground'">
+              <p class="text-2xl font-bold tabular-nums" :class="cashflowKpis.outstanding > 0 ? 'text-warning' : 'text-foreground'">
                 {{ fmtCompact(cashflowKpis.outstanding) }}
               </p>
               <p class="text-[11px] text-muted-foreground mt-0.5">across all open invoices</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Overdue</p>
-              <p class="text-2xl font-bold" :class="cashflowKpis.overdueCount > 0 ? 'text-destructive' : 'text-foreground'">
+              <p class="text-2xl font-bold tabular-nums" :class="cashflowKpis.overdueCount > 0 ? 'text-destructive' : 'text-foreground'">
                 {{ cashflowKpis.overdueCount }}
               </p>
               <p class="text-[11px] text-muted-foreground mt-0.5">{{ cashflowKpis.overdueCount === 1 ? 'invoice' : 'invoices' }} past due</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Billed this month</p>
-              <p class="text-2xl font-bold text-foreground">{{ fmtCompact(cashflowKpis.billedThisMonth) }}</p>
+              <p class="text-2xl font-bold tabular-nums text-foreground">{{ fmtCompact(cashflowKpis.billedThisMonth) }}</p>
               <p class="text-[11px] text-muted-foreground mt-0.5">{{ format(new Date(), 'MMMM yyyy') }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Paid this month</p>
-              <p class="text-2xl font-bold text-success">{{ fmtCompact(cashflowKpis.paidThisMonth) }}</p>
+              <p class="text-2xl font-bold tabular-nums text-success">{{ fmtCompact(cashflowKpis.paidThisMonth) }}</p>
               <p class="text-[11px] text-muted-foreground mt-0.5">collected</p>
             </div>
           </div>
@@ -841,11 +842,11 @@ const headerAction = computed(() => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Total Received</p>
-              <p class="text-2xl font-bold text-success">{{ fmtMoney(paymentsTotal) }}</p>
+              <p class="text-2xl font-bold tabular-nums text-success">{{ fmtMoney(paymentsTotal) }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Payments</p>
-              <p class="text-2xl font-bold text-foreground">{{ paymentsList.length }}</p>
+              <p class="text-2xl font-bold tabular-nums text-foreground">{{ paymentsList.length }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Latest</p>

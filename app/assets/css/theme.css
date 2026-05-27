@@ -358,6 +358,37 @@ select:focus-visible {
   }
 }
 
+/* ---- Route transition: page-fade-up ----
+ * Soft fade + tiny lift on every route change. The new page enters from
+ * 8px below + fully transparent and settles into place over 200ms with
+ * the iOS curve. `out-in` mode (set on <NuxtPage>) ensures the outgoing
+ * page finishes leaving before the incoming page starts entering, so we
+ * never get a cross-fade collision. */
+.page-fade-up-enter-active,
+.page-fade-up-leave-active {
+  transition:
+    opacity 200ms cubic-bezier(0.36, 0.66, 0.04, 1),
+    transform 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.page-fade-up-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-up-enter-active,
+  .page-fade-up-leave-active {
+    transition: opacity 120ms ease;
+  }
+  .page-fade-up-enter-from,
+  .page-fade-up-leave-to {
+    transform: none;
+  }
+}
+
 /* ---- iOS-style inset group (Settings-like sections) ---- */
 .ios-group {
   @apply bg-card rounded-xl overflow-hidden divide-y divide-border/60;

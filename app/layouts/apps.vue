@@ -237,7 +237,10 @@ if (import.meta.client) {
 }
 
 .apps-shell__chrome-btn {
-	@apply flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
+	/* Bumped from 32pt → 36pt: closer to the iOS 44pt minimum without
+	 * crowding the chrome row. Pairs with the universal :active scale
+	 * for proper tactile feedback. */
+	@apply flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
 }
 
 .apps-shell__page {

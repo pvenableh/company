@@ -47,7 +47,7 @@ const { visibleLinks } = useNavPreferences();
 </script>
 <template>
 	<NuxtLayout>
-		<NuxtPage />
+		<NuxtPage :transition="{ name: 'page-fade-up', mode: 'out-in' }" />
 	</NuxtLayout>
 	<SupportReportModal v-if="user" />
 	<NuxtLoadingIndicator
