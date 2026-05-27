@@ -483,6 +483,7 @@ function handleSubmit() {
         product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
+        amount: Math.round((li.quantity || 0) * (li.rate || 0) * 100) / 100,
         description: li.description || undefined,
       }));
     }
@@ -492,6 +493,7 @@ function handleSubmit() {
         product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
+        amount: Math.round((li.quantity || 0) * (li.rate || 0) * 100) / 100,
         description: li.description || undefined,
       }));
     }
@@ -509,6 +511,7 @@ function handleSubmit() {
         product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
+        amount: Math.round((li.quantity || 0) * (li.rate || 0) * 100) / 100,
         description: li.description || undefined,
       })),
     };

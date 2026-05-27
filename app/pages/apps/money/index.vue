@@ -37,9 +37,8 @@ useHead({ title: 'Money | Earnest' });
 const router = useRouter();
 
 const invoiceSlide = useAppSlideOver('invoice');
-function openInvoice(invoiceId: string, ev?: MouseEvent) {
-  const flipFrom = flipPayloadFrom(ev?.currentTarget as HTMLElement | null | undefined);
-  invoiceSlide.open(invoiceId, { flipFrom });
+function openInvoice(invoiceId: string) {
+  invoiceSlide.open(invoiceId);
 }
 const route = useRoute();
 
