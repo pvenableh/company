@@ -159,6 +159,63 @@ if (import.meta.client) {
 
 .apps-shell__main {
 	@apply flex-1 flex flex-col min-w-0 min-h-0;
+	position: relative;
+}
+
+/* Page ambient gradient — a fixed-position accent-tinted radial fade at
+ * the top of the viewport that bridges the AppHeader's glass into the
+ * page body, so the surfaces read as one continuous material instead of
+ * two separately-floating slabs. Sits behind page content (z-0) and is
+ * pointer-events:none so it never intercepts clicks. The accent vars
+ * are bound on the shell wrapper via :style="accentStyle" — switching
+ * apps re-tints the wash automatically. */
+.apps-shell__main::before {
+	content: '';
+	position: fixed;
+	top: 56px;
+	left: 0;
+	right: 0;
+	height: 360px;
+	pointer-events: none;
+	z-index: 0;
+	background:
+		radial-gradient(
+			ellipse 70% 100% at 50% -10%,
+			hsl(var(--app-accent-h, 220) 65% 60% / 0.08) 0%,
+			hsl(var(--app-accent-h, 220) 55% 55% / 0.04) 35%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 50% 80% at 90% 0%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 60% 55% / 0.05) 0%,
+			transparent 60%
+		);
+	mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+	-webkit-mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+}
+.dark .apps-shell__main::before {
+	background:
+		radial-gradient(
+			ellipse 70% 100% at 50% -10%,
+			hsl(var(--app-accent-h, 220) 65% 50% / 0.10) 0%,
+			hsl(var(--app-accent-h, 220) 55% 45% / 0.05) 35%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 50% 80% at 90% 0%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 60% 50% / 0.07) 0%,
+			transparent 60%
+		);
+}
+@media (prefers-reduced-transparency: reduce) {
+	.apps-shell__main::before { display: none; }
+}
+
+/* Lift page content above the ambient wash. The chrome already has its
+ * own z-40, so this only affects body content. */
+.apps-shell__page {
+	position: relative;
+	z-index: 1;
 }
 
 .apps-shell__chrome {
