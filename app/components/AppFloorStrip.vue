@@ -20,6 +20,8 @@
 
 import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue';
 
+const { tap } = useHaptic();
+
 interface FloorItem<TKey extends string> {
 	key: TKey;
 	label: string;
@@ -111,7 +113,7 @@ watch(() => props.modelValue, () => nextTick(measure));
 				:aria-selected="modelValue === seg.key"
 				class="app-floor-strip__item"
 				:class="{ 'app-floor-strip__item--active': modelValue === seg.key }"
-				@click="emit('update:modelValue', seg.key)"
+				@click="modelValue !== seg.key && (emit('update:modelValue', seg.key), tap())"
 			>
 				<EarnestIcon v-if="seg.icon === 'earnest'" class="app-floor-strip__icon" />
 				<Icon v-else :name="seg.icon" class="app-floor-strip__icon" />

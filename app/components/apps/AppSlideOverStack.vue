@@ -402,9 +402,38 @@ function onShellClose() {
 .app-slide-over-stack__backdrop {
 	position: absolute;
 	inset: 0;
-	background: rgb(0 0 0 / 0.35);
+	/* Accent-tinted blurred backdrop matching the Dialog overlay treatment
+	 * — radial wash toward the panel side + blur over the page beneath, so
+	 * the app reads as "behind glass" when a slide-over is open instead of
+	 * just dimmed-out. Depth-aware darken happens via the inline style
+	 * override on the element (settledDepth >=2 → 0.5 dim baseline). */
+	background:
+		radial-gradient(
+			ellipse 60% 80% at 80% 50%,
+			hsl(var(--app-accent-h, 220) 50% 30% / 0.28) 0%,
+			transparent 80%
+		),
+		rgb(0 0 0 / 0.35);
+	backdrop-filter: blur(6px) saturate(140%);
+	-webkit-backdrop-filter: blur(6px) saturate(140%);
 	pointer-events: auto;
 	opacity: 0;
+}
+.dark .app-slide-over-stack__backdrop {
+	background:
+		radial-gradient(
+			ellipse 60% 80% at 80% 50%,
+			hsl(var(--app-accent-h, 220) 50% 50% / 0.20) 0%,
+			transparent 80%
+		),
+		rgb(0 0 0 / 0.55);
+}
+@media (prefers-reduced-transparency: reduce) {
+	.app-slide-over-stack__backdrop {
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		background: rgb(0 0 0 / 0.5);
+	}
 }
 
 .app-slide-over-stack__panels {

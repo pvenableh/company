@@ -358,6 +358,57 @@ select:focus-visible {
   }
 }
 
+/* ---- iOS-style activity spinner ----
+ * `.spinner-ios` renders an iOS-flavored activity indicator: a thin
+ * gradient arc that spins continuously, tinted by the current app
+ * accent. Use as a drop-in for lucide:loader-2:
+ *
+ *   <span class="spinner-ios" />     (default 16px)
+ *   <span class="spinner-ios spinner-ios--sm" />  (12px)
+ *   <span class="spinner-ios spinner-ios--lg" />  (24px)
+ *
+ * Implemented via two stacked masked conic-gradient layers so the arc
+ * has a tapered head/tail. Lighter/heavier weight via the size
+ * modifiers. Respects prefers-reduced-motion (still spins, slower).
+ */
+.spinner-ios {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0%,
+      hsl(var(--app-accent-h, 220) 80% 55% / 0) 0%,
+      hsl(var(--app-accent-h, 220) 80% 55% / 0.15) 12%,
+      hsl(var(--app-accent-h, 220) 80% 55% / 0.55) 50%,
+      hsl(var(--app-accent-h, 220) 80% 55%) 100%
+    );
+  mask: radial-gradient(circle, transparent 38%, black 41%, black 100%);
+  -webkit-mask: radial-gradient(circle, transparent 38%, black 41%, black 100%);
+  animation: spinnerIos 900ms linear infinite;
+  vertical-align: middle;
+}
+.spinner-ios--sm {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.spinner-ios--lg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.spinner-ios--xl {
+  width: 2rem;
+  height: 2rem;
+}
+@keyframes spinnerIos {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner-ios { animation-duration: 1800ms; }
+}
+
 /* ---- Route transition: page-fade-up ----
  * Soft fade + tiny lift on every route change. The new page enters from
  * 8px below + fully transparent and settles into place over 200ms with
