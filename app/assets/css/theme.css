@@ -315,13 +315,13 @@ a[role='button']:not([data-no-press]):active,
   outline-offset: 2px;
   border-radius: inherit;
 }
-/* Native form controls — keep a more conservative ring that doesn't fight
- * the rounded border. The outline-offset still gives breathing room. */
+/* Native form controls — Input.vue + Textarea.vue manage their own
+ * accent-tinted focus border + shadow. Suppress the global outline so
+ * the two don't double-render into a triple-ring look. */
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid hsl(var(--app-accent-h, 220) 80% 55% / 0.85);
-  outline-offset: 1px;
+  outline: none;
 }
 
 /* ---- River-flow skeleton shimmer ----
