@@ -453,20 +453,6 @@ function closeComposer() {
 			</button>
 		</div>
 
-		<!-- Desktop "Overview" affordance (P4.4 Item D). Visible at z=1
-		     only — disappears once z drops toward the grid (the grid is
-		     itself the affordance below z=0.5) or rises toward
-		     lift/composer. Keyboard-friendly counterpart to the trackpad
-		     pinch-out gesture. -->
-		<button
-			v-if="lensOptions.length > 0 && zoom.z.value >= 0.9 && zoom.z.value < 1.5"
-			type="button"
-			class="composition-canvas__overview-affordance"
-			aria-label="Open lens overview"
-			@click="zoom.openOverview()"
-		>
-			<Icon name="lucide:layout-grid" class="w-4 h-4" />
-		</button>
 
 		<!-- Lifted leaf overlay — z=2 focus. Click backdrop to close back to
 		     the river. Active id comes from the composable singleton (the
@@ -716,15 +702,6 @@ function closeComposer() {
 		text-[11px] font-semibold text-foreground;
 	backdrop-filter: blur(8px);
 	pointer-events: none;
-}
-
-.composition-canvas__overview-affordance {
-	@apply absolute top-3 right-3 z-10 inline-flex items-center justify-center
-		w-9 h-9 rounded-full border border-border bg-card/95
-		text-muted-foreground hover:text-foreground hover:border-primary/40
-		transition-colors;
-	backdrop-filter: blur(8px);
-	box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05), 0 4px 12px hsl(0 0% 0% / 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {

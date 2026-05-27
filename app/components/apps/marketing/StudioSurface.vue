@@ -801,6 +801,21 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <!-- Overview button — gesture-free way to reach the z=0
+               lens-grid (P4.4 Item D). Sibling of the LensChip since
+               both navigate the lens axis. Hides at z=0 (the grid is
+               itself the affordance) and at z>=1.5 (composer territory).
+               Kept out of the canvas's top-right because RiverSurface's
+               own "New Post" control lives there — co-locating with the
+               LensChip also makes the affordance more discoverable. -->
+          <UiActionButton
+            v-if="zoom.z.value >= 0.9 && zoom.z.value < 1.5"
+            icon="lucide:layout-grid"
+            aria-label="Open lens overview"
+            @click="zoom.openOverview()"
+          >
+            Overview
+          </UiActionButton>
           <!-- Lens chip — view selector. P3.6 retired the iOS segmented
                control; the chip is the only DOM affordance that mutates
                `view`. Same UiActionButton/UPopover trusted-event quirk
