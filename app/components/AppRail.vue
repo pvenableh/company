@@ -692,21 +692,25 @@ html.dark[data-rail-tint='on'] .app-rail--right {
 	z-index: 0;
 }
 
-/* Hover — slight lift and brighter top stop so the tile catches more
- * "light". Background stays solid-gradient; only the lightness ramp
- * shifts. */
+/* Hover — iOS-dock-style lift: 2px translateY + brighter top stop + a
+ * larger accent-tinted glow halo. The chip feels like it rises toward
+ * the cursor instead of just brightening. */
 .app-rail__item:hover .app-rail__chip {
 	background: linear-gradient(
 		160deg,
-		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 16%)) 0%,
-		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 2%)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 18%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 3%)) 55%,
 		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 6%)) 100%
 	);
-	transform: translateY(-1px);
+	transform: translateY(-2px);
 	box-shadow:
-		inset 0 1px 0 hsl(0 0% 100% / 0.32),
+		inset 0 1px 0 hsl(0 0% 100% / 0.36),
 		inset 0 -1px 0 hsl(0 0% 0% / 0.08),
-		0 4px 10px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.4);
+		0 6px 18px -4px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.55),
+		0 0 24px -6px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+	.app-rail__item:hover .app-rail__chip { transform: none; }
 }
 
 .app-rail__item:hover {
