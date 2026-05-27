@@ -160,9 +160,80 @@ const fallbackBackLabel = computed(() => {
 /* Bar background + bottom border span the full width; the inner container
  * is constrained + padded to the same max-w/p- as LayoutPageContainer so
  * the title aligns vertically with the page content below it. The extra
- * pt-5 pushes the title down from the layout chrome above. */
+ * pt-5 pushes the title down from the layout chrome above.
+ *
+ * Liquid-glass header: app-accent-tinted gradient over a translucent
+ * substrate, with a saturation boost. Content scrolling under it reads
+ * as colored frosted glass, tying the header into the rail's palette
+ * tint without competing with it. Falls back to solid bg where blur
+ * isn't available or transparency is reduced. */
 .app-header {
-	@apply relative shrink-0 border-b border-border/40 bg-background z-30;
+	@apply relative shrink-0 z-30;
+	border-bottom: 1px solid hsl(var(--app-accent-h, 220) 30% 60% / 0.18);
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-accent-h, 220) 60% 60% / 0.08) 0%,
+			hsl(var(--app-accent-h, 220) 50% 50% / 0.03) 60%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 55% 55% / 0.06) 100%
+		),
+		hsl(var(--background) / 0.78);
+	backdrop-filter: blur(20px) saturate(160%);
+	-webkit-backdrop-filter: blur(20px) saturate(160%);
+	box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.08) inset;
+}
+.dark .app-header {
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-accent-h, 220) 60% 60% / 0.12) 0%,
+			hsl(var(--app-accent-h, 220) 50% 40% / 0.04) 60%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 55% 50% / 0.08) 100%
+		),
+		hsl(var(--background) / 0.70);
+	box-shadow: 0 1px 0 0 hsl(var(--app-accent-h, 220) 60% 80% / 0.06) inset;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.app-header { background: hsl(var(--background)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+	.app-header {
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		background: hsl(var(--background));
+	}
+}
+
+/* River-flow accent shimmer — a faint highlight pass that traces the bottom
+ * edge of the header every 7s. Reads as a quiet "current" tying the chrome
+ * into the river language without distracting from page content. */
+.app-header::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 1px;
+	pointer-events: none;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		hsl(var(--app-accent-h, 220) 80% 65% / 0) 20%,
+		hsl(var(--app-accent-h, 220) 90% 70% / 0.65) 50%,
+		hsl(var(--app-accent-h, 220) 80% 65% / 0) 80%,
+		transparent 100%
+	);
+	background-size: 220% 100%;
+	background-position: 100% 0;
+	opacity: 0.6;
+	animation: appHeaderShimmer 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes appHeaderShimmer {
+	0%   { background-position: 100% 0; }
+	100% { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.app-header::after { animation: none; opacity: 0.35; background-position: 50% 0; }
 }
 
 .app-header__inner {

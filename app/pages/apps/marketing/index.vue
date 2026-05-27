@@ -324,6 +324,54 @@ const filteredCampaigns = computed(() => {
   return campaignsList.value.filter(c => c.status === campaignsStatusFilter.value);
 });
 
+// ── Campaigns river mapping ─────────────────────────────────────────────────
+// Each campaign becomes a leaf positioned at start_date. Since campaigns are
+// day-granular (start times usually unset / midnight), we synthesize an hour
+// from the id hash so multiple same-day campaigns lane out instead of stacking.
+// Hue is driven by status — active=teal, paused=amber, completed=blue,
+// draft=muted. The chart hides hour rails so the synthetic Y doesn't read
+// as "9am vs 2pm".
+function campaignHue(status: string): number {
+  if (status === 'active') return 150;     // teal-green: live
+  if (status === 'paused') return 40;      // amber: held
+  if (status === 'completed') return 210;  // blue: shipped
+  return 220;                              // muted: draft
+}
+function campaignSat(status: string): number {
+  if (status === 'active') return 70;
+  if (status === 'paused') return 78;
+  if (status === 'completed') return 55;
+  return 30;
+}
+function hashHour(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  // Spread across 4:00–20:00 so leaves don't crowd the rails.
+  return 4 + (h % 16);
+}
+const campaignRiverItems = computed(() => {
+  return filteredCampaigns.value
+    .filter((c: any) => !!c.start_date)
+    .map((c: any) => {
+      const base = new Date(c.start_date);
+      base.setHours(hashHour(String(c.id)), 0, 0, 0);
+      return {
+        id: String(c.id),
+        when: base.toISOString(),
+        label: c.title || 'Untitled campaign',
+        sublabel: [c.status, c.type].filter(Boolean).join(' · '),
+        hue: campaignHue(c.status || 'draft'),
+        sat: campaignSat(c.status || 'draft'),
+        icon: 'lucide:rocket',
+        past: c.status === 'completed',
+        _raw: c,
+      };
+    });
+});
+function onCampaignLeafSelect(item: { _raw: any }) {
+  openCampaignSlideOver(item._raw);
+}
+
 // ── Campaign slide-over (URL-bound via useAppSlideOver) ─────────────────────
 // Quick-edit lives in `components/apps/panels/CampaignPanel.vue`, rendered
 // by the shell-level <AppsAppSlideOverStack>. The panel bumps a shared
@@ -1018,44 +1066,33 @@ const scopeLabel = computed(() => {
           </Button>
         </div>
 
-        <div v-else class="ios-card overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-border/50">
-                  <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Campaign</th>
-                  <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
-                  <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Type</th>
-                  <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Start</th>
-                  <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">End</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="c in filteredCampaigns"
-                  :key="c.id"
-                  class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-                  @click="openCampaignSlideOver(c)"
-                >
-                  <td class="py-3 px-4">
-                    <p class="font-medium text-foreground">{{ c.title }}</p>
-                    <p v-if="c.goal" class="text-[11px] text-muted-foreground truncate max-w-md">{{ c.goal }}</p>
-                  </td>
-                  <td class="py-3 px-4">
-                    <span
-                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                      :class="getStatusBadgeClasses(c.status)"
-                    >
-                      {{ c.status }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 text-muted-foreground capitalize">{{ c.type || '—' }}</td>
-                  <td class="py-3 px-4 text-muted-foreground">{{ c.start_date ? relativeDate(c.start_date) : '—' }}</td>
-                  <td class="py-3 px-4 text-muted-foreground">{{ c.end_date ? relativeDate(c.end_date) : '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
+        <div v-else class="glass-surface p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Campaign river
+              </h3>
+              <p class="text-[11px] text-muted-foreground/70 mt-0.5">
+                {{ filteredCampaigns.length }} {{ filteredCampaigns.length === 1 ? 'campaign' : 'campaigns' }} ·
+                drag-free overview, click any leaf to open
+              </p>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background: hsl(150 70% 50%)" />active</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background: hsl(40 78% 55%)" />paused</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background: hsl(210 55% 55%)" />completed</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background: hsl(220 30% 60%)" />draft</span>
+            </div>
           </div>
+          <RiverChart
+            :items="campaignRiverItems"
+            :hour-height="14"
+            :hide-hours="true"
+            :accent-hue="200"
+            empty-title="No campaigns in this window."
+            empty-subtitle="Plan one with the Campaign Planner to see it ripple in."
+            @select="onCampaignLeafSelect"
+          />
         </div>
       </template>
 

@@ -413,13 +413,12 @@ watch(activeTab, (t) => {
 				     toggles so deferred widgets don't re-mount. -->
 				<div class="flex flex-col gap-6">
 
-				<!-- ─── YOU band ─── -->
+				<!-- ─── Personal band ───
+				     Labels intentionally dropped: the header Mine/All toggle is
+				     the single source of truth for "what's this view about." A
+				     redundant in-page label only added a second mental model.
+				     Order still flips via :style based on the same toggle. -->
 				<section :style="{ order: youOrder }" class="space-y-4">
-					<div class="flex items-center gap-2">
-						<UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-primary" />
-						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">You</h2>
-						<div class="flex-1 h-px bg-border/40"></div>
-					</div>
 
 				<!-- Priority Actions + Quick Tasks | Earnest Score + My Goals -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -601,13 +600,8 @@ watch(activeTab, (t) => {
 				</div>
 				</section>
 
-				<!-- ─── US band ─── -->
+				<!-- ─── Org band ─── See above re: dropped header label. -->
 				<section :style="{ order: usOrder }" class="space-y-4">
-					<div class="flex items-center gap-2">
-						<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-primary" />
-						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Us</h2>
-						<div class="flex-1 h-px bg-border/40"></div>
-					</div>
 
 					<!-- Active client + project carousels — quick access to the
 					     most-recently-active rows. Cards open the corresponding
@@ -624,191 +618,65 @@ watch(activeTab, (t) => {
 						<CommandCenterProjectDigestsWidget />
 					</ClientOnly>
 
-					<!-- CRM Health (relocated from YOU's right column; now full width) -->
-					<div v-if="showWidget('crm-health')" :class="healthBg" class="ios-card p-5 text-center">
-							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
-
-							<!-- Loading (snapshot) -->
-							<div v-if="crmSnapshotLoading && healthScore === null" class="py-4">
-								<div class="w-20 h-20 mx-auto bg-muted rounded-full animate-pulse"></div>
-								<div class="w-24 h-3 mx-auto bg-muted rounded mt-3 animate-pulse"></div>
-							</div>
-
-							<!-- Score Display -->
-							<div v-else-if="healthScore !== null" class="py-2">
-								<div class="relative w-24 h-24 mx-auto">
-									<svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
-										<path class="stroke-muted/30" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" />
-										<path
-											:class="healthColor.replace('text-', 'stroke-')"
-											d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-											fill="none"
-											stroke-width="3"
-											stroke-linecap="round"
-											:stroke-dasharray="`${healthScore}, 100`"
-										/>
-									</svg>
-									<div class="absolute inset-0 flex items-center justify-center">
-										<span :class="healthColor" class="text-2xl font-bold">{{ healthScore }}</span>
-									</div>
-								</div>
-								<p class="text-xs text-muted-foreground mt-2">Overall Score</p>
-
-								<!-- Breakdown bars -->
-								<div v-if="healthBreakdown" class="mt-4 space-y-2 text-left">
-									<div v-for="(value, key) in healthBreakdown" :key="key" class="flex items-center gap-2">
-										<span class="text-[10px] text-muted-foreground w-20 truncate capitalize">{{ String(key).replace(/([A-Z])/g, ' $1').trim() }}</span>
-										<div class="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
-											<div
-												class="h-full rounded-full transition-all duration-500"
-												:class="{
-													'bg-success': value >= 75,
-													'bg-warning': value >= 50 && value < 75,
-													'bg-destructive': value < 50,
-												}"
-												:style="{ width: `${value}%` }"
-											/>
-										</div>
-										<span class="text-[10px] font-medium text-muted-foreground w-6 text-right">{{ value }}</span>
-									</div>
-								</div>
-
-								<!-- Algorithmic alerts (shown when no AI insights) -->
-								<div v-if="crmAlerts.length > 0 && crmInsights.length === 0" class="mt-4 space-y-1.5 text-left">
-									<div
-										v-for="(alert, i) in crmAlerts.slice(0, 4)"
-										:key="i"
-										class="flex items-start gap-1.5 text-[10px]"
-									>
-										<UIcon
-											:name="alert.type === 'danger' ? 'i-heroicons-exclamation-triangle' : alert.type === 'warning' ? 'i-heroicons-exclamation-circle' : alert.type === 'success' ? 'i-heroicons-check-circle' : 'i-heroicons-information-circle'"
-											:class="alert.type === 'danger' ? 'text-destructive' : alert.type === 'warning' ? 'text-warning' : alert.type === 'success' ? 'text-success' : 'text-blue-500'"
-											class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
-										/>
-										<span class="text-muted-foreground leading-tight">{{ alert.message }}</span>
-									</div>
-								</div>
-
-								<!-- On-demand AI Analysis button -->
-								<button
-									v-if="!crmOverview"
-									@click="runCRMAnalysis"
-									:disabled="crmLoading"
-									class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-								>
-									<UIcon v-if="crmLoading" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
-									<EarnestIcon v-else class="w-3 h-3" />
-									{{ crmLoading ? 'Analyzing...' : 'Run Analysis' }}
-								</button>
-								<p v-if="crmLastAI" class="text-[9px] text-muted-foreground mt-1">
-									Analysis {{ new Date(crmLastAI).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-								</p>
-							</div>
-
-							<!-- No data state -->
-							<div v-else class="py-6">
-								<UIcon name="i-heroicons-user-group" class="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-								<p class="text-xs text-muted-foreground">No clients yet</p>
-								<p class="text-[10px] text-muted-foreground/70 mt-1">Add your first client to see CRM health.</p>
-								<NuxtLink
-									to="/clients?new=1"
-									class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
-								>
-									<UIcon name="i-heroicons-plus" class="w-3 h-3" />
-									Add your first client
-								</NuxtLink>
+					<!-- CRM Pulse — slim glass callout. The full radial + breakdown
+					     + insights + growth-opportunities surface lives on the
+					     /contacts Insights tab (one destination per noun). This
+					     gives quick reference here without dominating the band. -->
+					<NuxtLink
+						v-if="showWidget('crm-health')"
+						to="/contacts?view=insights"
+						class="glass-surface glass-surface--hoverable p-4 flex items-center gap-4 group"
+					>
+						<!-- Mini radial -->
+						<div v-if="healthScore !== null" class="relative w-12 h-12 shrink-0">
+							<svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+								<path class="stroke-muted/30" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" />
+								<path
+									:class="healthColor.replace('text-', 'stroke-')"
+									d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+									fill="none"
+									stroke-width="3"
+									stroke-linecap="round"
+									:stroke-dasharray="`${healthScore}, 100`"
+								/>
+							</svg>
+							<div class="absolute inset-0 flex items-center justify-center">
+								<span :class="healthColor" class="text-sm font-bold tabular-nums">{{ healthScore }}</span>
 							</div>
 						</div>
+						<div v-else-if="crmSnapshotLoading" class="w-12 h-12 shrink-0 rounded-full bg-muted/40 animate-pulse"></div>
+						<div v-else class="w-12 h-12 shrink-0 rounded-full bg-muted/30 flex items-center justify-center">
+							<UIcon name="i-heroicons-user-group" class="w-5 h-5 text-muted-foreground/60" />
+						</div>
+
+						<!-- Headline + first alert -->
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2">
+								<h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">CRM pulse</h3>
+								<span v-if="healthScore !== null" :class="healthColor" class="text-[10px] font-semibold tabular-nums">
+									{{ healthScore >= 75 ? 'Strong' : healthScore >= 50 ? 'Steady' : 'Needs attention' }}
+								</span>
+							</div>
+							<p v-if="crmAlerts.length > 0" class="text-xs text-foreground/80 mt-0.5 truncate">
+								{{ crmAlerts[0].message }}
+							</p>
+							<p v-else-if="healthScore === null" class="text-xs text-muted-foreground mt-0.5">
+								Add your first client to start tracking pulse.
+							</p>
+							<p v-else class="text-xs text-muted-foreground mt-0.5">
+								{{ healthBreakdown ? `${Object.keys(healthBreakdown).length} dimensions tracked` : 'Open Insights for full breakdown' }}
+							</p>
+						</div>
+
+						<!-- Open insights affordance -->
+						<span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-primary opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+							Open Insights
+							<Icon name="lucide:arrow-right" class="w-3.5 h-3.5" />
+						</span>
+					</NuxtLink>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
 				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />
-
-				<!-- CRM Insights + Growth Opportunities -->
-				<div v-if="showWidget('crm-insights') && (crmInsights.length > 0 || crmActions.length > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<!-- Insights -->
-					<div v-if="crmInsights.length > 0" class="ios-card p-5">
-						<div class="flex items-center gap-2 mb-4">
-							<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Insights</h3>
-						</div>
-
-						<div class="space-y-3">
-							<div
-								v-for="(insight, i) in crmInsights"
-								:key="i"
-								class="flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors"
-							>
-								<UIcon
-									:name="insightIcons[insight.type] || 'i-heroicons-information-circle'"
-									class="w-5 h-5 flex-shrink-0 mt-0.5"
-									:class="insightColors[insight.type] || 'text-muted-foreground'"
-								/>
-								<div class="flex-1 min-w-0">
-									<p class="text-sm font-medium text-foreground">{{ insight.title }}</p>
-									<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ insight.description }}</p>
-									<span class="text-[10px] text-muted-foreground/60 mt-1 block">{{ insight.dataPoint }}</span>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- CRM Actions or Growth Opportunities -->
-					<div v-if="crmActions.length > 0" class="ios-card p-5">
-						<div class="flex items-center gap-2 mb-4">
-							<UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-								{{ growthOpportunities.length > 0 ? 'Growth Opportunities' : 'CRM Actions' }}
-							</h3>
-						</div>
-
-						<!-- Growth Opportunities -->
-						<div v-if="growthOpportunities.length > 0" class="space-y-3">
-							<div
-								v-for="(opp, i) in growthOpportunities"
-								:key="i"
-								class="p-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors"
-							>
-								<div class="flex items-start justify-between gap-2">
-									<p class="text-sm font-medium text-foreground">{{ opp.title }}</p>
-									<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full flex-shrink-0"
-										:class="{
-											'bg-success/10 text-success dark:bg-success/30 dark:text-success': opp.effort === 'low',
-											'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': opp.effort === 'medium',
-											'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive': opp.effort === 'high',
-										}"
-									>
-										{{ opp.effort }} effort
-									</span>
-								</div>
-								<p class="text-xs text-muted-foreground mt-1">{{ opp.description }}</p>
-								<p class="text-xs text-primary mt-1">{{ opp.potentialImpact }}</p>
-							</div>
-						</div>
-
-						<!-- Fallback: CRM Actions -->
-						<div v-else class="space-y-3">
-							<div
-								v-for="(action, i) in crmActions"
-								:key="i"
-								class="flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
-								@click="action.link && goTo(action.link)"
-							>
-								<div class="flex-1 min-w-0">
-									<div class="flex items-center gap-2">
-										<p class="text-sm font-medium text-foreground">{{ action.title }}</p>
-										<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-											:class="priorityChipClasses(action.priority)"
-										>
-											{{ action.priority }}
-										</span>
-									</div>
-									<p class="text-xs text-muted-foreground mt-0.5">{{ action.description }}</p>
-									<p class="text-xs text-primary/80 mt-1">{{ action.impact }}</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
 
 					<!-- Marketing actions — compact (only when no social/email data) -->
 					<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />

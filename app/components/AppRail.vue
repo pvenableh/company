@@ -388,25 +388,49 @@ function chipMagnifyStyle(appId: string) {
 .app-rail--right {
 	@apply fixed z-40
 		rounded-full border border-border/40
-		backdrop-blur-md
 		w-auto;
-	/* Unified glass-chrome backdrop across every palette/chip mode — the
-	 * cool light-grey tint gives the floating chips something to sit on
-	 * regardless of the page beneath. Palette-specific overrides below
-	 * have been retired; this is the single source of truth. */
-	background: hsl(220 14% 95% / 0.78);
+	/* Liquid-glass plinth — bumped from backdrop-blur-md (12px) to 24px +
+	 * saturate(160%) so the rail reads as a true iOS-26 glass pill against
+	 * whatever's underneath. Palette-tint overlay (below) still layers on
+	 * top of this for color. */
+	backdrop-filter: blur(24px) saturate(160%);
+	-webkit-backdrop-filter: blur(24px) saturate(160%);
+	background: hsl(220 14% 95% / 0.72);
 	box-shadow:
-		0 4px 14px -6px hsl(0 0% 0% / 0.18),
+		0 1px 0 0 hsl(0 0% 100% / 0.55) inset,
+		0 6px 18px -8px hsl(0 0% 0% / 0.22),
 		0 2px 6px -2px hsl(0 0% 0% / 0.08);
+}
+@media (prefers-reduced-transparency: reduce) {
+	.app-rail--top,
+	.app-rail--bottom,
+	.app-rail--left,
+	.app-rail--right {
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		background: hsl(220 14% 95%);
+	}
 }
 
 .dark .app-rail--top,
 .dark .app-rail--bottom,
 .dark .app-rail--left,
 .dark .app-rail--right {
-	/* Match the .glass header backdrop (rgba(40,40,40,0.88)) so the rail
-	 * reads as the same plinth as the chrome above it in dark mode. */
-	background: rgba(40, 40, 40, 0.88);
+	/* Dark glass: deeper translucent slab so the saturate boost picks up
+	 * the page's accent gradients beneath without washing the chips out. */
+	background: rgba(34, 36, 40, 0.74);
+	box-shadow:
+		0 1px 0 0 hsl(0 0% 100% / 0.06) inset,
+		0 8px 24px -10px hsl(0 0% 0% / 0.55),
+		0 2px 6px -2px hsl(0 0% 0% / 0.30);
+}
+@media (prefers-reduced-transparency: reduce) {
+	.dark .app-rail--top,
+	.dark .app-rail--bottom,
+	.dark .app-rail--left,
+	.dark .app-rail--right {
+		background: rgb(34, 36, 40);
+	}
 }
 
 /* ── Palette tint overlay ────────────────────────────────────────────

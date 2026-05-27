@@ -458,17 +458,38 @@ const backdropStyle = computed(() => ({
   flex-direction: column;
   max-height: 88vh;
   min-height: 30vh;
-  background: hsl(var(--background));
+  /* Liquid-glass slab — accent-tinted gradient over translucent background
+   * with blur+saturate. Sheet bodies inherit the same iOS-26 glass treatment
+   * the rail + header use, so the system feels coherent. */
+  background:
+    linear-gradient(
+      180deg,
+      hsl(var(--app-accent-h, 220) 50% 55% / 0.10) 0%,
+      hsl(var(--app-accent-h, 220) 40% 50% / 0.03) 18%,
+      transparent 40%
+    ),
+    hsl(var(--background) / 0.92);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
-  box-shadow: 0 -8px 24px -8px rgb(0 0 0 / 0.25);
+  box-shadow:
+    0 1px 0 0 hsl(0 0% 100% / 0.10) inset,
+    0 -10px 28px -10px rgb(0 0 0 / 0.28);
   margin-inline: auto;
   max-width: 640px;
-  border: 1px solid hsl(var(--border) / 0.5);
+  border: 1px solid hsl(var(--app-accent-h, 220) 30% 60% / 0.20);
   border-bottom: 0;
   will-change: transform;
   /* Closed pose — overridden by the reactive inline transform on open. */
   transform: translate3d(0, 100%, 0);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .app-bottom-sheet {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: hsl(var(--background));
+  }
 }
 
 .app-bottom-sheet__handle-row {

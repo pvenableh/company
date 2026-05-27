@@ -261,11 +261,45 @@ onBeforeUnmount(() => {
 	flex-direction: column;
 	gap: 0.375rem;
 	padding: 0.5rem 1.25rem 0.875rem;
-	border-bottom: 1px solid hsl(var(--border) / 0.4);
-	background: hsl(var(--background) / 0.92);
-	backdrop-filter: blur(8px);
+	border-bottom: 1px solid hsl(var(--app-accent-h, 220) 30% 60% / 0.18);
+	/* Liquid-glass header: app-accent-tinted gradient over a translucent
+	 * substrate, with saturation boost so content scrolling under it reads
+	 * as colored frosted glass. Falls back to flat card on browsers that
+	 * can't backdrop-filter, and to flat on prefers-reduced-transparency. */
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-accent-h, 220) 60% 60% / 0.10) 0%,
+			hsl(var(--app-accent-h, 220) 50% 50% / 0.04) 60%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 55% 55% / 0.08) 100%
+		),
+		hsl(var(--background) / 0.78);
+	backdrop-filter: blur(20px) saturate(160%);
+	-webkit-backdrop-filter: blur(20px) saturate(160%);
+	box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.10) inset;
 	position: relative;
 	flex-shrink: 0;
+}
+.dark .app-slide-over-shell__header {
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-accent-h, 220) 60% 60% / 0.14) 0%,
+			hsl(var(--app-accent-h, 220) 50% 40% / 0.05) 60%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 55% 50% / 0.10) 100%
+		),
+		hsl(var(--background) / 0.70);
+	box-shadow: 0 1px 0 0 hsl(var(--app-accent-h, 220) 60% 80% / 0.06) inset;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.app-slide-over-shell__header { background: hsl(var(--background)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+	.app-slide-over-shell__header {
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		background: hsl(var(--background));
+	}
 }
 
 .app-slide-over-shell__nav-row {

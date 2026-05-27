@@ -490,6 +490,43 @@ function activityWhen(iso: string): string {
 	return d.toLocaleDateString();
 }
 
+// ── Activity river ─────────────────────────────────────────────────────────
+// Map ActivityRow → RiverItem. Hue per `kind` so money/projects/tickets/
+// meetings each read as their own current. The temperature curve above the
+// leaves exposes engagement rhythm — slow weeks visibly sag, active bursts
+// arc up. Only renders on the 'all' filter (other filters narrow the picture
+// and the river would feel artificially quiet).
+function activityHue(kind: string): number {
+	if (kind.startsWith('invoice')) return 150;       // money: teal-green
+	if (kind.startsWith('ticket')) return 25;          // tickets: amber
+	if (kind.startsWith('project')) return 210;        // projects: blue
+	if (kind.startsWith('meeting')) return 270;        // meetings: violet
+	if (kind.startsWith('task')) return 145;           // tasks: success green
+	return 220;
+}
+function activitySat(kind: string): number {
+	if (kind === 'invoice_paid' || kind === 'task_completed') return 70;
+	if (kind === 'ticket_opened') return 78;
+	return 60;
+}
+const activityRiverItems = computed(() => {
+	return activityRows.value
+		.filter((r) => !!r.ts)
+		.map((r) => ({
+			id: r.id,
+			when: r.ts,
+			label: r.title,
+			sublabel: r.subtitle || undefined,
+			hue: activityHue(r.kind),
+			sat: activitySat(r.kind),
+			icon: r.icon,
+			_raw: r,
+		}));
+});
+function onActivityLeafSelect(item: { _raw: ActivityRow }) {
+	if (item._raw.href) navigateTo(item._raw.href);
+}
+
 // ── Inline create modals ───────────────────────────────────────────────────
 // All of these are UModal-based and teleport to body, so they render
 // outside the slide-over's transformed container without breaking.
@@ -732,7 +769,35 @@ watch(() => props.clientId, () => {
 					<div v-else-if="!activityRows.length" class="text-sm text-muted-foreground text-center py-10">
 						No activity for this filter yet.
 					</div>
-					<div v-else class="space-y-px">
+					<template v-else>
+						<!-- Activity river — only on 'all' filter. Shows recent
+						     rhythm at a glance; the list below stays for deep
+						     scroll-back and load-more. -->
+						<div v-if="activityFilter === 'all'" class="glass-surface p-4 mb-4">
+							<div class="flex items-center justify-between mb-3">
+								<h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+									Activity river
+								</h4>
+								<div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground">
+									<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(150 70% 50%)" />money</span>
+									<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(210 60% 55%)" />projects</span>
+									<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(270 60% 60%)" />meetings</span>
+									<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(25 78% 55%)" />tickets</span>
+								</div>
+							</div>
+							<RiverChart
+								:items="activityRiverItems"
+								:days-back="14"
+								:days-forward="2"
+								:hour-height="14"
+								:hide-hours="true"
+								:accent-hue="210"
+								empty-title="Quiet stretch."
+								empty-subtitle="Nothing in the last two weeks."
+								@select="onActivityLeafSelect"
+							/>
+						</div>
+						<div class="space-y-px">
 						<component
 							:is="row.href ? 'NuxtLink' : 'div'"
 							v-for="row in activityRows"
@@ -762,6 +827,7 @@ watch(() => props.clientId, () => {
 							</button>
 						</div>
 					</div>
+					</template>
 				</div>
 
 				<!-- Contacts -->
