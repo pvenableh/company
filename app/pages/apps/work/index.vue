@@ -452,7 +452,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
           <template #fallback>
             <div class="flex items-center justify-center min-h-[400px]">
               <div class="flex flex-col items-center gap-3">
-                <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+                <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
                 <span class="text-sm text-muted-foreground">Loading timeline…</span>
               </div>
             </div>
@@ -500,7 +500,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
         </div>
         <template #fallback>
           <div class="flex items-center justify-center min-h-[400px]">
-            <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+            <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           </div>
         </template>
       </ClientOnly>
@@ -589,7 +589,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
         <SchedulerHub />
         <template #fallback>
           <div class="flex items-center justify-center min-h-[400px]">
-            <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+            <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           </div>
         </template>
       </ClientOnly>

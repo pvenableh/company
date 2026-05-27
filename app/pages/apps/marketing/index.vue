@@ -1048,7 +1048,7 @@ const scopeLabel = computed(() => {
         </div>
 
         <div v-if="campaignsLoading && !campaignsList.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading campaigns…</p>
         </div>
 
@@ -1326,7 +1326,7 @@ const scopeLabel = computed(() => {
         </div>
 
         <div v-if="emailLoading && !emailTemplates.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading templates…</p>
         </div>
 
@@ -1534,7 +1534,7 @@ const scopeLabel = computed(() => {
       <!-- ── Audience floor ───────────────────────────────────────────── -->
       <template v-else-if="floor === 'audience'">
         <div v-if="audienceLoading && !audienceContactsTotal" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading audience…</p>
         </div>
 

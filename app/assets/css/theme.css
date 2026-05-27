@@ -358,6 +358,53 @@ select:focus-visible {
   }
 }
 
+/* ---- Selection + scrollbar ----
+ * Tints text selection with the active app accent so highlighting reads
+ * as part of the current app's color, not a generic browser blue. Custom
+ * scrollbars stay thin and accent-tinted so they feel like part of the
+ * liquid-glass system rather than chunky OS chrome. */
+::selection {
+  background: hsl(var(--app-accent-h, 220) 80% 60% / 0.32);
+  color: inherit;
+}
+::-moz-selection {
+  background: hsl(var(--app-accent-h, 220) 80% 60% / 0.32);
+  color: inherit;
+}
+
+/* Modern thin scrollbars. Firefox uses scrollbar-* on whatever scrolls;
+ * WebKit uses ::-webkit-scrollbar. Both get accent-tinted thumbs. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--app-accent-h, 220) 25% 60% / 0.4) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--app-accent-h, 220) 25% 60% / 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 200ms ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--app-accent-h, 220) 50% 55% / 0.55);
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(var(--app-accent-h, 220) 30% 55% / 0.30);
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--app-accent-h, 220) 60% 60% / 0.50);
+  background-clip: padding-box;
+}
+
 /* ---- iOS-style activity spinner ----
  * `.spinner-ios` renders an iOS-flavored activity indicator: a thin
  * gradient arc that spins continuously, tinted by the current app

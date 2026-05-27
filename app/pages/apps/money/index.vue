@@ -742,7 +742,7 @@ const headerAction = computed(() => {
         </div>
 
         <div v-if="invoicesLoading && !invoicesList.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading invoices…</p>
         </div>
 
@@ -834,7 +834,7 @@ const headerAction = computed(() => {
       <!-- ── Payments floor ───────────────────────────────────────────── -->
       <template v-else-if="floor === 'payments'">
         <div v-if="paymentsLoading && !paymentsList.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading payments…</p>
         </div>
 
@@ -939,7 +939,7 @@ const headerAction = computed(() => {
       <!-- ── Expenses floor ───────────────────────────────────────────── -->
       <template v-else-if="floor === 'expenses'">
         <div v-if="expensesLoading && !expenses.length" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+          <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
           <p class="text-sm text-muted-foreground">Loading expenses…</p>
         </div>
 
