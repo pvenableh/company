@@ -121,14 +121,12 @@ watch(() => route.query.view, (qv) => {
 // remain a slide-over panel (only the compose slide-over was retired).
 const planSlide = useAppSlideOver('social-plan');
 
-function toggleComposeChooser() {
-  composeChooserOpen.value = !composeChooserOpen.value;
-}
-
 // ── P3.4 — in-canvas + New chooser ────────────────────────────────
 // Canvas mode replaces the slide-over hand-off with a two-option
 // popover: social vs email. Each option drops the user straight into
-// the matching composer at z=3 with an empty form.
+// the matching composer at z=3 with an empty form. The popover's
+// open state is driven by `v-model:open` on UPopover — Reka-UI's
+// PopoverTrigger handles toggle on click.
 const composeChooserOpen = ref(false);
 function composeKind(kind: 'social' | 'email') {
   composeChooserOpen.value = false;
@@ -139,11 +137,9 @@ function composeKind(kind: 'social' | 'email') {
 // The Studio hero now carries a "Lens: <current>" chip. Clicking it
 // opens a five-option chooser that mutates `view` — the existing
 // view↔URL watchers handle ?view= sync, so this is the only DOM
-// affordance that changes lens.
+// affordance that changes lens. Same v-model:open + PopoverTrigger
+// pattern as the compose chooser above.
 const lensChooserOpen = ref(false);
-function toggleLensChooser() {
-  lensChooserOpen.value = !lensChooserOpen.value;
-}
 function pickLens(next: StudioView) {
   lensChooserOpen.value = false;
   if (view.value === next) return;
@@ -818,11 +814,12 @@ onMounted(() => {
           </UiActionButton>
           <!-- Lens chip — view selector. P3.6 retired the iOS segmented
                control; the chip is the only DOM affordance that mutates
-               `view`. Same UiActionButton/UPopover trusted-event quirk
-               as the compose chooser below — drive open state via an
-               explicit toggle handler on the Vue click event. -->
+               `view`. Reka-UI's PopoverTrigger handles the open toggle
+               via attr-fall-through onto UiActionButton's root <button>;
+               no explicit @click needed (the earlier workaround was
+               causing a double-toggle that net-zero'd the popover open). -->
           <UPopover v-model:open="lensChooserOpen" :popper="{ placement: 'bottom-end' }">
-            <UiActionButton :icon="currentLens.icon" @click="toggleLensChooser">
+            <UiActionButton :icon="currentLens.icon">
               <span>Lens: {{ currentLens.label }}</span>
               <Icon name="lucide:chevron-down" class="w-3 h-3 ml-0.5 -mr-0.5 opacity-70" />
             </UiActionButton>
@@ -851,12 +848,13 @@ onMounted(() => {
             </template>
           </UPopover>
           <!-- Compose entry — kind-chooser popover (social vs email).
-               UiActionButton owns its own native `@click` (re-emitting
-               to its component event), which keeps Radix's PopoverTrigger
-               from intercepting the DOM click — so we drive the popover
-               state explicitly via a toggle handler on the Vue click event. -->
+               Reka-UI's PopoverTrigger toggles the popover via attr-fall-
+               through onto UiActionButton's root <button>; the earlier
+               explicit @click handler caused a double-toggle that net-
+               zero'd the open state. Drop it; v-model:open is the single
+               source of truth. -->
           <UPopover v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
-            <UiActionButton icon="lucide:pen-line" variant="primary" @click="toggleComposeChooser">
+            <UiActionButton icon="lucide:pen-line" variant="primary">
               Compose
             </UiActionButton>
             <template #panel>
