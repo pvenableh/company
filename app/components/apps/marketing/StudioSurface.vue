@@ -985,7 +985,7 @@ onMounted(() => {
     <!-- Loading — only for the plan-aware views (approval/upcoming).
          Calendar/Inbox/Analytics surfaces below own their own loading UI. -->
     <div v-if="(view === 'approval' || view === 'upcoming') && loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
-      <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+      <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
       <p class="cg-text-child text-muted-foreground">Loading content…</p>
     </div>
 

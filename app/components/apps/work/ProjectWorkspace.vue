@@ -550,7 +550,7 @@ watch(() => props.projectId, () => {
 <template>
 	<div class="project-workspace">
 		<div v-if="loading && !project" class="flex flex-col items-center justify-center py-16 gap-3">
-			<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
+			<span class="spinner-ios spinner-ios--lg" role="status" aria-label="Loading" />
 			<p class="text-xs text-muted-foreground">Loading project…</p>
 		</div>
 

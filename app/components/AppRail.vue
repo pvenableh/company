@@ -18,6 +18,11 @@ import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, getPaletteC
 import { useAppPalette } from '~/composables/useAppPalette';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
+// Haptic tap on app switch — mirrors AppSegmentedControl + AppFloorStrip
+// so navigating apps via the rail feels tactile-consistent with switching
+// floors within an app.
+const { tap: hapticTap } = useHaptic();
+
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
 const { accents } = useAppAccent();
@@ -259,6 +264,7 @@ function chipMagnifyStyle(appId: string) {
 								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
 								:data-app-id="app.id"
 								:aria-label="app.name"
+								@click="activeId !== app.id && hapticTap()"
 							>
 								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
 									<span class="app-rail__icon">
@@ -294,6 +300,7 @@ function chipMagnifyStyle(appId: string) {
 								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
 								:data-app-id="app.id"
 								:aria-label="app.name"
+								@click="activeId !== app.id && hapticTap()"
 							>
 								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
 									<span class="app-rail__icon">

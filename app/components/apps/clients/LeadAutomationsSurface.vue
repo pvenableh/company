@@ -200,7 +200,7 @@ defineExpose({ openNew });
 
 		<!-- Role still loading -->
 		<div v-if="!roleReady || loading" class="flex items-center justify-center py-20">
-			<Icon name="lucide:loader-2" class="w-6 h-6 animate-spin text-muted-foreground" />
+			<span class="spinner-ios spinner-ios--lg" role="status" aria-label="Loading" />
 		</div>
 
 		<!-- Access gate -->

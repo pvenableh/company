@@ -292,7 +292,7 @@ watch(() => selectedClient.value, () => {
       v-else-if="loading"
       class="flex flex-col items-center justify-center py-24 gap-3"
     >
-      <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+      <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
       <p class="cg-text-child text-muted-foreground">Loading entries…</p>
     </div>
 

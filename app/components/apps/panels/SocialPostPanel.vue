@@ -150,7 +150,7 @@ async function save() {
 <template>
 	<AppSlideOverShell :title="post?.caption?.slice(0, 60) || 'Social Post'" @close="$emit('close')">
 		<div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-3">
-			<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
+			<span class="spinner-ios spinner-ios--lg" role="status" aria-label="Loading" />
 			<p class="text-xs text-muted-foreground">Loading post…</p>
 		</div>
 
