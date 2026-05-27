@@ -171,29 +171,18 @@ async function loadMailingListContacts(
 	return loadEligibleContacts(directus, ids, organizationId);
 }
 
-async function resolveAudience(args: {
+/**
+ * Resolve recipients for a single audience_segment target. Pulled out of
+ * `resolveAudience` so the junction-row loop can dispatch per-target
+ * without duplicating the unopened/opened-previous lookup.
+ */
+async function resolveSegmentRecipients(args: {
 	directus: any;
 	touch: any;
 	campaign: CampaignRow;
+	filter: string;
 }): Promise<ContactRow[]> {
-	const { directus, touch, campaign } = args;
-
-	// Mailing-list targeting takes priority. When the canvas's email
-	// composer attaches a `mailing_list` FK, we resolve recipients from
-	// the list directly — this is the only audience path that works for
-	// one-off canvas-created emails, since their parent campaign has no
-	// `audience_snapshot` populated. See setup-touch-mailing-list-fk.ts
-	// for the schema rationale.
-	if (touch.mailing_list != null) {
-		const listId = typeof touch.mailing_list === 'object'
-			? Number((touch.mailing_list as { id?: number })?.id)
-			: Number(touch.mailing_list);
-		if (Number.isFinite(listId)) {
-			return loadMailingListContacts(directus, listId, campaign.organization);
-		}
-	}
-
-	const filter: string = touch.audience_filter || 'all';
+	const { directus, touch, campaign, filter } = args;
 	const baseIds: string[] = (campaign.audience_snapshot?.contact_ids || []) as string[];
 
 	if (filter === 'all' || filter.startsWith('cluster:')) {
@@ -201,7 +190,6 @@ async function resolveAudience(args: {
 	}
 
 	if (filter === 'unopened_previous' || filter === 'opened_previous') {
-		// Find the previous email touch in this campaign by sequence_index.
 		const previous = await directus.request(
 			readItems('marketing_touches', {
 				filter: {
@@ -219,8 +207,6 @@ async function resolveAudience(args: {
 		const prev = previous[0];
 		if (!prev) return loadEligibleContacts(directus, baseIds, campaign.organization);
 
-		// Look for opens via email_events. Schema fields per shared/directus.ts:
-		// `event` (not `event_type`), `email_id` (campaign FK), `contact` (FK).
 		let openedIds: Set<string> = new Set();
 		try {
 			const opens = await directus.request(
@@ -237,7 +223,6 @@ async function resolveAudience(args: {
 			) as any[];
 			openedIds = new Set(opens.map((o: any) => o.contact).filter(Boolean));
 		} catch {
-			// email_events may not exist on this DB — fall back to "all".
 			return loadEligibleContacts(directus, baseIds, campaign.organization);
 		}
 
@@ -248,6 +233,101 @@ async function resolveAudience(args: {
 	}
 
 	return loadEligibleContacts(directus, baseIds, campaign.organization);
+}
+
+/**
+ * Resolve a single junction-row target → ContactRow[].
+ *
+ * Dispatches on `target_kind`. The FK shape on the row is the
+ * Directus-default for non-expanded m2o (bare id), since the junction
+ * read doesn't deep-walk per the policy in
+ * [[feedback_directus_o2m_alias_gotcha]] / the `loadMailingListContacts`
+ * comment above.
+ */
+async function resolveTargetRow(args: {
+	directus: any;
+	row: {
+		target_kind: 'mailing_list' | 'audience_segment';
+		mailing_list: number | { id?: number } | null;
+		audience_filter: string | null;
+	};
+	touch: any;
+	campaign: CampaignRow;
+}): Promise<ContactRow[]> {
+	const { directus, row, touch, campaign } = args;
+	if (row.target_kind === 'mailing_list') {
+		const listId = typeof row.mailing_list === 'object'
+			? Number((row.mailing_list as { id?: number } | null)?.id)
+			: Number(row.mailing_list);
+		if (!Number.isFinite(listId)) return [];
+		return loadMailingListContacts(directus, listId, campaign.organization);
+	}
+	const filter = row.audience_filter || 'all';
+	return resolveSegmentRecipients({ directus, touch, campaign, filter });
+}
+
+async function resolveAudience(args: {
+	directus: any;
+	touch: any;
+	campaign: CampaignRow;
+}): Promise<ContactRow[]> {
+	const { directus, touch, campaign } = args;
+
+	// P4 Item A.1: try the junction first. When rows exist, union all
+	// targets and dedupe by contact id. Junction rows always win over the
+	// back-compat single-FK columns — the POST/PATCH handlers keep both
+	// in sync (mirror the first target), so reading the junction is
+	// strictly more general.
+	let junctionRows: Array<{
+		id: number;
+		target_kind: 'mailing_list' | 'audience_segment';
+		mailing_list: number | { id?: number } | null;
+		audience_filter: string | null;
+		sort: number | null;
+	}> = [];
+	try {
+		junctionRows = (await directus.request(
+			readItems('marketing_touch_targets', {
+				filter: { touch: { _eq: Number(touch.id) } },
+				fields: ['id', 'target_kind', 'mailing_list', 'audience_filter', 'sort'],
+				sort: ['sort'],
+				limit: 50,
+			}),
+		)) as typeof junctionRows;
+	} catch (err: any) {
+		console.warn('[marketing-send] junction read failed; falling back to legacy single-target:', err.message);
+	}
+
+	if (junctionRows.length > 0) {
+		const buckets = await Promise.all(
+			junctionRows.map((row) => resolveTargetRow({ directus, row, touch, campaign })),
+		);
+		// Dedupe by contact id — same contact across multiple lists/segments
+		// is emailed exactly once per touch.
+		const merged = new Map<string, ContactRow>();
+		for (const bucket of buckets) {
+			for (const r of bucket) {
+				if (!merged.has(r.id)) merged.set(r.id, r);
+			}
+		}
+		return Array.from(merged.values());
+	}
+
+	// Legacy fallback for pre-junction rows: mailing-list FK takes priority,
+	// then audience_filter. Same behavior as P4.2 — kept until every touch
+	// has at least one junction row (back-compat columns get cleared in a
+	// later cleanup phase).
+	if (touch.mailing_list != null) {
+		const listId = typeof touch.mailing_list === 'object'
+			? Number((touch.mailing_list as { id?: number })?.id)
+			: Number(touch.mailing_list);
+		if (Number.isFinite(listId)) {
+			return loadMailingListContacts(directus, listId, campaign.organization);
+		}
+	}
+
+	const filter: string = touch.audience_filter || 'all';
+	return resolveSegmentRecipients({ directus, touch, campaign, filter });
 }
 
 async function loadVariantsByContact(

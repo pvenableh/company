@@ -33,11 +33,18 @@ import { format, addHours, roundToNearestMinutes } from 'date-fns';
 import type {
   EmailComposition,
   CompositionPatch,
+  CompositionTarget,
 } from '~~/shared/composition';
 import type {
   EmailCTA,
   AudienceFilter,
 } from '~~/shared/marketing-persistence';
+
+/** Local alias — the email-side of CompositionTarget (lists + segments). */
+type EmailTarget = Extract<
+  CompositionTarget,
+  { kind: 'mailing_list' } | { kind: 'audience_segment' }
+>;
 
 const props = defineProps<{
   /** Active touch id (canvas activeId — `touch:<n>` form). When this is
@@ -78,13 +85,16 @@ const subject = ref('');
 const previewText = ref('');
 const body = ref('');
 const cta = ref<EmailCTA | ''>('');
-// Recipients picker is mutex: the user picks EITHER a mailing list OR an
-// audience segment. The two refs are kept independent on the form so the
-// previously-typed value survives a tab switch — only the "active" side
-// is persisted on save. See `save()` for the mutex enforcement.
-const recipientsMode = ref<'mailing_list' | 'audience_segment'>('audience_segment');
-const mailingListId = ref<number | null>(null);
-const audienceFilter = ref<AudienceFilter>('all');
+// P4 Item A.1: multi-target Recipients. The composer now holds a list of
+// targets (mix of mailing lists + audience segments). Each target is a
+// "chip" in the recipients row; the user can add more via the picker
+// below the chip row and remove via the chip's × button.
+const targets = ref<EmailTarget[]>([]);
+// Picker scratch state — separate from `targets` so the previously-picked
+// value survives a tab switch. Cleared after a successful "+ Add".
+const pickerMode = ref<'mailing_list' | 'audience_segment'>('mailing_list');
+const pickerListId = ref<number | null>(null);
+const pickerSegment = ref<AudienceFilter>('all');
 const scheduledAt = ref(
   format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
@@ -126,18 +136,15 @@ async function loadTouch(id: string) {
     previewText.value = comp.preview_text ?? '';
     body.value = comp.body;
     cta.value = comp.cta ?? '';
-    // Hydrate the recipients picker from whichever target shape the
-    // touch has. List takes priority — mailing_list FK is the more
-    // specific signal and the send path treats it as such.
-    const listTarget = comp.targets.find((t) => t.kind === 'mailing_list');
-    const segmentTarget = comp.targets.find((t) => t.kind === 'audience_segment');
-    if (listTarget) {
-      recipientsMode.value = 'mailing_list';
-      mailingListId.value = Number(listTarget.list_id);
-    } else if (segmentTarget) {
-      recipientsMode.value = 'audience_segment';
-      audienceFilter.value = segmentTarget.filter;
-    }
+    // Hydrate the chip row from the full targets array. P4.2 (single-target)
+    // rows surface as a single chip; P4.1 multi-target rows surface as
+    // multiple chips in junction-sort order.
+    targets.value = comp.targets.map((t) => {
+      if (t.kind === 'mailing_list') {
+        return { kind: 'mailing_list', list_id: t.list_id, list_name: t.list_name };
+      }
+      return { kind: 'audience_segment', filter: t.filter };
+    });
     isDraft.value = comp.status === 'draft';
     if (comp.scheduled_at) {
       const d = new Date(comp.scheduled_at);
@@ -171,27 +178,60 @@ watch(
   { immediate: true },
 );
 
-/**
- * Build the single `CompositionTarget` to persist on save. Mutex is
- * enforced here — the picker keeps both the mailing_list and
- * audience_segment ref values around as the user toggles tabs, but only
- * the active tab's value is written. Returns null when the active tab is
- * mailing_list but no list has been picked (gates save).
- */
-function buildTargetForSave():
-  | { kind: 'mailing_list'; list_id: string; list_name: string }
-  | { kind: 'audience_segment'; filter: AudienceFilter }
-  | null {
-  if (recipientsMode.value === 'mailing_list') {
-    if (mailingListId.value == null) return null;
-    const list = mailingLists.value.find((l) => l.id === mailingListId.value);
-    return {
-      kind: 'mailing_list',
-      list_id: String(mailingListId.value),
-      list_name: list?.name || `List ${mailingListId.value}`,
-    };
+/** Tagger chip-row helpers (P4 Item A.1). */
+function chipLabelFor(t: EmailTarget): string {
+  if (t.kind === 'mailing_list') return t.list_name || `List ${t.list_id}`;
+  const opt = AUDIENCE_OPTIONS.find((o) => o.value === t.filter);
+  return opt?.label || t.filter;
+}
+
+function chipIconFor(t: EmailTarget): string {
+  return t.kind === 'mailing_list' ? 'lucide:list' : 'lucide:filter';
+}
+
+/** Stable v-for key for a chip — uses kind + id/filter so two segment
+ *  chips with different filters render independently and reordering a
+ *  list-chip keeps its DOM node. */
+function chipKey(t: EmailTarget, idx: number): string {
+  if (t.kind === 'mailing_list') return `list:${t.list_id}:${idx}`;
+  return `seg:${t.filter}:${idx}`;
+}
+
+function removeTarget(idx: number) {
+  targets.value = targets.value.filter((_, i) => i !== idx);
+}
+
+function addMailingListTarget() {
+  if (pickerListId.value == null) return;
+  const id = pickerListId.value;
+  // De-dupe: don't add the same list twice. Quiet no-op — the user can
+  // see the existing chip already.
+  if (targets.value.some((t) => t.kind === 'mailing_list' && Number(t.list_id) === id)) {
+    pickerListId.value = null;
+    return;
   }
-  return { kind: 'audience_segment', filter: audienceFilter.value };
+  const list = mailingLists.value.find((l) => l.id === id);
+  targets.value = [
+    ...targets.value,
+    {
+      kind: 'mailing_list',
+      list_id: String(id),
+      list_name: list?.name || `List ${id}`,
+    },
+  ];
+  pickerListId.value = null;
+}
+
+function addSegmentTarget() {
+  const filter = pickerSegment.value;
+  // De-dupe: don't add the same segment twice.
+  if (targets.value.some((t) => t.kind === 'audience_segment' && t.filter === filter)) {
+    return;
+  }
+  targets.value = [
+    ...targets.value,
+    { kind: 'audience_segment', filter },
+  ];
 }
 
 // ── Mailing-list fetch ─────────────────────────────────────────────
@@ -236,12 +276,27 @@ const mailingListOptions = computed(() =>
   })),
 );
 
-const selectedListLabel = computed(() => {
-  if (mailingListId.value == null) return '';
-  const list = mailingLists.value.find((l) => l.id === mailingListId.value);
-  if (!list) return '';
-  const count = list.subscriber_count ?? 0;
-  return `${count} active subscriber${count === 1 ? '' : 's'} will receive this send.`;
+/** Helper: total subscriber count summed across all mailing-list targets
+ *  (segment targets don't have a count surface). Returned as a short
+ *  one-liner under the chip row. */
+const recipientsSummary = computed(() => {
+  if (targets.value.length === 0) return '';
+  const listTargets = targets.value.filter((t): t is Extract<EmailTarget, { kind: 'mailing_list' }> => t.kind === 'mailing_list');
+  const segmentCount = targets.value.length - listTargets.length;
+  const subscriberSum = listTargets.reduce((sum, t) => {
+    const list = mailingLists.value.find((l) => l.id === Number(t.list_id));
+    return sum + (list?.subscriber_count ?? 0);
+  }, 0);
+  const parts: string[] = [];
+  if (listTargets.length > 0) {
+    parts.push(`${subscriberSum} subscriber${subscriberSum === 1 ? '' : 's'} from ${listTargets.length} list${listTargets.length === 1 ? '' : 's'}`);
+  }
+  if (segmentCount > 0) {
+    parts.push(`${segmentCount} audience segment${segmentCount === 1 ? '' : 's'}`);
+  }
+  return parts.length > 1
+    ? `${parts.join(' + ')} (deduped at send time)`
+    : parts[0] || '';
 });
 
 const subjectCount = computed(() => subject.value.length);
@@ -258,11 +313,9 @@ const canSubmit = computed(() => {
   if (subjectCount.value > 998) return false;
   if (previewCount.value > 300) return false;
   if (bodyCount.value > 50_000) return false;
-  // Recipients: mailing-list mode requires a picked list. Segment mode
-  // always has a value (radio default = 'all').
-  if (recipientsMode.value === 'mailing_list' && mailingListId.value == null) {
-    return false;
-  }
+  // Recipients: at least one target. The tagger's empty state nudges the
+  // user to pick something via the inline pickers below.
+  if (targets.value.length === 0) return false;
   return true;
 });
 
@@ -280,8 +333,7 @@ async function save() {
       // selection is a later phase).
       const orgId = selectedOrg.value;
       if (!orgId) throw new Error('No organization selected');
-      const target = buildTargetForSave();
-      if (!target) throw new Error('Pick a mailing list or audience segment');
+      if (targets.value.length === 0) throw new Error('Pick at least one mailing list or audience segment');
       const result = await create({
         kind: 'email',
         organization: orgId,
@@ -291,7 +343,10 @@ async function save() {
         preview_text: previewText.value.trim() || null,
         body: body.value,
         cta: (cta.value || null) as EmailCTA | null,
-        targets: [target],
+        // P4 Item A.1: send the full targets array (server persists to
+        // marketing_touch_targets junction + mirrors first target into
+        // back-compat columns).
+        targets: targets.value,
         variants: null,
         plan_id: null,
       });
@@ -308,15 +363,14 @@ async function save() {
       return;
     }
     if (!original.value) return;
-    const target = buildTargetForSave();
-    if (!target) throw new Error('Pick a mailing list or audience segment');
+    if (targets.value.length === 0) throw new Error('Pick at least one mailing list or audience segment');
     const patch: Extract<CompositionPatch, { kind: 'email' }> = {
       kind: 'email',
       subject: subject.value.trim(),
       preview_text: previewText.value.trim() || null,
       body: body.value,
       cta: (cta.value || null) as EmailCTA | null,
-      targets: [target],
+      targets: targets.value,
       status,
     };
     // Drafts keep their scheduled_at as a target time the user can
@@ -459,104 +513,161 @@ async function save() {
 
       <UCard>
         <template #header>
-          <h2 class="font-semibold text-gray-900 dark:text-white">Recipients</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Recipients</h2>
+            <span v-if="targets.length > 0" class="text-[11px] text-muted-foreground">
+              {{ targets.length }} target{{ targets.length === 1 ? '' : 's' }}
+            </span>
+          </div>
         </template>
         <div class="space-y-3">
-          <!-- Segmented control switches the picker shape; mutex is
-               enforced on save (buildTargetForSave). Both tabs preserve
-               their state across switches so a user can experiment. -->
-          <div
-            class="inline-flex p-0.5 rounded-lg bg-muted/60 text-xs font-medium"
-            role="tablist"
-            aria-label="Recipients picker"
-          >
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="recipientsMode === 'mailing_list'"
-              class="composer-tab"
-              :class="{ 'composer-tab--active': recipientsMode === 'mailing_list' }"
-              @click="recipientsMode = 'mailing_list'"
+          <!-- Chip row — one chip per junction target. Empty state nudges
+               toward the picker below. P4 Item A.1. -->
+          <div v-if="targets.length === 0" class="composer-tag-empty">
+            <Icon name="lucide:users" class="w-4 h-4 shrink-0" />
+            <p class="flex-1">No recipients yet. Pick a mailing list or audience segment below.</p>
+          </div>
+          <div v-else class="composer-tag-row" role="list" aria-label="Recipient targets">
+            <span
+              v-for="(t, idx) in targets"
+              :key="chipKey(t, idx)"
+              role="listitem"
+              class="composer-tag"
+              :class="t.kind === 'mailing_list' ? 'composer-tag--list' : 'composer-tag--segment'"
             >
-              <Icon name="lucide:list" class="w-3.5 h-3.5" />
-              Mailing list
-            </button>
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="recipientsMode === 'audience_segment'"
-              class="composer-tab"
-              :class="{ 'composer-tab--active': recipientsMode === 'audience_segment' }"
-              @click="recipientsMode = 'audience_segment'"
-            >
-              <Icon name="lucide:filter" class="w-3.5 h-3.5" />
-              Audience segment
-            </button>
+              <Icon :name="chipIconFor(t)" class="w-3.5 h-3.5" />
+              <span class="truncate max-w-[180px]">{{ chipLabelFor(t) }}</span>
+              <button
+                type="button"
+                class="composer-tag__remove"
+                :aria-label="`Remove ${chipLabelFor(t)}`"
+                @click="removeTarget(idx)"
+              >
+                <Icon name="lucide:x" class="w-3 h-3" />
+              </button>
+            </span>
           </div>
 
-          <!-- Mailing-list tab. Empty state nudges the user to /lists
-               (the canonical management surface) — inline creation is a
-               v2 ergonomic. -->
-          <div v-if="recipientsMode === 'mailing_list'" class="space-y-2">
-            <div v-if="mailingListsLoading" class="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Icon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
-              Loading lists…
-            </div>
+          <p v-if="recipientsSummary" class="text-[11px] text-muted-foreground">
+            {{ recipientsSummary }}
+          </p>
+
+          <!-- Picker — segmented control switches the source, "+ Add"
+               button appends a chip and resets the picker. Two tabs
+               preserve their state across switches, matching P4.2. -->
+          <div class="composer-picker">
             <div
-              v-else-if="mailingLists.length === 0"
-              class="flex items-center gap-2 p-3 rounded-lg border border-dashed text-xs text-muted-foreground"
+              class="inline-flex p-0.5 rounded-lg bg-muted/60 text-xs font-medium"
+              role="tablist"
+              aria-label="Recipients picker source"
             >
-              <Icon name="lucide:info" class="w-4 h-4 shrink-0" />
-              <p class="flex-1">
-                No mailing lists yet.
-                <NuxtLink to="/lists" class="underline hover:text-foreground">Create one in Lists →</NuxtLink>
-              </p>
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="pickerMode === 'mailing_list'"
+                class="composer-tab"
+                :class="{ 'composer-tab--active': pickerMode === 'mailing_list' }"
+                @click="pickerMode = 'mailing_list'"
+              >
+                <Icon name="lucide:list" class="w-3.5 h-3.5" />
+                Mailing list
+              </button>
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="pickerMode === 'audience_segment'"
+                class="composer-tab"
+                :class="{ 'composer-tab--active': pickerMode === 'audience_segment' }"
+                @click="pickerMode = 'audience_segment'"
+              >
+                <Icon name="lucide:filter" class="w-3.5 h-3.5" />
+                Audience segment
+              </button>
             </div>
-            <USelect
-              v-else
-              v-model="mailingListId"
-              :options="mailingListOptions"
-              option-attribute="label"
-              value-attribute="value"
-              placeholder="Pick a mailing list"
-            />
-            <p v-if="mailingListId != null && selectedListLabel" class="text-[11px] text-muted-foreground">
-              {{ selectedListLabel }}
-            </p>
-          </div>
 
-          <!-- Audience-segment tab. Same options as the pre-tab version,
-               still wired against the AudienceFilter literal. Note: for
-               canvas-created one-off emails, segments resolve against
-               the parent campaign's audience_snapshot which is null —
-               so segment-targeted sends currently SKIP at delivery. The
-               Mailing list tab is the only path that actually delivers
-               recipients today. -->
-          <div v-else class="space-y-2">
-            <label
-              v-for="opt in AUDIENCE_OPTIONS"
-              :key="opt.value"
-              class="flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors"
-              :class="
-                audienceFilter === opt.value
-                  ? 'bg-primary/10 border border-primary/30'
-                  : 'border border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
-              "
-            >
-              <input
-                type="radio"
-                name="audience"
-                :value="opt.value"
-                v-model="audienceFilter"
-                class="mt-0.5"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ opt.label }}</p>
-                <p v-if="opt.description" class="text-[11px] text-muted-foreground mt-0.5">
-                  {{ opt.description }}
+            <!-- Mailing-list picker. Empty state nudges to /lists; same
+                 as P4.2 — inline creation is a v2 ergonomic. -->
+            <div v-if="pickerMode === 'mailing_list'" class="space-y-2">
+              <div v-if="mailingListsLoading" class="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                <Icon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+                Loading lists…
+              </div>
+              <div
+                v-else-if="mailingLists.length === 0"
+                class="flex items-center gap-2 p-3 rounded-lg border border-dashed text-xs text-muted-foreground"
+              >
+                <Icon name="lucide:info" class="w-4 h-4 shrink-0" />
+                <p class="flex-1">
+                  No mailing lists yet.
+                  <NuxtLink to="/lists" class="underline hover:text-foreground">Create one in Lists →</NuxtLink>
                 </p>
               </div>
-            </label>
+              <div v-else class="flex items-center gap-2">
+                <USelect
+                  v-model="pickerListId"
+                  :options="mailingListOptions"
+                  option-attribute="label"
+                  value-attribute="value"
+                  placeholder="Pick a mailing list"
+                  class="flex-1"
+                />
+                <UButton
+                  size="sm"
+                  variant="soft"
+                  icon="i-lucide-plus"
+                  :disabled="pickerListId == null"
+                  @click="addMailingListTarget"
+                >
+                  Add
+                </UButton>
+              </div>
+            </div>
+
+            <!-- Audience-segment picker. Same options as P4.2. NOTE: for
+                 canvas-created one-off emails, segment targets still
+                 resolve against the parent campaign's audience_snapshot
+                 which is null — so segment-only sends SKIP at delivery
+                 unless paired with at least one mailing list in the
+                 multi-target row. The mailing-list path is what actually
+                 delivers recipients today. -->
+            <div v-else class="space-y-2">
+              <div class="space-y-1">
+                <label
+                  v-for="opt in AUDIENCE_OPTIONS"
+                  :key="opt.value"
+                  class="flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors"
+                  :class="
+                    pickerSegment === opt.value
+                      ? 'bg-primary/10 border border-primary/30'
+                      : 'border border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="picker-audience"
+                    :value="opt.value"
+                    v-model="pickerSegment"
+                    class="mt-0.5"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ opt.label }}</p>
+                    <p v-if="opt.description" class="text-[11px] text-muted-foreground mt-0.5">
+                      {{ opt.description }}
+                    </p>
+                  </div>
+                </label>
+              </div>
+              <div class="flex justify-end">
+                <UButton
+                  size="sm"
+                  variant="soft"
+                  icon="i-lucide-plus"
+                  @click="addSegmentTarget"
+                >
+                  Add segment
+                </UButton>
+              </div>
+            </div>
           </div>
         </div>
       </UCard>
@@ -647,5 +758,38 @@ async function save() {
 
 .composer-tab--active {
   @apply bg-card text-foreground shadow-sm;
+}
+
+/* P4 Item A.1 — tagger chip row. */
+.composer-tag-row {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.composer-tag {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+    text-xs font-medium border;
+}
+
+.composer-tag--list {
+  @apply bg-primary/10 text-primary border-primary/30;
+}
+
+.composer-tag--segment {
+  @apply bg-muted/60 text-foreground border-border;
+}
+
+.composer-tag__remove {
+  @apply inline-flex items-center justify-center w-4 h-4 rounded-full
+    text-current/70 hover:text-current hover:bg-black/10 dark:hover:bg-white/10
+    transition-colors;
+}
+
+.composer-tag-empty {
+  @apply flex items-center gap-2 p-3 rounded-lg border border-dashed
+    text-xs text-muted-foreground;
+}
+
+.composer-picker {
+  @apply space-y-3 pt-3 border-t border-border;
 }
 </style>

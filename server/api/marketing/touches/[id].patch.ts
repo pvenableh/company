@@ -18,7 +18,7 @@
  * as social posts (`getSocialPostById` → ['draft','scheduled']).
  */
 import { z } from 'zod';
-import { readItem, updateItem } from '@directus/sdk';
+import { createItems, deleteItems, readItem, readItems, updateItem } from '@directus/sdk';
 
 // ─── Schema (SYMMETRIC with POST) ───────────────────────────────────────
 
@@ -47,6 +47,19 @@ const emailCtaSchema = z.enum([
 
 const socialChannelSchema = z.enum(['linkedin', 'instagram', 'twitter']);
 
+/** Per-row target shape — MUST stay symmetric with index.post.ts. P4 Item
+ *  A.1 multi-target. */
+const targetEntrySchema = z.discriminatedUnion('kind', [
+	z.object({
+		kind: z.literal('mailing_list'),
+		list_id: z.number().int().positive(),
+	}),
+	z.object({
+		kind: z.literal('audience_segment'),
+		filter: audienceFilterSchema,
+	}),
+]);
+
 const updateTouchSchema = z.object({
 	// Reparenting is allowed (move a touch between campaigns) but never
 	// re-orging: the caller has membership in exactly the touch's current
@@ -62,6 +75,14 @@ const updateTouchSchema = z.object({
 	// audience_segment.
 	mailing_list: z.number().int().positive().nullable().optional(),
 	send_offset_hours: z.number().int().min(0).max(24 * 30).optional(),
+
+	/** Multi-target recipients (P4 Item A.1). When present, replaces the
+	 *  full set of junction rows (delete-then-recreate — diff is overkill
+	 *  for v1). Order preserved; first entry mirrors to the back-compat
+	 *  mailing_list/audience_filter columns. Omit to leave junction rows
+	 *  alone. Pass [] to clear all junction rows (and also clear the
+	 *  back-compat columns to a default 'all' segment). */
+	targets: z.array(targetEntrySchema).max(20).optional(),
 
 	scheduled_for: z.string().datetime().nullable().optional(),
 	status: z.enum(['pending', 'scheduled', 'cancelled']).optional(),
@@ -119,7 +140,11 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const patch: Record<string, unknown> = { ...parsed.data };
+	// Pull `targets` out — it's not a column on marketing_touches, it's
+	// handled as a separate junction-table write below. Leaving it in
+	// `patch` would cause Directus to 400 on an unknown field.
+	const { targets: incomingTargets, ...patchableData } = parsed.data;
+	const patch: Record<string, unknown> = { ...patchableData };
 
 	// If the caller flips status=scheduled they need a scheduled_for —
 	// either in this same patch or already on the row. Mirrors the social
@@ -167,6 +192,45 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// P4 Item A.1: cross-org validate every list_id in incomingTargets.
+	// Same trust-boundary concern as the legacy single-FK check above —
+	// without this an org-A member could target an org-B list by guessing
+	// the integer id.
+	if (incomingTargets !== undefined) {
+		const listIdsToCheck = Array.from(new Set(
+			incomingTargets
+				.filter((t): t is Extract<typeof t, { kind: 'mailing_list' }> => t.kind === 'mailing_list')
+				.map((t) => t.list_id),
+		));
+		for (const listId of listIdsToCheck) {
+			const list = await directus
+				.request(readItem('mailing_lists', listId, { fields: ['id', 'organization'] }))
+				.catch(() => null) as any;
+			if (!list || list.organization !== existing.organization) {
+				throw createError({
+					statusCode: 400,
+					message: `Invalid mailing list ${listId} for this organization`,
+				});
+			}
+		}
+
+		// Mirror the FIRST target into the back-compat columns. Pre-junction
+		// readers (timeline.get, send-path fallback) read those directly.
+		// Empty targets[] clears the back-compat columns to a safe default
+		// (audience_filter='all', mailing_list=null).
+		const firstTarget = incomingTargets[0];
+		if (firstTarget?.kind === 'mailing_list') {
+			patch.mailing_list = firstTarget.list_id;
+			patch.audience_filter = 'all';
+		} else if (firstTarget?.kind === 'audience_segment') {
+			patch.audience_filter = firstTarget.filter;
+			patch.mailing_list = null;
+		} else {
+			patch.mailing_list = null;
+			patch.audience_filter = 'all';
+		}
+	}
+
 	try {
 		// Expand `mailing_list` on the response so the canvas's
 		// touchToComposition mapper can read the list name without a
@@ -176,7 +240,69 @@ export default defineEventHandler(async (event) => {
 				fields: ['*', 'mailing_list.id', 'mailing_list.name'],
 			}),
 		) as any;
-		return { data: updated };
+
+		// Replace junction rows when targets[] is explicitly provided.
+		// Delete-then-recreate is simpler than diff for v1; the row count
+		// per touch is bounded (max 20 by schema) so the write volume is
+		// trivial. Skip entirely when targets is undefined (= "don't
+		// touch junction") to keep partial patches partial.
+		if (incomingTargets !== undefined) {
+			try {
+				// Delete existing rows for this touch.
+				const existingRows = (await directus.request(
+					readItems('marketing_touch_targets', {
+						filter: { touch: { _eq: touchId } },
+						fields: ['id'],
+						limit: 50,
+					}),
+				)) as Array<{ id: number }>;
+				if (existingRows.length > 0) {
+					await directus.request(
+						deleteItems('marketing_touch_targets', existingRows.map((r) => r.id)),
+					);
+				}
+				// Recreate from the new shape (no-op when targets is []).
+				if (incomingTargets.length > 0) {
+					const newRows = incomingTargets.map((t, idx) => ({
+						touch: touchId,
+						organization: existing.organization,
+						target_kind: t.kind,
+						mailing_list: t.kind === 'mailing_list' ? t.list_id : null,
+						audience_filter: t.kind === 'audience_segment' ? t.filter : null,
+						sort: idx,
+					}));
+					await directus.request(createItems('marketing_touch_targets', newRows));
+				}
+			} catch (err: any) {
+				console.warn(
+					'[marketing/touches] junction replace failed (back-compat columns still updated):',
+					err.message,
+				);
+			}
+		}
+
+		// Re-fetch with targets.* expanded so the response shape matches
+		// what `useComposition.touchToComposition` expects.
+		try {
+			const withTargets = await directus.request(
+				readItem('marketing_touches', touchId, {
+					fields: [
+						'*',
+						'mailing_list.id',
+						'mailing_list.name',
+						'targets.id',
+						'targets.target_kind',
+						'targets.mailing_list.id',
+						'targets.mailing_list.name',
+						'targets.audience_filter',
+						'targets.sort',
+					],
+				}),
+			);
+			return { data: withTargets };
+		} catch {
+			return { data: updated };
+		}
 	} catch (err: any) {
 		console.error('[marketing/touches] update failed:', err.message);
 		throw createError({ statusCode: 500, message: 'Failed to update touch' });

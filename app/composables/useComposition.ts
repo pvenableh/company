@@ -204,6 +204,17 @@ interface TouchRow {
 	email_cta: import('~~/shared/marketing-persistence').EmailCTA | null;
 	date_created: string;
 	date_updated: string;
+	/** P4 Item A.1: junction-row expansion. Present when the GET/POST/PATCH
+	 *  routes expanded `targets.*`; absent (or empty array) for callers
+	 *  that don't. When present + non-empty, supersedes the bare
+	 *  `mailing_list`/`audience_filter` columns. */
+	targets?: Array<{
+		id: number;
+		target_kind: 'mailing_list' | 'audience_segment';
+		mailing_list: { id: number; name: string } | number | null;
+		audience_filter: string | null;
+		sort: number | null;
+	}> | null;
 }
 
 function touchToComposition(touch: TouchRow): EmailComposition {
@@ -211,14 +222,44 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 	// AudienceFilter is the right view-model type for it — no contortion needed.
 	const filter = touch.audience_filter as import('~~/shared/marketing-persistence').AudienceFilter;
 
-	// Mailing-list targeting takes priority over audience_filter at the
-	// view-model layer (the canvas composer enforces the mutex when
-	// writing, so in practice only one is set at a time). When the
-	// touches/[id].get expanded the m2o we get `{ id, name }`; a stale
-	// caller that returned the bare int gets a placeholder name we'll
-	// upgrade on the next fetch.
+	// P4 Item A.1: junction rows are the source of truth when present. The
+	// canvas's tagger composer surfaces one chip per junction row. Legacy
+	// rows (no junction) fall back to the bare `mailing_list`/`audience_filter`
+	// columns — that path stays live until every touch has at least one
+	// junction row (the POST/PATCH handlers mirror first-target on every
+	// write, so new rows always have one).
 	let targets: EmailComposition['targets'];
-	if (touch.mailing_list != null) {
+	if (touch.targets && touch.targets.length > 0) {
+		// Sort defensively — the server already orders by `sort` but a
+		// stale caller might pass them in row-id order.
+		const sortedRows = [...touch.targets].sort((a, b) => {
+			const sa = a.sort ?? 0;
+			const sb = b.sort ?? 0;
+			return sa - sb;
+		});
+		targets = sortedRows.map((row) => {
+			if (row.target_kind === 'mailing_list') {
+				const list = row.mailing_list;
+				if (typeof list === 'object' && list && 'id' in list) {
+					return {
+						kind: 'mailing_list' as const,
+						list_id: String(list.id),
+						list_name: list.name || `List ${list.id}`,
+					};
+				}
+				const id = String(list);
+				return {
+					kind: 'mailing_list' as const,
+					list_id: id,
+					list_name: `List ${id}`,
+				};
+			}
+			return {
+				kind: 'audience_segment' as const,
+				filter: (row.audience_filter ?? 'all') as import('~~/shared/marketing-persistence').AudienceFilter,
+			};
+		});
+	} else if (touch.mailing_list != null) {
 		const list = touch.mailing_list;
 		if (typeof list === 'object' && list && 'id' in list) {
 			targets = [
@@ -262,16 +303,42 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 	};
 }
 
+/** Convert each CompositionTarget into the server's `targets[]` entry
+ *  shape (P4 Item A.1). The server's Zod discriminated union expects
+ *  `{ kind: 'mailing_list', list_id: number } | { kind: 'audience_segment', filter: string }`.
+ *  CompositionTarget is more permissive (list_id is stringy on the view
+ *  model) so we coerce here. */
+function targetsForServer(
+	targets: Extract<
+		CompositionTarget,
+		{ kind: 'mailing_list' } | { kind: 'audience_segment' }
+	>[],
+): Array<{ kind: 'mailing_list'; list_id: number } | { kind: 'audience_segment'; filter: string }> {
+	return targets
+		.map((t) => {
+			if (t.kind === 'mailing_list') {
+				const id = Number(t.list_id);
+				if (!Number.isFinite(id)) return null;
+				return { kind: 'mailing_list' as const, list_id: id };
+			}
+			return { kind: 'audience_segment' as const, filter: t.filter };
+		})
+		.filter((t): t is NonNullable<typeof t> => t !== null);
+}
+
 /** Convert an EmailComposition create input to a `/api/marketing/touches`
  *  POST body. Keeps the canonical-status mapping co-located with the
  *  read mapping so canvas surfaces only ever speak `CompositionStatus`. */
 function touchCreateBody(
 	input: Extract<CompositionCreate, { kind: 'email' }>,
 ): Record<string, unknown> {
+	const targets = targetsForServer(input.targets);
 	const firstTarget = input.targets[0];
-	// Mutex: emit either `mailing_list` (FK) or `audience_filter` (literal),
-	// never both. The send path checks mailing_list first; if a stale caller
-	// somehow set both, the list wins, but the canvas never sends that shape.
+	// Mirror the first target back into the back-compat columns so older
+	// readers (timeline.get, send-path fallback) still see a valid target
+	// even when they haven't been updated to expand the junction. Server
+	// will overwrite these with its own mirror logic anyway, but sending
+	// matched values avoids a write-then-rewrite.
 	const isList = firstTarget?.kind === 'mailing_list';
 	const audienceFilter =
 		firstTarget?.kind === 'audience_segment' ? firstTarget.filter : 'all';
@@ -286,6 +353,10 @@ function touchCreateBody(
 		audience_target: 'project_contact' as const,
 		audience_filter: audienceFilter,
 		mailing_list: mailingList,
+		// New shape: full targets array for multi-target sends. Server
+		// persists these to the junction + mirrors the first to the
+		// back-compat columns above.
+		targets,
 		send_offset_hours: 0,
 		scheduled_for: input.scheduled_at,
 		status: touchStatusFor(input.status ?? 'draft'),
@@ -308,15 +379,23 @@ function touchPatchBody(
 	if (patch.preview_text !== undefined) body.email_preview_text = patch.preview_text;
 	if (patch.cta !== undefined) body.email_cta = patch.cta;
 	if (patch.targets !== undefined) {
+		// P4 Item A.1: send the full array. Server replaces all junction
+		// rows for this touch (delete-then-recreate) and mirrors the
+		// first entry into the back-compat columns. We still set the
+		// back-compat columns explicitly so a server that hasn't been
+		// updated yet (e.g. local dev with stale code) still sees the
+		// first target.
+		body.targets = targetsForServer(patch.targets);
 		const first = patch.targets[0];
-		// Mutex on write — set one side and clear the other so the row
-		// doesn't carry stale state from a previous target kind.
 		if (first?.kind === 'mailing_list') {
 			body.mailing_list = Number(first.list_id);
 			body.audience_filter = 'all';
 		} else if (first?.kind === 'audience_segment') {
 			body.audience_filter = first.filter;
 			body.mailing_list = null;
+		} else {
+			body.mailing_list = null;
+			body.audience_filter = 'all';
 		}
 	}
 	if (patch.scheduled_at !== undefined) body.scheduled_for = patch.scheduled_at;

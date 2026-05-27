@@ -58,6 +58,15 @@ export default defineEventHandler(async (event) => {
 					'generator_strategy_excerpt',
 					'date_created',
 					'date_updated',
+					// P4 Item A.1: junction rows for multi-target sends.
+					// Expanded inline so the canvas's touchToComposition
+					// mapper can build the chip row without a second fetch.
+					'targets.id',
+					'targets.target_kind',
+					'targets.mailing_list.id',
+					'targets.mailing_list.name',
+					'targets.audience_filter',
+					'targets.sort',
 				],
 			}),
 		)

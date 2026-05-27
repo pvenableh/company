@@ -2245,6 +2245,27 @@ export interface MarketingTouche {
 	user_updated?: string | null;
 	/** @description Mailing list this touch targets. When set, the send path resolves recipients from mailing_list_contacts (bypasses campaign.audience_snapshot). XOR with audience_filter at the app layer. */
 	mailing_list?: MailingList | string | null;
+	/** @description Recipient buckets this touch targets. Reverse of marketing_touch_targets.touch. */
+	targets?: MarketingTouchTarget[] | string[];
+}
+
+export interface MarketingTouchTarget {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	touch: MarketingTouche | string;
+	/** @description Denormalized from touch.organization for fast org-scoped reads. @required */
+	organization: Organization | string;
+	/** @required */
+	target_kind: 'mailing_list' | 'audience_segment';
+	/** @description Set when target_kind=mailing_list. XOR with audience_filter. */
+	mailing_list?: MailingList | string | null;
+	/** @description Set when target_kind=audience_segment. One of: all | opened_previous | unopened_previous | cluster:<label>. */
+	audience_filter?: string | null;
+	/** @description Display order in the chip row. */
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface MarketingTouchVariant {
@@ -4749,6 +4770,7 @@ export interface Schema {
 	marketing_campaigns: MarketingCampaign[];
 	marketing_recommendations: MarketingRecommendation[];
 	marketing_touches: MarketingTouche[];
+	marketing_touch_targets: MarketingTouchTarget[];
 	marketing_touch_variants: MarketingTouchVariant[];
 	meeting_chat_messages: MeetingChatMessage[];
 	meeting_notes: MeetingNote[];
@@ -4982,6 +5004,7 @@ export enum CollectionNames {
 	marketing_campaigns = 'marketing_campaigns',
 	marketing_recommendations = 'marketing_recommendations',
 	marketing_touches = 'marketing_touches',
+	marketing_touch_targets = 'marketing_touch_targets',
 	marketing_touch_variants = 'marketing_touch_variants',
 	meeting_chat_messages = 'meeting_chat_messages',
 	meeting_notes = 'meeting_notes',

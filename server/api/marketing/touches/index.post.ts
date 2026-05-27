@@ -20,7 +20,7 @@
  * FK so engagement counters and timeline reads keep working.
  */
 import { z } from 'zod';
-import { createItem, readItem } from '@directus/sdk';
+import { createItem, createItems, readItem, readItems } from '@directus/sdk';
 import type { MarketingTouchStatus } from '~~/shared/marketing-persistence';
 
 /**
@@ -78,6 +78,25 @@ const TOUCH_STATUSES: readonly MarketingTouchStatus[] = [
  *  pending→scheduled→sent/failed; admin actions flip to cancelled). */
 const createStatusSchema = z.enum(['pending', 'scheduled']).default('pending');
 
+/** A single recipient bucket on a touch. P4 Item A.1 introduces multi-target
+ *  sends — one touch can fan out to a mix of mailing lists and audience
+ *  segments, deduped at send time. Each entry maps 1:1 to a row in the new
+ *  `marketing_touch_targets` junction.
+ *
+ *  Mutex per row: `mailing_list` set + `audience_filter` empty when
+ *  kind=mailing_list; inverse when kind=audience_segment. Refine catches
+ *  any client that flips the wrong field. */
+const targetEntrySchema = z.discriminatedUnion('kind', [
+	z.object({
+		kind: z.literal('mailing_list'),
+		list_id: z.number().int().positive(),
+	}),
+	z.object({
+		kind: z.literal('audience_segment'),
+		filter: audienceFilterSchema,
+	}),
+]);
+
 const createTouchSchema = z.object({
 	organization: z.string().uuid(),
 
@@ -93,8 +112,21 @@ const createTouchSchema = z.object({
 	// XOR with audience_filter at the app layer. When set, the send path
 	// resolves recipients via mailing_list_contacts instead of
 	// campaign.audience_snapshot. See the comment at the top of this file.
+	//
+	// Back-compat with pre-junction P4.2 callers — the new shape is
+	// `targets[]` below. When `targets[]` is provided, the server mirrors
+	// the FIRST target back into mailing_list/audience_filter so the
+	// pre-junction send path keeps working for any caller still on the
+	// single-target shape, AND so timeline/list reads that haven't
+	// expanded targets.* surface the right pill copy.
 	mailing_list: z.number().int().positive().nullable().optional(),
 	send_offset_hours: z.number().int().min(0).max(24 * 30).default(0),
+
+	/** Multi-target recipients. Order preserved — the first entry mirrors
+	 *  to the back-compat `mailing_list`/`audience_filter` columns. When
+	 *  omitted, falls back to the legacy single-target shape (mailing_list
+	 *  OR audience_filter). */
+	targets: z.array(targetEntrySchema).max(20).optional(),
 
 	// Schedule + status.
 	scheduled_for: z.string().datetime().nullable().optional(),
@@ -199,6 +231,44 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// Resolve effective targets. New shape `targets[]` wins when provided.
+	// Otherwise fall back to the legacy single-target columns so pre-P4.1
+	// callers still produce a valid junction row.
+	const targetsInput = (data.targets && data.targets.length > 0)
+		? data.targets
+		: data.mailing_list != null
+			? [{ kind: 'mailing_list' as const, list_id: data.mailing_list }]
+			: [{ kind: 'audience_segment' as const, filter: data.audience_filter }];
+
+	// Cross-org validate every list_id in the targets array. One readItem
+	// per unique list; small N (max 20), so a serial loop is fine.
+	const listIdsToCheck = Array.from(new Set(
+		targetsInput
+			.filter((t): t is Extract<typeof t, { kind: 'mailing_list' }> => t.kind === 'mailing_list')
+			.map((t) => t.list_id),
+	));
+	for (const listId of listIdsToCheck) {
+		const list = await directus
+			.request(readItem('mailing_lists', listId, { fields: ['id', 'organization'] }))
+			.catch(() => null) as any;
+		if (!list || list.organization !== data.organization) {
+			throw createError({
+				statusCode: 400,
+				message: `Invalid mailing list ${listId} for this organization`,
+			});
+		}
+	}
+
+	// Mirror the FIRST target into the back-compat columns. Pre-junction
+	// readers (timeline.get, send-path fallback) read those directly; this
+	// keeps the single-target send path live until everything moves to
+	// reading the junction.
+	const firstTarget = targetsInput[0]!;
+	const mirrorMailingList = firstTarget.kind === 'mailing_list' ? firstTarget.list_id : null;
+	const mirrorAudienceFilter = firstTarget.kind === 'audience_segment'
+		? firstTarget.filter
+		: 'all';
+
 	try {
 		// Same `mailing_list` expansion as the PATCH route — the canvas's
 		// touchToComposition mapper expects the expanded m2o so it can
@@ -210,8 +280,8 @@ export default defineEventHandler(async (event) => {
 				sequence_index: data.sequence_index,
 				kind: data.kind,
 				audience_target: data.audience_target,
-				audience_filter: data.audience_filter,
-				mailing_list: data.mailing_list ?? null,
+				audience_filter: mirrorAudienceFilter,
+				mailing_list: mirrorMailingList,
 				send_offset_hours: data.send_offset_hours,
 				scheduled_for: data.scheduled_for ?? null,
 				status: data.status,
@@ -231,7 +301,55 @@ export default defineEventHandler(async (event) => {
 				fields: ['*', 'mailing_list.id', 'mailing_list.name'],
 			}),
 		) as any;
-		return { data: created };
+
+		// Persist the full targets array to the junction. Sort preserves
+		// the order the caller sent (used as the chip-row display order in
+		// the composer). On failure here we leave the touch + back-compat
+		// columns in place — the send-path's fallback path still works for
+		// the first target, so a junction-write failure degrades but
+		// doesn't break.
+		try {
+			const junctionRows = targetsInput.map((t, idx) => ({
+				touch: Number(created.id),
+				organization: data.organization,
+				target_kind: t.kind,
+				mailing_list: t.kind === 'mailing_list' ? t.list_id : null,
+				audience_filter: t.kind === 'audience_segment' ? t.filter : null,
+				sort: idx,
+			}));
+			await directus.request(createItems('marketing_touch_targets', junctionRows));
+		} catch (err: any) {
+			console.warn(
+				'[marketing/touches] junction write failed (back-compat columns still set):',
+				err.message,
+			);
+		}
+
+		// Re-fetch the touch with targets.* expanded so the response shape
+		// matches what `useComposition.touchToComposition` expects.
+		try {
+			const withTargets = await directus.request(
+				readItem('marketing_touches', Number(created.id), {
+					fields: [
+						'*',
+						'mailing_list.id',
+						'mailing_list.name',
+						'targets.id',
+						'targets.target_kind',
+						'targets.mailing_list.id',
+						'targets.mailing_list.name',
+						'targets.audience_filter',
+						'targets.sort',
+					],
+				}),
+			);
+			return { data: withTargets };
+		} catch {
+			// If the targets-expansion fetch fails for any reason, fall
+			// back to the original create response. Junction rows still
+			// exist; the canvas mapper degrades to the legacy fields.
+			return { data: created };
+		}
 	} catch (err: any) {
 		console.error('[marketing/touches] create failed:', err.message);
 		throw createError({ statusCode: 500, message: 'Failed to create touch' });
