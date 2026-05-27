@@ -9,9 +9,10 @@
  * was tried before — see handoff guidance on the "one form, two
  * configs" trap).
  *
- * Fields: subject, preview text, body (Markdown via UTextarea — Tiptap
- * is deferred until the body editor needs richer affordances), audience
- * segment, CTA, schedule. Save routes through `useComposition().update`
+ * Fields: subject, preview text, body (HTML via FormTiptap since P4.3
+ * Item C — Tiptap's `getHTML()` round-trips through
+ * `marketing_touches.email_body_html`), audience segment, CTA, schedule.
+ * Save routes through `useComposition().update`
  * (edit mode) or `useComposition().create` (P3.4 create mode — no
  * touchId or sentinel `compose:email`). In create mode the schedule
  * picker stays as-is; status defaults to 'draft' until the user
@@ -100,9 +101,9 @@ const pickerSegment = ref<AudienceFilter>('all');
 
 // P4 Item A.2: per-target subject + body variants. Keyed by
 // `targetKeyOf(target)`. Lanes are stored as a complete shape (subject
-// always defined, body always defined) — the save handler normalizes
-// against master before writing so lanes matching master collapse out.
-// Empty record + no master diffs = column stays NULL.
+// always defined, body_html always defined — P4.3 Item C) — the save
+// handler normalizes against master before writing so lanes matching
+// master collapse out. Empty record + no master diffs = column stays NULL.
 const variantLanes = ref<Record<string, EmailBodyVariant>>({});
 // Which target row is open for editing in the disclosure (null = no
 // disclosure open). Mutex — editing one lane at a time matches the
@@ -168,9 +169,14 @@ async function loadTouch(id: string) {
     const reconstituted: Record<string, EmailBodyVariant> = {};
     for (const [key, lane] of Object.entries(incomingVariants)) {
       if (!lane) continue;
+      // P4.3 Item C: lanes carry `body_html`. Legacy `body_markdown` is
+      // pre-rendered to HTML by the adapter's normalizeLaneForRead, so
+      // this branch always sees html in `lane.body_html`. We seed the
+      // full shape (subject inherits master if the lane only forked the
+      // body, etc).
       reconstituted[key] = {
         subject: lane.subject ?? masterSubject,
-        body_markdown: lane.body_markdown ?? masterBody,
+        body_html: lane.body_html ?? masterBody,
       };
     }
     variantLanes.value = reconstituted;
@@ -274,7 +280,7 @@ function isLaneForked(key: string): boolean {
   if (!lane) return false;
   return (
     (lane.subject !== undefined && lane.subject !== subject.value)
-    || lane.body_markdown !== body.value
+    || lane.body_html !== body.value
   );
 }
 
@@ -285,7 +291,7 @@ function editLane(key: string) {
   if (!variantLanes.value[key]) {
     variantLanes.value = {
       ...variantLanes.value,
-      [key]: { subject: subject.value, body_markdown: body.value },
+      [key]: { subject: subject.value, body_html: body.value },
     };
   }
   editingTargetKey.value = editingTargetKey.value === key ? null : key;
@@ -303,7 +309,7 @@ function laneSubject(key: string): string {
 }
 
 function setLaneSubject(key: string, value: string) {
-  const existing = variantLanes.value[key] ?? { subject: subject.value, body_markdown: body.value };
+  const existing = variantLanes.value[key] ?? { subject: subject.value, body_html: body.value };
   variantLanes.value = {
     ...variantLanes.value,
     [key]: { ...existing, subject: value },
@@ -311,14 +317,14 @@ function setLaneSubject(key: string, value: string) {
 }
 
 function laneBody(key: string): string {
-  return variantLanes.value[key]?.body_markdown ?? body.value;
+  return variantLanes.value[key]?.body_html ?? body.value;
 }
 
 function setLaneBody(key: string, value: string) {
-  const existing = variantLanes.value[key] ?? { subject: subject.value, body_markdown: body.value };
+  const existing = variantLanes.value[key] ?? { subject: subject.value, body_html: body.value };
   variantLanes.value = {
     ...variantLanes.value,
-    [key]: { ...existing, body_markdown: value },
+    [key]: { ...existing, body_html: value },
   };
 }
 
@@ -410,6 +416,14 @@ const recipientsSummary = computed(() => {
 const subjectCount = computed(() => subject.value.length);
 const previewCount = computed(() => previewText.value.length);
 const bodyCount = computed(() => body.value.length);
+/** Tiptap returns `<p></p>` for an empty editor — the trimmed HTML is
+ *  non-empty even when the user hasn't typed anything. Strip tags +
+ *  collapse whitespace so the canSubmit guard rejects an unauthored
+ *  body. Used only for the gate; the canvas always saves the raw HTML. */
+const bodyHasContent = computed(() => {
+  const stripped = body.value.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim();
+  return stripped.length > 0;
+});
 
 const canSubmit = computed(() => {
   // Create mode skips the original.value guard; edit mode still
@@ -417,10 +431,14 @@ const canSubmit = computed(() => {
   if (!creating.value && !original.value) return false;
   if (creating.value && !selectedOrg.value) return false;
   if (!subject.value.trim()) return false;
-  if (!body.value.trim()) return false;
+  if (!bodyHasContent.value) return false;
   if (subjectCount.value > 998) return false;
   if (previewCount.value > 300) return false;
-  if (bodyCount.value > 50_000) return false;
+  // P4.3 Item C: body is now HTML (Tiptap). The server schema caps
+  // email_body_html at 200_000 chars to absorb markup overhead — the
+  // visible-text fraction of that is still well within email-client
+  // safe limits.
+  if (bodyCount.value > 200_000) return false;
   // Recipients: at least one target. The tagger's empty state nudges the
   // user to pick something via the inline pickers below.
   if (targets.value.length === 0) return false;
@@ -619,20 +637,26 @@ async function save() {
             <h2 class="font-semibold text-gray-900 dark:text-white">Body</h2>
             <span
               class="text-[11px] tabular-nums"
-              :class="bodyCount > 50_000 ? 'text-rose-500' : 'text-muted-foreground'"
+              :class="bodyCount > 200_000 ? 'text-rose-500' : 'text-muted-foreground'"
             >
               {{ bodyCount }} chars
             </span>
           </div>
         </template>
-        <UTextarea
-          v-model="body"
-          :rows="14"
-          placeholder="Markdown supported — # headings, **bold**, [links](https://...)"
-          class="font-mono text-sm"
+        <FormTiptap
+          :model-value="body"
+          :character-limit="0"
+          :show-char-count="false"
+          :allow-uploads="false"
+          height="min-h-[260px] max-h-[420px]"
+          custom-classes="px-4 py-3"
+          @update:model-value="body = $event"
         />
         <p class="mt-2 text-[11px] text-muted-foreground">
-          Markdown is rendered on send. Use plain prose for short, conversational notes.
+          Rich text — bold, italic, lists, and links. Headings via the toolbar
+          or <code class="text-[10px] bg-muted/40 px-1 rounded">#</code>
+          shortcut. No tables or images in body — email clients render them
+          inconsistently.
         </p>
       </UCard>
 
@@ -712,11 +736,13 @@ async function save() {
               </div>
               <div class="space-y-1">
                 <label class="composer-lane__label">Body</label>
-                <UTextarea
+                <FormTiptap
                   :model-value="laneBody(targetKeyForChip(t))"
-                  :rows="10"
-                  :placeholder="body || 'Body (inherits master)'"
-                  class="font-mono text-sm"
+                  :character-limit="0"
+                  :show-char-count="false"
+                  :allow-uploads="false"
+                  height="min-h-[180px] max-h-[320px]"
+                  custom-classes="px-4 py-3"
                   @update:model-value="setLaneBody(targetKeyForChip(t), String($event))"
                 />
               </div>

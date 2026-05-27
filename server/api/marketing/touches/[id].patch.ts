@@ -88,18 +88,31 @@ const updateTouchSchema = z.object({
 	/** P4 Item A.2 — per-target body + subject variants. Same shape as
 	 *  the POST schema; pass null to clear the JSON column. Server
 	 *  normalizes against master before write (drops lanes matching
-	 *  master). */
+	 *  master).
+	 *
+	 *  P4.3 Item C: each lane now carries `body_html` (Tiptap output);
+	 *  `body_markdown` accepted for one release as back-compat. At least
+	 *  one of the two MUST be present per lane. */
 	body_variants: z.record(z.string(), z.object({
 		subject: z.string().max(998).optional(),
-		body_markdown: z.string().max(50_000),
-	})).nullable().optional(),
+		body_html: z.string().max(200_000).optional(),
+		body_markdown: z.string().max(50_000).optional(),
+	}).refine(
+		(lane) =>
+			(typeof lane.body_html === 'string' && lane.body_html.length > 0)
+			|| (typeof lane.body_markdown === 'string' && lane.body_markdown.length > 0),
+		{ message: 'lane requires body_html or body_markdown' },
+	)).nullable().optional(),
 
 	scheduled_for: z.string().datetime().nullable().optional(),
 	status: z.enum(['pending', 'scheduled', 'cancelled']).optional(),
 
 	email_subject: z.string().max(998).nullable().optional(),
 	email_preview_text: z.string().max(300).nullable().optional(),
+	/** Master body markdown — legacy field, kept one release. */
 	email_body_markdown: z.string().max(50_000).nullable().optional(),
+	/** Master body HTML (P4.3 Item C). */
+	email_body_html: z.string().max(200_000).nullable().optional(),
 	email_cta: emailCtaSchema.nullable().optional(),
 
 	social_channel: socialChannelSchema.nullable().optional(),
@@ -130,8 +143,12 @@ export default defineEventHandler(async (event) => {
 					// P4 Item A.2: need the current master subject + body so the
 					// body_variants normalizer can collapse lanes that match
 					// the effective master (patch values OR existing values).
+					// P4.3 Item C: read both bodies so the normalizer picks the
+					// canonical HTML when present, falling back to markdown for
+					// unmigrated rows.
 					'email_subject',
 					'email_body_markdown',
+					'email_body_html',
 				],
 			}),
 		)
@@ -173,14 +190,19 @@ export default defineEventHandler(async (event) => {
 	// always sends the full state on save, so partial patches that touch
 	// only the master subject/body without resending variants will leave
 	// stale lanes in place — acceptable since the send-time read still
-	// uses `lane.body_markdown ?? master` correctly.
+	// uses `lane.body_html ?? lane.body_markdown ?? master` correctly.
+	//
+	// P4.3 Item C: prefer HTML for the master comparison; fall back to
+	// markdown for unmigrated rows. The normalizer itself collapses lane
+	// bodies on the effective-html axis.
 	if ('body_variants' in patchableData) {
 		const effectiveSubject =
 			(patch.email_subject as string | undefined)
 			?? (existing.email_subject ?? '');
 		const effectiveBody =
-			(patch.email_body_markdown as string | undefined)
-			?? (existing.email_body_markdown ?? '');
+			(patch.email_body_html as string | undefined)
+			?? (patch.email_body_markdown as string | undefined)
+			?? (existing.email_body_html ?? existing.email_body_markdown ?? '');
 		patch.body_variants = normalizeBodyVariants(
 			patchableData.body_variants ?? null,
 			effectiveSubject,

@@ -37,6 +37,7 @@
  * @see project_composition_canvas_redesign — the design rationale.
  */
 
+import { marked } from 'marked';
 import type {
 	Composition,
 	SocialComposition,
@@ -46,6 +47,7 @@ import type {
 	CompositionSource,
 	CompositionTarget,
 	CompositionResults,
+	EmailBodyVariant,
 } from '~~/shared/composition';
 import {
 	statusFromSocial,
@@ -73,6 +75,45 @@ function decodeTouchId(id: string): number | null {
 	if (!id.startsWith('touch:')) return null;
 	const n = Number(id.slice(6));
 	return Number.isFinite(n) ? n : null;
+}
+
+// ─── Body format helpers (P4.3 Item C) ──────────────────────────────────────
+
+/** Render a markdown string through `marked` synchronously. Used at read
+ *  time when a touch hasn't been backfilled yet — `email_body_html` is
+ *  null but `email_body_markdown` is present. Tiptap roundtrips through
+ *  this on the next save (HTML stored from then on). */
+function markdownToHtmlSync(md: string): string {
+	if (!md) return '';
+	try {
+		const html = marked.parse(md, { async: false, gfm: true, breaks: true }) as string;
+		return html.trim();
+	} catch {
+		// Fall back to a paragraph wrap so unmigrated rows still render
+		// something instead of throwing inside the read path.
+		return `<p>${md.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+	}
+}
+
+/** Pick the canonical body for a touch row — HTML when present, else the
+ *  rendered legacy markdown. Returns '' when neither is set. */
+function effectiveTouchBody(row: {
+	email_body_html: string | null;
+	email_body_markdown: string | null;
+}): string {
+	if (row.email_body_html && row.email_body_html.trim().length > 0) {
+		return row.email_body_html;
+	}
+	return markdownToHtmlSync(row.email_body_markdown ?? '');
+}
+
+/** Map a stored variant lane into HTML — legacy markdown lanes get
+ *  rendered through `marked` once so the canvas only ever sees HTML. */
+function normalizeLaneForRead(lane: EmailBodyVariant): EmailBodyVariant {
+	const html = lane.body_html ?? markdownToHtmlSync(lane.body_markdown ?? '');
+	const out: EmailBodyVariant = { body_html: html };
+	if (lane.subject !== undefined) out.subject = lane.subject;
+	return out;
 }
 
 // ─── Social mapping ─────────────────────────────────────────────────────────
@@ -201,6 +242,9 @@ interface TouchRow {
 	email_subject: string | null;
 	email_preview_text: string | null;
 	email_body_markdown: string | null;
+	/** P4.3 Item C: HTML body (Tiptap output). Canonical going forward;
+	 *  markdown column kept one release as a fallback read source. */
+	email_body_html: string | null;
 	email_cta: import('~~/shared/marketing-persistence').EmailCTA | null;
 	/** P4 Item A.2: per-target subject + body forks. JSON object keyed
 	 *  by `targetKeyOf(target)`. Null when the touch has no forks. */
@@ -296,14 +340,27 @@ function touchToComposition(touch: TouchRow): EmailComposition {
 		results: null,
 		created_at: touch.date_created,
 		updated_at: touch.date_updated,
-		body: touch.email_body_markdown ?? '',
+		// P4.3 Item C: master body is HTML going forward. The adapter
+		// renders the legacy markdown column through `marked` for rows
+		// that haven't been backfilled yet, so the canvas only ever
+		// receives HTML.
+		body: effectiveTouchBody(touch),
 		subject: touch.email_subject ?? '',
 		preview_text: touch.email_preview_text,
 		cta: touch.email_cta,
 		// P4 Item A.2 — per-target subject + body forks. Null in the
 		// common case; non-null when at least one lane diverges from
-		// master after server-side normalization.
-		variants: touch.body_variants ?? null,
+		// master after server-side normalization. P4.3 Item C: legacy
+		// lanes with body_markdown get rendered to HTML at read time
+		// so downstream UI uniformly sees `body_html`.
+		variants: touch.body_variants
+			? Object.fromEntries(
+				Object.entries(touch.body_variants).map(([k, lane]) => [
+					k,
+					normalizeLaneForRead(lane!),
+				]),
+			)
+			: null,
 		targets,
 		source: { type: 'marketing_touch', touch_id: touch.id, campaign_id: touch.campaign },
 	};
@@ -368,11 +425,15 @@ function touchCreateBody(
 		status: touchStatusFor(input.status ?? 'draft'),
 		email_subject: input.subject,
 		email_preview_text: input.preview_text ?? null,
-		email_body_markdown: input.body,
+		// P4.3 Item C: master body is HTML (Tiptap). Canvas writers stop
+		// touching the legacy markdown column — backfilled rows keep
+		// their markdown copy until the next-phase cleanup drops it.
+		email_body_html: input.body,
 		email_cta: input.cta ?? null,
 		// P4 Item A.2: per-target variants pass-through. Server normalizes
 		// against master before write (drops lanes matching master) — we
-		// just forward whatever the caller set.
+		// just forward whatever the caller set. P4.3: lane shape carries
+		// `body_html` going forward.
 		body_variants: input.variants ?? null,
 	};
 }
@@ -384,7 +445,10 @@ function touchPatchBody(
 	patch: Extract<CompositionPatch, { kind: 'email' }>,
 ): Record<string, unknown> {
 	const body: Record<string, unknown> = {};
-	if (patch.body !== undefined) body.email_body_markdown = patch.body;
+	// P4.3 Item C: master body lands in email_body_html. Canvas no longer
+	// touches the legacy markdown column on write — the migration script
+	// is the only thing that backfills it.
+	if (patch.body !== undefined) body.email_body_html = patch.body;
 	if (patch.subject !== undefined) body.email_subject = patch.subject;
 	if (patch.preview_text !== undefined) body.email_preview_text = patch.preview_text;
 	if (patch.cta !== undefined) body.email_cta = patch.cta;

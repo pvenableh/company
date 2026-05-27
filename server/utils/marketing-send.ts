@@ -484,7 +484,15 @@ async function sendEmailTouch(args: {
 
 	const masterSubject = touch.email_subject || '';
 	const previewTemplate = touch.email_preview_text || '';
-	const masterBody = touch.email_body_markdown || '';
+	// P4.3 Item C: prefer the HTML body (Tiptap output) when present;
+	// fall back to rendering the legacy markdown column for rows that
+	// haven't been touched since the migration ran. `useMaster` is the
+	// effective master body the send loop hands to per-target / per-
+	// contact precedence below — already HTML when it leaves this point,
+	// so downstream code never has to think about format again.
+	const masterBodyHtml = (touch.email_body_html as string | null) || null;
+	const masterBodyMarkdown = touch.email_body_markdown || '';
+	const masterBody = masterBodyHtml || mdToHtml(masterBodyMarkdown);
 
 	let sentCount = 0;
 	for (const { contact: r, sourceTargetKey } of recipientsBundle) {
@@ -494,14 +502,22 @@ async function sendEmailTouch(args: {
 		const perTargetLane = sourceTargetKey ? bodyVariants?.[sourceTargetKey] : null;
 
 		const effectiveSubjectTemplate = perTargetLane?.subject ?? masterSubject;
-		const effectiveBodyTemplate = perTargetLane?.body_markdown ?? masterBody;
+		// P4.3 Item C: each lane carries HTML going forward (body_html).
+		// Legacy lanes that still have body_markdown get rendered through
+		// `mdToHtml` here so downstream rendering is always HTML.
+		const laneHtml = perTargetLane?.body_html
+			?? (perTargetLane?.body_markdown ? mdToHtml(perTargetLane.body_markdown) : null);
+		const effectiveBodyTemplate = laneHtml ?? masterBody;
 
 		// Per-contact variants store already-personalized strings — no
 		// {{first_name}} swap. Master + per-target templates still go
-		// through personalize() for the legacy mail-merge.
+		// through personalize() for the legacy mail-merge. Per-contact
+		// rows are markdown (pre-P4.3); rendered to HTML here too.
 		const subject = perContact?.email_subject ?? personalize(effectiveSubjectTemplate, r);
 		const preview = perContact?.email_preview_text ?? personalize(previewTemplate, r);
-		const body = perContact?.email_body_markdown ?? personalize(effectiveBodyTemplate, r);
+		const personalizedBody = perContact?.email_body_markdown
+			? mdToHtml(personalize(perContact.email_body_markdown, r))
+			: personalize(effectiveBodyTemplate, r);
 
 		const unsubscribeUrl = r.unsubscribe_token
 			? buildUnsubscribeUrl(r.unsubscribe_token, siteUrl)
@@ -512,7 +528,9 @@ async function sendEmailTouch(args: {
 			subject,
 			preheader: preview || null,
 			heading: null,
-			bodyHtml: mdToHtml(body),
+			// effectiveBodyTemplate is already HTML by this point. The
+			// shell wraps it in chrome + adds the unsubscribe footer.
+			bodyHtml: personalizedBody,
 			unsubscribeUrl,
 			physicalAddress,
 		});
@@ -521,7 +539,9 @@ async function sendEmailTouch(args: {
 			to: r.email!,
 			subject,
 			html,
-			text: text || body,
+			// `text` is derived from `bodyHtml` by renderOrgEmail's
+			// htmlToText pass — always populated, always plain-text safe.
+			text,
 			org,
 			categories: ['marketing', `campaign-${campaign.id}`, `touch-${touch.id}`],
 			emailName: `campaign-${campaign.id}-touch-${touch.id}`,
@@ -611,6 +631,7 @@ export async function fireDueTouch(args: SendTouchArgs): Promise<SendTouchResult
 					'email_subject',
 					'email_preview_text',
 					'email_body_markdown',
+					'email_body_html',
 					'body_variants',
 					'social_channel',
 					'social_caption',

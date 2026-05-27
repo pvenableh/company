@@ -132,11 +132,23 @@ const createTouchSchema = z.object({
 	/** P4 Item A.2 — per-target body + subject variants. Keyed by
 	 *  `targetKeyOf(target)` (`list:<id>` or `segment:<filter>`). The
 	 *  server normalizer drops lanes matching master before write so the
-	 *  column stays NULL in the common case. */
+	 *  column stays NULL in the common case.
+	 *
+	 *  P4.3 Item C: each lane now carries `body_html` (Tiptap output).
+	 *  `body_markdown` is still accepted for one release as a back-compat
+	 *  read fallback — the normalizer in `shared/composition.ts` folds
+	 *  whichever the lane carries into the persisted `body_html`. At
+	 *  least one of the two MUST be present per lane. */
 	body_variants: z.record(z.string(), z.object({
 		subject: z.string().max(998).optional(),
-		body_markdown: z.string().max(50_000),
-	})).nullable().optional(),
+		body_html: z.string().max(200_000).optional(),
+		body_markdown: z.string().max(50_000).optional(),
+	}).refine(
+		(lane) =>
+			(typeof lane.body_html === 'string' && lane.body_html.length > 0)
+			|| (typeof lane.body_markdown === 'string' && lane.body_markdown.length > 0),
+		{ message: 'lane requires body_html or body_markdown' },
+	)).nullable().optional(),
 
 	// Schedule + status.
 	scheduled_for: z.string().datetime().nullable().optional(),
@@ -149,7 +161,13 @@ const createTouchSchema = z.object({
 	// narrower than the table.
 	email_subject: z.string().max(998).nullable().optional(),
 	email_preview_text: z.string().max(300).nullable().optional(),
+	/** Master body markdown — legacy field, accepted for one release as a
+	 *  back-compat write path. New callers (post-P4.3) send `email_body_html`. */
 	email_body_markdown: z.string().max(50_000).nullable().optional(),
+	/** Master body HTML (P4.3 Item C). Tiptap's `getHTML()` output.
+	 *  Canonical going forward; legacy markdown column stays as a read
+	 *  fallback for one release. */
+	email_body_html: z.string().max(200_000).nullable().optional(),
 	email_cta: emailCtaSchema.nullable().optional(),
 
 	// Social content (NOT used by the v1 email composer but kept for
@@ -286,10 +304,17 @@ export default defineEventHandler(async (event) => {
 		// P4 Item A.2 — normalize body_variants against master before write
 		// so the column stays NULL in the common case (touch with no forks).
 		// The shared helper handles the drop-lane-if-equal-to-master rule.
+		// P4.3 Item C: comparison is on HTML — if a legacy markdown lane
+		// is sent without HTML, the normalizer treats `body_markdown` as
+		// the effective body. Master body is preferentially HTML; we fall
+		// back to the markdown column when the caller still uses the old
+		// shape so unmigrated dual-write callers still collapse correctly.
+		const masterBodyForNormalize =
+			data.email_body_html ?? data.email_body_markdown ?? '';
 		const normalizedVariants = normalizeBodyVariants(
 			data.body_variants ?? null,
 			data.email_subject ?? '',
-			data.email_body_markdown ?? '',
+			masterBodyForNormalize,
 		);
 
 		const created = await directus.request(
@@ -307,6 +332,7 @@ export default defineEventHandler(async (event) => {
 				email_subject: data.email_subject ?? null,
 				email_preview_text: data.email_preview_text ?? null,
 				email_body_markdown: data.email_body_markdown ?? null,
+				email_body_html: data.email_body_html ?? null,
 				email_cta: data.email_cta ?? null,
 				body_variants: normalizedVariants,
 				social_channel: data.social_channel ?? null,

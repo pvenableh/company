@@ -188,12 +188,19 @@ export interface SocialComposition extends CompositionBase {
 // ─── Email ──────────────────────────────────────────────────────────────────
 
 /**
- * Per-target email variant (P4 Item A.2). The lane axis is the target —
- * the same string keys returned by `targetKeyOf` (e.g. `list:10` for
- * mailing list 10, `segment:opened_previous` for the corresponding
- * audience filter). Both `subject` and `body_markdown` are forkable;
- * `subject` is optional so a lane that overrides only the body inherits
- * the master subject (and vice versa).
+ * Per-target email variant (P4 Item A.2, lane shape upgraded in P4.3
+ * Item C for Tiptap HTML storage). The lane axis is the target — the
+ * same string keys returned by `targetKeyOf` (e.g. `list:10` for mailing
+ * list 10, `segment:opened_previous` for the corresponding audience
+ * filter). Both `subject` and `body_html` are forkable; `subject` is
+ * optional so a lane that overrides only the body inherits the master
+ * subject (and vice versa).
+ *
+ * Storage format (P4.3): `body_html` is the canonical field — Tiptap's
+ * `getHTML()` output. The legacy `body_markdown` field is kept as a
+ * deprecated read-fallback for lanes written before the migration ran;
+ * new writes always go through `body_html`. After the next-phase cleanup
+ * the markdown lane field gets dropped (mirrors the column-level cleanup).
  *
  * Normalization rule (enforced server-side on write): a lane collapses
  * (gets dropped from the JSON object) when its body matches master AND
@@ -202,7 +209,12 @@ export interface SocialComposition extends CompositionBase {
  */
 export interface EmailBodyVariant {
 	subject?: string;
-	body_markdown: string;
+	body_html: string;
+	/** @deprecated since P4.3 — populated only on unmigrated lanes.
+	 *  Reads prefer `body_html`; the migration script copies rendered
+	 *  markdown into `body_html` and leaves this field in place for one
+	 *  release as a safety net. */
+	body_markdown?: string;
 }
 
 /** @deprecated since P4.1 — kept exported until the next phase to avoid
@@ -213,9 +225,12 @@ export type EmailVariantAxis = AudienceFilter;
 
 export interface EmailComposition extends CompositionBase {
 	kind: 'email';
-	/** Master body — Markdown today (matches `email_body_markdown`). The
-	 * canvas's z=5 block editor renders this as a rich Tiptap surface and
-	 * round-trips back to Markdown on write. */
+	/** Master body — HTML (Tiptap's `getHTML()` output) since P4.3 Item C.
+	 * Maps to `marketing_touches.email_body_html`. The adapter falls back
+	 * to rendering `email_body_markdown` through `marked` for rows that
+	 * haven't been touched since the migration; the send path does the
+	 * same. The deprecated markdown column is kept one release for safety
+	 * and then dropped in a follow-up phase. */
 	body: string;
 	subject: string;
 	preview_text: string | null;
@@ -261,7 +276,17 @@ export function targetKeyOf(
  *
  * Pure function so it can run client-side (defensive normalization
  * before save) and server-side (authoritative collapse before write).
+ *
+ * Storage rule (P4.3): the canonical field is `body_html`. Unmigrated
+ * lanes may arrive with only `body_markdown`; the read fallback is
+ * `lane.body_html ?? lane.body_markdown`. After normalization the
+ * output lane always carries `body_html` — never markdown — so the
+ * persisted shape is uniform.
  */
+function effectiveLaneBody(lane: EmailBodyVariant): string {
+	return lane.body_html ?? lane.body_markdown ?? '';
+}
+
 export function normalizeBodyVariants(
 	variants: Partial<Record<string, EmailBodyVariant>> | null | undefined,
 	masterSubject: string,
@@ -273,13 +298,16 @@ export function normalizeBodyVariants(
 		if (!lane || typeof lane !== 'object') continue;
 		const subjectEqualsMaster =
 			lane.subject === undefined || lane.subject === masterSubject;
-		const bodyEqualsMaster = lane.body_markdown === masterBody;
+		const laneBody = effectiveLaneBody(lane);
+		const bodyEqualsMaster = laneBody === masterBody;
 		if (subjectEqualsMaster && bodyEqualsMaster) continue;
 		// Preserve only fields that differ from master — a subject that
 		// matches master gets dropped from the lane (so the read-side
-		// `lane.subject ?? master` lookup stays correct).
+		// `lane.subject ?? master` lookup stays correct). Markdown gets
+		// folded into the html field on the way out so the persisted
+		// shape is single-axis.
 		const collapsedLane: EmailBodyVariant = {
-			body_markdown: lane.body_markdown,
+			body_html: laneBody,
 		};
 		if (lane.subject !== undefined && lane.subject !== masterSubject) {
 			collapsedLane.subject = lane.subject;

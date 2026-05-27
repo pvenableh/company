@@ -42,6 +42,10 @@ export default defineEventHandler(async (event) => {
 					'email_subject',
 					'email_preview_text',
 					'email_body_markdown',
+					// P4.3 Item C: HTML body (Tiptap). Canonical going
+					// forward; markdown column kept one release as a
+					// read-fallback for unmigrated rows.
+					'email_body_html',
 					'email_cta',
 					// P4 Item A.2: per-target body + subject variants.
 					'body_variants',
