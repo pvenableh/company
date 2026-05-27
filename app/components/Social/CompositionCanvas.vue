@@ -2,8 +2,10 @@
 /**
  * CompositionCanvas — depth-zoom host for the Composition Canvas redesign.
  *
- * P3 Phase 3.1 + 3.2 + 3.3 + 3.4. Replaces the floor segmented control's
- * grid hand-off with a single host that ramps a `z` level. Layers:
+ * P3 Phase 3.1 + 3.2 + 3.3 + 3.4 + P4.4 (Item D). Replaces the floor
+ * segmented control's grid hand-off with a single host that ramps a `z`
+ * level. Layers:
+ *   z=0 (overview lens-grid)    5 live mini-renders, one per lens — P4.4
  *   z=1 (river surface)         default slot
  *   z=2 (lifted card)           LiftedCard | EmailLiftedCard (kind-dispatched)
  *   z=3 (composer)              CompositionComposer | EmailComposer (edit OR create)
@@ -43,7 +45,18 @@ import EmailLiftedCard from '~/components/Social/EmailLiftedCard.vue';
 import CompositionComposer from '~/components/Social/CompositionComposer.vue';
 import EmailComposer from '~/components/Social/EmailComposer.vue';
 
-withDefaults(
+/** Lens descriptor — used to render the z=0 grid (P4.4 Item D). The
+ *  parent enumerates its full lens set; the canvas paints one mini-
+ *  render tile per entry and emits `update:lens` when the user picks
+ *  one. The `key` axis stays opaque to the canvas — the parent owns
+ *  what each key means. */
+export interface LensOption {
+	key: string;
+	label: string;
+	icon: string;
+}
+
+const props = withDefaults(
 	defineProps<{
 		/** Current zoom level. Parent owns the source-of-truth ref (typically
 		 *  via useCompositionZoom().z). The canvas reads zoom internally as
@@ -51,19 +64,26 @@ withDefaults(
 		 *  v-model:z, but the canvas does NOT depend on it for layout. */
 		z: number;
 		/** Which lens the default slot is showing. Informational — the canvas
-		 *  doesn't switch surfaces itself; the parent does. */
-		lens?: 'calendar' | 'inbox' | 'approval' | 'analytics' | 'upcoming';
+		 *  doesn't switch surfaces itself; the parent does (see
+		 *  `update:lens` for the canvas-driven path). */
+		lens?: string;
 		/** Active id, mirrored from the composable singleton. Kept on the
 		 *  prop surface so existing parents can still bind a v-model:activeId
 		 *  if they want to control externally. */
 		activeId?: string | null;
+		/** Full lens set for the z=0 overview grid (P4.4 Item D). When
+		 *  empty / undefined the grid stays empty and the Overview
+		 *  affordance hides — the canvas degrades gracefully for hosts
+		 *  that don't have a lens axis. */
+		lensOptions?: LensOption[];
 	}>(),
-	{ lens: 'calendar', activeId: null },
+	{ lens: 'calendar', activeId: null, lensOptions: () => [] },
 );
 
 const emit = defineEmits<{
 	(e: 'update:z', n: number): void;
 	(e: 'update:activeId', id: string | null): void;
+	(e: 'update:lens', key: string): void;
 	(e: 'post-updated', post: SocialPost): void;
 	(e: 'touch-updated', composition: EmailComposition): void;
 	(e: 'post-created', post: SocialPost): void;
@@ -202,13 +222,32 @@ function onEmailComposerCreated(comp: EmailComposition) {
 
 let teardown: (() => void) | null = null;
 
+/** ESC at z=0 → dive back into the previously-active lens. At z>=2 the
+ *  existing slide-out behavior (handled by closeLifted / closeComposer
+ *  via backdrop click + composer's own close button) covers ESC's role.
+ *  We only listen for z=0 here so we don't fight the composer's own
+ *  keydown handling. */
+function onKeydown(ev: KeyboardEvent) {
+	if (ev.key !== 'Escape') return;
+	if (zoom.z.value > 0.5) return;
+	// At the overview grid — dive into the previously-active lens.
+	ev.preventDefault();
+	zoom.setZ1();
+}
+
 onMounted(() => {
 	if (rootEl.value) teardown = zoom.installAll(rootEl.value);
+	if (typeof window !== 'undefined') {
+		window.addEventListener('keydown', onKeydown);
+	}
 });
 
 onBeforeUnmount(() => {
 	if (teardown) teardown();
 	teardown = null;
+	if (typeof window !== 'undefined') {
+		window.removeEventListener('keydown', onKeydown);
+	}
 });
 
 // Bridge the composable singleton back to the parent's v-model. The parent
@@ -233,16 +272,30 @@ onMounted(() => {
 
 /**
  * z=1 → identity. As z ramps to 3 the river surface dims and shifts up,
- * making room for the lifted card → composer stack. We interpolate
- * linearly between integers so the gesture feels continuous; CSS
- * transition catches the snap-on-release.
+ * making room for the lifted card → composer stack. As z drops to 0
+ * (P4.4 Item D) the surface fades to transparent and scales up to 1.2 —
+ * the user is "rising above" the lens into the overview grid. We
+ * interpolate linearly between integers so the gesture feels continuous;
+ * CSS transition catches the snap-on-release.
  */
 const surfaceStyle = computed(() => {
-	const z = Math.max(1, Math.min(3, zoom.z.value));
-	// 0 at floor, 1 at lifted, 1 at composer too (surface doesn't keep
-	// receding past the lifted pose — the composer takes over the focus).
-	const t = Math.min(1, z - 1);
+	const z = Math.max(0, Math.min(3, zoom.z.value));
 	const reduce = prefersReducedMotion.value;
+	// Phase A — z 0→1: surface fades 0→1 + dilates 1.2→1 as the user
+	// dives from the overview grid into the active lens. At z=0 the
+	// surface is invisible so the grid below has a clean stage.
+	if (z <= 1) {
+		const t = z; // 0 at z=0, 1 at z=1
+		if (reduce) return { opacity: String(t) };
+		const scale = 1 + 0.2 * (1 - t);
+		return {
+			transform: `translate3d(0, 0, 0) scale(${scale})`,
+			opacity: String(t),
+		};
+	}
+	// Phase B — z 1→3: existing dim/shrink as the lifted/composer stack
+	// takes over the focus.
+	const t = Math.min(1, z - 1);
 	const scale = reduce ? 1 : 1 - 0.06 * t;
 	const translateY = reduce ? 0 : -12 * t;
 	const opacity = 1 - 0.6 * t;
@@ -251,6 +304,47 @@ const surfaceStyle = computed(() => {
 		opacity: String(opacity),
 	};
 });
+
+/**
+ * z=0 overview lens-grid (P4.4 Item D). The grid mounts whenever z
+ * approaches 0 (z<=0.6) and animates in across z=0.4→0: opacity 0→1
+ * and scale 0.96→1. Mount-gating prevents the 5 mini-render lens
+ * surfaces from running their data fetches when the user is at z>=1.
+ */
+const overviewActive = computed(() => zoom.z.value <= 0.6 && props.lensOptions.length > 0);
+const overviewStyle = computed(() => {
+	const z = Math.max(0, Math.min(1, zoom.z.value));
+	const reduce = prefersReducedMotion.value;
+	// t = 0 at z=0.4+, t = 1 at z=0.
+	const t = Math.max(0, Math.min(1, (0.4 - z) / 0.4));
+	if (reduce) {
+		return {
+			opacity: String(t),
+			pointerEvents: zoom.z.value < 0.5 ? ('auto' as const) : ('none' as const),
+		};
+	}
+	const scale = 0.96 + 0.04 * t;
+	return {
+		transform: `translate3d(0, 0, 0) scale(${scale})`,
+		opacity: String(t),
+		pointerEvents: zoom.z.value < 0.5 ? ('auto' as const) : ('none' as const),
+	};
+});
+
+/** Returns the previously-active lens (the one that owned the canvas
+ *  before the overview opened). Used by the ESC handler to dive back
+ *  into the same lens the user came from. */
+const previousLens = computed(() => props.lens);
+
+function pickLens(key: string) {
+	// Emit the lens change to the parent (single source of truth for
+	// the `view` axis). The parent's view-watcher drops the stale
+	// `?z=0` from the URL as it propagates — we don't need to wrestle
+	// router state from inside the canvas. Then ramp the internal z
+	// state to the URL-default level so the surface animates back in.
+	if (key !== props.lens) emit('update:lens', key);
+	zoom.setZ1();
+}
 
 const liftedActive = computed(() => zoom.z.value >= 1.5 && !!zoom.activeId.value);
 const composerActive = computed(
@@ -320,6 +414,59 @@ function closeComposer() {
 		<div class="composition-canvas__surface" :style="surfaceStyle">
 			<slot />
 		</div>
+
+		<!-- z=0 overview lens-grid (P4.4 Item D). Mount-gated on
+		     overviewActive so the per-lens mini-renders only run their
+		     data fetches when the user's actually approaching the
+		     overview. The grid lays out a 5-tile arrangement (3 over 2);
+		     each tile clips a scaled-down render of its lens via a
+		     scoped slot the parent fills.  -->
+		<div
+			v-if="overviewActive"
+			class="composition-canvas__overview"
+			:style="overviewStyle"
+			role="grid"
+			aria-label="Overview — switch lens"
+		>
+			<button
+				v-for="(opt, idx) in lensOptions"
+				:key="opt.key"
+				type="button"
+				class="composition-canvas__overview-tile"
+				:class="{
+					'composition-canvas__overview-tile--active': opt.key === lens,
+					[`composition-canvas__overview-tile--pos-${idx}`]: true,
+				}"
+				@click="pickLens(opt.key)"
+			>
+				<div class="composition-canvas__overview-thumb">
+					<slot
+						name="lens-thumb"
+						:lens="opt.key"
+						:active="opt.key === lens"
+					/>
+				</div>
+				<div class="composition-canvas__overview-tag">
+					<Icon :name="opt.icon" class="w-3.5 h-3.5" />
+					<span>{{ opt.label }}</span>
+				</div>
+			</button>
+		</div>
+
+		<!-- Desktop "Overview" affordance (P4.4 Item D). Visible at z=1
+		     only — disappears once z drops toward the grid (the grid is
+		     itself the affordance below z=0.5) or rises toward
+		     lift/composer. Keyboard-friendly counterpart to the trackpad
+		     pinch-out gesture. -->
+		<button
+			v-if="lensOptions.length > 0 && zoom.z.value >= 0.9 && zoom.z.value < 1.5"
+			type="button"
+			class="composition-canvas__overview-affordance"
+			aria-label="Open lens overview"
+			@click="zoom.openOverview()"
+		>
+			<Icon name="lucide:layout-grid" class="w-4 h-4" />
+		</button>
 
 		<!-- Lifted leaf overlay — z=2 focus. Click backdrop to close back to
 		     the river. Active id comes from the composable singleton (the
@@ -475,10 +622,121 @@ function closeComposer() {
 		transition-colors;
 }
 
+/* P4.4 Item D — z=0 overview lens-grid. */
+.composition-canvas__overview {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+	grid-template-rows: 1fr 1fr;
+	gap: 16px;
+	padding: 24px;
+	transform-origin: center;
+	will-change: transform, opacity;
+	transition:
+		transform 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		opacity 400ms cubic-bezier(0.36, 0.66, 0.04, 1);
+	/* Same dim plate as the lifted overlay so the cascade feels
+	   continuous when zooming through. */
+	background: radial-gradient(
+		circle at center,
+		hsl(var(--accent-h, 220) 30% 8% / 0.12),
+		hsl(var(--accent-h, 220) 30% 6% / 0.04) 70%,
+		transparent 100%
+	);
+}
+
+.composition-canvas[data-gesturing='true'] .composition-canvas__overview {
+	transition: none;
+}
+
+.composition-canvas__overview-tile {
+	@apply relative flex flex-col rounded-2xl border border-border bg-card overflow-hidden;
+	cursor: pointer;
+	box-shadow: 0 1px 2px hsl(0 0% 0% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.06);
+	transform-origin: center;
+	transition:
+		transform 240ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		box-shadow 240ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		border-color 240ms ease;
+}
+
+/* 5-tile layout: 3 across top row, 2 centered on bottom row. */
+.composition-canvas__overview-tile--pos-0 { grid-column: 1 / span 2; grid-row: 1; }
+.composition-canvas__overview-tile--pos-1 { grid-column: 3 / span 2; grid-row: 1; }
+.composition-canvas__overview-tile--pos-2 { grid-column: 5 / span 2; grid-row: 1; }
+.composition-canvas__overview-tile--pos-3 { grid-column: 2 / span 2; grid-row: 2; }
+.composition-canvas__overview-tile--pos-4 { grid-column: 4 / span 2; grid-row: 2; }
+
+.composition-canvas__overview-tile:hover {
+	@apply border-primary/40;
+	transform: translate3d(0, -2px, 0) scale(1.02);
+	box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08), 0 20px 40px hsl(0 0% 0% / 0.12);
+}
+
+.composition-canvas__overview-tile:active {
+	transform: translate3d(0, 0, 0) scale(0.985);
+}
+
+.composition-canvas__overview-tile--active {
+	@apply border-primary;
+	box-shadow:
+		0 0 0 2px hsl(var(--primary) / 0.25),
+		0 4px 12px hsl(0 0% 0% / 0.08),
+		0 20px 40px hsl(0 0% 0% / 0.12);
+}
+
+.composition-canvas__overview-thumb {
+	@apply flex-1 relative overflow-hidden;
+	min-height: 0;
+	/* Pointer events on the inner content are suppressed via JS — we
+	   never want the user to interact with the mini-render itself. The
+	   button parent handles the click. */
+	pointer-events: none;
+	user-select: none;
+}
+
+/* The slot content (typically a full lens surface) is scaled down to
+   fit the tile. Width scales up so the inner layout still renders at
+   its normal flex point; the parent's overflow:hidden clips. */
+.composition-canvas__overview-thumb > :first-child {
+	display: block;
+	width: 400%;
+	height: 400%;
+	transform: scale(0.25);
+	transform-origin: 0 0;
+	pointer-events: none;
+}
+
+.composition-canvas__overview-tag {
+	@apply absolute bottom-2 left-2 inline-flex items-center gap-1.5
+		px-2.5 py-1 rounded-full
+		bg-card/95 border border-border
+		text-[11px] font-semibold text-foreground;
+	backdrop-filter: blur(8px);
+	pointer-events: none;
+}
+
+.composition-canvas__overview-affordance {
+	@apply absolute top-3 right-3 z-10 inline-flex items-center justify-center
+		w-9 h-9 rounded-full border border-border bg-card/95
+		text-muted-foreground hover:text-foreground hover:border-primary/40
+		transition-colors;
+	backdrop-filter: blur(8px);
+	box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05), 0 4px 12px hsl(0 0% 0% / 0.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.composition-canvas__surface,
-	.composition-canvas__lifted {
+	.composition-canvas__lifted,
+	.composition-canvas__overview {
 		transition: opacity 200ms linear;
+	}
+	.composition-canvas__overview-tile,
+	.composition-canvas__overview-tile:hover,
+	.composition-canvas__overview-tile:active {
+		transform: none;
 	}
 }
 </style>

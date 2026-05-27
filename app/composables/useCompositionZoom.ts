@@ -9,16 +9,21 @@
  * canvas don't move `z` and don't fight global browser zoom on the rest of
  * the page.
  *
- * Zoom levels (after P3.4):
- *   z=1  River timeline (default).
+ * Zoom levels (after P4.4 Item D):
+ *   z=0  Overview lens-grid — 5 thumbnails of the canvas's lenses; click
+ *        to dive into one at z=1 (P4.4). Reached by pinch-out from z=1,
+ *        Cmd+- at z=1, the Overview affordance, or `?z=0` deep-link.
+ *   z=1  River timeline (default — the URL drops `?z=` for this level).
  *   z=2  Selected leaf lifted to center via FLIP — see lift().
  *   z=3  Master-variant composer in-place — edit OR create (sentinel id) — see compose().
  *   z=4-5  Block-level depth (deferred indefinitely; reclaim if blocks ever apply).
  *
  * URL binding: `?z=` + `?id=` are the canonical form when canvas mode is on.
  * `useRouter().replace` (not push) so back/forward history doesn't fill up
- * with z transitions. `?id=` is dropped when z snaps back to 1 (no active
- * target at the river level).
+ * with z transitions. `?id=` is dropped when z snaps back to ≤1 (no active
+ * target at the river / overview levels). `?z=` is dropped *only* at the
+ * URL-default level (z=1) — z=0 is an explicit non-default state that
+ * must round-trip through the URL.
  *
  * Motion contract (load-bearing — see feedback_motion_stack_policy):
  *   The zoom *payoff* is reactive `z` + CSS transition in CompositionCanvas —
@@ -30,7 +35,10 @@
  * @see project_composition_canvas_redesign — design rationale.
  */
 
-const Z_MIN = 1;
+/** Z range. z=0 is the lens-grid overview (P4.4 Item D); the URL-default
+ *  level (the one that drops `?z=` from the URL) is z=1 (River). */
+const Z_MIN = 0;
+const URL_DEFAULT_Z = 1;
 const Z_MAX = 5;
 const WHEEL_PIXELS_PER_LEVEL = 90;
 const WHEEL_SETTLE_MS = 220;
@@ -71,9 +79,13 @@ function clampZ(n: number): number {
 }
 
 function parseUrlZ(q: unknown): number {
-	if (typeof q !== 'string') return Z_MIN;
+	// Missing / malformed param means the user is on the canonical URL-
+	// default view (z=1 River) — NOT the overview grid. P4.4 widened the
+	// range to [0, 5] but kept 1 as the resting state so `?z=` stays
+	// optional for the common case.
+	if (typeof q !== 'string') return URL_DEFAULT_Z;
 	const n = Number(q);
-	if (!Number.isFinite(n)) return Z_MIN;
+	if (!Number.isFinite(n)) return URL_DEFAULT_Z;
 	return clampZ(Math.round(n));
 }
 
@@ -89,12 +101,17 @@ function build() {
 
 	// SSR-safe init. Depth-zoom is a client-only UX (the canvas surfaces
 	// — lifted card, composer, gesture handlers — all need a live DOM and
-	// session cookies for fetchById). Initialize to Z_MIN on both server
-	// and client; the `immediate: true` watcher below reconciles to the
-	// URL on the client's first tick. This also fixes the SSR hydration
-	// mismatch on `data-z` and avoids server-side mount of EmailComposer
-	// (which would 401-fail on $fetch without cookies forwarded).
-	const z = ref<number>(Z_MIN);
+	// session cookies for fetchById). On the server we use the URL-
+	// default (River) so the SSR pass never tries to mount the five
+	// overview lens components. On the client we read the URL directly
+	// at build time — the `immediate: true` watcher below proved racy
+	// against the second canvas render after P4.4 added z=0, so we
+	// short-circuit the SSR/CSR seam by sampling the route once here.
+	const initialZ =
+		import.meta.server
+			? URL_DEFAULT_Z
+			: parseUrlZ(route.query.z);
+	const z = ref<number>(initialZ);
 	const activeId = ref<string | null>(null);
 	/** Source rect captured at lift time — drives the FLIP from-pose for the
 	 *  lifted card. NOT URL-bound: a deep-link via `?z=3&id=<uuid>` skips the
@@ -143,7 +160,10 @@ function build() {
 		const currentId = parseUrlId(route.query.id);
 		if (currentZ === intZ && currentId === nextId) return;
 		const query = { ...route.query };
-		if (intZ === Z_MIN) {
+		// Drop the param only at the URL-default level (z=1 River). z=0
+		// (overview) and z>=2 (lifted/composer) are explicit non-default
+		// states that need to round-trip through the URL.
+		if (intZ === URL_DEFAULT_Z) {
 			delete query.z;
 		} else {
 			query.z = String(intZ);
@@ -159,14 +179,18 @@ function build() {
 
 	function setZ(next: number, mode: 'push' | 'replace' = 'replace') {
 		let clamped = clampZ(Math.round(next));
-		// You need a target to leave the river. If callers ask for z>=2 with
-		// no activeId, snap back to z=1 instead — keeps deep-link contract
-		// honest and prevents the lifted overlay from rendering empty.
-		if (clamped > Z_MIN && !activeId.value) clamped = Z_MIN;
-		const nextId = clamped === Z_MIN ? null : activeId.value;
+		// You need a target to leave the river upward (lift / composer).
+		// If callers ask for z>=2 with no activeId, snap back to the URL-
+		// default level instead — keeps deep-link contract honest and
+		// prevents the lifted overlay from rendering empty. z=0 has no
+		// such requirement: the overview surface is target-less by design.
+		if (clamped >= 2 && !activeId.value) clamped = URL_DEFAULT_Z;
+		// activeId only makes sense at z>=2 (lift/composer). Drop it on
+		// the way down to either the river or the overview grid.
+		const nextId = clamped <= URL_DEFAULT_Z ? null : activeId.value;
 		z.value = clamped;
 		if (nextId !== activeId.value) activeId.value = nextId;
-		if (clamped === Z_MIN) sourceRect.value = null;
+		if (clamped < 2) sourceRect.value = null;
 		writeUrl(clamped, nextId, mode);
 	}
 
@@ -189,11 +213,14 @@ function build() {
 	}
 
 	/**
-	 * Close the lifted card and any deeper layer. Pushes so the browser
-	 * back stack reads naturally — close is a discrete action.
+	 * Close the lifted card and any deeper layer. Returns to the URL-
+	 * default level (River) — NOT the overview grid. Pushes so the
+	 * browser back stack reads naturally — close is a discrete action.
+	 * P4.4 made z=0 a real state (overview); without this fix closing
+	 * a lifted card would skip River and drop the user into the grid.
 	 */
 	function closeLift() {
-		setZ(Z_MIN, 'push');
+		setZ(URL_DEFAULT_Z, 'push');
 	}
 
 	/**
@@ -231,6 +258,21 @@ function build() {
 		setZ(Math.round(z.value) - KEYBOARD_STEP, 'push');
 	}
 
+	/** Open the lens-grid overview (P4.4 Item D). Pushes so back drops to
+	 *  the lens the user was on. Clears activeId — z=0 is target-less. */
+	function openOverview() {
+		setZ(0, 'push');
+	}
+
+	/** Dive into a lens from the overview grid (P4.4 Item D). Clears any
+	 *  activeId (no lifted leaf carries across lens-switches), drops to
+	 *  z=1, and emits a `lens` change via the caller — the canvas's
+	 *  parent owns the lens axis (`?view=`). Push so back returns to z=0
+	 *  with the previous lens still highlighted. */
+	function setZ1() {
+		setZ(URL_DEFAULT_Z, 'push');
+	}
+
 	/** Snap the (possibly fractional) gesturing z to the nearest integer. */
 	function snap() {
 		gesturing.value = false;
@@ -246,15 +288,22 @@ function build() {
 
 		const onWheel = (ev: WheelEvent) => {
 			if (!(ev.ctrlKey || ev.metaKey)) return;
-			// Without a target you can't leave the river — swallow the
-			// gesture so it doesn't fight global browser zoom either.
-			if (!activeId.value && z.value <= Z_MIN) {
+			const delta = -ev.deltaY / WHEEL_PIXELS_PER_LEVEL;
+			// Soft-block: zooming IN past the URL-default level (z=1)
+			// without an activeId would surface an empty lifted card.
+			// Swallow the gesture instead. Doesn't apply to z=0 — the
+			// overview grid needs no activeId.
+			if (delta > 0 && z.value >= URL_DEFAULT_Z && !activeId.value) {
+				ev.preventDefault();
+				return;
+			}
+			// Already at the floor — don't fight global browser zoom past it.
+			if (delta < 0 && z.value <= Z_MIN) {
 				ev.preventDefault();
 				return;
 			}
 			ev.preventDefault();
 			gesturing.value = true;
-			const delta = -ev.deltaY / WHEEL_PIXELS_PER_LEVEL;
 			z.value = clampZ(z.value + delta);
 
 			if (settleTimer) clearTimeout(settleTimer);
@@ -329,13 +378,18 @@ function build() {
 			if (!pointers.has(ev.pointerId)) return;
 			pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
 			if (pointers.size === 2 && startDist > 0) {
-				// Same gate as the wheel handler — without a target the
-				// pinch is a no-op (gesturing flag stays set so the
-				// pointer-end branch still snaps cleanly to Z_MIN).
-				if (!activeId.value && z.value <= Z_MIN) return;
-				ev.preventDefault();
 				const ratio = dist() / startDist;
-				z.value = clampZ(startZ + (ratio - 1) * 1.4);
+				const proposed = clampZ(startZ + (ratio - 1) * 1.4);
+				// Same gate as the wheel handler — soft-block zoom IN past
+				// z=1 with no target so the lifted overlay never renders
+				// empty. Pinch IN that lands at z=0 (overview) is fine.
+				if (proposed > URL_DEFAULT_Z && !activeId.value) {
+					ev.preventDefault();
+					z.value = URL_DEFAULT_Z;
+					return;
+				}
+				ev.preventDefault();
+				z.value = proposed;
 			}
 		};
 
@@ -388,11 +442,14 @@ function build() {
 		zoomIn,
 		zoomOut,
 		snap,
+		openOverview,
+		setZ1,
 		installWheelHandler,
 		installKeyboardHandler,
 		installPinchHandler,
 		installAll,
 		Z_MIN,
+		URL_DEFAULT_Z,
 		Z_MAX,
 		Z_COMPOSER_THRESHOLD,
 	};

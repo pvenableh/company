@@ -98,7 +98,16 @@ const STATE_FILTERS: { key: 'all' | ApprovalState; label: string }[] = [
 watch(view, (next) => {
   const current = (route.query.view as string | undefined) ?? 'approval';
   if (current === next) return;
-  router.replace({ query: { ...route.query, view: next === 'approval' ? undefined : next } });
+  const query: Record<string, any> = {
+    ...route.query,
+    view: next === 'approval' ? undefined : next,
+  };
+  // P4.4 Item D — picking a lens from the overview grid kicks the
+  // user back to z=1 (River default). Drop the stale `z=0` param so
+  // the URL settles cleanly. This rides with the view change so we
+  // don't race the canvas's own writeUrl from setZ1().
+  if (query.z === '0') delete query.z;
+  router.replace({ query });
 });
 // Sync the other direction too — back/forward navigation should flip the toggle.
 watch(() => route.query.view, (qv) => {
@@ -927,10 +936,39 @@ onMounted(() => {
       :z="zoom.z.value"
       :lens="canvasLens"
       :active-id="zoom.activeId.value"
+      :lens-options="STUDIO_LENS_OPTIONS"
       @post-updated="onCanvasPostUpdated"
       @post-created="onCanvasPostCreated"
       @touch-created="onCanvasTouchCreated"
+      @update:lens="(k) => pickLens(k as StudioView)"
     >
+    <!-- P4.4 Item D — overview lens-grid thumbnails. Each tile renders a
+         live mini-version of its lens, scaled down + clipped by the
+         canvas's tile frame. Mount-gating happens inside CompositionCanvas
+         (only when z<=0.6), so these subtrees are inert when the user is
+         not approaching the overview. -->
+    <template #lens-thumb="{ lens: thumbLens }">
+      <SocialRiverSurface v-if="thumbLens === 'calendar'" />
+      <SocialInboxSurface v-else-if="thumbLens === 'inbox'" />
+      <SocialAnalyticsSurface v-else-if="thumbLens === 'analytics'" />
+      <div v-else-if="thumbLens === 'approval'" class="studio-thumb-grid">
+        <template v-for="bucket in postsByPlan.slice(0, 4)" :key="bucket.plan?.id ?? 'orphan'">
+          <PlanGridCard
+            v-if="bucket.plan"
+            :plan="bucket.plan"
+            :posts="bucket.posts"
+            :client-name="planClientName(bucket.plan)"
+          />
+        </template>
+      </div>
+      <div v-else-if="thumbLens === 'upcoming'" class="studio-thumb-grid">
+        <StudioPostCard
+          v-for="post in posts.slice(0, 8)"
+          :key="post.id"
+          :post="post"
+        />
+      </div>
+    </template>
     <!-- Loading — only for the plan-aware views (approval/upcoming).
          Calendar/Inbox/Analytics surfaces below own their own loading UI. -->
     <div v-if="(view === 'approval' || view === 'upcoming') && loading && !plans.length" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -1379,6 +1417,16 @@ onMounted(() => {
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
+
+/* P4.4 Item D — mini-render grid used inside the overview lens-tiles for
+   approval + upcoming lenses. The tile wrapper in CompositionCanvas
+   already scales the content down to 0.25, so this grid lays out at
+   close-to-full visual density (4 cards visible at the lens's natural
+   layout, just smaller). */
+.studio-thumb-grid {
+  @apply grid gap-3 p-3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 
 .studio-shell {
   --accent-h: var(--app-accent-h, 220);
