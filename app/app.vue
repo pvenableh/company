@@ -57,16 +57,16 @@ const { visibleLinks } = useNavPreferences();
 		position="bottom-center"
 		:toast-options="{
 			classNames: {
-				toast: 'group toast bg-card text-foreground border-border/50 shadow-xl rounded-2xl backdrop-blur-xl',
+				toast: 'group toast glass-surface text-foreground shadow-xl rounded-2xl',
 				title: 'text-foreground font-medium',
 				description: 'text-muted-foreground text-sm',
 				actionButton: 'bg-primary text-primary-foreground rounded-lg',
 				cancelButton: 'bg-muted text-muted-foreground rounded-lg',
-				closeButton: 'bg-card text-foreground border-border',
-				success: 'border-success/30',
-				error: 'border-destructive/30',
-				warning: 'border-warning/30',
-				info: 'border-blue-500/30',
+				closeButton: 'glass-surface text-foreground',
+				success: '!border-success/40',
+				error: '!border-destructive/40',
+				warning: '!border-warning/40',
+				info: '!border-blue-500/40',
 			},
 		}"
 		rich-colors

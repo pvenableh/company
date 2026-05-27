@@ -344,6 +344,55 @@ async function fetchPayments() {
 
 const paymentsTotal = computed(() => paymentsList.value.reduce((s, p) => s + (Number(p.amount) || 0), 0));
 
+// ── Payments river mapping ─────────────────────────────────────────────────
+// Each received payment becomes a leaf at date_received. Method drives hue:
+// stripe=violet, manual=teal, plaid=blue, default=muted. Label = amount,
+// sublabel = client / invoice. Hour position is synthesized from the payment
+// id so multiple same-day payments lane out instead of stacking.
+function paymentMethodHue(method: string): number {
+	const m = (method || '').toLowerCase();
+	if (m.includes('stripe') || m.includes('card')) return 270;
+	if (m.includes('plaid') || m.includes('ach') || m.includes('bank')) return 210;
+	if (m.includes('cash') || m.includes('check') || m.includes('manual')) return 150;
+	return 200;
+}
+function paymentMethodSat(method: string): number {
+	const m = (method || '').toLowerCase();
+	if (m.includes('stripe') || m.includes('card')) return 65;
+	return 60;
+}
+function paymentHashHour(id: string): number {
+	let h = 0;
+	for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+	return 4 + (h % 16);
+}
+const paymentsRiverItems = computed(() => {
+	return paymentsList.value
+		.filter((p) => !!p?.date_received)
+		.map((p) => {
+			const base = new Date(p.date_received);
+			base.setHours(paymentHashHour(String(p.id)), 0, 0, 0);
+			const method = p.payment_method || p.method || '';
+			const amount = Number(p.amount) || 0;
+			const client = p.invoice_id?.client?.name || '';
+			const code = p.invoice_id?.invoice_code || '';
+			return {
+				id: String(p.id),
+				when: base.toISOString(),
+				label: fmtMoney(amount),
+				sublabel: [client, code].filter(Boolean).join(' · ') || (method || 'Payment'),
+				hue: paymentMethodHue(method),
+				sat: paymentMethodSat(method),
+				icon: 'lucide:dollar-sign',
+				_raw: p,
+			};
+		});
+});
+function onPaymentLeafSelect(item: { _raw: any }) {
+	const id = item?._raw?.invoice_id?.id;
+	if (id) openInvoice(id);
+}
+
 // ── Expenses floor ──────────────────────────────────────────────────────────
 const { expenses, isLoading: expensesLoading, billableExpenses, reimbursableExpenses, deleteExpense, refresh: refreshExpenses } = useExpenses();
 const expensesSearch = ref('');
@@ -811,7 +860,39 @@ const headerAction = computed(() => {
             <p class="text-sm text-muted-foreground">No payments received yet.</p>
           </div>
 
-          <div v-else class="ios-card overflow-hidden">
+          <!-- Cash-inflow river — 30-day rhythm of payments received, leaves
+               sized only by visibility (every drop matters). Method drives
+               hue. Click a leaf → linked invoice slide-over. -->
+          <div v-if="paymentsList.length" class="glass-surface p-4 sm:p-5 mb-5">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Cash inflow river
+                </h3>
+                <p class="text-[11px] text-muted-foreground/70 mt-0.5">
+                  Last 30 days · click a leaf to open the invoice
+                </p>
+              </div>
+              <div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground">
+                <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(270 65% 55%)" />card</span>
+                <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(210 60% 55%)" />ach</span>
+                <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(150 60% 50%)" />manual</span>
+              </div>
+            </div>
+            <RiverChart
+              :items="paymentsRiverItems"
+              :days-back="29"
+              :days-forward="1"
+              :hour-height="14"
+              :hide-hours="true"
+              :accent-hue="150"
+              empty-title="Quiet stream."
+              empty-subtitle="No payments received in the last 30 days."
+              @select="onPaymentLeafSelect"
+            />
+          </div>
+
+          <div v-if="paymentsList.length" class="ios-card overflow-hidden">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-border/50">

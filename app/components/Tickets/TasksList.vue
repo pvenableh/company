@@ -31,6 +31,33 @@
 			</div>
 
 			<div v-else>
+				<!-- Tasks river — workload rhythm at a glance. Mirrors the
+				     active filter so e.g. "Overdue" shows only red leaves. -->
+				<div v-if="tasksRiverItems.length > 0" class="glass-surface p-3 sm:p-4 mb-4">
+					<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+						<h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+							Workload river
+						</h4>
+						<div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground">
+							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(0 78% 55%)" />overdue</span>
+							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(40 75% 55%)" />in progress</span>
+							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(210 60% 55%)" />new</span>
+							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(145 60% 50%); opacity: 0.6" />done</span>
+						</div>
+					</div>
+					<RiverChart
+						:items="tasksRiverItems"
+						:days-back="7"
+						:days-forward="21"
+						:hour-height="14"
+						:hide-hours="true"
+						:accent-hue="210"
+						empty-title="No dated tasks in this window."
+						empty-subtitle="Add due dates to surface workload rhythm."
+						@select="onTaskLeafSelect"
+					/>
+				</div>
+
 				<div class="flex justify-between items-center mb-3">
 					<h3 class="text-xs font-bold uppercase tracking-wide">
 						Tasks ({{ filteredTasks.length }}{{ totalTaskCount > limit ? '+' : '' }})
@@ -328,6 +355,49 @@ const filteredTasks = computed(() => {
 	console.log('Filtered tasks result:', result.length);
 	return result;
 });
+
+// ── Tasks river ────────────────────────────────────────────────
+// Maps the same filteredTasks to RiverItems so the river reflects the
+// active filter (Overdue → only red leaves; Completed → only faded
+// green; etc.). Hue per state:
+//   overdue (red 0)  ·  new (blue 210)  ·  in_progress (amber 40)
+//   completed (green 145, faded via past=true).
+// Window leans forward (7 back, 21 fwd) — surface upcoming workload.
+function stripHtml(s) {
+	if (!s) return '';
+	return String(s).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+function taskHue(task) {
+	if (isTaskOverdue(task)) return 0;
+	if (task.status === 'completed') return 145;
+	if (task.status === 'in_progress') return 40;
+	return 210;
+}
+function taskSat(task) {
+	if (isTaskOverdue(task)) return 78;
+	if (task.status === 'in_progress') return 75;
+	return 60;
+}
+const tasksRiverItems = computed(() => {
+	return (filteredTasks.value || [])
+		.filter((t) => !!t?.ticketContext?.due_date)
+		.map((t) => ({
+			id: String(t.id),
+			when: t.ticketContext.due_date,
+			label: stripHtml(t.description).slice(0, 40) || (t.ticketContext.title || 'Task'),
+			sublabel: t.ticketContext.title || undefined,
+			hue: taskHue(t),
+			sat: taskSat(t),
+			icon: t.status === 'completed' ? 'lucide:check-square' : (isTaskOverdue(t) ? 'lucide:alert-octagon' : 'lucide:square'),
+			past: t.status === 'completed',
+			_raw: t,
+		}));
+});
+function onTaskLeafSelect(item) {
+	if (item?._raw?.ticketContext?.id) {
+		navigateToTicket(item._raw.ticketContext.id);
+	}
+}
 
 // Check if a task is overdue (uses isOverdue from utils/dates.ts for the date check)
 const isTaskOverdue = (task) => {

@@ -63,9 +63,11 @@ watch(selectedPersona, () => {
 });
 
 // ── CRM Intelligence Engine ──
-// snapshot = instant algorithmic data (no AI, loads on mount)
-// analyze = on-demand AI deep analysis (user clicks button)
-const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading, lastAIAnalysis: crmLastAI } = useCRMIntelligence();
+// `snapshot` is the algorithmic snapshot that drives the slim CRM-pulse
+// callout. `overview` carries any cached AI result so the score reflects
+// the deeper number when present. The AI run-button + insights surface
+// live on /contacts?view=insights now.
+const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, overview: crmOverview } = useCRMIntelligence();
 
 // ── Earnest Score ──
 const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp, getScoreTier } = useEarnestScore();
@@ -153,15 +155,11 @@ const otherSuggestions = computed(() => {
 	return suggestions.value.filter(s => s.priority !== 'urgent' && s.priority !== 'high').slice(0, 4);
 });
 
-// ── CRM Health (prefer AI result if available, otherwise use algorithmic snapshot) ──
+// ── CRM Pulse (drives the slim glass callout — full breakdown lives on
+//     /contacts?view=insights) ──
 const healthScore = computed(() => crmOverview.value?.healthScore ?? crmSnapshot.value?.healthScore ?? null);
 const healthBreakdown = computed(() => crmOverview.value?.healthBreakdown ?? crmSnapshot.value?.breakdown ?? null);
-const crmInsights = computed(() => crmOverview.value?.insights?.slice(0, 4) ?? []);
-const growthOpportunities = computed(() => crmOverview.value?.growthOpportunities?.slice(0, 3) ?? []);
-const crmActions = computed(() => crmOverview.value?.topActions?.slice(0, 4) ?? []);
 const crmAlerts = computed(() => crmSnapshot.value?.alerts ?? []);
-
-// ── Health Score Color ──
 const healthColor = computed(() => {
 	const score = healthScore.value;
 	if (score === null) return 'text-muted-foreground';
@@ -169,29 +167,6 @@ const healthColor = computed(() => {
 	if (score >= 50) return 'text-warning';
 	return 'text-destructive';
 });
-
-const healthBg = computed(() => {
-	const score = healthScore.value;
-	if (score === null) return 'bg-muted/30';
-	if (score >= 75) return 'bg-success/10 dark:bg-success/10';
-	if (score >= 50) return 'bg-warning/10 dark:bg-warning/10';
-	return 'bg-destructive/10 dark:bg-destructive/10';
-});
-
-// ── Insight Icons ──
-const insightIcons: Record<string, string> = {
-	strength: 'i-heroicons-check-circle',
-	risk: 'i-heroicons-exclamation-triangle',
-	trend: 'i-heroicons-arrow-trending-up',
-	opportunity: 'i-heroicons-light-bulb',
-};
-
-const insightColors: Record<string, string> = {
-	strength: 'text-success',
-	risk: 'text-destructive',
-	trend: 'text-blue-500',
-	opportunity: 'text-warning',
-};
 
 // ── Priority Styles ──
 const { getPriorityIconClass: priorityIconColor, getPriorityBadgeClasses: priorityChipClasses } = useStatusStyle();
@@ -221,14 +196,6 @@ const runAnalysis = (): Promise<void> => {
 		}
 	})();
 	return analysisInflight;
-};
-
-// CRM AI analysis is now on-demand only (user clicks "Run AI Analysis")
-// The algorithmic snapshot loads automatically via the composable
-const runCRMAnalysis = () => {
-	if (selectedOrg.value) {
-		crmAnalyze('overview');
-	}
 };
 
 // Lazy module loaders for the three deferred widgets. The corresponding hat
