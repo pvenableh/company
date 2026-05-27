@@ -506,10 +506,22 @@ const backdropStyle = computed(() => ({
 
 .app-bottom-sheet__grabber {
   display: block;
-  width: 36px;
+  /* Slightly wider + a touch darker than the bare iOS bar so it reads
+   * as an obvious drag affordance on first glance. The handle row
+   * itself is :active grab-cursored so users find the right spot. */
+  width: 40px;
   height: 5px;
   border-radius: 3px;
-  background: hsl(var(--muted-foreground) / 0.35);
+  background: hsl(var(--muted-foreground) / 0.5);
+  transition: background 200ms ease, transform 200ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.app-bottom-sheet__handle-row:hover .app-bottom-sheet__grabber {
+  background: hsl(var(--muted-foreground) / 0.7);
+  transform: scaleX(1.1);
+}
+.app-bottom-sheet--dragging .app-bottom-sheet__grabber {
+  background: hsl(var(--app-accent-h, 220) 80% 55% / 0.75);
+  transform: scaleX(1.15);
 }
 
 .app-bottom-sheet__header {
