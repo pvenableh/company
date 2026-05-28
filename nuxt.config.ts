@@ -321,9 +321,6 @@ export default defineNuxtConfig({
 				ignored: ['**/.claude/worktrees/**'],
 			},
 		},
-		optimizeDeps: {
-			include: ['isomorphic-dompurify'],
-		},
 	},
 
 	// Ensure all component directories are scanned with path prefixes
