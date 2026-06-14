@@ -24,6 +24,9 @@ const {
 // contact route.
 const contactSlide = useAppSlideOver('contact');
 
+// Picture Jam — block-puzzle mini-game that uncovers a quiet contact to reconnect with
+const jamOpen = ref(false);
+
 // Filters
 const activeTab = ref<string>('all');
 const searchQuery = ref('');
@@ -343,6 +346,22 @@ onMounted(async () => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Picture Jam — blast blocks to uncover a quiet contact, then reconnect -->
+		<button
+			type="button"
+			class="w-full flex items-center gap-3 mb-6 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left"
+			@click="jamOpen = true"
+		>
+			<span class="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shrink-0">
+				<Icon name="lucide:puzzle" class="size-5" />
+			</span>
+			<span class="flex-1 min-w-0">
+				<span class="block text-sm font-semibold">Picture Jam</span>
+				<span class="block text-xs text-gray-400">Blast blocks to uncover a contact who's gone quiet — then reconnect.</span>
+			</span>
+			<Icon name="lucide:play" class="size-4 text-gray-400 shrink-0" />
+		</button>
 
 		<!-- Main Content -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -763,6 +782,9 @@ onMounted(async () => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Picture Jam mini-game (full-screen overlay; teleports to body) -->
+		<CardDeskPictureJam v-model:open="jamOpen" />
 
 		<!-- Promote-to-Earnest modal (lazy: only mounts when opened) -->
 		<CardDeskPromoteModal
