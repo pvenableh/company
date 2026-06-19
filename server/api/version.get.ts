@@ -7,5 +7,11 @@
 export default defineEventHandler((event) => {
   setResponseHeader(event, "cache-control", "no-store, max-age=0");
   const config = useRuntimeConfig();
-  return { buildId: config.public.buildId };
+  return {
+    buildId: config.public.buildId,
+    // Semantic release version (package.json) — the human-readable label the
+    // client shows next to the freshness check. The buildId remains the actual
+    // per-deploy freshness signal; version only changes when we bump it.
+    version: config.public.appVersion,
+  };
 });

@@ -26,6 +26,12 @@ const {
 // contact route.
 const contactSlide = useAppSlideOver('contact');
 
+// Deep-link the selected cd_contact to its detail page in the CardDesk app.
+const config = useRuntimeConfig();
+const cardDeskContactUrl = computed(() =>
+	selectedContact.value ? `${config.public.cardDeskUrl}/c/${selectedContact.value.id}` : '#',
+);
+
 // Picture Jam — block-puzzle mini-game that uncovers a quiet contact to reconnect with
 const jamOpen = ref(false);
 
@@ -111,22 +117,10 @@ const ratingColors: Record<string, string> = {
 	cold: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
-const activityIcons: Record<string, string> = {
-	email: 'i-heroicons-envelope',
-	text: 'i-heroicons-chat-bubble-left',
-	call: 'i-heroicons-phone',
-	meeting: 'i-heroicons-users',
-	linkedin: 'i-heroicons-link',
-	// CardDesk lifecycle / system events (2026-06):
-	card_scanned: 'i-heroicons-viewfinder-circle',
-	contact_added: 'i-heroicons-user-plus',
-	stage_change: 'i-heroicons-arrows-right-left',
-	converted_lead: 'i-heroicons-arrow-trending-up',
-	converted_client: 'i-heroicons-briefcase',
-	converted_partner: 'i-heroicons-user-group',
-	promoted_to_earnest: 'i-heroicons-arrow-up-right',
-	other: 'i-heroicons-ellipsis-horizontal',
-};
+// Activity icons come from the shared CardDesk taxonomy (lucide), so every
+// touch-point + lifecycle event renders 1:1 with the CardDesk app.
+const activityIcon = (type: string): string =>
+	CD_TOUCHPOINT_ICON[type] || CD_TOUCHPOINT_FALLBACK_ICON;
 
 const loadContacts = async () => {
 	contactsLoading.value = true;
@@ -289,14 +283,11 @@ const activityForm = reactive<{ type: string; label: string; note: string }>({
 });
 const activitySaving = ref(false);
 
-const activityTypeOptions = [
-	{ key: 'email', label: 'Email' },
-	{ key: 'text', label: 'Text' },
-	{ key: 'call', label: 'Call' },
-	{ key: 'meeting', label: 'Meeting' },
-	{ key: 'linkedin', label: 'LinkedIn' },
-	{ key: 'other', label: 'Other' },
-];
+// Full CardDesk touch-point taxonomy (all 11 categories) drives the manual
+// logger — the picker is a horizontal overflow-scroll row, matching CardDesk.
+// The Earnest-only `promoted_to_earnest` lifecycle event is auto-emitted, so it
+// stays out of the manual picker (but still renders via activityIcon()).
+const activityTypeOptions = CD_TOUCHPOINTS.filter((t) => t.key !== 'promoted_to_earnest');
 
 const openActivityForm = () => {
 	activityForm.type = 'email';
@@ -410,7 +401,7 @@ onMounted(async () => {
 				</div>
 				<div class="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
 					<div
-						class="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-500"
+						class="h-full bg-gradient-to-r from-[#00ff87] to-[#4da6ff] rounded-full transition-all duration-500"
 						:style="{ width: `${stats.xp.progress}%` }"
 					/>
 				</div>
@@ -545,11 +536,23 @@ onMounted(async () => {
 				<!-- Contact Detail -->
 				<div v-if="selectedContact" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
 					<div class="p-4 border-b border-gray-100 dark:border-gray-700">
-						<div class="flex items-center justify-between mb-3">
-							<h3 class="text-sm font-semibold">{{ contactDisplayName(selectedContact) }}</h3>
-							<button @click="closeDetail" class="text-gray-400 hover:text-gray-600">
-								<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
-							</button>
+						<div class="flex items-center justify-between mb-3 gap-2">
+							<h3 class="text-sm font-semibold truncate">{{ contactDisplayName(selectedContact) }}</h3>
+							<div class="flex items-center gap-1.5 shrink-0">
+								<a
+									:href="cardDeskContactUrl"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#4da6ff]/40 text-[#3d8fd6] dark:text-[#4da6ff] bg-[#4da6ff]/10 text-[10px] font-semibold hover:bg-[#4da6ff]/20 transition-colors whitespace-nowrap"
+									title="Open this contact in the Card Desk app"
+								>
+									<Icon name="lucide:external-link" class="size-3" />
+									Card Desk
+								</a>
+								<button @click="closeDetail" class="text-gray-400 hover:text-gray-600">
+									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+								</button>
+							</div>
 						</div>
 
 						<div class="space-y-1.5 text-xs text-gray-500">
@@ -606,7 +609,7 @@ onMounted(async () => {
 							<button
 								v-else
 								type="button"
-								class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white text-xs font-semibold hover:from-orange-600 hover:to-red-600 transition-colors shadow-sm"
+								class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-br from-[#00ff87] to-[#4da6ff] text-[#06121f] text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm"
 								@click="openPromoteModal"
 							>
 								<Icon name="lucide:arrow-up-right-from-square" class="w-3.5 h-3.5" />
@@ -620,13 +623,13 @@ onMounted(async () => {
 								<div class="text-[10px] uppercase font-semibold text-gray-400 mb-1.5 tracking-wider">
 									Rating
 								</div>
-								<div class="inline-flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border">
+								<div class="inline-flex items-center gap-1 rounded-full bg-muted/50 p-1 border border-border">
 									<button
 										v-for="r in (['hot', 'warm', 'nurture', 'cold'] as const)"
 										:key="r"
 										type="button"
 										:disabled="savingPatch"
-										class="px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all disabled:opacity-40"
+										class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize transition-all disabled:opacity-40"
 										:class="selectedContact.rating === r
 											? ratingColors[r]
 											: 'text-muted-foreground hover:text-foreground'"
@@ -641,7 +644,7 @@ onMounted(async () => {
 								<button
 									type="button"
 									:disabled="savingPatch"
-									class="text-[11px] px-2.5 py-1 rounded-md font-medium border border-border transition-colors disabled:opacity-40"
+									class="text-[11px] px-2.5 py-1 rounded-full font-medium border border-border transition-colors disabled:opacity-40"
 									:class="selectedContact.is_client
 										? 'bg-success/10 text-success border-success/30'
 										: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
@@ -653,7 +656,7 @@ onMounted(async () => {
 								<button
 									type="button"
 									:disabled="savingPatch"
-									class="text-[11px] px-2.5 py-1 rounded-md font-medium border border-border transition-colors disabled:opacity-40"
+									class="text-[11px] px-2.5 py-1 rounded-full font-medium border border-border transition-colors disabled:opacity-40"
 									:class="selectedContact.hibernated
 										? 'bg-muted text-muted-foreground'
 										: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
@@ -737,18 +740,18 @@ onMounted(async () => {
 
 						<!-- Inline new-activity form -->
 						<div v-if="activityFormOpen" class="mb-4 p-3 rounded-lg border border-border bg-muted/30 space-y-2">
-							<div class="flex flex-wrap gap-1">
+							<div class="flex flex-nowrap gap-1 overflow-x-auto pb-1 -mx-0.5 px-0.5 cd-touchpoint-scroll">
 								<button
 									v-for="opt in activityTypeOptions"
 									:key="opt.key"
 									type="button"
-									class="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize transition-colors"
+									class="shrink-0 whitespace-nowrap inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors"
 									:class="activityForm.type === opt.key
 										? 'bg-foreground text-background'
 										: 'bg-card text-muted-foreground hover:text-foreground border border-border'"
 									@click="activityForm.type = opt.key"
 								>
-									<UIcon :name="activityIcons[opt.key] || activityIcons.other" class="w-3 h-3 inline -mt-0.5 mr-0.5" />
+									<Icon :name="opt.icon" class="size-3 shrink-0" />
 									{{ opt.label }}
 								</button>
 							</div>
@@ -775,7 +778,7 @@ onMounted(async () => {
 								<button
 									type="button"
 									:disabled="activitySaving"
-									class="text-[11px] font-medium px-2.5 py-1 rounded-md bg-foreground text-background disabled:opacity-40"
+									class="text-[11px] font-medium px-3 py-1 rounded-full bg-foreground text-background disabled:opacity-40"
 									@click="saveActivity"
 								>
 									{{ activitySaving ? 'Saving…' : 'Save' }}
@@ -799,9 +802,9 @@ onMounted(async () => {
 							>
 								<div class="flex flex-col items-center">
 									<div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-										<UIcon
-											:name="activityIcons[act.type] || activityIcons.other"
-											class="w-3.5 h-3.5 text-gray-500"
+										<Icon
+											:name="activityIcon(act.type)"
+											class="size-3.5 text-gray-500"
 										/>
 									</div>
 									<div class="w-px flex-1 bg-gray-200 dark:bg-gray-600 mt-1" />
@@ -892,7 +895,7 @@ onMounted(async () => {
 								:key="act.id"
 								class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
 							>
-								<UIcon :name="activityIcons[act.type] || activityIcons.other" class="w-3.5 h-3.5 flex-shrink-0" />
+								<Icon :name="activityIcon(act.type)" class="size-3.5 shrink-0" />
 								<span class="truncate">
 									{{ act.type }}{{ act.contactName ? ` with ${act.contactName}` : '' }}
 								</span>
@@ -917,3 +920,18 @@ onMounted(async () => {
 		/>
 	</div>
 </template>
+
+<style scoped>
+/* Touch-point picker is a single horizontal overflow-scroll row (matches the
+   CardDesk app). Keep the scrollbar slim + unobtrusive. */
+.cd-touchpoint-scroll {
+	scrollbar-width: thin;
+}
+.cd-touchpoint-scroll::-webkit-scrollbar {
+	height: 4px;
+}
+.cd-touchpoint-scroll::-webkit-scrollbar-thumb {
+	background: hsl(var(--muted-foreground) / 0.3);
+	border-radius: 9999px;
+}
+</style>

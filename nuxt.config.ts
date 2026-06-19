@@ -2,6 +2,7 @@
 // Migrated to Tailwind CSS v4 + shadcn-vue + Directus with nuxt-auth-utils
 
 import tailwindcss from '@tailwindcss/vite';
+import { version as appVersion } from './package.json';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -282,6 +283,15 @@ export default defineNuxtConfig({
 				process.env.NUXT_PUBLIC_BUILD_ID ||
 				process.env.VERCEL_GIT_COMMIT_SHA ||
 				'dev',
+
+			// Human-readable semantic version, sourced from package.json. Shown
+			// in the About panel + avatar menu so a user can confirm at a glance
+			// which release they're on. Bump package.json "version" on each release.
+			appVersion,
+
+			// Public base URL of the deployed CardDesk app. Used to deep-link a
+			// cd_contact to its detail page in CardDesk (`/c/<id>`).
+			cardDeskUrl: process.env.NUXT_PUBLIC_CARDDESK_URL || 'https://carddesk.earnest.guru',
 		},
 	},
 

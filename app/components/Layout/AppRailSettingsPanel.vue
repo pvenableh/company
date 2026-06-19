@@ -12,7 +12,6 @@
  * tap targets + more whitespace).
  */
 import { Switch } from '@/components/ui/switch';
-import type { RailPosition } from '~/composables/useAppsMode';
 import { useAppPalette, type AppPaletteId } from '~/composables/useAppPalette';
 import {
   APP_PALETTES,
@@ -27,34 +26,14 @@ const props = withDefaults(
   { density: 'comfortable' },
 );
 
-const { railPosition, storedRailPosition, setRailPosition, railShowLabels, setRailShowLabels } = useAppsMode();
+const { railShowLabels, setRailShowLabels } = useAppsMode();
 const { palette, setPalette, glassChrome, setGlassChrome, paletteTint, setPaletteTint } = useAppPalette();
 
-const labelsToggleVisible = computed(
-	() => railPosition.value === 'top' || railPosition.value === 'bottom',
-);
+// The rail is locked to the bottom (the position picker has been retired), so
+// the label toggle — which only applies to a horizontal rail — is always shown.
+const labelsToggleVisible = true;
 
-const positionOptions: Array<{ id: RailPosition; label: string; icon: string; hint: string }> = [
-  { id: 'left', label: 'Left', icon: 'lucide:panel-left', hint: 'Floating pill on the left edge' },
-  { id: 'right', label: 'Right', icon: 'lucide:panel-right', hint: 'Floating pill on the right edge' },
-  { id: 'top', label: 'Top', icon: 'lucide:panel-top', hint: 'Floating pill along the top' },
-  { id: 'bottom', label: 'Bottom', icon: 'lucide:panel-bottom', hint: 'Floating pill along the bottom' },
-];
-
-const isMobileForced = computed(() => railPosition.value === 'bottom' && storedRailPosition.value !== 'bottom');
 const saving = ref(false);
-
-async function handlePickPosition(next: RailPosition) {
-  if (storedRailPosition.value === next) return;
-  saving.value = true;
-  try {
-    await setRailPosition(next);
-  } catch {
-    // swallow — caller UI surfaces the unchanged state
-  } finally {
-    saving.value = false;
-  }
-}
 
 function swatchesFor(id: AppPaletteId) {
   const accents = getAppAccents(id);
@@ -81,35 +60,7 @@ const isCompact = computed(() => props.density === 'compact');
 
 <template>
   <div :class="isCompact ? 'rail-panel rail-panel--compact' : 'rail-panel rail-panel--comfortable'">
-    <!-- ── Section: Position ─────────────────────────────────────── -->
-    <div class="rail-panel__heading">Rail position</div>
-    <div class="rail-panel__list">
-      <button
-        v-for="opt in positionOptions"
-        :key="opt.id"
-        type="button"
-        :disabled="saving"
-        class="rail-panel__row"
-        :class="{ 'rail-panel__row--active': storedRailPosition === opt.id }"
-        @click="handlePickPosition(opt.id)"
-      >
-        <Icon :name="opt.icon" class="rail-panel__row-icon" />
-        <div class="rail-panel__row-body">
-          <div class="rail-panel__row-title">{{ opt.label }}</div>
-          <div class="rail-panel__row-hint">{{ opt.hint }}</div>
-        </div>
-        <Icon
-          v-if="storedRailPosition === opt.id"
-          name="lucide:check"
-          class="rail-panel__row-check"
-        />
-      </button>
-    </div>
-    <div v-if="isMobileForced" class="rail-panel__warning">
-      Mobile forces Bottom. Your saved choice ({{ storedRailPosition }}) returns on wider screens.
-    </div>
-
-    <!-- ── Section: Show labels (top/bottom only) ────────────────── -->
+    <!-- ── Section: Show labels ──────────────────────────────────── -->
     <div
       v-if="labelsToggleVisible"
       class="rail-panel__toggle"

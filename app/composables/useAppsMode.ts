@@ -115,11 +115,12 @@ export function useAppsMode() {
 		return normalizePosition((user.value as any)?.app_rail_position);
 	});
 
-	// Small + medium screens (phones + tablets, < lg) force bottom for thumb
-	// reach; the stored pref is preserved and re-engages on wider viewports.
-	const railPosition = computed<RailPosition>(() =>
-		isMobile.value ? 'bottom' : storedRailPosition.value,
-	);
+	// The rail is locked to the bottom for everyone (decided 2026-06-19): the
+	// position picker has been removed from the UI, so the dock always docks at
+	// the bottom like a mobile tab bar — regardless of any previously-saved
+	// `app_rail_position`. `storedRailPosition` is kept available for a future
+	// re-enable, but is intentionally NOT consulted for the live position.
+	const railPosition = computed<RailPosition>(() => 'bottom');
 
 	async function setMode(next: AppsLayoutMode): Promise<void> {
 		if (mode.value === next) return;

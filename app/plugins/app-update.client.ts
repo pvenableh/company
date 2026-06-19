@@ -12,12 +12,11 @@
 // precaching / offline behaviour to reason about.
 
 export default defineNuxtPlugin(() => {
-	const config = useRuntimeConfig();
-	const currentBuildId = String(config.public.buildId || "");
+	const { isDev, status, liveBuildId, check: checkVersion, refresh } = useAppVersion();
 
 	// No-op in local dev (buildId === 'dev') — there's no deploy to detect and
 	// HMR already keeps things fresh.
-	if (!currentBuildId || currentBuildId === "dev") return;
+	if (isDev) return;
 
 	const CHECK_INTERVAL_MS = 5 * 60 * 1000; // poll every 5 minutes
 	const MIN_GAP_MS = 60 * 1000; // don't re-check more than once a minute on focus/visibility
@@ -28,9 +27,12 @@ export default defineNuxtPlugin(() => {
 
 	const toast = useToast();
 
-	function promptRefresh(newBuildId: string) {
-		if (promptedFor === newBuildId) return;
-		promptedFor = newBuildId;
+	// Drive the toast off the shared version state so the About panel and this
+	// prompt never disagree about whether a newer build is live.
+	watch(status, (s) => {
+		if (s !== "outdated") return;
+		if (promptedFor === liveBuildId.value) return;
+		promptedFor = liveBuildId.value;
 		toast.add({
 			title: "Update available",
 			description: "A newer version of Earnest is ready.",
@@ -38,24 +40,17 @@ export default defineNuxtPlugin(() => {
 			duration: Infinity,
 			action: {
 				label: "Refresh",
-				onClick: () => reloadNuxtApp({ force: true }),
+				onClick: () => refresh(),
 			},
 		});
-	}
+	});
 
 	async function check() {
 		if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
 		const now = Date.now();
 		if (now - lastCheck < MIN_GAP_MS) return;
 		lastCheck = now;
-		try {
-			const { buildId } = await $fetch<{ buildId: string }>("/api/version");
-			if (buildId && buildId !== currentBuildId) {
-				promptRefresh(String(buildId));
-			}
-		} catch {
-			// Network hiccup / offline — ignore and try again next tick.
-		}
+		await checkVersion();
 	}
 
 	// Periodic poll.

@@ -90,33 +90,8 @@
 							/>
 						</div>
 
-						<div v-if="appsModeChecked" class="flex items-start justify-between gap-4">
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium">Rail Position</p>
-								<p class="text-xs text-muted-foreground mt-1">
-									Which edge the rail hugs. Every position renders as a floating
-									glass pill.
-								</p>
-							</div>
-							<Select
-								:model-value="railPosition"
-								:disabled="railSaving"
-								@update:model-value="handleRailChange"
-							>
-								<SelectTrigger class="w-32">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="left">Left</SelectItem>
-									<SelectItem value="top">Top</SelectItem>
-									<SelectItem value="right">Right</SelectItem>
-									<SelectItem value="bottom">Bottom</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
 						<div
-							v-if="appsModeChecked && (railPosition === 'top' || railPosition === 'bottom')"
+							v-if="appsModeChecked"
 							class="flex items-start justify-between gap-4"
 						>
 							<div class="flex-1 min-w-0">
@@ -232,6 +207,79 @@
 						</button>
 					</div>
 				</section>
+
+				<section v-else-if="section === 'about'" class="max-w-xl">
+					<h2 class="account-page__heading">About</h2>
+
+					<div class="ios-card p-5 space-y-5">
+						<!-- Status line -->
+						<div class="flex items-center justify-between gap-4">
+							<div class="flex items-center gap-3 min-w-0">
+								<span
+									class="flex items-center justify-center size-9 rounded-lg shrink-0"
+									:class="{
+										'bg-success/15 text-success': versionStatus === 'current',
+										'bg-amber-500/15 text-amber-600 dark:text-amber-500': versionStatus === 'outdated',
+										'bg-muted/60 text-muted-foreground': versionStatus === 'checking' || versionStatus === 'unknown',
+									}"
+								>
+									<Icon
+										:name="versionStatus === 'current' ? 'lucide:check-circle-2'
+											: versionStatus === 'outdated' ? 'lucide:arrow-down-circle'
+											: versionStatus === 'checking' ? 'lucide:loader-circle'
+											: 'lucide:help-circle'"
+										class="size-5"
+										:class="{ 'animate-spin': versionStatus === 'checking' }"
+									/>
+								</span>
+								<div class="min-w-0">
+									<p class="text-sm font-semibold">
+										{{ versionStatus === 'current' ? 'Up to date'
+											: versionStatus === 'outdated' ? 'Update available'
+											: versionStatus === 'checking' ? 'Checking…'
+											: isDevBuild ? 'Development build' : 'Unable to confirm' }}
+									</p>
+									<p class="text-xs text-muted-foreground">{{ lastCheckedLabel }}</p>
+								</div>
+							</div>
+							<button
+								class="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted/60 transition-colors disabled:opacity-50"
+								:disabled="versionChecking || isDevBuild"
+								@click="handleCheckVersion"
+							>
+								{{ versionChecking ? 'Checking…' : 'Check now' }}
+							</button>
+						</div>
+
+						<div v-if="versionStatus === 'outdated'">
+							<button
+								class="w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+								@click="refreshApp"
+							>
+								Refresh to update
+							</button>
+						</div>
+
+						<div class="border-t border-border/40" />
+
+						<!-- Version detail -->
+						<dl class="space-y-3 text-sm">
+							<div class="flex items-center justify-between gap-4">
+								<dt class="text-muted-foreground">Version</dt>
+								<dd class="font-medium tabular-nums">v{{ currentVersion }}</dd>
+							</div>
+							<div class="flex items-center justify-between gap-4">
+								<dt class="text-muted-foreground">Build</dt>
+								<dd class="font-mono text-xs text-muted-foreground">{{ shortBuildId || '—' }}</dd>
+							</div>
+						</dl>
+					</div>
+
+					<p class="text-xs text-muted-foreground mt-3 px-1">
+						Earnest updates automatically on each deploy. If you've had this tab open a
+						while, “Check now” confirms whether a newer release is live.
+					</p>
+				</section>
 			</div>
 		</LayoutPageContainer>
 	</div>
@@ -240,19 +288,11 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
 import { Switch } from '@/components/ui/switch';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import type { RailPosition } from '~/composables/useAppsMode';
 
-type SectionKey = 'profile' | 'password' | 'score' | 'appearance' | 'notifications';
+type SectionKey = 'profile' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
 
 const { user } = useDirectusAuth();
-const { isAppsMode, railPosition, railShowLabels, setMode, setRailPosition, setRailShowLabels } = useAppsMode();
+const { isAppsMode, railShowLabels, setMode, setRailShowLabels } = useAppsMode();
 const route = useRoute();
 const router = useRouter();
 
@@ -268,6 +308,7 @@ const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'score',         label: 'Earnest Score', icon: 'earnest' },
 	{ key: 'appearance',    label: 'Appearance',    icon: 'lucide:palette' },
 	{ key: 'notifications', label: 'Notifications', icon: 'lucide:bell' },
+	{ key: 'about',         label: 'About',         icon: 'lucide:info' },
 ];
 
 const SECTION_KEYS: SectionKey[] = sections.map((s) => s.key);
@@ -327,7 +368,6 @@ async function handleSavePrefs() {
 // ── Apps Layout ─────────────────────────────────────────────────────────────
 const appsModeChecked = computed(() => isAppsMode.value);
 const appsModeSaving = ref(false);
-const railSaving = ref(false);
 
 async function handleToggleAppsMode(next: boolean) {
 	appsModeSaving.value = true;
@@ -346,17 +386,41 @@ async function handleToggleAppsMode(next: boolean) {
 	}
 }
 
-async function handleRailChange(next: unknown) {
-	if (typeof next !== 'string') return;
-	railSaving.value = true;
+// ── About / version ─────────────────────────────────────────────────────────
+const {
+	currentVersion,
+	currentBuildId,
+	shortBuildId,
+	status: versionStatus,
+	lastCheckedAt,
+	isDev: isDevBuild,
+	check: checkVersion,
+	refresh: refreshApp,
+} = useAppVersion();
+
+const versionChecking = ref(false);
+async function handleCheckVersion() {
+	versionChecking.value = true;
 	try {
-		await setRailPosition(next as RailPosition);
-	} catch {
-		toast.error("Couldn't save rail position");
+		const result = await checkVersion();
+		if (result === 'current') toast.success("You're on the latest version");
+		else if (result === 'outdated') toast.info('A newer version is available — refresh to update');
+		else toast.error("Couldn't reach the server to check");
 	} finally {
-		railSaving.value = false;
+		versionChecking.value = false;
 	}
 }
+
+const lastCheckedLabel = computed(() => {
+	if (!lastCheckedAt.value) return 'Not checked yet';
+	const d = new Date(lastCheckedAt.value);
+	return `Checked ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+});
+
+// Run a check whenever the user lands on the About section.
+watch(section, (s) => {
+	if (s === 'about') void checkVersion();
+}, { immediate: true });
 
 // ── Appearance / dark mode ──────────────────────────────────────────────────
 const colorMode = useColorMode();

@@ -31,6 +31,21 @@ function toggleDark() {
 	colorMode.preference = isDark.value ? 'light' : 'dark';
 }
 
+// Build/version footer — lets the user confirm at a glance which release they're
+// on, with a colour dot reflecting the live deploy check. Full detail + a manual
+// re-check live in Account → About.
+const { currentVersion, status, check: checkVersion } = useAppVersion();
+const versionDotClass = computed(() => ({
+	current: 'bg-success',
+	outdated: 'bg-amber-500',
+	checking: 'bg-muted-foreground/50',
+	unknown: 'bg-muted-foreground/40',
+}[status.value] ?? 'bg-muted-foreground/40'));
+// Refresh the check when the menu opens so the dot is trustworthy on view.
+function onOpenChange(open: boolean) {
+	if (open) void checkVersion();
+}
+
 const avatarUrl = computed(() => {
 	const u = user.value as Record<string, any> | null;
 	if (!u?.avatar) return null;
@@ -71,7 +86,7 @@ function handleLogout() {
 </script>
 
 <template>
-	<DropdownMenu>
+	<DropdownMenu @update:open="onOpenChange">
 		<DropdownMenuTrigger as-child>
 			<button
 				type="button"
@@ -172,6 +187,21 @@ function handleLogout() {
 			<DropdownMenuItem class="text-destructive focus:text-destructive" @select="handleLogout">
 				<Icon name="lucide:log-out" class="size-4 mr-2 shrink-0" />
 				<span>Sign out</span>
+			</DropdownMenuItem>
+
+			<DropdownMenuSeparator />
+
+			<DropdownMenuItem
+				class="flex items-center justify-between text-[11px] text-muted-foreground cursor-pointer"
+				@select="goTo('/account?section=about')"
+			>
+				<span class="inline-flex items-center gap-1.5">
+					<span class="size-1.5 rounded-full shrink-0" :class="versionDotClass" aria-hidden="true" />
+					<span>Earnest v{{ currentVersion }}</span>
+				</span>
+				<span v-if="status === 'outdated'" class="text-amber-600 dark:text-amber-500 font-medium">
+					Update available
+				</span>
 			</DropdownMenuItem>
 		</DropdownMenuContent>
 	</DropdownMenu>
