@@ -214,7 +214,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 			<div v-if="rows.length === 0" class="py-8 text-center">
 				<UIcon name="i-heroicons-flag" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
 				<p class="text-sm text-muted-foreground">No personal goals to check in on.</p>
-				<NuxtLink to="/goals?scope=user" class="text-xs text-primary hover:underline mt-2 inline-block">Set one &rarr;</NuxtLink>
+				<UiViewLink to="/goals?scope=user" size="sm" class="mt-2">Set one</UiViewLink>
 			</div>
 
 			<div

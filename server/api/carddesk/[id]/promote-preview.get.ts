@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
 
   const cd: any = await directus.request(
     readItem('cd_contacts', cdContactId, {
-      fields: ['id', 'name', 'first_name', 'last_name', 'email', 'phone', 'company', 'title', 'rating', 'is_client', 'user_created', 'promoted_contact'],
+      fields: ['id', 'name', 'first_name', 'last_name', 'email', 'phone', 'company', 'title', 'rating', 'is_client', 'is_partner', 'earnest_client_id', 'user_created', 'promoted_contact'],
     }),
   );
   if (!cd) throw createError({ statusCode: 404, message: 'cd_contact not found' });
@@ -54,6 +54,15 @@ export default defineEventHandler(async (event) => {
       already_promoted: true,
       promoted_contact: existing,
       match: null,
+      // Graduation state so the modal's already-promoted branch can offer
+      // (or suppress) the convert-to-client/partner control. The promote
+      // endpoint graduates an already-promoted card when earnest_client_id
+      // is still null.
+      graduation: {
+        is_client: !!cd.is_client,
+        is_partner: !!cd.is_partner,
+        earnest_client_id: cd.earnest_client_id || null,
+      },
     };
   }
 
@@ -84,6 +93,11 @@ export default defineEventHandler(async (event) => {
     already_promoted: false,
     promoted_contact: null,
     match,
+    graduation: {
+      is_client: !!cd.is_client,
+      is_partner: !!cd.is_partner,
+      earnest_client_id: cd.earnest_client_id || null,
+    },
   };
 });
 

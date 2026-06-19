@@ -64,8 +64,11 @@
 					</div>
 				</div>
 
-				<!-- Assignees -->
-				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1">
+				<!-- Assignees. Shift the stack left on hover so the absolutely-
+				     positioned archive button (top-right) never lands on top of
+				     the avatars. Transform keeps both fully visible with no
+				     layout reflow. -->
+				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1 transition-transform duration-200 group-hover:-translate-x-6">
 					<UTooltip
 						v-for="(u, i) in displayUsers"
 						:key="i"
@@ -124,7 +127,7 @@
 
 			<!-- Hover archive button -->
 			<button
-				class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted/40"
+				class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted/40"
 				:title="'Archive'"
 				@click.stop="$emit('archive', element?.id)"
 			>

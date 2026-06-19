@@ -285,7 +285,7 @@ export const useAIProductivityEngine = () => {
 				fields: ['id', 'title', 'status', 'priority', 'due_date', 'assigned_to', 'organization.name'],
 				filter: {
 					_and: [
-						{ status: { _nin: ['completed', 'archived'] } },
+						{ status: { _nin: ['Completed', 'Archived'] } },
 						orgFilter(),
 						clientFilter(),
 						myFilter(),
@@ -343,7 +343,7 @@ export const useAIProductivityEngine = () => {
 					fields: ['id'],
 					filter: {
 						_and: [
-							{ status: { _eq: 'completed' } },
+							{ status: { _eq: 'Completed' } },
 							{ date_updated: { _gte: todayISO() } },
 							...(Object.keys(oFilter).length > 0 ? [oFilter] : []),
 							...(Object.keys(cFilter).length > 0 ? [cFilter] : []),

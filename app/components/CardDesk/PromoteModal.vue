@@ -17,8 +17,18 @@
         <div class="rounded-lg border border-success/30 bg-success/5 p-3">
           <div class="flex items-start gap-2">
             <Icon name="lucide:check-circle" class="w-4 h-4 text-success mt-0.5 shrink-0" />
-            <div class="text-xs">
-              <div class="font-medium text-foreground">Already in Earnest</div>
+            <div class="text-xs flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-foreground">Already in Earnest</span>
+                <span
+                  v-if="graduationLabel"
+                  class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                  :class="graduationLabel === 'Partner' ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'"
+                >
+                  <Icon :name="graduationLabel === 'Partner' ? 'lucide:handshake' : 'lucide:briefcase'" class="w-3 h-3" />
+                  {{ graduationLabel }}
+                </span>
+              </div>
               <div class="text-muted-foreground mt-0.5">
                 Linked to
                 <span class="font-medium text-foreground">{{ preview.promoted_contact?.first_name }} {{ preview.promoted_contact?.last_name }}</span>
@@ -27,9 +37,57 @@
             </div>
           </div>
         </div>
+
+        <!-- Convert-to-client/partner — only when not already graduated. The
+             promote endpoint upgrades the existing linked contact in place. -->
+        <div v-if="!alreadyGraduated" class="rounded-lg border border-border p-3 space-y-2">
+          <div class="flex items-center gap-2 text-xs">
+            <Icon name="lucide:trending-up" class="w-4 h-4 text-primary shrink-0" />
+            <span class="font-medium">Convert this contact further</span>
+          </div>
+          <p class="text-[11px] text-muted-foreground">
+            Spin up a CRM {{ goal === 'partner' ? 'partner' : 'client' }} account anchored to this contact.
+          </p>
+          <div class="inline-flex rounded-lg border border-border p-0.5 text-[11px]">
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-md font-medium transition-colors"
+              :class="goal === 'client' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+              @click="goal = 'client'"
+            >
+              Client
+            </button>
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-md font-medium transition-colors"
+              :class="goal === 'partner' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+              @click="goal = 'partner'"
+            >
+              Partner
+            </button>
+          </div>
+          <input
+            v-model="conversionReason"
+            type="text"
+            placeholder="What sealed it? (e.g. Project, Retainer, Referral)"
+            class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+          />
+          <input
+            v-model.number="estimatedValue"
+            type="number"
+            min="0"
+            placeholder="Estimated value (USD, optional)"
+            class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+          />
+        </div>
+
         <div class="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" @click="close">Close</Button>
-          <Button variant="default" size="sm" @click="openPromotedContactPanel">
+          <Button variant="ghost" size="sm" :disabled="submitting" @click="close">Close</Button>
+          <Button v-if="!alreadyGraduated" variant="outline" size="sm" :disabled="submitting" @click="confirmGraduation">
+            <Icon v-if="submitting" name="lucide:loader-2" class="w-3.5 h-3.5 mr-1 animate-spin" />
+            Convert to {{ goal === 'partner' ? 'Partner' : 'Client' }}
+          </Button>
+          <Button variant="default" size="sm" :disabled="submitting" @click="openPromotedContactPanel">
             View contact <Icon name="lucide:arrow-right" class="w-3.5 h-3.5 ml-1" />
           </Button>
         </div>
@@ -142,6 +200,56 @@
           Cold contacts don't open a Lead — only the rolodex entry.
         </div>
 
+        <!-- Client / Partner graduation -->
+        <div class="rounded-lg border border-border p-3 space-y-2">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input
+              v-model="convertToClient"
+              type="checkbox"
+              class="mt-0.5 rounded border-border"
+            />
+            <span class="text-xs flex-1">
+              <span class="font-medium">Convert to a {{ goal === 'partner' ? 'Partner' : 'Client' }}</span>
+              <span class="text-muted-foreground">
+                — also creates a CRM {{ goal === 'partner' ? 'partner' : 'client' }} account anchored to this contact.
+              </span>
+            </span>
+          </label>
+          <div v-if="convertToClient" class="pl-6 space-y-2">
+            <div class="inline-flex rounded-lg border border-border p-0.5 text-[11px]">
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-md font-medium transition-colors"
+                :class="goal === 'client' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+                @click="goal = 'client'"
+              >
+                Client
+              </button>
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-md font-medium transition-colors"
+                :class="goal === 'partner' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+                @click="goal = 'partner'"
+              >
+                Partner
+              </button>
+            </div>
+            <input
+              v-model="conversionReason"
+              type="text"
+              placeholder="What sealed it? (e.g. Project, Retainer, Referral)"
+              class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+            />
+            <input
+              v-model.number="estimatedValue"
+              type="number"
+              min="0"
+              placeholder="Estimated value (USD, optional)"
+              class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+            />
+          </div>
+        </div>
+
         <!-- Footer -->
         <div class="flex justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" :disabled="submitting" @click="close">Cancel</Button>
@@ -183,16 +291,24 @@ interface MatchedContact {
   company: string | null;
 }
 
+interface GraduationState {
+  is_client: boolean;
+  is_partner: boolean;
+  earnest_client_id: string | null;
+}
+
 interface PreviewResult {
   cd_contact: CdSummary;
   already_promoted: boolean;
   promoted_contact: MatchedContact | null;
   match: MatchedContact | null;
+  graduation?: GraduationState;
 }
 
 interface PromoteResult {
   contact: { id: string; first_name: string; last_name: string; email: string | null; company: string | null };
   lead: { id: string; name: string; stage: string } | null;
+  client: { id: string; name: string; goal: 'client' | 'partner' } | null;
   alreadyExisted: boolean;
   xpEarned: number;
   isStub?: boolean;
@@ -232,6 +348,10 @@ const error = ref<string | null>(null);
 const action = ref<'create' | 'link'>('create');
 const openLead = ref(true);
 const submitting = ref(false);
+const convertToClient = ref(false);
+const goal = ref<'client' | 'partner'>('client');
+const conversionReason = ref('');
+const estimatedValue = ref<number | null>(null);
 
 const STAGE_FROM_RATING: Record<string, string> = {
   hot: 'qualified',
@@ -244,7 +364,32 @@ const leadStage = computed(() => {
   return r ? STAGE_FROM_RATING[r] || null : null;
 });
 
+// Graduation state for the already-promoted branch. `alreadyGraduated` is true
+// once the card has spun up an Earnest client/partner account; until then we
+// offer the convert control so a contact can be upgraded after the fact.
+const alreadyGraduated = computed(() => {
+  const g = preview.value?.graduation;
+  return !!(g && (g.earnest_client_id || g.is_client || g.is_partner));
+});
+const graduationLabel = computed(() => {
+  const g = preview.value?.graduation;
+  if (!g) return null;
+  if (g.is_partner) return 'Partner';
+  if (g.is_client || g.earnest_client_id) return 'Client';
+  return null;
+});
+
+// Convert an ALREADY-promoted card to a client/partner. Reuses the linked
+// contact (the promote endpoint detects cd.promoted_contact) and skips lead
+// creation so we don't open a duplicate lead.
+async function confirmGraduation() {
+  convertToClient.value = true;
+  openLead.value = false;
+  await confirm();
+}
+
 const submitButtonLabel = computed(() => {
+  if (convertToClient.value) return goal.value === 'partner' ? 'Convert to Partner' : 'Convert to Client';
   if (action.value === 'link') return 'Link & Promote';
   return openLead.value && leadStage.value ? 'Create + Open Lead' : 'Create Contact';
 });
@@ -305,15 +450,24 @@ async function confirm() {
           existing_contact_id: action.value === 'link' ? preview.value.match?.id : undefined,
           open_lead: openLead.value,
           org_id: selectedOrg.value,
+          goal: convertToClient.value ? goal.value : 'contact',
+          conversion_reason: convertToClient.value ? conversionReason.value || undefined : undefined,
+          estimated_value: convertToClient.value ? estimatedValue.value : undefined,
         },
       },
     );
     const xpSuffix = res.xpEarned ? ` · +${res.xpEarned} XP` : '';
     toast.add({
-      title: res.alreadyExisted ? 'Linked to existing contact' : 'Added to Earnest',
-      description: res.lead
-        ? `Lead opened in ${res.lead.stage} stage${xpSuffix}`
-        : `In rolodex${xpSuffix}`,
+      title: res.client
+        ? `Converted to ${res.client.goal === 'partner' ? 'Partner' : 'Client'}`
+        : res.alreadyExisted
+          ? 'Linked to existing contact'
+          : 'Added to Earnest',
+      description: res.client
+        ? `Created client "${res.client.name}"${xpSuffix}`
+        : res.lead
+          ? `Lead opened in ${res.lead.stage} stage${xpSuffix}`
+          : `In rolodex${xpSuffix}`,
       color: 'green',
     });
     emit('promoted', res);

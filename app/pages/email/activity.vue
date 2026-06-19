@@ -260,7 +260,7 @@ function eventColor(ev: string | null | undefined) {
 			<div class="lg:col-span-2 ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Campaigns</h3>
-					<NuxtLink to="/email" class="text-[11px] text-muted-foreground hover:text-foreground">All emails →</NuxtLink>
+					<UiViewLink to="/email" variant="muted" size="sm">All emails</UiViewLink>
 				</div>
 				<div v-if="!campaignRows.length" class="text-sm text-muted-foreground text-center py-8">
 					No campaigns sent in this window.

@@ -71,72 +71,54 @@
 				</div>
 				<!-- Row 2: Due Date, Project, Archive -->
 				<div class="flex flex-row items-center gap-4">
-					<div class="flex items-center space-x-2 relative">
-						<USelectMenu
-							v-model="filterDueDate"
-							:options="dueDateOptions"
-							placeholder="Due Date"
-							size="sm"
-							class="w-36 uppercase text-[10px]"
-							option-attribute="label"
-							value-attribute="value"
-						>
-							<template #trigger>
-								<UButton
-									:color="activeDueDateFilter ? 'yellow' : 'gray'"
-									variant="soft"
-									:icon="activeDueDateFilter ? 'i-heroicons-clock' : 'i-heroicons-calendar'"
-									size="xs"
-									class="uppercase text-[10px]"
-								>
-									{{ filterDueDate?.label || 'Due Date' }}
-								</UButton>
-							</template>
-						</USelectMenu>
-					</div>
+					<!-- Due Date — universal Select (glass, dark-adaptive). The
+						 leading icon turns amber when a date filter is active. -->
+					<Select v-model="dueDateModel">
+						<SelectTrigger class="h-8 w-40 rounded-lg text-xs gap-1.5">
+							<Icon
+								:name="activeDueDateFilter ? 'lucide:clock' : 'lucide:calendar'"
+								class="w-3.5 h-3.5 shrink-0"
+								:class="activeDueDateFilter ? 'text-warning' : 'text-muted-foreground'"
+							/>
+							<SelectValue placeholder="Due date" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem v-for="opt in dueDateOptions" :key="opt.value" :value="opt.value">
+								{{ opt.label }}
+							</SelectItem>
+						</SelectContent>
+					</Select>
 
-					<div class="flex items-center space-x-2">
-						<USelectMenu
-							searchable
-							v-model="selectedProject"
-							:options="projectOptions"
-							option-attribute="title"
-							value-attribute="id"
-							placeholder="Select Project"
-							class="w-full lg:w-64 uppercase text-[8px] text-muted-foreground relative"
-							@change="handleProjectChange"
-						>
-							<template #option="{ option }">
-								<div class="flex flex-col w-full">
-									<span class="w-full flex flex-row items-center justify-start leading-4">
-										{{ option.title }}
-										<span
-											v-if="option.tickets?.length"
-											class="text-[8px] font-bold h-4 w-4 !text-white rounded-full bg-[var(--cyan)] inline-flex items-center justify-center ml-1 text-center"
-										>
-											{{ option.tickets.length }}
-										</span>
-									</span>
-									<span v-if="option.organization" class="text-[9px] leading-3 text-muted-foreground">
-										{{ option.organization.name }}
-									</span>
-									<span v-if="option.team" class="text-[9px] leading-3 text-muted-foreground">
-										Team: {{ option.team.name }}
-									</span>
-								</div>
-							</template>
-						</USelectMenu>
-					</div>
-					<UButton
-						icon="i-heroicons-archive-box"
-						size="xs"
-						:color="showArchived ? 'primary' : 'gray'"
-						:variant="showArchived ? 'soft' : 'outline'"
+					<!-- Project — universal Select with per-project ticket counts -->
+					<Select v-model="projectModel">
+						<SelectTrigger class="h-8 w-56 rounded-lg text-xs gap-1.5">
+							<Icon name="lucide:folder" class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+							<SelectValue placeholder="All projects" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem v-for="opt in projectSelectItems" :key="opt.value" :value="opt.value">
+								<span class="flex items-center gap-1.5">
+									{{ opt.title }}
+									<span
+										v-if="opt.count"
+										class="text-[9px] font-semibold px-1.5 rounded-full bg-primary/10 text-primary leading-none py-0.5"
+									>{{ opt.count }}</span>
+								</span>
+							</SelectItem>
+						</SelectContent>
+					</Select>
+
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors"
+						:class="showArchived
+							? 'border-primary/40 bg-primary/10 text-primary'
+							: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'"
 						@click="toggleArchived"
-						class="uppercase text-[10px] border border-border/60"
 					>
-						{{ showArchived ? 'View Board' : 'Archived' }}
-					</UButton>
+						<Icon name="lucide:archive" class="w-3.5 h-3.5" />
+						{{ showArchived ? 'View board' : 'Archived' }}
+					</button>
 				</div>
 				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-muted-foreground absolute font-bold uppercase">
 					Last updated: {{ formatLastUpdated(lastUpdated) }}
@@ -239,7 +221,7 @@
 				<div class="tickets-board__board-col-header">
 					<div class="flex items-center gap-3">
 						<div class="h-5 w-1 rounded-full" :style="{ backgroundColor: `var(--${column.color})` }" />
-						<h3 class="cg-text-header text-foreground flex-1">{{ column.name }}</h3>
+						<h3 class="text-xs font-semibold uppercase tracking-wider text-foreground/70 flex-1">{{ column.name }}</h3>
 						<span
 							class="text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
 							:style="{ backgroundColor: `var(--${column.color})`, color: 'var(--darkBlue)' }"
@@ -316,6 +298,7 @@
 
 <script setup>
 import VueDraggable from 'vuedraggable';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const props = defineProps({
 	projectId: {
@@ -460,6 +443,40 @@ const activeDueDateFilter = computed(() => {
 	if (!filterDueDate.value || filterDueDate.value === 'all') return null;
 	return typeof filterDueDate.value === 'object' ? filterDueDate.value.value : filterDueDate.value;
 });
+
+// ── Modern (shadcn Select) filter bindings ─────────────────────────────────
+// The Due Date + Project filters render through the universal `Select`
+// component. These computeds adapt the existing filter state (which may hold a
+// string, a legacy {value,label} object, or null) to the string-only model
+// Select expects, using 'all' as the no-filter sentinel.
+const dueDateModel = computed({
+	get() {
+		const v = filterDueDate.value;
+		if (!v) return 'all';
+		return typeof v === 'object' ? (v.value || 'all') : v;
+	},
+	set(val) {
+		filterDueDate.value = val === 'all' ? null : val;
+	},
+});
+
+const projectModel = computed({
+	get: () => selectedProject.value || 'all',
+	set: (val) => {
+		selectedProject.value = val === 'all' ? null : val;
+	},
+});
+
+// Project options shaped for the Select — 'all' sentinel + per-project ticket
+// counts (the rich org/team sublines from the old menu aren't surfaced here;
+// the trigger stays compact).
+const projectSelectItems = computed(() =>
+	(projectOptions.value || []).map((p) => ({
+		value: p.id || 'all',
+		title: p.title || 'Untitled project',
+		count: Array.isArray(p.tickets) ? p.tickets.length : (typeof p.tickets === 'number' ? p.tickets : 0),
+	})),
+);
 
 // Required fields for ticket data — kept tight for cold-mount payload size.
 // Card.vue + FormModal.vue + Board.vue archived list are the only consumers;
@@ -1337,15 +1354,17 @@ watch(
 	}
 	.tickets-board__board-col-header {
 		@apply relative py-4 px-4 border-b border-border sticky top-0 z-10;
-		background: rgba(255, 255, 255, 0.78);
+		/* Token-based bg adapts to dark automatically. The old hardcoded white
+		 * + a `:is(.dark)` override nested inside `.tickets-board` compiled to
+		 * `.tickets-board :is(.dark) …` (needs `.dark` INSIDE the board, not on
+		 * <html>) so it never matched — headers stayed white in dark mode.
+		 * Mirrors the universal kanban header (Tasks/Leads boards). */
+		background: hsl(var(--card) / 0.85);
 		backdrop-filter: saturate(180%) blur(20px);
 		-webkit-backdrop-filter: saturate(180%) blur(20px);
 		@media (min-width: 1600px) {
 			@apply px-8;
 		}
-	}
-	:is(.dark) .tickets-board__board-col-header {
-		background: rgba(20, 20, 20, 0.78);
 	}
 	.tickets-board__board-col-content {
 		@apply min-h-screen lg:h-svh h-full py-3 bg-muted/20 dark:bg-card/30 overflow-y-auto px-3;

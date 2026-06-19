@@ -1018,9 +1018,7 @@ const scopeLabel = computed(() => {
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Channels
                 </h3>
-                <button class="text-xs text-primary hover:underline" @click="floor = 'accounts'">
-                  Manage →
-                </button>
+                <UiViewLink size="sm" @click="floor = 'accounts'">Manage</UiViewLink>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <MarketingPlatformTile
@@ -1624,7 +1622,7 @@ const scopeLabel = computed(() => {
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Segments</h3>
-              <NuxtLink to="/apps/clients?view=contacts" class="text-xs text-primary hover:underline">Open Contacts →</NuxtLink>
+              <UiViewLink to="/apps/clients?view=contacts" size="sm">Open Contacts</UiViewLink>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <NuxtLink

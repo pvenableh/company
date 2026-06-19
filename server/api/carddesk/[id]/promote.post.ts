@@ -31,6 +31,16 @@ interface Body {
   existing_contact_id?: string;
   open_lead?: boolean;
   org_id: string;
+  /**
+   * What this card is being converted into:
+   *   'contact' (default) — rolodex contact (+ optional lead)
+   *   'client' | 'partner' — also create an Earnest CRM Client account and
+   *     flag the card as graduated. Mirrors CardDesk's own graduate flow.
+   */
+  goal?: 'contact' | 'client' | 'partner';
+  conversion_reason?: string;
+  conversion_note?: string;
+  estimated_value?: number | null;
 }
 
 const STAGE_FROM_RATING: Record<string, string> = {
@@ -64,19 +74,28 @@ export default defineEventHandler(async (event) => {
 
   await requireOrgMembership(event, body.org_id);
 
+  const wantsClient = body.goal === 'client' || body.goal === 'partner';
+
   const directus = getTypedDirectus();
   const cd: any = await directus.request(
     readItem('cd_contacts', cdContactId, {
-      fields: ['id', 'name', 'first_name', 'last_name', 'email', 'phone', 'company', 'title', 'rating', 'user_created', 'promoted_contact'],
+      fields: [
+        'id', 'name', 'first_name', 'last_name', 'email', 'phone', 'company', 'title',
+        'rating', 'user_created', 'promoted_contact', 'industry', 'location',
+        'estimated_value', 'is_client', 'is_partner', 'earnest_client_id',
+      ],
     }),
   );
 
   if (!cd) throw createError({ statusCode: 404, message: 'cd_contact not found' });
   if (cd.user_created !== userId) throw createError({ statusCode: 403, message: 'Not your cd_contact' });
 
-  // Already promoted? Short-circuit with the existing link so the modal
-  // can render the "already in Earnest" state idempotently.
-  if (cd.promoted_contact) {
+  // Already promoted to a contact AND no further client/partner conversion is
+  // being requested (or it's already done)? Short-circuit with the existing
+  // link so the modal can render the "already in Earnest" state idempotently.
+  // When a client/partner conversion IS requested and not yet done, we fall
+  // through and reuse the existing contact to graduate it.
+  if (cd.promoted_contact && (!wantsClient || cd.earnest_client_id)) {
     const existing: any = await directus.request(
       readItem('contacts', cd.promoted_contact, {
         fields: ['id', 'first_name', 'last_name', 'email', 'company', 'title'],
@@ -85,6 +104,7 @@ export default defineEventHandler(async (event) => {
     return {
       contact: existing,
       lead: null,
+      client: null,
       alreadyExisted: true,
       xpEarned: 0,
     };
@@ -94,7 +114,15 @@ export default defineEventHandler(async (event) => {
   let contact: any;
   let contactWasCreated = false;
 
-  if (body.action === 'link') {
+  if (cd.promoted_contact) {
+    // Card already has a CRM contact — reuse it to graduate to a client/partner.
+    contact = await directus.request(
+      readItem('contacts', cd.promoted_contact, {
+        fields: ['id', 'first_name', 'last_name', 'email', 'company', 'title'],
+      }),
+    );
+    if (!contact) throw createError({ statusCode: 404, message: 'linked contact no longer exists' });
+  } else if (body.action === 'link') {
     // Verify the existing contact actually belongs to this org — otherwise
     // a malicious caller could link a cd_contact to any contact ID they
     // could guess.
@@ -174,18 +202,21 @@ export default defineEventHandler(async (event) => {
   // it idempotent). Failures here log loudly but don't roll back the
   // contact create.
   let lead: any = null;
+  let client: any = null;
   let xpEarned = 0;
-  let linkSucceeded = false;
+  let linkSucceeded = !!cd.promoted_contact;
 
-  try {
-    await directus.request(
-      updateItem('cd_contacts', cdContactId, { promoted_contact: contact.id }),
-    );
-    linkSucceeded = true;
-  } catch (e: any) {
-    console.error('[promote] failed to set cd_contacts.promoted_contact', {
-      cdContactId, contactId: contact.id, contactWasCreated, error: e?.message,
-    });
+  if (!cd.promoted_contact) {
+    try {
+      await directus.request(
+        updateItem('cd_contacts', cdContactId, { promoted_contact: contact.id }),
+      );
+      linkSucceeded = true;
+    } catch (e: any) {
+      console.error('[promote] failed to set cd_contacts.promoted_contact', {
+        cdContactId, contactId: contact.id, contactWasCreated, error: e?.message,
+      });
+    }
   }
 
   const wantsLead = body.open_lead !== false && cd.rating && STAGE_FROM_RATING[cd.rating];
@@ -208,17 +239,85 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Activity type stays inside the existing enum ('other') — the cd_activities
-  // dropdown is constrained to email/text/call/meeting/linkedin/other.
-  // The "Promoted to Earnest CRM" label + Earnest-marked icon in the timeline
-  // is what readers actually see.
+  // ── Client / Partner graduation ─────────────────────────────────────────
+  // When the card is graduating to a client (or partner), spin up an Earnest
+  // CRM Client account anchored to this contact, and flag the card so the
+  // dashboard reflects the graduation. Idempotent on earnest_client_id.
+  if (wantsClient && !cd.earnest_client_id) {
+    const clientName =
+      cd.company?.trim() ||
+      `${contact.first_name || ''} ${contact.last_name || ''}`.trim() ||
+      cd.name?.trim() ||
+      'New Client';
+    const noteParts = [
+      `Converted from Card Desk${body.conversion_reason ? ` — ${body.conversion_reason}` : ''}.`,
+      body.conversion_note || '',
+    ].filter(Boolean);
+    try {
+      client = await directus.request(
+        createItem('clients', {
+          name: clientName,
+          organization: body.org_id,
+          primary_contact: contact.id,
+          industry: cd.industry || null,
+          location: cd.location || null,
+          notes: noteParts.join(' ').trim() || null,
+          // status omitted — clients.status enum differs from other collections
+          // (migrate-orgs-to-clients uses 'active'); let Directus apply its default.
+        }),
+      );
+    } catch (e: any) {
+      console.error('[promote] failed to create client', {
+        cdContactId, contactId: contact.id, error: e?.message,
+      });
+    }
+
+    // Flag the card as graduated, idempotently. Best-effort.
+    const nowIso = new Date().toISOString();
+    const cdPatch: Record<string, any> = client ? { earnest_client_id: client.id } : {};
+    if (body.goal === 'partner') {
+      cdPatch.is_partner = true;
+      cdPatch.partner_at = nowIso;
+    } else {
+      cdPatch.is_client = true;
+      cdPatch.client_at = nowIso;
+    }
+    if (body.estimated_value != null) cdPatch.estimated_value = body.estimated_value;
+    if (Object.keys(cdPatch).length) {
+      try {
+        await directus.request(updateItem('cd_contacts', cdContactId, cdPatch));
+      } catch (e: any) {
+        console.error('[promote] failed to stamp client graduation on cd_contact', {
+          cdContactId, error: e?.message,
+        });
+      }
+    }
+  }
+
+  // Activity log. cd_activities now supports lifecycle types (converted_client/
+  // converted_partner); fall back to the legacy 'other' for plain contact
+  // promotion. The label is what readers see in the timeline.
+  const activityType = client
+    ? body.goal === 'partner'
+      ? 'converted_partner'
+      : 'converted_client'
+    : 'promoted_to_earnest';
+  const activityLabel = client
+    ? body.goal === 'partner'
+      ? 'Converted to Partner in Earnest'
+      : 'Converted to Client in Earnest'
+    : 'Promoted to Earnest CRM';
   try {
     await directus.request(
       createItem('cd_activities', {
         contact: cdContactId,
-        type: 'other',
-        label: 'Promoted to Earnest CRM',
-        note: lead ? `Opened a ${lead.stage} lead.` : null,
+        type: activityType,
+        label: activityLabel,
+        note: client
+          ? body.conversion_reason || (lead ? `Opened a ${lead.stage} lead.` : null)
+          : lead
+            ? `Opened a ${lead.stage} lead.`
+            : null,
         date: new Date().toISOString(),
         user_created: userId,
       }),
@@ -227,7 +326,8 @@ export default defineEventHandler(async (event) => {
     console.error('[promote] failed to log cd_activity', { cdContactId, error: e?.message });
   }
 
-  xpEarned = 50 + (lead ? 50 : 0);
+  // XP: 50 base for the contact link, +50 for a lead, +100 for a client/partner.
+  xpEarned = (cd.promoted_contact ? 0 : 50) + (lead ? 50 : 0) + (client ? 100 : 0);
   try {
     await bumpXp(directus, userId, xpEarned);
   } catch (e: any) {
@@ -239,7 +339,10 @@ export default defineEventHandler(async (event) => {
     lead: lead
       ? { id: lead.id, name: lead.name, stage: lead.stage, related_contact: contact.id }
       : null,
-    alreadyExisted: body.action === 'link',
+    client: client
+      ? { id: client.id, name: client.name, goal: body.goal || 'client' }
+      : null,
+    alreadyExisted: body.action === 'link' && !cd.promoted_contact ? true : !!cd.promoted_contact,
     xpEarned,
     linkSucceeded,
   };

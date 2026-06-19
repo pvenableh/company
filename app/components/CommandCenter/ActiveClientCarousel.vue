@@ -92,12 +92,7 @@ function relTime(iso: string | null | undefined) {
 				<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Clients</h3>
 			</div>
-			<NuxtLink
-				to="/apps/clients"
-				class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-			>
-				All clients →
-			</NuxtLink>
+			<UiViewLink to="/apps/clients" variant="muted" size="sm">All clients</UiViewLink>
 		</div>
 
 		<!-- Loading -->

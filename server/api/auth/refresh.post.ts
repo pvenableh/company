@@ -15,8 +15,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Refresh tokens with Directus
-    const newTokens = await directusRefresh(refreshToken);
+    // Refresh tokens with Directus. dedupedDirectusRefresh collapses
+    // concurrent refreshes (e.g. multiple tabs, or the proactive client timer
+    // racing an in-flight request) onto a single rotation so they all receive
+    // the same valid tokens instead of fighting over a single-use refresh token.
+    const newTokens = await dedupedDirectusRefresh(refreshToken);
 
     // Update session with new tokens
     await updateSessionTokens(event, session, newTokens);
@@ -28,12 +31,25 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error("Token refresh error:", error);
 
-    // Clear session on refresh failure
-    await clearUserSession(event);
+    // Only clear the session when the refresh token itself is rejected by
+    // Directus (truly expired/revoked). A transient/network failure should NOT
+    // log the user out — that was a key cause of sessions dropping "for no
+    // reason." A 401/403 from Directus means the token is dead; anything else
+    // is treated as transient and the existing session is left intact.
+    const status = error?.response?.status ?? error?.statusCode;
+    const tokenRejected = status === 401 || status === 403;
+
+    if (tokenRejected) {
+      await clearUserSession(event);
+      throw createError({
+        statusCode: 401,
+        message: "Session expired - please log in again",
+      });
+    }
 
     throw createError({
-      statusCode: 401,
-      message: "Session expired - please log in again",
+      statusCode: 503,
+      message: "Could not refresh session, please retry",
     });
   }
 });

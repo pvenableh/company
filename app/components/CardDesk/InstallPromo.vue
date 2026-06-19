@@ -62,20 +62,21 @@ onMounted(() => {
 <template>
 	<div
 		v-if="visible"
-		class="cd-promo relative mb-6 overflow-hidden rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-slate-50 to-slate-50 p-4 sm:p-5 dark:from-emerald-400/10 dark:via-slate-900/40 dark:to-slate-900/40 dark:border-emerald-400/20"
+		class="cd-promo relative mb-6 overflow-hidden rounded-2xl border border-[#00ff87]/25 bg-gradient-to-br from-[#00ff87]/[0.07] via-background to-[#4da6ff]/[0.07] p-4 sm:p-5 dark:from-[#00ff87]/[0.10] dark:to-[#4da6ff]/[0.08] dark:border-[#00ff87]/25"
 	>
-		<!-- Decorative phone-shaped chip -->
-		<div class="absolute -right-4 -bottom-4 hidden sm:block opacity-50 dark:opacity-40 pointer-events-none">
-			<div class="w-24 h-32 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 rotate-12 shadow-lg shadow-emerald-500/20" />
+		<!-- Decorative CardDesk gradient orb (green → blue), perfectly round -->
+		<div class="absolute -right-8 -bottom-10 hidden sm:block pointer-events-none">
+			<div class="w-36 h-36 rounded-full bg-gradient-to-br from-[#00ff87] to-[#4da6ff] opacity-20 blur-2xl" />
 		</div>
 
 		<div class="relative flex flex-col sm:flex-row sm:items-center gap-4">
-			<div class="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm shadow-emerald-500/30">
-				<Icon name="lucide:smartphone" class="w-5 h-5 text-white" />
+			<!-- Perfect-circle icon badge in CardDesk's mint/blue gradient -->
+			<div class="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-[#00ff87] to-[#4da6ff] flex items-center justify-center shadow-sm shadow-[#00ff87]/30 ring-1 ring-white/20">
+				<Icon :name="isIOS ? 'lucide:scan-line' : 'lucide:smartphone'" class="w-5 h-5 text-[#06121f]" />
 			</div>
 
 			<div class="flex-1 min-w-0">
-				<div class="text-[10px] uppercase tracking-[0.18em] font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+				<div class="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#00b86a] dark:text-[#3ce39a] mb-1">
 					CardDesk · companion app
 				</div>
 				<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -97,7 +98,7 @@ onMounted(() => {
 					:href="CARDDESK_URL"
 					target="_blank"
 					rel="noopener"
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-sm shadow-emerald-500/30 transition-colors"
+					class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#00ff87] to-[#4da6ff] hover:opacity-90 text-[#06121f] text-xs font-bold shadow-sm shadow-[#00ff87]/30 transition-opacity"
 				>
 					<Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
 					{{ isIOS ? 'Open on iPhone' : 'Open CardDesk' }}

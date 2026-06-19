@@ -16,6 +16,10 @@ let _refreshTimer = null
 let _isRefreshing = false
 let _channel = null
 let _initialized = false
+// Whether the most recent refresh failure was a definitive auth rejection
+// (refresh token truly dead) vs. a transient/network failure we should not
+// log the user out for.
+let _lastRefreshFatal = false
 
 /**
  * Clears the cross-user `selectedOrganization` cookie + localStorage.
@@ -50,9 +54,14 @@ export const useDirectusAuth = () => {
 			await fetchSession()
 			scheduleRefresh()
 			broadcastAuth('refresh')
+			_lastRefreshFatal = false
 			return session.value
 		} catch (error) {
 			console.error('[Auth] Token refresh failed:', error)
+			// 401 = refresh token rejected by Directus (truly expired/revoked).
+			// Anything else (503, network) is transient — keep the session.
+			const statusCode = error?.statusCode ?? error?.status ?? error?.response?.status
+			_lastRefreshFatal = statusCode === 401
 			return null
 		} finally {
 			_isRefreshing = false
@@ -258,8 +267,10 @@ export const useDirectusAuth = () => {
 			// or if token is within 2 minutes of expiry
 			if (hiddenDuration > 300_000 || (expiresAt && Date.now() >= expiresAt - 120_000)) {
 				const result = await refreshSession()
-				if (!result && loggedIn.value) {
-					// Refresh failed but user was logged in — show toast before redirecting
+				if (!result && loggedIn.value && _lastRefreshFatal) {
+					// Refresh definitively rejected (token dead) while logged in —
+					// show toast before redirecting. Transient failures are ignored
+					// so a network blip on wake doesn't log the user out.
 					try {
 						const { toast } = await import('vue-sonner')
 						toast.error('Your session has expired. Please sign in again.')

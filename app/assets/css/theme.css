@@ -227,7 +227,23 @@
       hsl(var(--glass-h) var(--glass-s) 50% / 0.06) 50%,
       hsl(calc(var(--glass-h) + 35) var(--glass-s) 55% / 0.10) 100%
     ),
-    hsl(var(--card) / 0.78);
+    hsl(var(--card) / 0.90);
+}
+/* Dark mode previously fell through to `.dark .glass-surface` (card/0.55),
+ * leaving "strong" floating surfaces — dropdown menus, selects, dialogs,
+ * tooltips, sheets — too translucent to read against busy dark content.
+ * Give them a near-opaque substrate + heavier blur so text reads cleanly. */
+.dark .glass-surface--strong {
+  background:
+    linear-gradient(
+      135deg,
+      hsl(var(--glass-h) var(--glass-s) 65% / 0.12) 0%,
+      hsl(var(--glass-h) var(--glass-s) 45% / 0.04) 50%,
+      hsl(calc(var(--glass-h) + 35) var(--glass-s) 50% / 0.08) 100%
+    ),
+    hsl(var(--card) / 0.94);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass-surface { background: hsl(var(--card)); }
@@ -238,6 +254,18 @@
     -webkit-backdrop-filter: none;
     background: hsl(var(--card));
   }
+}
+
+/* Dialog + Sheet wear `.glass-surface`, whose `position: relative` (above)
+ * was overriding their `fixed` positioning utility — same specificity, later
+ * source order — so the modal dropped into normal document flow and rendered
+ * anchored at the page BOTTOM instead of centered/overlaid. (Dropdowns,
+ * selects and tooltips escape this because reka-ui's popper assigns them an
+ * inline `position: fixed`.) Re-assert fixed here so these surfaces overlay
+ * and center as designed. This rule follows `.glass-surface`, so it wins. */
+[data-slot="dialog-content"],
+[data-slot="sheet-content"] {
+  position: fixed;
 }
 
 /* ---- Dialog overlay glass ----

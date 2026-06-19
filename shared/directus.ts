@@ -1018,7 +1018,22 @@ export interface CdActivity {
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	contact?: CdContact | string | null;
-	type?: 'email' | 'text' | 'call' | 'meeting' | 'linkedin' | 'other' | null;
+	type?:
+		| 'email'
+		| 'text'
+		| 'call'
+		| 'meeting'
+		| 'linkedin'
+		| 'other'
+		// Lifecycle / system events emitted by CardDesk (2026-06):
+		| 'contact_added'
+		| 'card_scanned'
+		| 'stage_change'
+		| 'converted_lead'
+		| 'converted_client'
+		| 'converted_partner'
+		| 'promoted_to_earnest'
+		| null;
 	label?: string | null;
 	date?: string | null;
 	note?: string | null;
@@ -1048,10 +1063,61 @@ export interface CdContact {
 	hibernated?: boolean | null;
 	hibernated_at?: string | null;
 	notes?: string | null;
+	location?: string | null;
+	address?: string | null;
+	/** @description CardDesk pipeline stage (2026-06 restructure). */
+	pipeline_stage?: 'new' | 'warming' | 'opportunity' | 'client' | 'partner' | 'lost' | null;
+	/** @description When entering 'opportunity', what we're chasing. */
+	opportunity_goal?: 'client' | 'partner' | null;
+	/** @description Provenance of the card. */
+	source?: 'scan' | 'manual' | 'referral' | 'import' | 'event' | null;
+	estimated_value?: number | null;
+	lost_reason?: string | null;
 	is_client?: boolean | null;
 	client_at?: string | null;
+	is_partner?: boolean | null;
+	partner_at?: string | null;
+	/** @description What sealed the conversion — "Project", "Contract", "Referral", etc. */
+	conversion_reason?: string | null;
+	/** @description Free-text detail on what converted them. */
+	conversion_note?: string | null;
 	/** @description Earnest CRM contact this Card Desk card was promoted into. Null = unpromoted. */
 	promoted_contact?: Contact | string | null;
+	/** @description Earnest CRM lead opened for this card on client conversion. */
+	earnest_lead_id?: Lead | string | null;
+	/** @description Earnest CRM client created for this card on client/partner conversion. */
+	earnest_client_id?: Client | string | null;
+}
+
+export interface CdPlan {
+	/** @primaryKey */
+	id: string;
+	user?: DirectusUser | string | null;
+	contact?: CdContact | string | null;
+	title?: string | null;
+	status?: 'active' | 'done' | 'archived' | null;
+	source_session?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	tasks?: CdTask[];
+}
+
+export interface CdTask {
+	/** @primaryKey */
+	id: string;
+	user?: DirectusUser | string | null;
+	plan?: CdPlan | string | null;
+	contact?: CdContact | string | null;
+	title?: string | null;
+	channel?: 'email' | 'linkedin' | 'call' | 'meet' | 'other' | null;
+	note?: string | null;
+	due_at?: string | null;
+	status?: 'pending' | 'done' | 'skipped' | null;
+	completed_at?: string | null;
+	sort?: number | null;
+	source_session?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface CdXpState {

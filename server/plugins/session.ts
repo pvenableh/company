@@ -13,7 +13,7 @@ export default defineNitroPlugin(() => {
         const refreshToken = getSessionRefreshToken(session);
         if (refreshToken) {
           try {
-            const newTokens = await directusRefresh(refreshToken);
+            const newTokens = await dedupedDirectusRefresh(refreshToken);
             await updateSessionTokens(event, session, newTokens);
           } catch (error) {
             console.warn("[Session Hook] Token refresh failed during fetch:", error);

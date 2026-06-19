@@ -1,8 +1,7 @@
 <template>
 	<div class="account-page">
+		<AppHeader title="Account" />
 		<LayoutPageContainer>
-			<h1 class="text-2xl font-semibold mb-6">Account</h1>
-
 			<!-- Identity card -->
 			<div class="ios-card flex items-center gap-4 p-4 mb-6">
 				<UserAvatar size="md" />

@@ -59,13 +59,7 @@ function activityIcon(type: string) {
         <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Social Inbox
         </p>
-        <NuxtLink
-          to="/inbox"
-          class="text-[10px] font-medium text-primary hover:underline"
-          @click="isOpen = false"
-        >
-          Open inbox →
-        </NuxtLink>
+        <UiViewLink to="/inbox" @click="isOpen = false">Open inbox</UiViewLink>
       </div>
 
       <div v-if="!activity.length" class="px-2 py-6 text-center text-xs text-muted-foreground">

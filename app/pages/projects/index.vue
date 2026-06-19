@@ -180,7 +180,8 @@ definePageMeta({
 			<ProjectsFormModal v-model="showProjectForm" @created="handleProjectCreated" />
 		</ClientOnly>
 
-		<!-- View switcher -->
+		<!-- View switcher — UTabs is the app-wide universal segmented pill
+		     control (same component the Tasks + CardDesk tabs use). -->
 		<ClientOnly>
 			<UTabs v-model="activeView" :items="projectViewOptions" class="mb-5 w-fit" />
 		</ClientOnly>

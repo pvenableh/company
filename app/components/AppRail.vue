@@ -74,6 +74,13 @@ const tooltipSide = computed<'top' | 'bottom' | 'left' | 'right'>(() => {
 	return 'top';
 });
 
+// On the horizontal (top/bottom/floating) rail the hovered chip magnifies to
+// ~1.65× and visually overhangs its layout box, so the default 8px tooltip
+// offset let the label render ON TOP of the magnified icon. Clear the grown
+// footprint — half the peak overhang of a ~38px chip is ~13px — so the
+// tooltip sits cleanly above (or beside) the magnified app instead.
+const tooltipOffset = computed(() => (magnifyEnabled.value ? 22 : 8));
+
 function styleFor(app: AppAccent) {
 	return {
 		'--rail-h': String(app.h),
@@ -282,7 +289,7 @@ function chipMagnifyStyle(appId: string) {
 								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
-						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
+						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="tooltipOffset" class="z-[70]">
 							{{ app.name }}
 						</TooltipContent>
 					</Tooltip>
@@ -318,7 +325,7 @@ function chipMagnifyStyle(appId: string) {
 								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
-						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
+						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="tooltipOffset" class="z-[70]">
 							{{ app.name }}
 						</TooltipContent>
 					</Tooltip>

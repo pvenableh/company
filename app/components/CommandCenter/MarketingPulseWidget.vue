@@ -144,12 +144,7 @@
 					</span>
 				</div>
 			</div>
-			<NuxtLink
-				to="/social"
-				class="text-[11px] font-medium text-primary hover:underline flex-shrink-0"
-			>
-				Open social →
-			</NuxtLink>
+			<UiViewLink to="/social" size="sm" class="flex-shrink-0">Open social</UiViewLink>
 		</div>
 	</div>
 </template>

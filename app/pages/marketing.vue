@@ -112,12 +112,7 @@
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Email</h3>
 					</div>
-					<NuxtLink
-						to="/email"
-						class="text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground"
-					>
-						Open →
-					</NuxtLink>
+					<UiViewLink to="/email" variant="muted">Open</UiViewLink>
 				</div>
 
 				<div v-if="loadingKPIs" class="space-y-3 animate-pulse">
@@ -211,12 +206,7 @@
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Social</h3>
 					</div>
-					<NuxtLink
-						to="/social"
-						class="text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground"
-					>
-						Open →
-					</NuxtLink>
+					<UiViewLink to="/social" variant="muted">Open</UiViewLink>
 				</div>
 
 				<div v-if="loadingSocial" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 animate-pulse">

@@ -31,6 +31,9 @@ export default defineEventHandler(async (event) => {
         'id', 'name', 'first_name', 'last_name', 'email', 'phone',
         'company', 'title', 'rating', 'industry', 'met_at', 'notes',
         'is_client', 'hibernated', 'date_created',
+        // Graduation / pipeline context (2026-06 CardDesk restructure):
+        'pipeline_stage', 'is_partner', 'client_at', 'partner_at',
+        'conversion_reason', 'estimated_value',
       ],
       filter: {
         _and: [
@@ -43,21 +46,53 @@ export default defineEventHandler(async (event) => {
   );
 
   const card = cards[0] || null;
-  if (!card) return { cd_contact: null, activities: [] };
+  if (!card) return { cd_contact: null, activities: [], plans: [], tasks: [] };
 
-  const activities: any[] = await directus.request(
-    readItems('cd_activities', {
-      fields: ['id', 'type', 'label', 'note', 'date', 'is_response'],
-      filter: {
-        _and: [
-          { contact: { _eq: card.id } },
-          { user_created: { _eq: userId } },
-        ],
-      },
-      sort: ['-date'],
-      limit: 5,
-    }),
-  );
+  // Activities + follow-up plans/tasks are all user-scoped on the same card.
+  // Plans/tasks are read-only context (authored by the CardDesk app); we fetch
+  // them with the server token so the panel works even before the per-user
+  // read perms (scripts/setup-carddesk-permissions.ts) have been applied.
+  const [activities, plans, tasks] = await Promise.all([
+    directus.request(
+      readItems('cd_activities', {
+        fields: ['id', 'type', 'label', 'note', 'date', 'is_response'],
+        filter: {
+          _and: [
+            { contact: { _eq: card.id } },
+            { user_created: { _eq: userId } },
+          ],
+        },
+        sort: ['-date'],
+        limit: 5,
+      }),
+    ).catch(() => []),
+    directus.request(
+      readItems('cd_plans', {
+        fields: ['id', 'title', 'status', 'date_created'],
+        filter: {
+          _and: [
+            { contact: { _eq: card.id } },
+            { user_created: { _eq: userId } },
+          ],
+        },
+        sort: ['-date_created'],
+        limit: 50,
+      }),
+    ).catch(() => []),
+    directus.request(
+      readItems('cd_tasks', {
+        fields: ['id', 'title', 'channel', 'note', 'due_at', 'status', 'completed_at', 'plan'],
+        filter: {
+          _and: [
+            { contact: { _eq: card.id } },
+            { user_created: { _eq: userId } },
+          ],
+        },
+        sort: ['due_at', 'sort'],
+        limit: 100,
+      }),
+    ).catch(() => []),
+  ]);
 
-  return { cd_contact: card, activities };
+  return { cd_contact: card, activities, plans, tasks };
 });

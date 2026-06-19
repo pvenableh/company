@@ -287,9 +287,7 @@ watch(() => selectedOrg.value, () => loadSummary());
 							<h2 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
 								Project Timeline
 							</h2>
-							<NuxtLink to="/portal/progress" class="text-[11px] text-primary hover:underline">
-								Open full view →
-							</NuxtLink>
+							<UiViewLink to="/portal/progress" size="sm">Open full view</UiViewLink>
 						</div>
 						<ProjectTimelineUnifiedGantt portal :auto-expand-threshold="3" compact />
 					</div>

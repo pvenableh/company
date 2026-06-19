@@ -208,7 +208,7 @@
 					</div>
 				</div>
 				<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-					No leads in pipeline. <NuxtLink to="/leads?new=true" class="text-primary hover:underline">Add a lead →</NuxtLink>
+					No leads in pipeline. <UiViewLink to="/leads?new=true">Add a lead</UiViewLink>
 				</div>
 			</div>
 
@@ -240,7 +240,7 @@
 					</div>
 				</div>
 				<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-					No revenue data yet. <NuxtLink to="/invoices?new=true" class="text-primary hover:underline">Add an invoice →</NuxtLink>
+					No revenue data yet. <UiViewLink to="/invoices?new=true">Add an invoice</UiViewLink>
 				</div>
 			</div>
 		</div>

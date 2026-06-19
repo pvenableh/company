@@ -209,7 +209,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 							:to="`/portal/contracts/${signTarget.id}`"
 							class="block text-[11px] text-primary hover:underline"
 						>
-							Read the full contract first →
+							Read the full contract first
 						</NuxtLink>
 
 						<div class="space-y-2">

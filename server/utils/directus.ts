@@ -119,7 +119,7 @@ export async function getUserDirectus(
     const refreshToken = getSessionRefreshToken(session);
     if (refreshToken) {
       try {
-        const newTokens = await directusRefresh(refreshToken);
+        const newTokens = await dedupedDirectusRefresh(refreshToken);
         await updateSessionTokens(event, session, newTokens);
         session = await getUserSession(event);
       } catch {
@@ -198,6 +198,57 @@ export async function directusRefresh(
   }
 
   return result;
+}
+
+/**
+ * Deduplicated token refresh.
+ *
+ * Directus rotates refresh tokens: every successful /auth/refresh invalidates
+ * the refresh token it was given and issues a new one. When several requests
+ * land at once (e.g. the dashboard fires /api/ai/notices + /api/directus/users
+ * + /api/directus/notifications in parallel) and the access token has just
+ * expired, each one independently tried to refresh with the SAME (still old)
+ * refresh token. Only the first wins; the rest hit an already-rotated token,
+ * fail, and either surface as 500s or clear the session entirely — which is
+ * why navigation 500'd but a full SSR page load (one serial refresh) worked,
+ * and why sessions seemed to drop "for no reason."
+ *
+ * This collapses concurrent refreshes for the same refresh token into a single
+ * network call, and briefly caches the result so a straggler that read the
+ * same old cookie gets the rotated tokens instead of re-refreshing a dead one.
+ */
+const inflightRefreshes = new Map<string, Promise<AuthenticationData>>();
+const recentRefreshes = new Map<string, { data: AuthenticationData; at: number }>();
+const RECENT_REFRESH_TTL_MS = 10_000;
+
+export async function dedupedDirectusRefresh(
+  refreshToken: string
+): Promise<AuthenticationData> {
+  const cached = recentRefreshes.get(refreshToken);
+  if (cached && Date.now() - cached.at < RECENT_REFRESH_TTL_MS) {
+    return cached.data;
+  }
+
+  const existing = inflightRefreshes.get(refreshToken);
+  if (existing) return existing;
+
+  const promise = directusRefresh(refreshToken)
+    .then((data) => {
+      recentRefreshes.set(refreshToken, { data, at: Date.now() });
+      // Trim the recent cache opportunistically so it can't grow unbounded.
+      for (const [key, value] of recentRefreshes) {
+        if (Date.now() - value.at >= RECENT_REFRESH_TTL_MS) {
+          recentRefreshes.delete(key);
+        }
+      }
+      return data;
+    })
+    .finally(() => {
+      inflightRefreshes.delete(refreshToken);
+    });
+
+  inflightRefreshes.set(refreshToken, promise);
+  return promise;
 }
 
 /**
@@ -290,7 +341,7 @@ export async function withAuthRetry<T>(
 
       if (refreshToken) {
         try {
-          const result = await directusRefresh(refreshToken);
+          const result = await dedupedDirectusRefresh(refreshToken);
 
           await updateSessionTokens(event, session, {
             access_token: result.access_token!,

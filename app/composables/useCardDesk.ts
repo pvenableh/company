@@ -1,6 +1,8 @@
 // composables/useCardDesk.ts
-// Fetches CardDesk data (cd_contacts, cd_activities, cd_xp_state) from the shared Directus instance.
-// Both apps share the same directus_users auth, so the user's token works for cd_ collections.
+// Fetches CardDesk data (cd_contacts, cd_activities, cd_xp_state, cd_plans,
+// cd_tasks) from the shared Directus instance. Both apps share the same
+// directus_users auth, so the user's token works for cd_ collections.
+import type { CdPlan, CdTask } from '~~/shared/directus';
 
 export interface CardDeskStats {
 	totalContacts: number;
@@ -64,6 +66,8 @@ export const useCardDesk = () => {
 	const contactItems = useDirectusItems('cd_contacts');
 	const activityItems = useDirectusItems('cd_activities');
 	const xpItems = useDirectusItems('cd_xp_state');
+	const planItems = useDirectusItems('cd_plans');
+	const taskItems = useDirectusItems('cd_tasks');
 	const { user: authUser } = useDirectusAuth();
 
 	const stats = ref<CardDeskStats>({
@@ -258,6 +262,56 @@ export const useCardDesk = () => {
 		});
 	};
 
+	// Fetch the CardDesk follow-up PLANS for a cd_contact, with their nested
+	// tasks. Read-only — these are authored by the CardDesk app. Degrades to
+	// an empty array on 403 (perms script not yet run) or any error so the
+	// caller can render a quiet empty state instead of breaking.
+	const fetchContactPlans = async (cdContactId: string): Promise<CdPlan[]> => {
+		const userId = authUser.value?.id;
+		const filter: any = { contact: { _eq: cdContactId } };
+		if (userId) filter.user_created = { _eq: userId };
+		try {
+			return (await planItems.list({
+				fields: [
+					'id', 'title', 'status', 'date_created', 'date_updated',
+					'tasks.id', 'tasks.title', 'tasks.channel', 'tasks.note',
+					'tasks.due_at', 'tasks.status', 'tasks.completed_at', 'tasks.sort',
+				],
+				filter,
+				sort: ['-date_created'],
+				limit: 50,
+			})) as CdPlan[];
+		} catch (e) {
+			console.warn('[CardDesk] Could not fetch contact plans:', e);
+			return [];
+		}
+	};
+
+	// Fetch the CardDesk follow-up TASKS for a cd_contact (flat, across all
+	// plans), ordered by due date. Same read-only + graceful-403 contract as
+	// fetchContactPlans.
+	const fetchContactTasks = async (cdContactId: string): Promise<CdTask[]> => {
+		const userId = authUser.value?.id;
+		const filter: any = { contact: { _eq: cdContactId } };
+		if (userId) filter.user_created = { _eq: userId };
+		try {
+			return (await taskItems.list({
+				fields: [
+					'id', 'title', 'channel', 'note', 'due_at', 'status',
+					'completed_at', 'sort', 'plan.id', 'plan.title', 'date_created',
+				],
+				filter,
+				// Pending first (due soonest), then the rest. Nulls-last on due_at
+				// is handled client-side by the consumer.
+				sort: ['due_at', 'sort'],
+				limit: 100,
+			})) as CdTask[];
+		} catch (e) {
+			console.warn('[CardDesk] Could not fetch contact tasks:', e);
+			return [];
+		}
+	};
+
 	// Update a cd_contact (rating, hibernation, client status, etc.). Writes
 	// straight through the user's token — perms are governed by
 	// scripts/setup-carddesk-permissions.ts.
@@ -345,6 +399,8 @@ export const useCardDesk = () => {
 		fetchContacts,
 		fetchContactById,
 		fetchContactActivities,
+		fetchContactPlans,
+		fetchContactTasks,
 		updateContact,
 		setIsClient,
 		addActivity,

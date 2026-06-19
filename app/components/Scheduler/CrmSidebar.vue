@@ -122,7 +122,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 					<UIcon name="i-heroicons-funnel" class="w-4 h-4 text-primary" />
 					<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Pipeline</h3>
 				</div>
-				<NuxtLink to="/apps/clients?view=leads" class="text-[10px] text-primary hover:underline">View &rarr;</NuxtLink>
+				<UiViewLink to="/apps/clients?view=leads">View</UiViewLink>
 			</div>
 
 			<div class="grid grid-cols-2 gap-2">
@@ -181,7 +181,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-warning mt-1.5">Pick an active organization to generate the URL.</p>
 			<p v-else-if="bookingUrlBlockedReason === 'no-slug'" class="text-[10px] text-warning mt-1.5">
 				Your organization has no URL slug yet.
-				<NuxtLink to="/organization" class="underline hover:text-warning">Set one in Organization settings →</NuxtLink>
+				<NuxtLink to="/organization" class="underline hover:text-warning">Set one in Organization settings</NuxtLink>
 			</p>
 		</div>
 	</div>

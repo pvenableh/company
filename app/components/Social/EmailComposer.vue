@@ -839,7 +839,7 @@ async function save() {
                 <Icon name="lucide:info" class="w-4 h-4 shrink-0" />
                 <p class="flex-1">
                   No mailing lists yet.
-                  <NuxtLink to="/lists" class="underline hover:text-foreground">Create one in Lists →</NuxtLink>
+                  <NuxtLink to="/lists" class="underline hover:text-foreground">Create one in Lists</NuxtLink>
                 </p>
               </div>
               <div v-else class="flex items-center gap-2">

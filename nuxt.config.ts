@@ -273,6 +273,15 @@ export default defineNuxtConfig({
 
 			// Default team
 			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
+
+			// Build identity — used by the deploy-update checker (plugins/app-update.client.ts).
+			// Baked into the client bundle at build time; the live /api/version route reports
+			// the running server's value. When they diverge, a new deploy is live and we prompt
+			// the user to refresh. Vercel sets VERCEL_GIT_COMMIT_SHA on every deploy.
+			buildId:
+				process.env.NUXT_PUBLIC_BUILD_ID ||
+				process.env.VERCEL_GIT_COMMIT_SHA ||
+				'dev',
 		},
 	},
 

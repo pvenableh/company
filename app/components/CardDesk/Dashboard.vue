@@ -14,6 +14,8 @@ const {
 	fetchStats,
 	fetchContacts,
 	fetchContactActivities,
+	fetchContactPlans,
+	fetchContactTasks,
 	updateContact,
 	setIsClient,
 	addActivity,
@@ -38,6 +40,56 @@ const contactsLoading = ref(false);
 const selectedContact = ref<any>(null);
 const contactActivities = ref<any[]>([]);
 const activitiesLoading = ref(false);
+
+// CardDesk follow-up plans & tasks for the selected contact (read-only).
+const contactPlans = ref<any[]>([]);
+const contactTasks = ref<any[]>([]);
+const plansLoading = ref(false);
+
+// Tasks grouped under their plan, with a trailing "Other follow-ups" bucket.
+const taskGroups = computed(() => {
+	const byPlan = new Map<string, any[]>();
+	const ungrouped: any[] = [];
+	for (const t of contactTasks.value) {
+		const planId = typeof t.plan === 'object' ? t.plan?.id : t.plan;
+		if (planId) {
+			if (!byPlan.has(planId)) byPlan.set(planId, []);
+			byPlan.get(planId)!.push(t);
+		} else {
+			ungrouped.push(t);
+		}
+	}
+	const groups: Array<{ id: string; title: string; tasks: any[] }> = [];
+	for (const p of contactPlans.value) {
+		const list = byPlan.get(p.id);
+		if (list?.length) {
+			groups.push({ id: p.id, title: p.title || 'Untitled plan', tasks: list });
+			byPlan.delete(p.id);
+		}
+	}
+	for (const [planId, list] of byPlan) groups.push({ id: planId, title: 'Plan', tasks: list });
+	if (ungrouped.length) groups.push({ id: '__none', title: 'Other follow-ups', tasks: ungrouped });
+	return groups;
+});
+
+const pendingTaskCount = computed(() => contactTasks.value.filter((t) => t.status === 'pending').length);
+
+const taskChannelIcons: Record<string, string> = {
+	email: 'i-heroicons-envelope',
+	linkedin: 'i-heroicons-link',
+	call: 'i-heroicons-phone',
+	meet: 'i-heroicons-users',
+	other: 'i-heroicons-ellipsis-horizontal-circle',
+};
+
+const formatTaskDue = (due: string | null): { label: string; overdue: boolean } | null => {
+	if (!due) return null;
+	const d = new Date(due);
+	if (Number.isNaN(d.getTime())) return null;
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	return { label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), overdue: d.getTime() < today.getTime() };
+};
 
 // Rating tabs feed UTabs (the project's floating-pill segmented control).
 // `dotColor` paints the small status dot before each label; `count`
@@ -65,6 +117,14 @@ const activityIcons: Record<string, string> = {
 	call: 'i-heroicons-phone',
 	meeting: 'i-heroicons-users',
 	linkedin: 'i-heroicons-link',
+	// CardDesk lifecycle / system events (2026-06):
+	card_scanned: 'i-heroicons-viewfinder-circle',
+	contact_added: 'i-heroicons-user-plus',
+	stage_change: 'i-heroicons-arrows-right-left',
+	converted_lead: 'i-heroicons-arrow-trending-up',
+	converted_client: 'i-heroicons-briefcase',
+	converted_partner: 'i-heroicons-user-group',
+	promoted_to_earnest: 'i-heroicons-arrow-up-right',
 	other: 'i-heroicons-ellipsis-horizontal',
 };
 
@@ -91,6 +151,9 @@ const loadContacts = async () => {
 const openContact = async (contact: any) => {
 	selectedContact.value = contact;
 	activitiesLoading.value = true;
+	plansLoading.value = true;
+	contactPlans.value = [];
+	contactTasks.value = [];
 	try {
 		contactActivities.value = await fetchContactActivities(contact.id);
 	} catch (e) {
@@ -99,11 +162,25 @@ const openContact = async (contact: any) => {
 	} finally {
 		activitiesLoading.value = false;
 	}
+	// Plans/tasks load in parallel and degrade quietly (read perms may not be
+	// applied yet — see scripts/setup-carddesk-permissions.ts).
+	try {
+		const [p, t] = await Promise.all([
+			fetchContactPlans(contact.id),
+			fetchContactTasks(contact.id),
+		]);
+		contactPlans.value = p;
+		contactTasks.value = t;
+	} finally {
+		plansLoading.value = false;
+	}
 };
 
 const closeDetail = () => {
 	selectedContact.value = null;
 	contactActivities.value = [];
+	contactPlans.value = [];
+	contactTasks.value = [];
 };
 
 // ── Mutations on the selected contact ─────────────────────────────────────
@@ -523,13 +600,7 @@ onMounted(async () => {
 											Lead opened · {{ promotedInfo.leadStage }} stage
 										</div>
 									</div>
-									<button
-										type="button"
-										class="text-[11px] font-medium text-primary hover:underline whitespace-nowrap"
-										@click="contactSlide.open(String(promotedInfo.contactId))"
-									>
-										View →
-									</button>
+									<UiViewLink size="sm" class="whitespace-nowrap" @click="contactSlide.open(String(promotedInfo.contactId))">View</UiViewLink>
 								</div>
 							</div>
 							<button
@@ -597,6 +668,57 @@ onMounted(async () => {
 						<p v-if="selectedContact.notes" class="mt-3 text-xs text-gray-500 italic border-t pt-2">
 							{{ selectedContact.notes }}
 						</p>
+					</div>
+
+					<!-- Plans & Tasks — CardDesk follow-up plan (read-only), grouped. -->
+					<div v-if="plansLoading || taskGroups.length" class="p-4 border-b border-gray-100 dark:border-gray-700">
+						<div class="flex items-center justify-between mb-3">
+							<h4 class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider flex items-center gap-1.5">
+								<UIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
+								Plans &amp; Tasks
+							</h4>
+							<span
+								v-if="pendingTaskCount"
+								class="text-[10px] font-bold px-1.5 h-4 inline-flex items-center rounded-full bg-primary/10 text-primary"
+							>{{ pendingTaskCount }} pending</span>
+						</div>
+
+						<div v-if="plansLoading" class="space-y-2">
+							<div v-for="n in 2" :key="n" class="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+						</div>
+
+						<div v-else class="space-y-4">
+							<div v-for="group in taskGroups" :key="group.id">
+								<p class="text-[11px] font-semibold text-foreground/80 mb-1.5">{{ group.title }}</p>
+								<ul class="space-y-1.5">
+									<li
+										v-for="t in group.tasks"
+										:key="t.id"
+										class="flex items-start gap-2 text-xs rounded-lg border border-border/60 bg-card px-2.5 py-2"
+										:class="{ 'opacity-55': t.status !== 'pending' }"
+									>
+										<UIcon
+											:name="t.status === 'done' ? 'i-heroicons-check-circle' : t.status === 'skipped' ? 'i-heroicons-no-symbol' : (taskChannelIcons[t.channel || 'other'] || taskChannelIcons.other)"
+											class="w-3.5 h-3.5 shrink-0 mt-0.5"
+											:class="t.status === 'done' ? 'text-success' : 'text-gray-400'"
+										/>
+										<div class="flex-1 min-w-0">
+											<p class="font-medium text-foreground" :class="{ 'line-through': t.status !== 'pending' }">
+												{{ t.title || 'Untitled task' }}
+											</p>
+											<p v-if="t.note" class="text-gray-400 mt-0.5 line-clamp-2">{{ t.note }}</p>
+										</div>
+										<span
+											v-if="formatTaskDue(t.due_at)"
+											class="shrink-0 whitespace-nowrap text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+											:class="formatTaskDue(t.due_at)!.overdue && t.status === 'pending' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'"
+										>
+											{{ formatTaskDue(t.due_at)!.label }}
+										</span>
+									</li>
+								</ul>
+							</div>
+						</div>
 					</div>
 
 					<!-- Activity Timeline -->

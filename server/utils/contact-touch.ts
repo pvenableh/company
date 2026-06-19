@@ -75,6 +75,19 @@ export async function touchContacts(
         }),
       ),
     );
+
+    // Card Desk writeback: mirror email/meeting touches back onto any linked
+    // cd_contacts timeline so a promoted card stays in sync with the CRM.
+    // Other channels (message/task/manual) are out of the confirmed sync
+    // scope. Batched (one cd_contacts lookup) + error-safe — never blocks the
+    // touch above. See server/utils/carddesk-writeback.ts.
+    if (channel === 'email' || channel === 'meeting') {
+      await writebackCardDeskActivityBatch(
+        rows.map((r) => r.id),
+        channel,
+        { date: stamp },
+      );
+    }
   } catch (err: any) {
     console.warn('[contact-touch] lookup failed:', err.message);
   }

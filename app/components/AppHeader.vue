@@ -84,6 +84,21 @@ function goBack() {
 	router.push('/');
 }
 
+// When an app accent is active, expose its HSL components as local CSS
+// vars so the (scoped) title + border + shimmer can tint themselves
+// per-mode. On non-app / default-mode pages `accent` is null → the header
+// renders its neutral "plain" variant (foreground title, neutral border).
+const isAccented = computed(() => !!accent.value);
+const accentVars = computed(() => {
+	const a = accent.value;
+	if (!a) return undefined;
+	return {
+		'--ah-h': String(a.h),
+		'--ah-s': `${a.s}%`,
+		'--ah-l': `${a.l}%`,
+	} as Record<string, string>;
+});
+
 const fallbackBackLabel = computed(() => {
 	if (accent.value) return accent.value.name;
 	const seg = route.path.split('/').filter(Boolean);
@@ -97,7 +112,7 @@ const fallbackBackLabel = computed(() => {
 </script>
 
 <template>
-	<header class="app-header">
+	<header class="app-header" :class="{ 'app-header--accented': isAccented }" :style="accentVars">
 		<div class="app-header__inner">
 			<!-- Back row — sits on its own line above the title so the back
 			     affordance is always discoverable without competing with the
@@ -157,57 +172,34 @@ const fallbackBackLabel = computed(() => {
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
-/* Bar background + bottom border span the full width; the inner container
- * is constrained + padded to the same max-w/p- as LayoutPageContainer so
- * the title aligns vertically with the page content below it. The extra
- * pt-5 pushes the title down from the layout chrome above.
+/* Border-only header (no background fill): the title sits directly on the
+ * page surface — an iOS large-title feel — with only a hairline bottom
+ * border + the river-flow shimmer carrying the app's accent. The inner
+ * container is constrained + padded to the same max-w/p- as
+ * LayoutPageContainer so the title aligns with the page content below it.
  *
- * Liquid-glass header: app-accent-tinted gradient over a translucent
- * substrate, with a saturation boost. Content scrolling under it reads
- * as colored frosted glass, tying the header into the rail's palette
- * tint without competing with it. Falls back to solid bg where blur
- * isn't available or transparency is reduced. */
+ * Two variants, driven by `.app-header--accented`:
+ *   • accented (any /apps/* or /portal/* page) → border + title tint in
+ *     the active app's accent hue (via the --ah-* vars set on the root).
+ *   • plain (default-mode pages, Account, anything with no app accent) →
+ *     neutral border + foreground title. */
 .app-header {
 	@apply relative shrink-0 z-30;
-	border-bottom: 1px solid hsl(var(--app-accent-h, 220) 30% 60% / 0.18);
-	background:
-		linear-gradient(
-			135deg,
-			hsl(var(--app-accent-h, 220) 60% 60% / 0.08) 0%,
-			hsl(var(--app-accent-h, 220) 50% 50% / 0.03) 60%,
-			hsl(calc(var(--app-accent-h, 220) + 30) 55% 55% / 0.06) 100%
-		),
-		hsl(var(--background) / 0.78);
-	backdrop-filter: blur(20px) saturate(160%);
-	-webkit-backdrop-filter: blur(20px) saturate(160%);
-	box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.08) inset;
+	background: transparent;
+	border-bottom: 1px solid hsl(var(--border));
 }
-.dark .app-header {
-	background:
-		linear-gradient(
-			135deg,
-			hsl(var(--app-accent-h, 220) 60% 60% / 0.12) 0%,
-			hsl(var(--app-accent-h, 220) 50% 40% / 0.04) 60%,
-			hsl(calc(var(--app-accent-h, 220) + 30) 55% 50% / 0.08) 100%
-		),
-		hsl(var(--background) / 0.70);
-	box-shadow: 0 1px 0 0 hsl(var(--app-accent-h, 220) 60% 80% / 0.06) inset;
+.app-header--accented {
+	border-bottom-color: hsl(var(--ah-h, 220) var(--ah-s, 50%) 55% / 0.28);
 }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	.app-header { background: hsl(var(--background)); }
-}
-@media (prefers-reduced-transparency: reduce) {
-	.app-header {
-		backdrop-filter: none;
-		-webkit-backdrop-filter: none;
-		background: hsl(var(--background));
-	}
+.dark .app-header--accented {
+	border-bottom-color: hsl(var(--ah-h, 220) var(--ah-s, 50%) 60% / 0.30);
 }
 
 /* River-flow accent shimmer — a faint highlight pass that traces the bottom
  * edge of the header every 7s. Reads as a quiet "current" tying the chrome
- * into the river language without distracting from page content. */
-.app-header::after {
+ * into the river language without distracting from page content. Only the
+ * accented variant carries it (plain pages keep a clean static border). */
+.app-header--accented::after {
 	content: '';
 	position: absolute;
 	left: 0;
@@ -218,9 +210,9 @@ const fallbackBackLabel = computed(() => {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		hsl(var(--app-accent-h, 220) 80% 65% / 0) 20%,
-		hsl(var(--app-accent-h, 220) 90% 70% / 0.65) 50%,
-		hsl(var(--app-accent-h, 220) 80% 65% / 0) 80%,
+		hsl(var(--ah-h, 220) 80% 65% / 0) 20%,
+		hsl(var(--ah-h, 220) 90% 70% / 0.65) 50%,
+		hsl(var(--ah-h, 220) 80% 65% / 0) 80%,
 		transparent 100%
 	);
 	background-size: 220% 100%;
@@ -233,7 +225,7 @@ const fallbackBackLabel = computed(() => {
 	100% { background-position: -120% 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-	.app-header::after { animation: none; opacity: 0.35; background-position: 50% 0; }
+	.app-header--accented::after { animation: none; opacity: 0.35; background-position: 50% 0; }
 }
 
 .app-header__inner {
@@ -242,8 +234,13 @@ const fallbackBackLabel = computed(() => {
 		px-4 md:px-6 pt-5 pb-4;
 }
 
+/* Reserve a constant title-row height so pages WITHOUT action buttons
+ * (e.g. Dashboard) render at the same height as pages with them — no more
+ * vertical "jump" when navigating between them. 2.25rem ≈ the tallest
+ * pill button (h-9). */
 .app-header__row {
 	@apply flex items-center justify-between gap-3;
+	min-height: 2.25rem;
 }
 
 .app-header__tagline {
@@ -380,9 +377,30 @@ html.dark[data-surface='glass'] .app-header__accent-base {
 
 .app-header__title {
 	@apply text-base font-semibold truncate;
+	color: hsl(var(--foreground));
+}
+
+/* Accented variant: tint the title in the active app's accent hue. Darken
+ * a touch in light mode and lighten generously in dark mode so the colour
+ * stays legible against the page surface across every palette. */
+.app-header--accented .app-header__title {
+	color: hsl(var(--ah-h, 220) var(--ah-s, 55%) calc(var(--ah-l, 48%) - 10%));
+}
+.dark .app-header--accented .app-header__title {
+	color: hsl(var(--ah-h, 220) var(--ah-s, 55%) calc(var(--ah-l, 48%) + 30%));
 }
 
 .app-header__actions {
 	@apply flex items-center gap-1.5 shrink-0;
+}
+
+/* Task 1a: every control passed into the actions slot reads as a pill,
+ * regardless of whether the page used <Button> (rounded-md),
+ * <UiActionButton> (rounded-lg), or a raw button. Scoped to the header so
+ * it can't leak into page content. */
+.app-header__actions :deep(button),
+.app-header__actions :deep(a),
+.app-header__actions :deep([data-slot='button']) {
+	border-radius: 9999px;
 }
 </style>

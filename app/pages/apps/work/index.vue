@@ -405,27 +405,19 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
       <!-- ── Projects floor (Timeline + Table views) ──────────────────── -->
       <template v-if="floor === 'projects'">
         <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <!-- View toggle — same `projects` data, two visualisations. -->
-          <div class="inline-flex items-center rounded-md border border-border bg-background p-0.5" role="tablist">
-            <button
-              v-for="opt in [
-                { key: 'timeline', label: 'Timeline', icon: 'lucide:bar-chart-horizontal' },
-                { key: 'table',    label: 'Table',    icon: 'lucide:list' },
-              ]"
-              :key="opt.key"
-              type="button"
-              role="tab"
-              :aria-selected="projectsView === opt.key"
-              class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[5px] text-xs font-medium transition-colors"
-              :class="projectsView === opt.key
-                ? 'bg-muted/70 text-foreground'
-                : 'text-muted-foreground hover:text-foreground'"
-              @click="projectsView = opt.key as ProjectsView"
-            >
-              <Icon :name="opt.icon" class="w-3.5 h-3.5" />
-              {{ opt.label }}
-            </button>
-          </div>
+          <!-- View toggle — same `projects` data, two visualisations.
+               UTabs is the app-wide universal segmented pill control (same
+               component the Tasks tabs + CardDesk tabs use) so every in-page
+               tab strip reads identically. -->
+          <UTabs
+            :model-value="projectsView"
+            :items="[
+              { key: 'timeline', label: 'Timeline', icon: 'lucide:bar-chart-horizontal' },
+              { key: 'table',    label: 'Table',    icon: 'lucide:list' },
+            ]"
+            class="w-fit"
+            @update:model-value="(v) => (projectsView = v as ProjectsView)"
+          />
 
           <!-- Table-only filters. The Gantt view does its own filtering
                inside ProjectTimelineUnifiedGantt. -->

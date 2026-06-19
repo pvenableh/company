@@ -284,7 +284,7 @@ watch(activeTab, (t) => {
 			<AppHeader v-if="isAppsMode" title="Dashboard" />
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Lens Toggle + Assistant Button -->
-				<div class="flex items-end justify-between gap-3 pt-2">
+				<div class="flex items-end justify-between gap-3 pt-6 sm:pt-8">
 					<div class="min-w-0">
 						<!-- Reserve a single-line slot for the greeting so the
 						     dashboard doesn't jump when the AI greeting resolves.
@@ -451,9 +451,13 @@ watch(activeTab, (t) => {
 											>
 												{{ action.priority }}
 											</span>
-											<span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-												{{ action.actionLabel }} &rarr;
-											</span>
+											<!-- Persistent disclosure chevron. Replaces the old "Complete now →"
+											     reveal, which reserved layout width even at opacity-0 and so
+											     permanently pushed the priority tag off the right edge. -->
+											<UIcon
+												name="i-heroicons-chevron-right"
+												class="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200"
+											/>
 										</div>
 									</div>
 								</div>

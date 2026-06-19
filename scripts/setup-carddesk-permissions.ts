@@ -9,6 +9,8 @@
  *   - cd_contacts   (user-owned, full CRUD on own records)
  *   - cd_activities  (user-owned, full CRUD on own records)
  *   - cd_xp_state   (user-owned, full CRUD on own records)
+ *   - cd_plans      (user-owned, READ-only — surfaced in Earnest)
+ *   - cd_tasks      (user-owned, READ-only — surfaced in Earnest)
  *
  * Usage:
  *   pnpm tsx scripts/setup-carddesk-permissions.ts
@@ -201,11 +203,33 @@ function ownRecordsCRUD(collection: string): PermissionRule[] {
   ]
 }
 
+/**
+ * Read-only access to own records. Used for cd_plans / cd_tasks, which are
+ * authored by the CardDesk app itself — Earnest only needs to *surface* them
+ * (Dashboard + SourcePanel), never to mutate them. Filtered by user_created
+ * so users only ever see their own plans/tasks, mirroring cd_contacts.
+ */
+function ownRecordsRead(collection: string): PermissionRule[] {
+  return [
+    {
+      collection,
+      action: 'read',
+      permissions: CREATOR_FILTER,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+  ]
+}
+
 function getCardDeskPermissions(): PermissionRule[] {
   return [
     ...ownRecordsCRUD('cd_contacts'),
     ...ownRecordsCRUD('cd_activities'),
     ...ownRecordsCRUD('cd_xp_state'),
+    // cd_plans / cd_tasks: read-only — surfaced in Earnest, owned by CardDesk.
+    ...ownRecordsRead('cd_plans'),
+    ...ownRecordsRead('cd_tasks'),
   ]
 }
 
@@ -312,6 +336,8 @@ async function main() {
     console.log('  cd_contacts    - Users can CRUD their own contacts')
     console.log('  cd_activities  - Users can CRUD their own activities')
     console.log('  cd_xp_state    - Users can CRUD their own XP/progress data')
+    console.log('  cd_plans       - Users can READ their own plans (surfaced in Earnest)')
+    console.log('  cd_tasks       - Users can READ their own tasks (surfaced in Earnest)')
     console.log('')
     console.log('Admin role has full access by default (no explicit permissions needed).')
   } else {

@@ -20,6 +20,14 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * @deprecated Use <UTabs> instead — it is the app-wide universal segmented
+ * pill-tab control (rounded-full list + sliding animated pill indicator,
+ * with icon/count/dot support). UTabs is what the Tasks, CardDesk and
+ * Projects tab strips all use, so reach for it to keep every in-page tab
+ * strip visually identical. This component is kept only to avoid breaking
+ * any stray imports.
+ */
 export interface PillToggleOption {
 	value: string;
 	label: string;

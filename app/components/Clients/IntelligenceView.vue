@@ -100,7 +100,7 @@
 						</div>
 					</div>
 					<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-						No lead data yet. <NuxtLink to="/leads?new=true" class="text-primary hover:underline">Add a lead →</NuxtLink>
+						No lead data yet. <UiViewLink to="/leads?new=true">Add a lead</UiViewLink>
 					</div>
 				</div>
 
@@ -108,7 +108,7 @@
 				<div class="ios-card p-5">
 					<div class="flex items-center justify-between mb-3">
 						<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pipeline Stage Aging</h3>
-						<NuxtLink to="/apps/clients?view=leads" class="text-[10px] text-primary hover:underline">View pipeline →</NuxtLink>
+						<UiViewLink to="/apps/clients?view=leads">View pipeline</UiViewLink>
 					</div>
 					<div v-if="stageRows.length" class="space-y-2.5">
 						<div v-for="row in stageRows" :key="row.stage" class="flex items-center gap-3">
@@ -167,7 +167,7 @@
 						</NuxtLink>
 					</div>
 					<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-						No partner connections yet. <NuxtLink to="/apps/clients?view=contacts" class="text-primary hover:underline">Find a contact to link →</NuxtLink>
+						No partner connections yet. <UiViewLink to="/apps/clients?view=contacts">Find a contact to link</UiViewLink>
 					</div>
 				</div>
 
@@ -175,7 +175,7 @@
 				<div class="ios-card p-5">
 					<div class="flex items-center justify-between mb-3">
 						<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Top Event Types</h3>
-						<NuxtLink to="/scheduler/settings" class="text-[10px] text-primary hover:underline">Manage →</NuxtLink>
+						<UiViewLink to="/scheduler/settings">Manage</UiViewLink>
 					</div>
 					<div v-if="data.bookings?.topEventTypes?.length" class="space-y-2.5">
 						<div v-for="et in data.bookings.topEventTypes" :key="et.id" class="flex items-center gap-3">
@@ -194,7 +194,7 @@
 						</div>
 					</div>
 					<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
-						No bookings in last 90 days. <NuxtLink to="/scheduler/settings" class="text-primary hover:underline">Set up event types →</NuxtLink>
+						No bookings in last 90 days. <UiViewLink to="/scheduler/settings">Set up event types</UiViewLink>
 					</div>
 				</div>
 			</div>

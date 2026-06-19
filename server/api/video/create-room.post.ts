@@ -282,6 +282,26 @@ export default defineEventHandler(async (event) => {
 						status: 'published',
 					}),
 				);
+
+				// Card Desk writeback: if the lead's contact was sourced from a
+				// Card Desk card, mirror the scheduled meeting onto its timeline.
+				// Error-safe + one-directional (no loop with the promote writeback).
+				try {
+					const lead: any = await directus.request(
+						readItem('leads', body.related_lead, { fields: ['related_contact'] }),
+					);
+					if (lead?.related_contact) {
+						await writebackCardDeskActivity({
+							contactId: String(lead.related_contact),
+							type: 'meeting',
+							label: 'Meeting scheduled in Earnest',
+							note: body.title || null,
+							date: scheduledStart.toISOString(),
+						});
+					}
+				} catch (cdErr: any) {
+					console.warn('[create-room] CardDesk meeting writeback failed:', cdErr?.message);
+				}
 			} catch (activityError) {
 				console.error('Failed to auto-create lead activity:', activityError);
 			}
