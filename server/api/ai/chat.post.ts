@@ -37,7 +37,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations, liveTranscript } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations, liveTranscript, routeScope, routeKey, scope, routeFocus, includedContext } = body;
+
+  // Knowledge gating — the unified panel lets the user deselect what Earnest
+  // can see ("What Earnest can see" chip). `includedContext` is the set of
+  // kept keys ('user' | 'organization' | 'entity'). When absent (older
+  // callers), include everything for back-compat.
+  const ctxGate: Set<string> | null = Array.isArray(includedContext) ? new Set(includedContext) : null;
+  const allowCtx = (k: string) => !ctxGate || ctxGate.has(k);
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -111,9 +118,13 @@ export default defineEventHandler(async (event) => {
             title: message.trim().substring(0, 100),
             status: 'active',
         };
-        // Store entity context so we can find this session later by entity
+        // Store context so we can find this session later. Entity sessions
+        // key off entityType/entityId; route (general) sessions key off the
+        // page's awareness scope so the panel can restore per-scope threads.
         if (entityType && entityId) {
           sessionData.context = { entityType, entityId };
+        } else if (scope || routeScope) {
+          sessionData.context = { scope: scope || routeScope, route: routeKey || routeScope || scope };
         }
         const newSession = await directus.request(
           createItem('ai_chat_sessions', sessionData, {
@@ -177,13 +188,16 @@ export default defineEventHandler(async (event) => {
 
     const now = new Date();
 
-    // Parallel: cached org context from broker + fresh user tasks + client brand override + entity context + saved notes
+    // Parallel: cached org context from broker + fresh user tasks + client brand
+    // override + entity context + saved notes. Each block is gated on the
+    // user's "What Earnest can see" toggles (includedContext) via allowCtx().
     const [cachedContext, taskContext, clientBrandContext, entityContext, notesContext] = await Promise.all([
-      // Org context from broker (L1 → L2 → L3 with stale-while-revalidate)
-      organizationId ? getOrgContext(organizationId).catch(() => null) : Promise.resolve(null),
+      // Org context from broker (L1 → L2 → L3 with stale-while-revalidate).
+      // Gated on the 'organization' knowledge toggle.
+      (organizationId && allowCtx('organization')) ? getOrgContext(organizationId).catch(() => null) : Promise.resolve(null),
 
-      // User tasks — always fresh (user-scoped, cheap query)
-      (async () => {
+      // User tasks — always fresh (user-scoped, cheap query). Gated on 'user'.
+      allowCtx('user') ? (async () => {
         try {
           const tasks = await directus.request(
             readItems('tasks', {
@@ -210,18 +224,18 @@ export default defineEventHandler(async (event) => {
           }
           return ctx;
         } catch { return ''; }
-      })(),
+      })() : Promise.resolve(''),
 
-      // Client-specific brand override (only when a specific client is selected)
-      clientId ? getBrandContext(event, { clientId, organizationId }) : Promise.resolve(''),
+      // Client-specific brand override (only when a specific client is selected). Gated on 'entity'.
+      (clientId && allowCtx('entity')) ? getBrandContext(event, { clientId, organizationId }) : Promise.resolve(''),
 
-      // Entity-scoped context (when chatting from an entity detail page)
-      entityType && entityId && organizationId
+      // Entity-scoped context (when chatting from an entity detail page). Gated on 'entity'.
+      (entityType && entityId && organizationId && allowCtx('entity'))
         ? getEntityContext(entityType, entityId, organizationId).catch(() => '')
         : Promise.resolve(''),
 
-      // User's pinned notes + entity-tagged notes (always fresh, user-scoped)
-      organizationId ? (async () => {
+      // User's pinned notes + entity-tagged notes (always fresh, user-scoped). Gated on 'user'.
+      (organizationId && allowCtx('user')) ? (async () => {
         try {
           const orConditions: any[] = [{ is_pinned: { _eq: true } }];
           if (entityType && entityId) {
@@ -322,7 +336,7 @@ export default defineEventHandler(async (event) => {
     // last ~12k chars so a long meeting doesn't blow the context budget;
     // the buffer is already speaker-prefixed.
     let liveTranscriptBlock = '';
-    if (entityType === 'video_meeting' && typeof liveTranscript === 'string' && liveTranscript.trim()) {
+    if (entityType === 'video_meeting' && allowCtx('entity') && typeof liveTranscript === 'string' && liveTranscript.trim()) {
       const TRIM = 12000;
       const trimmed = liveTranscript.length > TRIM
         ? `…\n${liveTranscript.slice(-TRIM)}`
@@ -334,12 +348,19 @@ export default defineEventHandler(async (event) => {
     // to the focused record + permission to use the tools without asking. Without
     // this, the model often hallucinates an id (or asks the user) instead of
     // calling reschedule_project / update_field with the real UUID.
-    const useMutationTools = allowMutations === true && entityType && entityId && organizationId;
+    const useMutationTools = allowMutations === true && entityType && entityId && organizationId && allowCtx('entity');
     const toolNudge = useMutationTools
       ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
       : '';
 
-    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + liveTranscriptBlock + toolNudge + styleContext + verbosityContext;
+    // Route awareness — the human "right now you're looking at …" sentence the
+    // panel derives from the current page, so the model orients to the user's
+    // current surface even on non-entity (general) pages.
+    const focusBlock = typeof routeFocus === 'string' && routeFocus.trim()
+      ? `\n\nCURRENT FOCUS: Right now the user is looking at ${routeFocus.trim()}. Tailor your help to this context.`
+      : '';
+
+    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + liveTranscriptBlock + focusBlock + toolNudge + styleContext + verbosityContext;
 
     // 6. Stream/tool response via SSE
     let provider;

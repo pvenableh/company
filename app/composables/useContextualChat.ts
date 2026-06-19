@@ -26,11 +26,31 @@ interface ContextualMessage {
   feedback?: { rating?: 'positive' | 'negative'; correction?: string };
 }
 
+/**
+ * What this chat is scoped to. Entity chats target a specific record (and can
+ * mutate it via tools); route chats are general per-scope threads (goals,
+ * work, dashboard, …) keyed by the page's awareness scope.
+ */
+type ChatCtx =
+  | { kind: 'entity'; entityType: string; entityId: string }
+  | { kind: 'route'; scope: string; routeKey: string };
+
 interface EntityChat {
   sessionId: string | null;
   messages: ContextualMessage[];
   hydrated: boolean; // whether we've attempted to load from server
   savedMessageIds: Set<string>; // message ids that have already been saved as ai_notes
+  ctx?: ChatCtx;
+}
+
+/** Extra per-send context the panel derives from useEarnestAwareness. */
+export interface SendOpts {
+  /** Human "right now you're looking at …" sentence injected into the prompt. */
+  routeFocus?: string;
+  /** Coarse scope ('work' | 'goals' | 'client' | …) for tone + persistence. */
+  scope?: string;
+  /** Knowledge keys the user kept toggled on ('user' | 'organization' | 'entity'). */
+  includedContext?: string[];
 }
 
 export interface ToolCallState {
@@ -90,7 +110,8 @@ export function useContextualChat() {
       unmarkMessageSaved: (_id: string) => {},
       error: ref<string | null>(null),
       setEntity: (_type: string, _id: string) => {},
-      sendMessage: async (_content: string) => {},
+      setRoute: (_scope: string, _routeKey: string) => {},
+      sendMessage: async (_content: string, _opts?: SendOpts) => {},
       cancelStream: () => {},
       clearChat: () => {},
     };
@@ -170,6 +191,32 @@ export function useContextualChat() {
     }
   };
 
+  /** Load the most recent route-scoped session (general / per-scope thread). */
+  const hydrateFromRoute = async (scope: string, routeKey: string, chat: EntityChat) => {
+    if (chat.hydrated) return;
+    chat.hydrated = true;
+    try {
+      isLoadingHistory.value = true;
+      const data = await $fetch('/api/ai/sessions/by-route', {
+        params: { scope, routeKey },
+      }) as any;
+      if (data?.session && data.messages?.length) {
+        chat.sessionId = data.session.id;
+        chat.messages = data.messages.map((m: any) => {
+          const id = String(m.id);
+          return { id, serverId: id, key: id, role: m.role, content: m.content, date_created: m.date_created };
+        });
+        if (Array.isArray(data.savedMessageIds)) {
+          chat.savedMessageIds = new Set<string>(data.savedMessageIds.map((id: any) => String(id)));
+        }
+      }
+    } catch (e: any) {
+      console.error('[ContextualChat] Failed to hydrate route session:', e.message);
+    } finally {
+      isLoadingHistory.value = false;
+    }
+  };
+
   const setEntity = (entityType: string, entityId: string) => {
     activeEntityKey.value = getEntityKey(entityType, entityId);
     // Cancel any in-progress stream when switching entities
@@ -178,15 +225,30 @@ export function useContextualChat() {
     }
     // Hydrate from server if not yet loaded
     const chat = getOrCreateChat(activeEntityKey.value);
+    chat.ctx = { kind: 'entity', entityType, entityId };
     hydrateFromServer(entityType, entityId, chat);
   };
 
-  const sendMessage = async (content: string) => {
+  const setRoute = (scope: string, routeKey: string) => {
+    activeEntityKey.value = `route:${routeKey}`;
+    if (isStreaming.value) {
+      abortController?.abort();
+    }
+    const chat = getOrCreateChat(activeEntityKey.value);
+    chat.ctx = { kind: 'route', scope, routeKey };
+    hydrateFromRoute(scope, routeKey, chat);
+  };
+
+  const sendMessage = async (content: string, opts: SendOpts = {}) => {
     if (!content.trim() || isSending.value || !activeEntityKey.value) return;
 
     const key = activeEntityKey.value;
     const chat = getOrCreateChat(key);
-    const [entityType, entityId] = key.split(':');
+    // Derive scope from the stored ctx (route or entity); the key-split is no
+    // longer safe now that route keys contain extra segments.
+    const ctx = chat.ctx;
+    const entityType = ctx?.kind === 'entity' ? ctx.entityType : '';
+    const entityId = ctx?.kind === 'entity' ? ctx.entityId : '';
 
     isSending.value = true;
     isStreaming.value = true;
@@ -237,10 +299,18 @@ export function useContextualChat() {
           organizationId: typeof selectedOrg.value === 'string' ? selectedOrg.value : (selectedOrg.value as any)?.id || undefined,
           responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
           verbosity: useAIPreferences().responseVerbosity.value,
-          entityType,
-          entityId,
-          allowMutations: true,
+          // Entity scope: only for entity chats (enables mutation tools + entity context).
+          entityType: entityType || undefined,
+          entityId: entityId || undefined,
+          allowMutations: ctx?.kind === 'entity',
           liveTranscript: liveTranscript || undefined,
+          // Route scope: general per-scope thread persistence.
+          routeScope: ctx?.kind === 'route' ? ctx.scope : undefined,
+          routeKey: ctx?.kind === 'route' ? ctx.routeKey : undefined,
+          // Awareness: the human focus sentence + the knowledge the user kept on.
+          scope: opts.scope,
+          routeFocus: opts.routeFocus,
+          includedContext: opts.includedContext,
         }),
       });
 
@@ -389,6 +459,7 @@ export function useContextualChat() {
     unmarkMessageSaved,
     error,
     setEntity,
+    setRoute,
     sendMessage,
     cancelStream,
     clearChat,

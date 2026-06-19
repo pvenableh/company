@@ -854,17 +854,5 @@ function openContactPivot() {
 		</template>
 
 		<!-- AI sidebar overlay — page mode only (panel container is transformed) -->
-		<ClientOnly v-if="!compact">
-			<AIContextualSidebar
-				v-if="sidebarOpen && lead?.id"
-				entity-type="lead"
-				:entity-id="String(lead.id)"
-				:entity-label="[lead.related_contact?.first_name, lead.related_contact?.last_name].filter(Boolean).join(' ') || lead.related_contact?.company || 'Lead'"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</div>
 </template>

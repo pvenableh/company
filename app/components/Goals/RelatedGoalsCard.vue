@@ -55,9 +55,11 @@ const matchingGoals = computed<Goal[]>(() => {
 const topGoals = computed<Goal[]>(() => matchingGoals.value.slice(0, props.limit ?? 3));
 
 const primaryCategory = computed<GoalCategory | null>(() => props.categories[0] ?? null);
+// Goals now live as a floor of the "Me" (Account) app — deep-link straight into
+// that section, pre-filtered by this lens's primary category.
 const seeAllHref = computed(() => {
 	const cat = primaryCategory.value;
-	return cat ? `/goals?category=${cat}` : '/goals';
+	return cat ? `/account?section=goals&category=${cat}` : '/account?section=goals';
 });
 
 const progressColor = (pct: number) => {

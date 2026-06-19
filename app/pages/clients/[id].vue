@@ -1042,17 +1042,5 @@ onUnmounted(() => clearEntity());
     />
 
     <!-- Contextual AI Sidebar -->
-    <ClientOnly>
-      <AIContextualSidebar
-        v-if="sidebarOpen"
-        entity-type="client"
-        :entity-id="client.id"
-        :entity-label="client.name || 'Client'"
-        @close="closeSidebar"
-      />
-      <Transition name="overlay">
-        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-      </Transition>
-    </ClientOnly>
   </LayoutPageContainer>
 </template>

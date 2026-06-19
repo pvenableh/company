@@ -12,6 +12,11 @@ const projectId = route.params.id as string;
 
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
+// Re-fetch when an Earnest mutation tool changes this project. Replaces the old
+// AIContextualSidebar @entity-mutated handler now that the panel is unified.
+const { mutationSignal: aiMutationSignal } = useContextualChat();
+watch(aiMutationSignal, () => { onProjectUpdated(); });
+
 import type { ProjectTabKey } from '~/components/apps/work/ProjectTabsBar.vue';
 const VALID_TABS: ProjectTabKey[] = ['activity', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
 
@@ -98,19 +103,6 @@ onUnmounted(() => clearEntity());
         />
       </ClientOnly>
 
-      <ClientOnly>
-        <AIContextualSidebar
-          v-if="sidebarOpen && project"
-          entity-type="project"
-          :entity-id="String(project.id)"
-          :entity-label="project.title || 'Project'"
-          @close="closeSidebar"
-          @entity-mutated="onProjectUpdated"
-        />
-        <Transition name="overlay">
-          <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-        </Transition>
-      </ClientOnly>
     </LayoutPageContainer>
   </div>
 </template>

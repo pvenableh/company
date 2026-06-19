@@ -25,6 +25,10 @@
 					<AccountProfile />
 				</section>
 
+				<section v-else-if="section === 'goals'" class="w-full">
+					<GoalsWorkspace />
+				</section>
+
 				<section v-else-if="section === 'password'">
 					<h2 class="account-page__heading">Reset Password</h2>
 					<AccountPasswordRequest />
@@ -289,7 +293,7 @@
 import { toast } from 'vue-sonner';
 import { Switch } from '@/components/ui/switch';
 
-type SectionKey = 'profile' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
+type SectionKey = 'profile' | 'goals' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
 
 const { user } = useDirectusAuth();
 const { isAppsMode, railShowLabels, setMode, setRailShowLabels } = useAppsMode();
@@ -304,6 +308,7 @@ useHead({ title: 'Account | Earnest' });
 
 const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'profile',       label: 'Profile',       icon: 'lucide:user-round' },
+	{ key: 'goals',         label: 'Goals',         icon: 'lucide:flag' },
 	{ key: 'password',      label: 'Password',      icon: 'lucide:key-round' },
 	{ key: 'score',         label: 'Earnest Score', icon: 'earnest' },
 	{ key: 'appearance',    label: 'Appearance',    icon: 'lucide:palette' },

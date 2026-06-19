@@ -231,18 +231,6 @@
 		/>
 
 		<!-- Contextual AI Sidebar -->
-		<ClientOnly>
-			<AIContextualSidebar
-				v-if="sidebarOpen"
-				entity-type="ticket"
-				:entity-id="String(localElement.id)"
-				:entity-label="localElement.title || 'Ticket'"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</div>
 </template>
 

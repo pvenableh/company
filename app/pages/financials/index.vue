@@ -446,17 +446,5 @@ const sections = [
     </div>
 
     <!-- Contextual AI Sidebar -->
-    <ClientOnly>
-      <AIContextualSidebar
-        v-if="sidebarOpen"
-        entity-type="financials"
-        entity-id="dashboard"
-        entity-label="Financials"
-        @close="closeSidebar"
-      />
-      <Transition name="overlay">
-        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-      </Transition>
-    </ClientOnly>
   </LayoutPageContainer>
 </template>

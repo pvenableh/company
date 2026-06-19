@@ -428,7 +428,7 @@ watch(() => selectedClient.value, debouncedFetch);
           enter-active-class="transition-all duration-300 ease-out"
           enter-from-class="opacity-0 -translate-y-2 max-h-0"
           enter-to-class="opacity-100 translate-y-0 max-h-[2000px]"
-          leave-active-class="transition-all duration-200 ease-in"
+          leave-active-class="transition-all duration-200 ease-out"
           leave-from-class="opacity-100 translate-y-0 max-h-[2000px]"
           leave-to-class="opacity-0 -translate-y-2 max-h-0"
         >

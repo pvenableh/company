@@ -421,18 +421,6 @@
 		</div>
 
 		<!-- AI Contextual Sidebar -->
-		<ClientOnly>
-			<AIContextualSidebar
-				v-if="sidebarOpen"
-				entity-type="marketing"
-				entity-id="dashboard"
-				entity-label="Marketing Intelligence"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</LayoutPageContainer>
 </template>
 

@@ -431,18 +431,6 @@ function openProject() {
 			</div>
 
 			<!-- AI sidebar overlay — page mode only (panel container is transformed) -->
-			<ClientOnly v-if="!compact">
-				<AIContextualSidebar
-					v-if="sidebarOpen && event?.id"
-					entity-type="project_event"
-					:entity-id="String(event.id)"
-					:entity-label="event.title || 'Event'"
-					@close="closeSidebar"
-				/>
-				<Transition name="overlay">
-					<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-				</Transition>
-			</ClientOnly>
 
 			<!-- Lightbox -->
 			<Teleport to="body">

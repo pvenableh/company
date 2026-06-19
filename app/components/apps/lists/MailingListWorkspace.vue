@@ -241,17 +241,5 @@ defineExpose({ openEdit: () => { showEditModal.value = true; } });
       @deleted="onListDeleted"
     />
 
-    <ClientOnly v-if="!compact">
-      <AIContextualSidebar
-        v-if="sidebarOpen && list"
-        entity-type="list"
-        :entity-id="String(list.id)"
-        :entity-label="list.name || 'Mailing List'"
-        @close="closeSidebar"
-      />
-      <Transition name="overlay">
-        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-      </Transition>
-    </ClientOnly>
   </div>
 </template>

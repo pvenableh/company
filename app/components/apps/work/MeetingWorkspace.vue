@@ -197,11 +197,13 @@ const fetchChat = async () => {
 };
 watch(() => props.meetingId, async (id) => { if (id) await fetchChat(); }, { immediate: true });
 
-// Set the AI sidebar's entity so Ask Earnest works against this meeting.
-// Skip when compact — the parent page owns the entity context.
-watch(meeting, (m) => {
+// Register this meeting as the Earnest panel's entity so Ask Earnest works
+// against it — with recap-surface adaptive prompts derived from the meeting's
+// real action-item counts. Re-runs when the prompts recompute. Skip when
+// compact — the parent page owns the entity context.
+watch([meeting, adaptivePrompts], ([m, prompts]) => {
 	if (props.compact) return;
-	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
+	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting', { surface: 'recap', prompts: prompts as string[] });
 }, { immediate: true });
 onBeforeUnmount(() => {
 	if (!props.compact) clearEntity();
@@ -1407,21 +1409,5 @@ const promoteActionItem = async (idx) => {
 			</div>
 		</template>
 
-		<!-- Contextual AI Sidebar — page mode only; the slide-over container's
-		     transform would otherwise displace the fixed overlay. -->
-		<ClientOnly v-if="!compact">
-			<AIContextualSidebar
-				v-if="sidebarOpen && meeting?.id"
-				entity-type="video_meeting"
-				:entity-id="meeting.id"
-				:entity-label="meeting.title || 'Meeting'"
-				surface="recap"
-				:prompts="adaptivePrompts"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</div>
 </template>

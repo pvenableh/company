@@ -40,7 +40,7 @@ async function handleForgotPassword(values: { email: string }) {
 	<div class="w-full max-w-sm">
 		<Transition
 			enter-active-class="transition-all duration-300 ease-out"
-			leave-active-class="transition-all duration-200 ease-in"
+			leave-active-class="transition-all duration-200 ease-out"
 			enter-from-class="opacity-0 translate-y-2"
 			enter-to-class="opacity-100 translate-y-0"
 			leave-from-class="opacity-100 translate-y-0"

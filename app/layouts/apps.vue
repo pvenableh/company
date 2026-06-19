@@ -80,8 +80,9 @@
 			<AppsAppSlideOverStack />
 		</ClientOnly>
 
+		<!-- Unified Earnest panel (route + entity aware; self-managed open state) -->
 		<ClientOnly>
-			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayInitialPrompt" @close="closeAITray" />
+			<AIEarnestPanel />
 		</ClientOnly>
 		<ClientOnly>
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
@@ -110,26 +111,19 @@
 <script setup lang="ts">
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 import { tokenModalOpen } from '~/composables/useTokenModal';
-import { aiTrayOpen, aiTrayInitialPrompt, openAITray, closeAITray } from '~/composables/useAITray';
+import { openEarnestPanel } from '~/composables/useEarnestPanel';
 
 const { user } = useDirectusAuth();
 const { railPosition } = useAppsMode();
 const { accentStyle } = useAppAccent();
-
-const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
 
 // Reconcile the global slide-over stack from `?slide=` on every route change.
 // Pages opt in via `useAppSlideOver(type)`; this sync makes deep links + back/
 // forward / swipe-back drive the same state.
 useAppSlideOverStackUrlSync();
 
-const handleOpenAI = () => {
-	if (isOnEntityPage.value) {
-		openEntitySidebar();
-	} else {
-		openAITray();
-	}
-};
+// The unified Earnest panel self-derives entity vs route context.
+const handleOpenAI = () => openEarnestPanel();
 
 const spotlightOpen = ref(false);
 const showOrgSwitcher = ref(false);

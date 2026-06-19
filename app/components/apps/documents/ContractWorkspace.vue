@@ -459,17 +459,5 @@ if (!props.compact) {
     <!-- Contextual AI Sidebar — full-page mode only. The slide-over panel
          lives inside a transformed container so this fixed overlay would
          not render at viewport level there. -->
-    <ClientOnly v-if="!compact">
-      <AIContextualSidebar
-        v-if="sidebarOpen && contract?.id"
-        entity-type="contract"
-        :entity-id="String(contract.id)"
-        :entity-label="contract.title || 'Contract'"
-        @close="closeSidebar"
-      />
-      <Transition name="overlay">
-        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-      </Transition>
-    </ClientOnly>
   </div>
 </template>

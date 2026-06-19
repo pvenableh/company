@@ -106,7 +106,8 @@ const {
 	transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .float-leave-active {
-	transition: all 0.2s ease-in;
+	/* iOS exits ease-out, not ease-in — match the enter spring family. */
+	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .float-enter-from {
 	opacity: 0;

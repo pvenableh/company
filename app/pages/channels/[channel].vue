@@ -241,18 +241,6 @@ onMounted(() => {
 		</div>
 
 		<!-- Contextual AI Sidebar -->
-		<ClientOnly>
-			<AIContextualSidebar
-				v-if="sidebarOpen && channelId"
-				entity-type="channel"
-				:entity-id="String(channelId)"
-				:entity-label="`#${params.channel}`"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</div>
 </template>
 

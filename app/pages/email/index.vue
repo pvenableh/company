@@ -604,18 +604,6 @@ onUnmounted(() => clearEntity());
 		</Teleport>
 
 		<!-- AI Contextual Sidebar -->
-		<ClientOnly>
-			<AIContextualSidebar
-				v-if="sidebarOpen"
-				entity-type="email"
-				entity-id="dashboard"
-				entity-label="Email Dashboard"
-				@close="closeSidebar"
-			/>
-			<Transition name="overlay">
-				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
-			</Transition>
-		</ClientOnly>
 	</LayoutPageContainer>
 </template>
 

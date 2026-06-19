@@ -25,9 +25,9 @@
 			<slot />
 		</component>
 
-		<!-- AI Tray (shared across all modes) -->
+		<!-- Unified Earnest panel (route + entity aware; self-managed open state) -->
 		<ClientOnly>
-			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayInitialPrompt" @close="closeAITray" />
+			<AIEarnestPanel />
 		</ClientOnly>
 
 		<!-- Time Tracker Modal (global, triggered from anywhere) -->
@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 import { tokenModalOpen } from '~/composables/useTokenModal';
-import { aiTrayOpen, aiTrayInitialPrompt, openAITray, closeAITray } from '~/composables/useAITray';
+import { openEarnestPanel } from '~/composables/useEarnestPanel';
 
 const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
@@ -69,15 +69,9 @@ const { currentMode } = useLayoutMode();
 // AppRail" class of bugs systemically.
 const { isAppsMode } = useAppsMode();
 
-const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
-
-const handleOpenAI = () => {
-  if (isOnEntityPage.value) {
-    openEntitySidebar();
-  } else {
-    openAITray();
-  }
-};
+// The unified Earnest panel self-derives entity vs route context, so opening
+// it is a single call — no entity-vs-tray branch.
+const handleOpenAI = () => openEarnestPanel();
 const spotlightOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 const tokenModalVisible = tokenModalOpen;
