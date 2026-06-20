@@ -8,6 +8,14 @@ definePageMeta({
 });
 useHead({ title: 'Social Analytics | Client Portal' });
 
+// Social analytics depend on connected platform APIs. While social publishing
+// is disabled this page is hidden from the portal nav — bounce any deep-link
+// back to the portal home.
+const { socialPublishingEnabled } = useSocialPublishing();
+if (!socialPublishingEnabled.value) {
+	await navigateTo('/portal');
+}
+
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 

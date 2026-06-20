@@ -73,6 +73,7 @@ const scheduledAt = ref(
   format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
 const isDraft = ref(false);
+const { socialPublishingEnabled } = useSocialPublishing();
 const ctaUrl = ref('');
 const ctaLabel = ref('');
 const linkedInVisibility = ref<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
@@ -456,8 +457,8 @@ async function save() {
         >
           {{
             creating
-              ? isDraft ? 'Create Draft' : 'Create & Schedule'
-              : isDraft ? 'Save Draft' : 'Save & Schedule'
+              ? isDraft ? 'Create Draft' : (socialPublishingEnabled ? 'Create & Schedule' : 'Create & Plan')
+              : isDraft ? 'Save Draft' : (socialPublishingEnabled ? 'Save & Schedule' : 'Save & Plan')
           }}
         </UButton>
       </div>
@@ -644,11 +645,17 @@ async function save() {
 
       <UCard>
         <template #header>
-          <h2 class="font-semibold text-gray-900 dark:text-white">Schedule</h2>
+          <h2 class="font-semibold text-gray-900 dark:text-white">{{ socialPublishingEnabled ? 'Schedule' : 'Plan date' }}</h2>
         </template>
         <div class="space-y-3">
           <UInput v-model="scheduledAt" type="datetime-local" />
-          <UCheckbox v-model="isDraft" label="Save as draft (won't auto-publish)" />
+          <UCheckbox
+            v-model="isDraft"
+            :label="socialPublishingEnabled ? 'Save as draft (won\'t auto-publish)' : 'Save as draft (keep off the calendar)'"
+          />
+          <p v-if="!socialPublishingEnabled" class="text-[11px] text-muted-foreground">
+            Live publishing is off — this date is an Earnest-only plan, not an auto-publish time.
+          </p>
         </div>
       </UCard>
 

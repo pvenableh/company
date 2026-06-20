@@ -211,20 +211,26 @@ interface NavItem {
 
 // All 11 portal sections, flat. Order roughly groups by category but
 // stays a single list — that's the whole point of the classic layout.
-const navItems: NavItem[] = [
-	{ name: 'Home',      to: '/portal',           icon: 'ph:squares-four-duotone' },
-	{ name: 'Projects',  to: '/portal/projects',  icon: 'lucide:gantt-chart' },
-	{ name: 'Tasks',     to: '/portal/tasks',     icon: 'heroicons:clipboard-document-check' },
-	{ name: 'Tickets',   to: '/portal/tickets',   icon: 'heroicons:queue-list' },
-	{ name: 'Invoices',  to: '/portal/invoices',  icon: 'heroicons:document-text' },
-	{ name: 'Proposals', to: '/portal/proposals', icon: 'heroicons:document-check' },
-	{ name: 'Contracts', to: '/portal/contracts', icon: 'lucide:file-signature' },
-	{ name: 'Content',   to: '/portal/content',   icon: 'lucide:eye' },
-	{ name: 'Social',    to: '/portal/social',    icon: 'lucide:share-2' },
-	{ name: 'Marketing', to: '/portal/marketing', icon: 'lucide:megaphone' },
-	{ name: 'Messages',  to: '/portal/messages',  icon: 'ph:chats-circle-duotone' },
-	{ name: 'Account',   to: '/portal/account',   icon: 'lucide:circle-user-round' },
-];
+// The Social section is social-analytics only, so it's hidden while social
+// publishing/analytics are disabled (see useSocialPublishing / nuxt.config).
+const { socialPublishingEnabled } = useSocialPublishing();
+const navItems = computed<NavItem[]>(() => {
+	const items: NavItem[] = [
+		{ name: 'Home',      to: '/portal',           icon: 'ph:squares-four-duotone' },
+		{ name: 'Projects',  to: '/portal/projects',  icon: 'lucide:gantt-chart' },
+		{ name: 'Tasks',     to: '/portal/tasks',     icon: 'heroicons:clipboard-document-check' },
+		{ name: 'Tickets',   to: '/portal/tickets',   icon: 'heroicons:queue-list' },
+		{ name: 'Invoices',  to: '/portal/invoices',  icon: 'heroicons:document-text' },
+		{ name: 'Proposals', to: '/portal/proposals', icon: 'heroicons:document-check' },
+		{ name: 'Contracts', to: '/portal/contracts', icon: 'lucide:file-signature' },
+		{ name: 'Content',   to: '/portal/content',   icon: 'lucide:eye' },
+		{ name: 'Social',    to: '/portal/social',    icon: 'lucide:share-2' },
+		{ name: 'Marketing', to: '/portal/marketing', icon: 'lucide:megaphone' },
+		{ name: 'Messages',  to: '/portal/messages',  icon: 'ph:chats-circle-duotone' },
+		{ name: 'Account',   to: '/portal/account',   icon: 'lucide:circle-user-round' },
+	];
+	return socialPublishingEnabled.value ? items : items.filter((i) => i.to !== '/portal/social');
+});
 
 function isActiveItem(to: string): boolean {
 	if (to === '/portal') return route.path === '/portal' || route.path === '/portal/';

@@ -5,18 +5,26 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { MessageSquare, MessageCircle, AtSign, Heart, Bell } from 'lucide-vue-next'
 import { getSocialPlatformIcon } from '~/utils/icons'
 
-const { activity, unread, refreshFeed, markRead } = useSocialActivity()
+// Social Inbox (platform comments/mentions/DMs) needs live platform APIs —
+// the whole bell is hidden + does no polling until social publishing is on.
+const { socialPublishingEnabled } = useSocialPublishing()
+
+const { activity, unread, refreshFeed, markRead } = useSocialActivity({
+  enabled: socialPublishingEnabled.value,
+})
 const isOpen = ref(false)
 
 // Hide the bell entirely until at least one social account is connected —
 // otherwise it's a permanent zero-state with no path forward from the popover.
 const { data: accountsData } = useFetch('/api/social/accounts', {
   default: () => ({ data: [] as any[] }),
+  immediate: socialPublishingEnabled.value,
 })
 const hasConnectedAccounts = computed(() => {
   const list = (accountsData.value as any)?.data ?? accountsData.value
   return Array.isArray(list) ? list.length > 0 : false
 })
+const showBell = computed(() => socialPublishingEnabled.value && hasConnectedAccounts.value)
 
 watch(isOpen, (open) => {
   if (open) refreshFeed()
@@ -39,7 +47,7 @@ function activityIcon(type: string) {
 </script>
 
 <template>
-  <Popover v-model:open="isOpen">
+  <Popover v-if="showBell" v-model:open="isOpen">
     <PopoverTrigger as-child>
       <button
         class="flex items-center justify-center relative rounded-full h-8 w-8 hover:bg-muted/50 text-muted-foreground transition-colors"

@@ -7,9 +7,19 @@
 import { publishSocialPost } from '~~/server/utils/social-publish'
 import { getSocialPostById } from '~~/server/utils/social-directus'
 import { requireSocialOrg } from '~~/server/utils/social-tenancy'
+import { isSocialPublishingEnabled } from '~~/server/utils/social-publishing'
 
 export default defineEventHandler(async (event) => {
   const { organizationId } = await requireSocialOrg(event)
+
+  // Kill-switch: external publishing is disabled until the Meta/LinkedIn
+  // app credentials are approved. Studio + manual planning stay available.
+  if (!isSocialPublishingEnabled(event)) {
+    throw createError({
+      statusCode: 403,
+      message: 'Social publishing is currently disabled. Content creation and planning remain available.',
+    })
+  }
   const id = getRouterParam(event, 'id')
   if (!id) {
     throw createError({ statusCode: 400, message: 'Post ID required' })

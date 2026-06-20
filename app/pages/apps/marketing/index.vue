@@ -46,6 +46,7 @@ function openEmailTemplate(id: string) {
 }
 const route = useRoute();
 const toast = useToast();
+const { socialPublishingEnabled } = useSocialPublishing();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
 type FloorKey = 'pulse' | 'campaigns' | 'email' | 'accounts' | 'studio' | 'audience';
@@ -53,7 +54,10 @@ const FLOOR_KEYS: FloorKey[] = ['pulse', 'campaigns', 'email', 'accounts', 'stud
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
-  // Legacy `?floor=social` redirects into Accounts so old bookmarks land somewhere.
+  // Social publishing off → the Accounts floor (platform OAuth + analytics) is
+  // hidden; legacy `?floor=social` and any `?floor=accounts` deep-links land on
+  // Studio instead. When on, legacy `?floor=social` redirects into Accounts.
+  if (!socialPublishingEnabled.value && (v === 'social' || v === 'accounts')) return 'studio';
   if (v === 'social') return 'accounts';
   return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'pulse';
 })();
@@ -63,14 +67,19 @@ watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'pulse' ? undefined : next } });
 });
 
-const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
-  { key: 'pulse', label: 'Pulse', icon: 'lucide:activity' },
-  { key: 'campaigns', label: 'Campaigns', icon: 'lucide:rocket' },
-  { key: 'email', label: 'Email', icon: 'lucide:mail' },
-  { key: 'accounts', label: 'Accounts', icon: 'lucide:share-2' },
-  { key: 'studio', label: 'Studio', icon: 'lucide:palette' },
-  { key: 'audience', label: 'Audience', icon: 'lucide:users' },
-];
+// Accounts floor connects Facebook/Instagram/LinkedIn (OAuth) + per-account
+// analytics — hidden until the platform app credentials are approved.
+const floors = computed<Array<{ key: FloorKey; label: string; icon: string }>>(() => {
+  const all: Array<{ key: FloorKey; label: string; icon: string }> = [
+    { key: 'pulse', label: 'Pulse', icon: 'lucide:activity' },
+    { key: 'campaigns', label: 'Campaigns', icon: 'lucide:rocket' },
+    { key: 'email', label: 'Email', icon: 'lucide:mail' },
+    { key: 'accounts', label: 'Accounts', icon: 'lucide:share-2' },
+    { key: 'studio', label: 'Studio', icon: 'lucide:palette' },
+    { key: 'audience', label: 'Audience', icon: 'lucide:users' },
+  ];
+  return socialPublishingEnabled.value ? all : all.filter((f) => f.key !== 'accounts');
+});
 
 // Accounts floor sub-views (`?view=overview|settings`). Settings is the
 // in-app home of the legacy `/social/settings` page.
@@ -900,6 +909,7 @@ const scopeLabel = computed(() => {
               :loading="pulseLoading"
             />
             <MarketingKPICard
+              v-if="socialPublishingEnabled"
               label="Social Reach"
               :value="formatNumber(pulseTotalReach)"
               tone="fuchsia"
@@ -976,8 +986,10 @@ const scopeLabel = computed(() => {
             </div>
           </div>
 
-          <!-- Last 7 days activity grid -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Last 7 days activity grid — recent published posts + connected
+               channels. Both depend on live publishing/analytics, so they're
+               hidden until the platform credentials are approved. -->
+          <div v-if="socialPublishingEnabled" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="ios-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

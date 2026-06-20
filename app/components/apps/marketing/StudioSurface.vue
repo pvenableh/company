@@ -21,6 +21,7 @@ import PlanGridCard from './PlanGridCard.vue';
 
 const toast = useToast();
 const { currentClient, selectedClient } = useClients();
+const { socialPublishingEnabled } = useSocialPublishing();
 
 const projectItems = useDirectusItems('projects');
 const clientItems = useDirectusItems('clients');
@@ -50,11 +51,28 @@ const STUDIO_LENS_OPTIONS: { key: StudioView; label: string; icon: string }[] = 
   { key: 'analytics', label: 'Analytics', icon: 'lucide:bar-chart-2' },
 ];
 
+// Inbox (social DMs/messaging) + Analytics depend on connected platform APIs.
+// While social publishing is disabled they're hidden everywhere — the lens
+// chooser, the overview grid, and the rendered surfaces below. The River
+// planner + Approval/Upcoming planning lenses stay.
+const lensOptions = computed(() =>
+  socialPublishingEnabled.value
+    ? STUDIO_LENS_OPTIONS
+    : STUDIO_LENS_OPTIONS.filter((o) => o.key !== 'inbox' && o.key !== 'analytics'),
+);
+
 const route = useRoute();
 const router = useRouter();
-const initialView: StudioView = STUDIO_VIEW_KEYS.includes(route.query.view as StudioView)
-  ? (route.query.view as StudioView)
-  : 'approval';
+function coerceView(v: StudioView): StudioView {
+  // Hidden lenses (inbox/analytics) fall back to Approval when publishing is off.
+  if (!socialPublishingEnabled.value && (v === 'inbox' || v === 'analytics')) return 'approval';
+  return v;
+}
+const initialView: StudioView = coerceView(
+  STUDIO_VIEW_KEYS.includes(route.query.view as StudioView)
+    ? (route.query.view as StudioView)
+    : 'approval',
+);
 const view = ref<StudioView>(initialView);
 
 // ── Composition Canvas (P3 — always on after P3.5) ───────────────
@@ -111,9 +129,9 @@ watch(view, (next) => {
 });
 // Sync the other direction too — back/forward navigation should flip the toggle.
 watch(() => route.query.view, (qv) => {
-  const next: StudioView = STUDIO_VIEW_KEYS.includes(qv as StudioView)
-    ? (qv as StudioView)
-    : 'approval';
+  const next: StudioView = coerceView(
+    STUDIO_VIEW_KEYS.includes(qv as StudioView) ? (qv as StudioView) : 'approval',
+  );
   if (view.value !== next) view.value = next;
 });
 
@@ -792,7 +810,9 @@ onMounted(() => {
               Scoped to <span class="font-medium text-foreground">{{ (currentClient as any).name }}</span>
             </template>
             <template v-else>
-              Design social posts, share with clients for review, then publish.
+              {{ socialPublishingEnabled
+                ? 'Design social posts, share with clients for review, then publish.'
+                : 'Design social posts, plan them on a calendar, and share with clients for review.' }}
             </template>
           </p>
         </div>
@@ -827,7 +847,7 @@ onMounted(() => {
               <div class="lens-chooser">
                 <p class="lens-chooser__title">Switch lens</p>
                 <button
-                  v-for="opt in STUDIO_LENS_OPTIONS"
+                  v-for="opt in lensOptions"
                   :key="opt.key"
                   type="button"
                   class="lens-chooser__option"
@@ -949,7 +969,7 @@ onMounted(() => {
       :z="zoom.z.value"
       :lens="canvasLens"
       :active-id="zoom.activeId.value"
-      :lens-options="STUDIO_LENS_OPTIONS"
+      :lens-options="lensOptions"
       @post-updated="onCanvasPostUpdated"
       @post-created="onCanvasPostCreated"
       @touch-created="onCanvasTouchCreated"
@@ -962,8 +982,8 @@ onMounted(() => {
          not approaching the overview. -->
     <template #lens-thumb="{ lens: thumbLens }">
       <SocialRiverSurface v-if="thumbLens === 'calendar'" />
-      <SocialInboxSurface v-else-if="thumbLens === 'inbox'" />
-      <SocialAnalyticsSurface v-else-if="thumbLens === 'analytics'" />
+      <SocialInboxSurface v-else-if="thumbLens === 'inbox' && socialPublishingEnabled" />
+      <SocialAnalyticsSurface v-else-if="thumbLens === 'analytics' && socialPublishingEnabled" />
       <div v-else-if="thumbLens === 'approval'" class="studio-thumb-grid">
         <template v-for="bucket in postsByPlan.slice(0, 4)" :key="bucket.plan?.id ?? 'orphan'">
           <PlanGridCard
@@ -1051,9 +1071,11 @@ onMounted(() => {
         <div class="studio-empty__mark">
           <Icon name="lucide:calendar-clock" class="w-9 h-9" />
         </div>
-        <p class="text-base font-semibold text-foreground">Nothing scheduled</p>
+        <p class="text-base font-semibold text-foreground">Nothing planned</p>
         <p class="text-sm text-muted-foreground/80 max-w-sm text-center">
-          Approved posts with a future publish time and a connected platform will show up here.
+          {{ socialPublishingEnabled
+            ? 'Approved posts with a future publish time and a connected platform will show up here.'
+            : 'Approved posts with a future planned date will show up here.' }}
         </p>
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -1097,8 +1119,8 @@ onMounted(() => {
     <!-- Legacy /social/* page bodies folded into Studio. Each renders lazily —
          we don't mount the others until the user switches to them. -->
     <SocialRiverSurface v-else-if="view === 'calendar'" />
-    <SocialInboxSurface v-else-if="view === 'inbox'" />
-    <SocialAnalyticsSurface v-else-if="view === 'analytics'" />
+    <SocialInboxSurface v-else-if="view === 'inbox' && socialPublishingEnabled" />
+    <SocialAnalyticsSurface v-else-if="view === 'analytics' && socialPublishingEnabled" />
     </CompositionCanvas>
 
     <!-- New Plan — iOS bottom sheet -->
@@ -1241,12 +1263,16 @@ onMounted(() => {
           >
             <div class="flex items-center justify-between gap-2">
               <div>
-                <p class="text-xs font-semibold text-foreground">Schedule</p>
+                <p class="text-xs font-semibold text-foreground">{{ socialPublishingEnabled ? 'Schedule' : 'Plan date' }}</p>
                 <p class="text-[11px] text-muted-foreground">
                   {{
-                    selectedPost.status === 'scheduled'
-                      ? 'Queued for auto-publish.'
-                      : 'Pick a future time to auto-publish on approval.'
+                    socialPublishingEnabled
+                      ? (selectedPost.status === 'scheduled'
+                          ? 'Queued for auto-publish.'
+                          : 'Pick a future time to auto-publish on approval.')
+                      : (selectedPost.status === 'scheduled'
+                          ? 'Planned on the calendar (Earnest only — not auto-published).'
+                          : 'Pick a target date to plan this post on the calendar.')
                   }}
                 </p>
               </div>
@@ -1255,7 +1281,7 @@ onMounted(() => {
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30"
               >
                 <Icon name="lucide:calendar-clock" class="w-3 h-3" />
-                Scheduled
+                {{ socialPublishingEnabled ? 'Scheduled' : 'Planned' }}
               </span>
             </div>
             <div class="flex flex-wrap items-end gap-2">
@@ -1279,7 +1305,9 @@ onMounted(() => {
               v-if="showScheduleHint"
               class="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
             >
-              Approved. Schedule a publish time to push live.
+              {{ socialPublishingEnabled
+                ? 'Approved. Schedule a publish time to push live.'
+                : 'Approved. Add a target date to plan this post on the calendar.' }}
             </div>
 
             <div

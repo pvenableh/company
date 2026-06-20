@@ -17,6 +17,7 @@
  */
 import { publishSocialPost } from '~~/server/utils/social-publish'
 import { findDueScheduledPosts, updateSocialPost } from '~~/server/utils/social-directus'
+import { isSocialPublishingEnabled } from '~~/server/utils/social-publishing'
 
 interface CronBody {
   dryRun?: boolean
@@ -42,6 +43,12 @@ export default defineEventHandler(async (event) => {
     const session = await requireUserSession(event)
     const userId = (session as any).user?.id
     if (!userId) throw createError({ statusCode: 401, message: 'Authentication required' })
+  }
+
+  // Kill-switch: while publishing is disabled, scheduled posts are treated
+  // as manual planning only — never auto-published. No-op the worker.
+  if (!isSocialPublishingEnabled(event)) {
+    return { disabled: true, picked: 0, results: [] }
   }
 
   const dryRun = !!body.dryRun

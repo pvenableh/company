@@ -242,6 +242,15 @@ export default defineNuxtConfig({
 			clientManagerRoleId: process.env.NUXT_PUBLIC_CLIENT_MANAGER_ROLE_ID || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb',
 			directusRoleUser: process.env.NUXT_PUBLIC_DIRECTUS_ROLE_USER,
 
+			// Social publishing kill-switch. OFF until the Meta/Facebook + LinkedIn
+			// app IDs/keys are approved. While false: external publishing, the
+			// scheduled-publish cron, social analytics, and social inbox/messaging
+			// are hidden in the UI and the publish endpoints hard-refuse. Studio
+			// content creation + the manual River/calendar planner (an Earnest-only
+			// planning concept) stay live. Flip to true — or set
+			// NUXT_PUBLIC_SOCIAL_PUBLISHING_ENABLED=true — to restore everything.
+			socialPublishingEnabled: process.env.NUXT_PUBLIC_SOCIAL_PUBLISHING_ENABLED === 'true',
+
 			// Stripe public key
 			stripePublic: isProduction ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 

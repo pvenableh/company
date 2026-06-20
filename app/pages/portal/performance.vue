@@ -21,6 +21,9 @@ useHead({ title: 'Performance | Client Portal' });
 
 const { selectedOrg } = useOrganization();
 const { membership, clientScope } = useOrgRole();
+// Social channels panel depends on connected platform analytics — hidden
+// until social publishing is enabled.
+const { socialPublishingEnabled } = useSocialPublishing();
 
 const campaignItems = usePortalItems('marketing_campaigns');
 
@@ -170,7 +173,7 @@ watch(() => selectedOrg.value, async () => {
 
 				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					<!-- Social channels -->
-					<div class="ios-card p-5">
+					<div v-if="socialPublishingEnabled" class="ios-card p-5">
 						<div class="flex items-center justify-between mb-4">
 							<h2 class="font-medium flex items-center gap-2">
 								<Icon name="ph:chart-line-up-duotone" class="w-4 h-4 text-muted-foreground" />
