@@ -14,7 +14,7 @@
 					</span>
 				</div>
 				<ClientOnly>
-					<div v-if="contactGrowthSeries.length" class="h-8 -mx-1">
+					<div v-if="contactGrowthSeries.length" class="h-8 -mx-1 w-full [&_[data-vis-xy-container]]:w-full [&_[data-vis-xy-container]]:h-full">
 						<VisXYContainer :data="contactGrowthSeries" :y-domain="[0, undefined]" :margin="{ left: 0, right: 0, top: 2, bottom: 2 }">
 							<VisLine
 								:x="(d: any) => d.weekIdx"
@@ -97,7 +97,11 @@
 				</div>
 				<div class="h-[160px] overflow-hidden">
 					<ClientOnly>
-						<div v-if="contactGrowthSeries.length" class="h-full">
+						<!-- w-full + the unovis-container width/height constraints mirror
+						     ChartContainer: without them the raw VisXYContainer falls back to
+						     its default width inside ClientOnly and the line draws off the
+						     right edge of the card. -->
+						<div v-if="contactGrowthSeries.length" class="h-full w-full [&_[data-vis-xy-container]]:w-full [&_[data-vis-xy-container]]:h-full">
 							<VisXYContainer :data="contactGrowthSeries" :y-domain="[0, undefined]" :height="160" :margin="{ left: 30, right: 8, top: 8, bottom: 24 }">
 								<VisLine
 									:x="(d: any) => d.weekIdx"

@@ -84,20 +84,14 @@ function goBack() {
 	router.push('/');
 }
 
-// When an app accent is active, expose its HSL components as local CSS
-// vars so the (scoped) title + border + shimmer can tint themselves
-// per-mode. On non-app / default-mode pages `accent` is null → the header
-// renders its neutral "plain" variant (foreground title, neutral border).
+// Whether an app accent is active. On non-app / default-mode pages `accent`
+// is null → the header renders its neutral "plain" variant (foreground title,
+// neutral border). The accent *colour* is read from the inherited
+// `--app-accent-*` vars (set by the shell's `accentStyle`), NOT from a local
+// copy of `accent.value`'s HSL: the shell reference-binds those to the
+// reliable html-level `--app-{id}-*` vars, so the header tracks the live
+// palette instead of going stale after SSR hydration.
 const isAccented = computed(() => !!accent.value);
-const accentVars = computed(() => {
-	const a = accent.value;
-	if (!a) return undefined;
-	return {
-		'--ah-h': String(a.h),
-		'--ah-s': `${a.s}%`,
-		'--ah-l': `${a.l}%`,
-	} as Record<string, string>;
-});
 
 const fallbackBackLabel = computed(() => {
 	if (accent.value) return accent.value.name;
@@ -112,7 +106,7 @@ const fallbackBackLabel = computed(() => {
 </script>
 
 <template>
-	<header class="app-header" :class="{ 'app-header--accented': isAccented }" :style="accentVars">
+	<header class="app-header" :class="{ 'app-header--accented': isAccented }">
 		<div class="app-header__inner">
 			<!-- Back row — sits on its own line above the title so the back
 			     affordance is always discoverable without competing with the
@@ -180,7 +174,8 @@ const fallbackBackLabel = computed(() => {
  *
  * Two variants, driven by `.app-header--accented`:
  *   • accented (any /apps/* or /portal/* page) → border + title tint in
- *     the active app's accent hue (via the --ah-* vars set on the root).
+ *     the active app's accent hue (via the inherited --app-accent-* vars the
+ *     shell binds from the active palette).
  *   • plain (default-mode pages, Account, anything with no app accent) →
  *     neutral border + foreground title. */
 .app-header {
@@ -189,10 +184,10 @@ const fallbackBackLabel = computed(() => {
 	border-bottom: 1px solid hsl(var(--border));
 }
 .app-header--accented {
-	border-bottom-color: hsl(var(--ah-h, 220) var(--ah-s, 50%) 55% / 0.28);
+	border-bottom-color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 50%) 55% / 0.28);
 }
 .dark .app-header--accented {
-	border-bottom-color: hsl(var(--ah-h, 220) var(--ah-s, 50%) 60% / 0.30);
+	border-bottom-color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 50%) 60% / 0.30);
 }
 
 /* River-flow accent shimmer — a faint highlight pass that traces the bottom
@@ -210,9 +205,9 @@ const fallbackBackLabel = computed(() => {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		hsl(var(--ah-h, 220) 80% 65% / 0) 20%,
-		hsl(var(--ah-h, 220) 90% 70% / 0.65) 50%,
-		hsl(var(--ah-h, 220) 80% 65% / 0) 80%,
+		hsl(var(--app-accent-h, 220) 80% 65% / 0) 20%,
+		hsl(var(--app-accent-h, 220) 90% 70% / 0.65) 50%,
+		hsl(var(--app-accent-h, 220) 80% 65% / 0) 80%,
 		transparent 100%
 	);
 	background-size: 220% 100%;
@@ -384,10 +379,10 @@ html.dark[data-surface='glass'] .app-header__accent-base {
  * a touch in light mode and lighten generously in dark mode so the colour
  * stays legible against the page surface across every palette. */
 .app-header--accented .app-header__title {
-	color: hsl(var(--ah-h, 220) var(--ah-s, 55%) calc(var(--ah-l, 48%) - 10%));
+	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 55%) calc(var(--app-accent-l, 48%) - 10%));
 }
 .dark .app-header--accented .app-header__title {
-	color: hsl(var(--ah-h, 220) var(--ah-s, 55%) calc(var(--ah-l, 48%) + 30%));
+	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 55%) calc(var(--app-accent-l, 48%) + 30%));
 }
 
 .app-header__actions {

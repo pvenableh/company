@@ -1597,11 +1597,11 @@ async function main() {
 	});
 	if (!adminUser) process.exit(1);
 
-	// Reset the admin's appearance to the default palette so the marketing
-	// screenshots show the default Fresh palette, not a stale stored choice.
+	// Reset the admin's appearance to the real default palette so screenshots
+	// show the default Neutral palette, not a stale stored choice.
 	{
-		const res = await directusRequest(`/users/${adminUser.id}`, 'PATCH', { app_palette: 'seaMist' });
-		if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${DEMO_ADMIN_EMAIL}`);
+		const res = await directusRequest(`/users/${adminUser.id}`, 'PATCH', { app_palette: 'neutral' });
+		if (res.ok) console.log(`  [ok]   reset app_palette → neutral for ${DEMO_ADMIN_EMAIL}`);
 		else console.warn(`  [warn] could not reset app_palette for ${DEMO_ADMIN_EMAIL}: ${res.error}`);
 	}
 
@@ -1623,8 +1623,8 @@ async function main() {
 		if (user) {
 			teammateIds.push(user.id);
 			// Reset each teammate's appearance to the default palette too.
-			const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'seaMist' });
-			if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${t.email}`);
+			const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'neutral' });
+			if (res.ok) console.log(`  [ok]   reset app_palette → neutral for ${t.email}`);
 			else console.warn(`  [warn] could not reset app_palette for ${t.email}: ${res.error}`);
 			await ensureMembership(org.id, user.id, roles.member, `teammate ${t.email}`);
 		}

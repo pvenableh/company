@@ -14,8 +14,7 @@
  * Mobile (< md) forces bottom via useAppsMode.
  */
 import { useMediaQuery } from '@vueuse/core';
-import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, getPaletteChrome, iconHighlightForAccent, type AppAccent } from '~/composables/useAppAccent';
-import { useAppPalette } from '~/composables/useAppPalette';
+import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, iconHighlightForAccent, type AppAccent } from '~/composables/useAppAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 // Haptic tap on app switch — mirrors AppSegmentedControl + AppFloorStrip
@@ -25,18 +24,16 @@ const { tap: hapticTap } = useHaptic();
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
-const { accents } = useAppAccent();
-const { palette, glassChrome } = useAppPalette();
+/**
+ * `accents` and `chipMode` MUST come from the same `useAppAccent()` call so
+ * they resolve against one palette ref. Deriving chipMode from a separate
+ * `useAppPalette()` here let the two desync during hydration — accents would
+ * flip to the user's palette (e.g. Neutral) while chipMode stayed on the SSR
+ * default, rendering Neutral's same-hue glyphs on gradient chips → invisible
+ * icons. One source keeps gradient-vs-frosted in lockstep with the glyph hue.
+ */
+const { accents, chipMode } = useAppAccent();
 const { countFor } = useUnreadByCategory();
-
-/** Active chip rendering mode — `palette` for gradient chips, `neutral`
- *  for the frosted-grey-with-accent-icon look. Glass-chrome toggle is
- *  orthogonal: when ON it forces neutral regardless of palette, so
- *  Sea Mist / Aurora users can wear the calm frosted look too. */
-const chipMode = computed(() => {
-	if (glassChrome.value) return 'neutral';
-	return getPaletteChrome(palette.value).chipMode;
-});
 
 function badgeFor(app: AppAccent): number {
 	if (!app.notificationCategories?.length) return 0;

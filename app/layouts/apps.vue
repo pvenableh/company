@@ -67,8 +67,19 @@
 
 			<!-- Rail always renders as a single floating pill — left/right
 			     hug the side edges (vertical), top/bottom hug those edges
-			     (horizontal). Position-driven styling lives on the rail itself. -->
-			<AppRail :key="`rail-${railPosition}`" class="apps-shell__rail" />
+			     (horizontal). Position-driven styling lives on the rail itself.
+
+			     Client-only on purpose: the active palette is client-only
+			     knowledge (the `/users/me` palette lookup is unauthenticated
+			     during SSR), so server-rendering the rail necessarily guesses
+			     the default palette. Hydrating that guess left the adopted DOM
+			     stuck on the default after the real palette resolved async —
+			     Neutral/Glass users saw gradient chips whose same-hue glyphs
+			     vanished into them. Rendering on the client skips hydration and
+			     lets normal reactivity paint the resolved palette. -->
+			<ClientOnly>
+				<AppRail :key="`rail-${railPosition}`" class="apps-shell__rail" />
+			</ClientOnly>
 		</div>
 
 		<!-- Universal slide-over stack — one mount-point, looks up each

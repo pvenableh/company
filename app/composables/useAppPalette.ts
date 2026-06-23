@@ -1,10 +1,19 @@
 /**
  * useAppPalette — per-user palette selection for the apps shell.
  *
- * Mirrors `useAppsMode`'s persistence pattern: a module-level ref is the
- * client-side source of truth, hydrated once from `/api/directus/users/me`
- * on first read. Persists to `directus_users.app_palette` so the choice
- * survives sessions and syncs across devices.
+ * Shared state lives in Nuxt `useState` (not a module-level `ref`) so every
+ * consumer — the `app-palette.client` plugin, `useAppAccent` (rail chips +
+ * header), the settings panel — reads the *same* reactive value. A bare
+ * module ref was load-bearing-by-accident: `useAppAccent.ts` and this file
+ * import each other (circular), which let the bundler hand different callers
+ * different module instances, each with its own `localPalette`. The plugin
+ * would hydrate one instance to the user's palette while the rail read
+ * another stuck on the default — so the chips rendered Sea Mist gradients
+ * while `<html data-chip-mode>` said Neutral, and Neutral's same-hue glyphs
+ * vanished into their chips. `useState` is keyed globally, so duplicate
+ * module instances all resolve to one store. It's also SSR-safe: the value
+ * resolved on the server serialises into the payload and hydrates without a
+ * mismatch.
  *
  * The available palettes (id + label + hint + colours) live in
  * `APP_PALETTES` over in `useAppAccent.ts`. Adding a new palette is a
@@ -26,8 +35,14 @@ import {
 
 export type { AppPaletteId };
 
-const localPalette = ref<AppPaletteId | null>(null);
+/** Dedup guard for the one-shot server hydrate. Module-level is fine even if
+ *  the module is instantiated twice — the fetch is idempotent and writes to
+ *  the shared `useState` store, so a double-run just resolves to the same
+ *  value. */
 let hydrationPromise: Promise<void> | null = null;
+
+const GLASS_STORAGE_KEY = 'earnest.appGlassChrome';
+const TINT_STORAGE_KEY = 'earnest.appPaletteTint';
 
 /**
  * Glass-chrome toggle — orthogonal to the palette choice. When ON, every
@@ -41,10 +56,7 @@ let hydrationPromise: Promise<void> | null = null;
  * schema migration for a UI toggle. Promote to a Directus field if
  * cross-device sync becomes important.
  */
-const GLASS_STORAGE_KEY = 'earnest.appGlassChrome';
-const localGlass = ref<boolean | null>(null);
-
-function hydrateGlassFromStorage() {
+function hydrateGlassFromStorage(localGlass: Ref<boolean | null>) {
 	if (typeof window === 'undefined' || localGlass.value !== null) return;
 	try {
 		localGlass.value = window.localStorage.getItem(GLASS_STORAGE_KEY) === 'true';
@@ -65,10 +77,7 @@ function hydrateGlassFromStorage() {
  * ON because the feature is the whole point of the toggle — users who
  * dislike it can disable from the rail settings panel.
  */
-const TINT_STORAGE_KEY = 'earnest.appPaletteTint';
-const localTint = ref<boolean | null>(null);
-
-function hydrateTintFromStorage() {
+function hydrateTintFromStorage(localTint: Ref<boolean | null>) {
 	if (typeof window === 'undefined' || localTint.value !== null) return;
 	try {
 		const stored = window.localStorage.getItem(TINT_STORAGE_KEY);
@@ -80,7 +89,10 @@ function hydrateTintFromStorage() {
 	}
 }
 
-async function hydrateFromServer(updateMe?: (patch: any) => Promise<unknown>) {
+async function hydrateFromServer(
+	localPalette: Ref<AppPaletteId | null>,
+	updateMe?: (patch: any) => Promise<unknown>,
+) {
 	if (hydrationPromise) return hydrationPromise;
 	hydrationPromise = (async () => {
 		try {
@@ -112,11 +124,19 @@ export function useAppPalette() {
 	const { user } = useDirectusAuth();
 	const { updateMe } = useDirectusUsers();
 
+	// Shared, app-wide state — `useState` guarantees a single store keyed by
+	// name even if this module is instantiated more than once (circular
+	// import with useAppAccent). Without this, palette/glass/tint could
+	// diverge between the plugin and the rail. See the file-level note.
+	const localPalette = useState<AppPaletteId | null>('app-palette', () => null);
+	const localGlass = useState<boolean | null>('app-glass-chrome', () => null);
+	const localTint = useState<boolean | null>('app-palette-tint', () => null);
+
 	if (import.meta.client && localPalette.value === null) {
-		hydrateFromServer(updateMe);
+		hydrateFromServer(localPalette, updateMe);
 	}
-	if (import.meta.client) hydrateGlassFromStorage();
-	if (import.meta.client) hydrateTintFromStorage();
+	if (import.meta.client) hydrateGlassFromStorage(localGlass);
+	if (import.meta.client) hydrateTintFromStorage(localTint);
 
 	const palette = computed<AppPaletteId>(() => {
 		if (localPalette.value !== null) return localPalette.value;

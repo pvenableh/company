@@ -549,6 +549,41 @@ const LOGIN_ENDPOINT: Record<Persona, string> = {
 	agency: '/api/auth/demo-agency-login',
 };
 
+/**
+ * Pin the persona's organization as the selected one. A fresh browser context
+ * has no `selectedOrganization` cookie/localStorage, so the app falls back to
+ * the "ALL" scope — which renders org-scoped pages (/organization branding,
+ * /tickets) empty ("No Organization Selected"). Each demo user belongs to one
+ * org, so we fetch its id and pin it via both the cookie and localStorage the
+ * app reads. Best-effort: on any failure we leave the default scope.
+ */
+async function pinSelectedOrg(context: BrowserContext, persona: Persona): Promise<void> {
+	try {
+		const res = await context.request.post(`${APP_URL}/api/directus/items`, {
+			headers: { 'content-type': 'application/json' },
+			data: { collection: 'organizations', operation: 'list', query: { limit: 1, fields: ['id'] } },
+		});
+		if (!res.ok()) return;
+		const json = (await res.json().catch(() => null)) as any;
+		const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+		const orgId = arr[0]?.id;
+		if (!orgId) return;
+		await context.addCookies([
+			{ name: 'selectedOrganization', value: String(orgId), url: APP_URL, sameSite: 'Lax' },
+		]);
+		await context.addInitScript((id) => {
+			try {
+				localStorage.setItem('selectedOrganization', id as string);
+			} catch {
+				/* storage blocked — cookie alone still scopes most pages */
+			}
+		}, String(orgId));
+		console.log(`  ⊙ ${persona} org pinned: ${orgId}`);
+	} catch {
+		/* best effort — fall back to default scope */
+	}
+}
+
 async function loginAsDemo(context: BrowserContext, persona: Persona): Promise<void> {
 	const endpoint = LOGIN_ENDPOINT[persona];
 	const result = await context.request.post(`${APP_URL}${endpoint}`, {
@@ -636,6 +671,18 @@ async function main(): Promise<void> {
 		if (!ctx) {
 			ctx = await browser.newContext({ deviceScaleFactor: 2 });
 			await loginAsDemo(ctx, persona);
+			await pinSelectedOrg(ctx, persona);
+			// Pin the default appearance toggles (glass chrome + palette tint ON)
+			// so captures render the real default Neutral look. These are
+			// localStorage-only client prefs the seed can't set server-side.
+			await ctx.addInitScript(() => {
+				try {
+					localStorage.setItem('earnest.appGlassChrome', 'true');
+					localStorage.setItem('earnest.appPaletteTint', 'true');
+				} catch {
+					/* storage blocked — palette (app_palette) alone still applies */
+				}
+			});
 			contexts.set(persona, ctx);
 		}
 		return ctx;

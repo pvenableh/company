@@ -28,7 +28,7 @@ import type { PermissionMatrix } from '../shared/permissions';
 import {
 	assertDirectusToken,
 	assignTicketsToUser,
-	backdateContacts,
+	backdateAllOrgContacts,
 	directusRequest,
 	ensureMembership,
 	ensureRoles,
@@ -739,6 +739,20 @@ async function seedQuickTasks(
 			},
 			`task "${t.title}"`,
 		);
+		// Always re-anchor the time-relative fields on the existing row.
+		// findOrCreate never updates, so a task seeded on a prior run keeps
+		// its stale (~50-day-old) due_date and the Command Center "Priority
+		// Actions" engine flags it overdue→urgent. PATCH each run so due-dates
+		// reset to today-relative (mildly due/overdue, not 50 days stale).
+		if (row) {
+			const res = await directusRequest(`/items/tasks/${row.id}`, 'PATCH', {
+				due_date: due,
+				status: t.status,
+				date_completed: completedAt,
+			});
+			if (res.ok) console.log(`  [shift] task "${t.title}" → due ${due ?? 'none'}`);
+			else console.warn(`  [warn]  task "${t.title}": ${res.error}`);
+		}
 		// Assign to demo user so /tasks "Assigned to Me" tab is non-empty.
 		if (row && t.assignToSelf) {
 			await findOrCreate(
@@ -748,6 +762,91 @@ async function seedQuickTasks(
 				`task assignee (${t.title})`,
 			);
 		}
+	}
+}
+
+/**
+ * Seed ~8 tickets for the SOLO org so the /tickets kanban (captured under the
+ * solo persona) reads full. The solo seed otherwise creates no tickets, so the
+ * board is nearly empty. Statuses spread across all four columns (Pending /
+ * Scheduled / In Progress / Completed); priorities vary; titles map to the
+ * solo studio's clients/projects with a few standalone. Every ticket is
+ * assigned to the demo user via the tickets_directus_users junction so they
+ * survive the board's default "assigned to me" filter. due_dates are anchored
+ * to today (a mix of a few days out + 1-2 slightly overdue) and re-anchored on
+ * every run. Idempotent on (organization, title) → PATCH status + due_date.
+ */
+async function seedSoloTickets(
+	orgId: string,
+	userId: string,
+	projectIds: Record<string, string>,
+	clientIds: Record<string, string>,
+): Promise<void> {
+	const todayIso = (offset: number) => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + offset);
+		return d.toISOString().slice(0, 10);
+	};
+	const tickets: Array<{
+		title: string;
+		description: string;
+		status: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed';
+		priority: 'low' | 'medium' | 'high';
+		projectKey?: string;
+		clientKey?: string;
+		dueDayOffset: number;
+	}> = [
+		// — In Progress —
+		{ title: 'Helios — launch carousel assets', description: 'Four-frame IG carousel for opening week — final hex + wordmark lockup.', status: 'In Progress', priority: 'high', projectKey: 'helios-launch', clientKey: 'helios-studio', dueDayOffset: 2 },
+		{ title: 'Meridian — redirect map QA', description: 'Verify old → new URL map and run a 404 sweep before cutover.', status: 'In Progress', priority: 'medium', projectKey: 'meridian-refresh', clientKey: 'meridian-law', dueDayOffset: -1 },
+		// — Pending —
+		{ title: 'Helios — lobby signage proofs', description: 'Press-check the wayfinding + room-number set before install.', status: 'Pending', priority: 'medium', projectKey: 'helios-launch', clientKey: 'helios-studio', dueDayOffset: 5 },
+		{ title: 'Driftwood — packaging concept review', description: 'Pull tier sketches together for the first concept pass.', status: 'Pending', priority: 'low', projectKey: 'driftwood-rebrand', dueDayOffset: 7 },
+		{ title: 'Studio — portfolio case-study refresh', description: 'Add the Helios + Meridian work to the studio site.', status: 'Pending', priority: 'low', dueDayOffset: -2 },
+		// — Scheduled —
+		{ title: 'Meridian — practice-page content audit', description: 'Metrics per practice area; flag low-engagement pages.', status: 'Scheduled', priority: 'medium', projectKey: 'meridian-refresh', clientKey: 'meridian-law', dueDayOffset: 4 },
+		{ title: 'Driftwood — photographer booking', description: 'Confirm Ben Wu for the packaging shoot date.', status: 'Scheduled', priority: 'low', projectKey: 'driftwood-rebrand', dueDayOffset: 9 },
+		// — Completed —
+		{ title: 'Helios — brand guidelines PDF export', description: 'Final guidelines deck exported and delivered to Sonia.', status: 'Completed', priority: 'low', projectKey: 'helios-launch', clientKey: 'helios-studio', dueDayOffset: -3 },
+	];
+
+	for (const t of tickets) {
+		const projectId = t.projectKey ? projectIds[t.projectKey] ?? null : null;
+		const clientId = t.clientKey ? clientIds[t.clientKey] ?? null : null;
+		const due = todayIso(t.dueDayOffset);
+		const row = await findOrCreate<any>(
+			'tickets',
+			{ _and: [{ organization: { _eq: orgId } }, { title: { _eq: t.title } }] },
+			{
+				title: t.title,
+				description: t.description,
+				organization: orgId,
+				project: projectId,
+				client: clientId,
+				status: t.status,
+				priority: t.priority,
+				due_date: due,
+			},
+			`ticket "${t.title}"`,
+		);
+		if (!row) continue;
+		// Re-anchor status + due_date on re-run (findOrCreate never updates), so
+		// the kanban columns + due-dates stay fresh across script re-runs.
+		const res = await directusRequest(`/items/tickets/${row.id}`, 'PATCH', {
+			status: t.status,
+			due_date: due,
+		});
+		if (res.ok) console.log(`  [shift] ticket "${t.title}" → ${t.status}, due ${due}`);
+		else console.warn(`  [warn]  ticket "${t.title}": ${res.error}`);
+		// Assign every ticket to the demo user so the board's default
+		// "assigned to me" filter still shows them.
+		await findOrCreate(
+			'tickets_directus_users',
+			{ _and: [{ tickets_id: { _eq: row.id } }, { directus_users_id: { _eq: userId } }] },
+			{ tickets_id: row.id, directus_users_id: userId },
+			`ticket assignee (${t.title})`,
+		);
 	}
 }
 
@@ -794,6 +893,36 @@ function buildSoloTimeEntries(): TimeEntrySeed[] {
 	];
 }
 
+/**
+ * Re-anchor due-dates on every active (non-Completed/Archived) ticket in the
+ * org to a near-future spread (1–6 days out), so no ticket reads as ~50 days
+ * overdue. Catches leftover tickets from older seed versions that the
+ * title-matched `seedSoloTickets` upsert doesn't touch.
+ */
+async function reanchorOrgTicketDueDates(orgId: string): Promise<void> {
+	const filter = encodeURIComponent(JSON.stringify({ organization: { _eq: orgId } }));
+	const res = await directusRequest<any[]>(
+		`/items/tickets?filter=${filter}&fields=id,status&limit=-1`,
+	);
+	const rows = (res.data as any[]) ?? [];
+	const todayIso = (offset: number) => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + offset);
+		return d.toISOString().slice(0, 10);
+	};
+	let i = 0;
+	let touched = 0;
+	for (const t of rows) {
+		if (t.status === 'Completed' || t.status === 'Archived') continue;
+		const due = todayIso((i % 6) + 1);
+		i++;
+		const patch = await directusRequest(`/items/tickets/${t.id}`, 'PATCH', { due_date: due });
+		if (patch.ok) touched++;
+	}
+	console.log(`  [ok]   re-anchored due dates on ${touched}/${rows.length} org tickets`);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -824,12 +953,12 @@ async function main() {
 	});
 	if (!user) process.exit(1);
 
-	// Reset appearance to the default palette. Demo users may carry a
-	// non-default `app_palette` from prior runs; force 'seaMist' so the
-	// marketing screenshots show the default Fresh palette.
+	// Reset appearance to the real default palette. Demo users may carry a
+	// stale `app_palette`; force 'neutral' — the actual default, paired with
+	// palette tint + glass chrome — so screenshots match what users see.
 	{
-		const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'seaMist' });
-		if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${DEMO_USER_EMAIL}`);
+		const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'neutral' });
+		if (res.ok) console.log(`  [ok]   reset app_palette → neutral for ${DEMO_USER_EMAIL}`);
 		else console.warn(`  [warn] could not reset app_palette for ${DEMO_USER_EMAIL}: ${res.error}`);
 	}
 
@@ -843,7 +972,11 @@ async function main() {
 	const contactIds = await seedContacts(org.id, clientIds);
 
 	console.log('\n--- backdate contacts (audience growth chart) ---');
-	await backdateContacts(Object.values(contactIds));
+	// Backdate EVERY contact in the org, not just the seeded ones. Any other
+	// contacts (card scans, signups, prior data) keep clustered recent dates
+	// and spike the People insights growth curve; spreading all of them gives
+	// the chart a smooth slope.
+	await backdateAllOrgContacts(org.id);
 
 	console.log('\n--- leads ---');
 	const leadIds = await seedLeads(org.id, contactIds, clientIds);
@@ -865,6 +998,15 @@ async function main() {
 
 	console.log('\n--- quick tasks ---');
 	await seedQuickTasks(org.id, user.id, projectIds, clientIds);
+
+	console.log('\n--- tickets (kanban — all four columns) ---');
+	await seedSoloTickets(org.id, user.id, projectIds, clientIds);
+
+	// Re-anchor due-dates on EVERY active ticket in the org — including any
+	// leftover tickets from prior seed versions that seedSoloTickets doesn't
+	// match by title. Without this they keep ~50-day-old due_dates and the
+	// Command Center flags them overdue→urgent, cluttering Priority Actions.
+	await reanchorOrgTicketDueDates(org.id);
 
 	console.log('\n--- time entries (this week + running timer) ---');
 	await seedTimeEntries({

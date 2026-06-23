@@ -231,6 +231,35 @@ export async function backdateContacts(
 	console.log(`  [ok]   backdated ${contactIds.length} contacts across ${windowDays} days`);
 }
 
+/**
+ * Fetch every contact id belonging to an org and backdate ALL of them.
+ *
+ * The People-Intelligence growth chart buckets contacts by `date_created`.
+ * Backdating only the SEEDED contacts leaves every OTHER contact in the org
+ * (card scans, signups, prior data) clustered at recent dates, which spikes
+ * the curve. This walks the `contacts_organizations` junction (contacts have
+ * no direct `organization` column — they relate M2M via that junction) to
+ * collect all contact ids for the org, then hands them to `backdateContacts`
+ * for the same even-spread treatment.
+ */
+export async function backdateAllOrgContacts(
+	orgId: string,
+	windowDays = 88,
+): Promise<void> {
+	const filter = encodeURIComponent(
+		JSON.stringify({ organizations_id: { _eq: orgId } }),
+	);
+	const res = await directusRequest<any[]>(
+		`/items/contacts_organizations?filter=${filter}&fields=contacts_id&limit=-1`,
+	);
+	const rows = (res.data as any[]) ?? [];
+	const ids = rows
+		.map((r) => (typeof r.contacts_id === 'object' ? r.contacts_id?.id : r.contacts_id))
+		.filter((id): id is string => Boolean(id));
+	console.log(`  [ok]   found ${ids.length} contacts in org for backdating`);
+	await backdateContacts(ids, windowDays);
+}
+
 // ─── Document system fixtures ─────────────────────────────────────────────
 
 interface BlockSeed {

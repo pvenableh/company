@@ -89,15 +89,15 @@ export interface AppAccent {
 type AppMeta = Pick<AppAccent, 'id' | 'name' | 'shortName' | 'icon' | 'to' | 'notificationCategories'>;
 
 const APP_META: Record<AppId, AppMeta> = {
-	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'ph:compass-tool-duotone',    to: '/' },
-	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'ph:users-three-duotone',     to: '/apps/clients' },
+	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'lucide:layout-dashboard',    to: '/' },
+	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'lucide:users',               to: '/apps/clients' },
 	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
 		notificationCategories: ['tickets', 'projects'] },
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
-	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'ph:waveform-duotone',        to: '/apps/marketing' },
-	organization: { id: 'organization', name: 'Organization', shortName: 'Org',     icon: 'ph:tree-structure-duotone',  to: '/apps/organization' },
-	account:      { id: 'account',      name: 'Account',      shortName: 'Me',      icon: 'lucide:circle-user-round',   to: '/account' },
+	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'lucide:megaphone',           to: '/apps/marketing' },
+	organization: { id: 'organization', name: 'Organization', shortName: 'Org',     icon: 'lucide:building-2',          to: '/apps/organization' },
+	account:      { id: 'account',      name: 'Account',      shortName: 'Me',      icon: 'lucide:circle-user',         to: '/account' },
 };
 
 export type HSL = { h: number; s: number; l: number; a?: number };
@@ -853,6 +853,23 @@ export function useAppAccent() {
 
 	const activeAppId = computed<AppId | null>(() => appIdForPath(route.path));
 
+	/**
+	 * Active chip-rendering mode, resolved from the *same* palette ref that
+	 * drives `accents`. Glass-chrome forces neutral (frosted discs) for any
+	 * palette; otherwise the palette's own chrome decides.
+	 *
+	 * This MUST live here rather than be re-derived in AppRail from a second
+	 * `useAppPalette()` call: the icon-strategy (which can colour a glyph the
+	 * same hue as its chip — e.g. Neutral's `identity` strategy) and the
+	 * chip-mode (gradient vs frosted) have to stay in lockstep, or a
+	 * same-hue glyph lands on a same-hue gradient chip and the icon vanishes.
+	 * Sourcing both from one palette ref guarantees they never desync.
+	 */
+	const chipMode = computed<'palette' | 'neutral'>(() => {
+		if (glassChrome.value) return 'neutral';
+		return getPaletteChrome(palette.value).chipMode;
+	});
+
 	const accent = computed<AppAccent | null>(() =>
 		activeAppId.value ? accents.value[activeAppId.value] : null,
 	);
@@ -863,8 +880,8 @@ export function useAppAccent() {
 	 * inheriting these vars still renders without conditionals.
 	 */
 	const accentStyle = computed<CSSProperties>(() => {
-		const a = accent.value;
-		if (!a) {
+		const id = activeAppId.value;
+		if (!id) {
 			return {
 				'--app-accent-h': '220',
 				'--app-accent-s': '10%',
@@ -873,16 +890,27 @@ export function useAppAccent() {
 				'--app-accent-icon-bright': 'hsl(0 0% 100%)',
 			} as CSSProperties;
 		}
+		// Reference the html-level `--app-{id}-*` vars that
+		// `applyPaletteToDocument` publishes (and re-applies on every palette
+		// switch) rather than the JS-resolved accent. Binding the resolved
+		// accent here goes stale after SSR hydration — the palette resolves
+		// async on the client and the adopted DOM never re-flushes, so the
+		// header/shell stayed on the SSR-default palette (e.g. Sea Mist hues
+		// on a Neutral user). The var-reference string is identical SSR and
+		// client (no hydration mismatch), and the colours track the live
+		// palette purely via CSS inheritance. `activeAppId` is route-derived,
+		// so it's reliable on both server and client. icon-bright is unused
+		// downstream; it mirrors icon to keep the contract intact.
 		return {
-			'--app-accent-h': String(a.h),
-			'--app-accent-s': `${a.s}%`,
-			'--app-accent-l': `${a.l}%`,
-			'--app-accent-icon': formatIconColor(a),
-			'--app-accent-icon-bright': iconHighlightForAccent(a.h, a.s, a.l),
+			'--app-accent-h': `var(--app-${id}-h, 220)`,
+			'--app-accent-s': `var(--app-${id}-s, 10%)`,
+			'--app-accent-l': `var(--app-${id}-l, 48%)`,
+			'--app-accent-icon': `var(--app-${id}-icon, hsl(0 0% 100%))`,
+			'--app-accent-icon-bright': `var(--app-${id}-icon, hsl(0 0% 100%))`,
 		} as CSSProperties;
 	});
 
-	return { activeAppId, accent, accents, accentStyle };
+	return { activeAppId, accent, accents, accentStyle, chipMode };
 }
 
 /**
