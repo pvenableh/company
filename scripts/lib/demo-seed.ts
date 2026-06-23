@@ -796,6 +796,11 @@ export interface ProjectSeed {
 	/** Days from today; negative = started in past. */
 	startDayOffset: number;
 	events: ProjectEventSeed[];
+	/** Optional `key` of another project in the same seed list to nest under.
+	 *  After the main create loop fills `out`, a second pass PATCHes this
+	 *  project's `parent_id` to `out[parentKey]` so the Project Timeline
+	 *  renders the parent/child nesting. */
+	parentKey?: string;
 }
 
 /**
@@ -979,6 +984,24 @@ export async function seedDemoProjects(opts: {
 			}
 		}
 	}
+
+	// Second pass — link any child projects to their parent now that every
+	// project id is in `out`. PATCH is idempotent so re-runs re-assert the
+	// same parent_id without duplicating. Lets the Project Timeline render
+	// the parent/child nesting.
+	for (const p of projects) {
+		if (!p.parentKey) continue;
+		const childId = out[p.key];
+		const parentId = out[p.parentKey];
+		if (!childId || !parentId) {
+			console.warn(`  [warn] project "${p.title}": missing id for parent link (child=${childId}, parent=${parentId})`);
+			continue;
+		}
+		const res = await directusRequest(`/items/projects/${childId}`, 'PATCH', { parent_id: parentId });
+		if (res.ok) console.log(`  [link] project "${p.title}" → parent "${p.parentKey}"`);
+		else console.warn(`  [warn] link "${p.title}" → "${p.parentKey}": ${res.error}`);
+	}
+
 	console.log(`  [ok]   ${projects.length} projects + ${projects.reduce((n, p) => n + p.events.length, 0)} events`);
 	return out;
 }

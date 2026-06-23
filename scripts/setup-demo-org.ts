@@ -326,6 +326,38 @@ function buildSoloProjectSeeds(clientIds: Record<string, string>): ProjectSeed[]
 			],
 		},
 		{
+			key: 'helios-brand-system',
+			title: 'Helios — Brand System',
+			description: 'Sub-project: identity system, type, color, and guidelines.',
+			clientId: clientIds['helios-studio'] ?? null,
+			serviceName: 'Brand & Identity',
+			status: 'In Progress',
+			contractValue: 62_000,
+			startDayOffset: -42,
+			parentKey: 'helios-launch',
+			events: [
+				{ title: 'Brand workshop + moodboards', type: 'General', status: 'Completed', dayOffset: -40, durationDays: 4 },
+				{ title: 'Logo + type system', type: 'Design', status: 'Completed', dayOffset: -30, durationDays: 12 },
+				{ title: 'Guidelines PDF + handoff', type: 'Design', status: 'Active', dayOffset: -4, durationDays: 8 },
+			],
+		},
+		{
+			key: 'helios-website-build',
+			title: 'Helios — Website Build',
+			description: 'Sub-project: marketing site + booking flow on the new brand.',
+			clientId: clientIds['helios-studio'] ?? null,
+			serviceName: 'Web & Digital',
+			status: 'In Progress',
+			contractValue: 48_000,
+			startDayOffset: -20,
+			parentKey: 'helios-launch',
+			events: [
+				{ title: 'Sitemap + key-page wireframes', type: 'Design', status: 'Completed', dayOffset: -18, durationDays: 7 },
+				{ title: 'Responsive build', type: 'Design', status: 'Active', dayOffset: -2, durationDays: 16 },
+				{ title: 'Booking flow QA + launch', type: 'Timeline', status: 'Scheduled', dayOffset: 18, is_milestone: true },
+			],
+		},
+		{
 			key: 'meridian-refresh',
 			title: 'Meridian Site Refresh',
 			description: 'Marketing site redesign with updated practice-area templates.',
@@ -671,9 +703,10 @@ async function seedQuickTasks(
 		{ title: 'Audit referral partner list — Q3 outreach', schedule: 'later', priority: 'low', status: 'new', category: 'quick', assignToSelf: true },
 		{ title: 'Prep Helios case study PDF for portfolio', schedule: 'later', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
 
-		// — Recently completed —
-		{ title: 'Confirm Atlas intro time on Calendly', schedule: 'today', priority: 'high', status: 'completed', category: 'quick' },
-		{ title: 'Sign Helios MSA renewal', schedule: 'this_week', priority: 'high', status: 'completed', category: 'project', clientKey: 'helios-studio' },
+		// — Recently completed — (priorities kept low/medium so the Command
+		// Center Priority Actions engine doesn't surface already-done items)
+		{ title: 'Confirm Atlas intro time on Calendly', schedule: 'today', priority: 'medium', status: 'completed', category: 'quick' },
+		{ title: 'Sign Helios MSA renewal', schedule: 'this_week', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio' },
 	];
 
 	const todayIso = (offset = 0) => {
@@ -739,6 +772,20 @@ function buildSoloTimeEntries(): TimeEntrySeed[] {
 		// Yesterday
 		{ key: 'helios-photo-direction', description: 'Helios — opening photoshoot direction', dayOffset: -1, edtStartHour: 9, durationMinutes: 105, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
 		{ key: 'studio-admin', description: 'Studio admin — invoicing + email', dayOffset: -1, edtStartHour: 16, durationMinutes: 30, billable: false },
+		// — Additional fill so the Time Tracker week reads fuller —
+		// 6 days ago
+		{ key: 'helios-brand-kickoff', description: 'Helios — brand workshop facilitation', dayOffset: -6, edtStartHour: 10, durationMinutes: 120, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 185 },
+		{ key: 'studio-pipeline-review', description: 'Studio — weekly pipeline review', dayOffset: -6, edtStartHour: 15, durationMinutes: 45, billable: false },
+		// 5 days ago
+		{ key: 'meridian-launch-retro', description: 'Meridian — post-launch retro notes', dayOffset: -5, edtStartHour: 16, durationMinutes: 50, projectKey: 'meridian-refresh', clientKey: 'meridian-law', billable: true, hourlyRate: 175 },
+		// 4 days ago
+		{ key: 'driftwood-moodboard', description: 'Driftwood — moodboard + reference pull', dayOffset: -4, edtStartHour: 14, durationMinutes: 80, projectKey: 'driftwood-rebrand', billable: true, hourlyRate: 165 },
+		// 3 days ago
+		{ key: 'helios-deck-polish', description: 'Helios — v2 brand deck polish', dayOffset: -3, edtStartHour: 16, durationMinutes: 70, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		// 2 days ago
+		{ key: 'studio-proposal-atlas', description: 'Atlas — proposal scope + estimate', dayOffset: -2, edtStartHour: 9, durationMinutes: 95, billable: false },
+		// Yesterday
+		{ key: 'driftwood-packaging-sketch', description: 'Driftwood — packaging tier sketches', dayOffset: -1, edtStartHour: 13, durationMinutes: 85, projectKey: 'driftwood-rebrand', billable: true, hourlyRate: 165 },
 		// Today
 		{ key: 'helios-launch-prep', description: 'Helios — launch ceremony prep', dayOffset: 0, edtStartHour: 9, durationMinutes: 60, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
 		// Today — running timer (no end_time, status='running'). The dock
@@ -776,6 +823,15 @@ async function main() {
 		lastName: DEMO_USER_LAST,
 	});
 	if (!user) process.exit(1);
+
+	// Reset appearance to the default palette. Demo users may carry a
+	// non-default `app_palette` from prior runs; force 'seaMist' so the
+	// marketing screenshots show the default Fresh palette.
+	{
+		const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'seaMist' });
+		if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${DEMO_USER_EMAIL}`);
+		else console.warn(`  [warn] could not reset app_palette for ${DEMO_USER_EMAIL}: ${res.error}`);
+	}
 
 	console.log('\n--- membership ---');
 	await ensureMembership(org.id, user.id, roles.member, 'solo demo → Member');

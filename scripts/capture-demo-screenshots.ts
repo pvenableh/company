@@ -87,13 +87,16 @@ const HIDE_OVERLAYS_CSS = `
 
 // ─── Capture plan ───────────────────────────────────────────────────────
 
-type ViewportPreset = 'hero' | 'inline';
+type ViewportPreset = 'hero' | 'inline' | 'tall';
 
 const VIEWPORTS: Record<ViewportPreset, { width: number; height: number; deviceScaleFactor: number }> = {
 	// Hero shot is larger & higher density — used for above-the-fold art.
 	hero: { width: 1440, height: 900, deviceScaleFactor: 2 },
 	// Inline shots on feature pages — slightly smaller.
 	inline: { width: 1280, height: 720, deviceScaleFactor: 2 },
+	// Tall shots for pages whose content card runs past 720px (e.g. the
+	// org Branding panel) so the whole card fits in frame instead of clipping.
+	tall: { width: 1280, height: 1180, deviceScaleFactor: 2 },
 };
 
 type Persona = 'solo' | 'agency';
@@ -332,6 +335,11 @@ const SHOTS: Shot[] = [
 		// route — this is the Apps Layout variant.
 		resolveUrl: async (ctx) =>
 			`${ctx.baseUrl}/apps/clients/${await firstItemId(ctx.page, 'clients', ctx.baseUrl)}`,
+		// Activity tab spinner — wait for it to clear before shooting.
+		waitFor: async (page) => {
+			await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 8000 }).catch(() => {});
+			await page.waitForTimeout(1200);
+		},
 	},
 	{
 		slug: 'project-workspace',
@@ -342,6 +350,12 @@ const SHOTS: Shot[] = [
 		// shot (which still shows the Gantt at /projects/[id]).
 		resolveUrl: async (ctx) =>
 			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
+		// The Activity tab loads via a spinner (animate-spin), which the global
+		// skeleton (animate-pulse) wait doesn't catch — let it clear first.
+		waitFor: async (page) => {
+			await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 8000 }).catch(() => {});
+			await page.waitForTimeout(1200);
+		},
 	},
 	{
 		slug: 'project-documents',
@@ -412,7 +426,7 @@ const SHOTS: Shot[] = [
 	},
 	{
 		slug: 'organization-branding',
-		viewport: 'inline',
+		viewport: 'tall',
 		persona: 'agency',
 		// Same /organization page — but scrolled to the Branding card so
 		// the Whitelabel toggle is in frame. The card lives mid-page; we
@@ -546,18 +560,15 @@ async function loginAsDemo(context: BrowserContext, persona: Persona): Promise<v
 	}
 }
 
-async function captureOne(browser: Browser, shot: Shot): Promise<void> {
+async function captureOne(context: BrowserContext, shot: Shot): Promise<void> {
 	const viewport = VIEWPORTS[shot.viewport];
-	const context = await browser.newContext({
-		viewport: { width: viewport.width, height: viewport.height },
-		deviceScaleFactor: viewport.deviceScaleFactor,
-	});
-	// Each context gets its own login so we can mix viewports AND personas
-	// freely. Demo login is cheap (reads env password + one Directus auth
-	// round-trip).
-	await loginAsDemo(context, shot.persona);
-
+	// A single logged-in context per persona is reused across all of its shots
+	// (see getPersonaContext in main) — one demo-login total per persona
+	// instead of one per shot, which previously tripped the prod login
+	// rate-limiter after ~15 captures. Per-shot viewport is applied to the
+	// page here; deviceScaleFactor is fixed at context creation (all shots @2x).
 	const page = await context.newPage();
+	await page.setViewportSize({ width: viewport.width, height: viewport.height });
 	await page.addStyleTag({ content: HIDE_OVERLAYS_CSS }).catch(() => {
 		/* addStyleTag can race with early navigation; re-applied after goto below. */
 	});
@@ -596,7 +607,7 @@ async function captureOne(browser: Browser, shot: Shot): Promise<void> {
 	await page.screenshot({ path: datedPath, fullPage: false });
 	await copyFile(datedPath, latestPath);
 
-	await context.close();
+	await page.close();
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────
@@ -614,6 +625,21 @@ async function main(): Promise<void> {
 	await mkdir(LATEST_DIR, { recursive: true });
 
 	const browser = await chromium.launch({ headless: true });
+	// One shared, already-authenticated context per persona, created lazily on
+	// first use. Keeps demo-logins to one per persona (was one per shot, which
+	// tripped the prod login rate-limiter after ~15 captures). All shots use
+	// deviceScaleFactor 2, so a single context dsf serves every viewport.
+	const contexts = new Map<Persona, BrowserContext>();
+	const failedPersonas = new Set<Persona>();
+	async function getPersonaContext(persona: Persona): Promise<BrowserContext> {
+		let ctx = contexts.get(persona);
+		if (!ctx) {
+			ctx = await browser.newContext({ deviceScaleFactor: 2 });
+			await loginAsDemo(ctx, persona);
+			contexts.set(persona, ctx);
+		}
+		return ctx;
+	}
 	try {
 		// Capture sequentially — demo data is shared, so we keep the app's
 		// server load predictable and make errors easier to diagnose.
@@ -622,14 +648,27 @@ async function main(): Promise<void> {
 				console.log(`  ⊘ ${shot.slug} (skipped — no DEMO_AGENCY_USER_PASSWORD)`);
 				continue;
 			}
+			if (failedPersonas.has(shot.persona)) {
+				console.log(`  ⊘ ${shot.slug} (skipped — ${shot.persona} login unavailable)`);
+				continue;
+			}
+			let context: BrowserContext;
 			try {
-				await captureOne(browser, shot);
+				context = await getPersonaContext(shot.persona);
+			} catch (err) {
+				failedPersonas.add(shot.persona);
+				console.error(`✗ ${shot.persona} login failed — skipping all ${shot.persona} shots: ${(err as Error).message}`);
+				continue;
+			}
+			try {
+				await captureOne(context, shot);
 			} catch (err) {
 				console.error(`✗ ${shot.slug}: ${(err as Error).message}`);
 				// Keep going — we'd rather have N-1 shots than 0.
 			}
 		}
 	} finally {
+		for (const ctx of contexts.values()) await ctx.close();
 		await browser.close();
 	}
 

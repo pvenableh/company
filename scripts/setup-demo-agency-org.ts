@@ -393,7 +393,18 @@ async function seedProjects(
 	clientIds: Record<string, string>,
 ): Promise<Record<string, string>> {
 	const out: Record<string, string> = {};
-	const projects = [
+	const projects: Array<{
+		key: string;
+		title: string;
+		description: string;
+		clientKey: string;
+		status: string;
+		contract_value: number;
+		template: string;
+		/** Key of another project in this list to nest under (PATCHed in a
+		 *  second pass once every id is known). */
+		parentKey?: string;
+	}> = [
 		{
 			key: 'helios-west-hotel',
 			title: 'Helios West Hotel Launch',
@@ -402,6 +413,28 @@ async function seedProjects(
 			status: 'In Progress',
 			contract_value: 140_000,
 			template: 'branding-project',
+		},
+		// Two sub-projects nested under the Helios launch so the Project
+		// Timeline shows parent/child nesting.
+		{
+			key: 'helios-brand-system',
+			title: 'Helios — Brand System',
+			description: 'Sub-project: identity system, type, color, and guidelines.',
+			clientKey: 'helios-studio',
+			status: 'In Progress',
+			contract_value: 62_000,
+			template: 'branding-project',
+			parentKey: 'helios-west-hotel',
+		},
+		{
+			key: 'helios-website-build',
+			title: 'Helios — Website Build',
+			description: 'Sub-project: marketing site + booking flow on the new brand.',
+			clientKey: 'helios-studio',
+			status: 'In Progress',
+			contract_value: 48_000,
+			template: 'web-project',
+			parentKey: 'helios-west-hotel',
 		},
 		{
 			key: 'meridian-site-refresh',
@@ -441,6 +474,22 @@ async function seedProjects(
 		);
 		if (row) out[p.key] = row.id;
 	}
+
+	// Second pass — link child projects to their parent now that every id is
+	// in `out`. PATCH is idempotent so re-runs re-assert the same parent_id.
+	for (const p of projects) {
+		if (!p.parentKey) continue;
+		const childId = out[p.key];
+		const parentId = out[p.parentKey];
+		if (!childId || !parentId) {
+			console.warn(`  [warn] project "${p.title}": missing id for parent link (child=${childId}, parent=${parentId})`);
+			continue;
+		}
+		const res = await directusRequest(`/items/projects/${childId}`, 'PATCH', { parent_id: parentId });
+		if (res.ok) console.log(`  [link] project "${p.title}" → parent "${p.parentKey}"`);
+		else console.warn(`  [warn] link "${p.title}" → "${p.parentKey}": ${res.error}`);
+	}
+
 	return out;
 }
 
@@ -472,6 +521,16 @@ async function seedProjectEvents(
 		{ key: 'helios-brand-v1', projectKey: 'helios-west-hotel', title: 'Brand system — v1 concepts', description: 'Three concept directions.', type: 'Design', status: 'Completed', approval: 'Approved', event_date: iso(-14), duration_days: 10 },
 		{ key: 'helios-site-build', projectKey: 'helios-west-hotel', title: 'Launch site build', description: 'Marketing site + reservation handoff.', type: 'Design', status: 'Active', approval: 'Need Approval', event_date: iso(5), duration_days: 14 },
 		{ key: 'helios-opening', projectKey: 'helios-west-hotel', title: 'Opening ceremony', description: 'Public launch + press walkthrough.', type: 'Timeline', status: 'Scheduled', is_milestone: true, event_date: iso(21) },
+
+		// Helios — Brand System (sub-project) — 3 events
+		{ key: 'helios-bs-workshop', projectKey: 'helios-brand-system', title: 'Brand workshop + moodboards', description: 'Stakeholder workshop, reference pulls.', type: 'General', status: 'Completed', event_date: iso(-26), duration_days: 4 },
+		{ key: 'helios-bs-logotype', projectKey: 'helios-brand-system', title: 'Logo + type system', description: 'Wordmark, lockups, type scale.', type: 'Design', status: 'Completed', approval: 'Approved', event_date: iso(-16), duration_days: 12 },
+		{ key: 'helios-bs-guidelines', projectKey: 'helios-brand-system', title: 'Guidelines PDF + handoff', description: 'Brand guidelines + Figma library.', type: 'Design', status: 'Active', approval: 'Need Approval', event_date: iso(-2), duration_days: 8 },
+
+		// Helios — Website Build (sub-project) — 3 events
+		{ key: 'helios-wb-wireframes', projectKey: 'helios-website-build', title: 'Sitemap + key-page wireframes', description: 'Homepage, rooms, booking entry.', type: 'Design', status: 'Completed', event_date: iso(-12), duration_days: 7 },
+		{ key: 'helios-wb-build', projectKey: 'helios-website-build', title: 'Responsive build', description: 'Marketing site + reservation handoff.', type: 'Design', status: 'Active', approval: 'Need Approval', event_date: iso(0), duration_days: 16 },
+		{ key: 'helios-wb-launch', projectKey: 'helios-website-build', title: 'Booking flow QA + launch', description: 'Cross-device QA then go-live.', type: 'Timeline', status: 'Scheduled', is_milestone: true, event_date: iso(18) },
 
 		// Meridian — 3 events
 		{ key: 'meridian-kickoff', projectKey: 'meridian-site-refresh', title: 'Kickoff + content inventory', description: 'Walk the current sitemap.', type: 'General', status: 'Completed', event_date: iso(-12), duration_days: 3 },
@@ -677,7 +736,19 @@ async function seedTickets(
 	memberUserIds: string[],
 ): Promise<Record<string, string>> {
 	const out: Record<string, string> = {};
-	const tickets = [
+	// Spread across every status (Pending / Scheduled / In Progress /
+	// Completed) so the Work tickets kanban populates multiple columns, with
+	// varied priorities and assignees rotated across the four teammates.
+	const tickets: Array<{
+		key: string;
+		title: string;
+		description: string;
+		status: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed';
+		priority: 'low' | 'medium' | 'high';
+		projectKey?: string;
+		clientKey?: string;
+		assigneeIdx: number;
+	}> = [
 		{
 			key: 'helios-insta',
 			title: 'Helios — Instagram launch assets',
@@ -685,6 +756,36 @@ async function seedTickets(
 			status: 'In Progress',
 			priority: 'high',
 			projectKey: 'helios-west-hotel',
+			clientKey: 'helios-studio',
+			assigneeIdx: 0,
+		},
+		{
+			key: 'helios-signage',
+			title: 'Helios — lobby signage proofs',
+			description: 'Press-check the wayfinding + room-number set before install.',
+			status: 'Pending',
+			priority: 'medium',
+			projectKey: 'helios-west-hotel',
+			clientKey: 'helios-studio',
+			assigneeIdx: 1,
+		},
+		{
+			key: 'helios-press-kit',
+			title: 'Helios — press kit page build',
+			description: 'Downloadable logos, photography, and founder bios for media.',
+			status: 'Scheduled',
+			priority: 'medium',
+			projectKey: 'helios-website-build',
+			clientKey: 'helios-studio',
+			assigneeIdx: 3,
+		},
+		{
+			key: 'helios-brand-pdf',
+			title: 'Helios — brand guidelines PDF export',
+			description: 'Final guidelines deck exported and delivered to Sonia.',
+			status: 'Completed',
+			priority: 'low',
+			projectKey: 'helios-brand-system',
 			clientKey: 'helios-studio',
 			assigneeIdx: 0,
 		},
@@ -699,6 +800,16 @@ async function seedTickets(
 			assigneeIdx: 2,
 		},
 		{
+			key: 'meridian-redirects',
+			title: 'Meridian — redirect map QA',
+			description: 'Verify the old → new URL map and 404 sweep before cutover.',
+			status: 'In Progress',
+			priority: 'high',
+			projectKey: 'meridian-site-refresh',
+			clientKey: 'meridian-law',
+			assigneeIdx: 3,
+		},
+		{
 			key: 'pinecrest-compliance',
 			title: 'Pinecrest — HIPAA compliance review',
 			description: 'Intake portal field-level review against compliance checklist.',
@@ -707,6 +818,41 @@ async function seedTickets(
 			projectKey: 'pinecrest-patient-portal',
 			clientKey: 'pinecrest-clinic',
 			assigneeIdx: 3,
+		},
+		{
+			key: 'pinecrest-intake-copy',
+			title: 'Pinecrest — intake form microcopy',
+			description: 'Plain-language helper text for each intake step.',
+			status: 'Pending',
+			priority: 'low',
+			projectKey: 'pinecrest-patient-portal',
+			clientKey: 'pinecrest-clinic',
+			assigneeIdx: 1,
+		},
+		{
+			key: 'northwind-pitch-deck',
+			title: 'Northwind — pitch deck polish',
+			description: 'Tighten the leasing-campaign deck ahead of the proposal review.',
+			status: 'In Progress',
+			priority: 'medium',
+			clientKey: 'northwind-dev',
+			assigneeIdx: 2,
+		},
+		{
+			key: 'studio-portfolio-refresh',
+			title: 'Studio — portfolio site case-study refresh',
+			description: 'Add the Helios + Meridian work to the agency site.',
+			status: 'Scheduled',
+			priority: 'low',
+			assigneeIdx: 0,
+		},
+		{
+			key: 'studio-asset-cleanup',
+			title: 'Studio — shared asset library cleanup',
+			description: 'Archive stale files and re-tag the active project folders.',
+			status: 'Completed',
+			priority: 'low',
+			assigneeIdx: 1,
 		},
 	];
 	for (const t of tickets) {
@@ -718,8 +864,8 @@ async function seedTickets(
 				title: t.title,
 				description: t.description,
 				organization: orgId,
-				project: projectIds[t.projectKey] || null,
-				client: clientIds[t.clientKey] || null,
+				project: (t.projectKey ? projectIds[t.projectKey] : null) || null,
+				client: (t.clientKey ? clientIds[t.clientKey] : null) || null,
 				status: t.status,
 				priority: t.priority,
 				due_date: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10),
@@ -1133,6 +1279,206 @@ async function seedMarketingPlans(orgId: string): Promise<void> {
 	);
 }
 
+/**
+ * Seed marketing_recommendations for the agency org so the /marketing
+ * "Earnest actions" feed has cards. The feed (server/api/marketing/
+ * recommendations.get.ts) returns rows with status pending|drafted, sorted
+ * by urgency desc; the card content is *derived* in
+ * components/marketing/RecommendationCard.vue from `card_type` +
+ * `candidate_data` (signal/cluster/audience) + `ranker_output.why_now` —
+ * there is no title/rationale column, so we shape candidate_data to match
+ * what the card reads.
+ *
+ * Idempotent: matched on (organization + card_type + ranker_run_id). On
+ * re-run we PATCH status/urgency and re-anchor surfaced_at/expires_at to
+ * the current week so the cards stay "fresh" (mirrors the appointment +
+ * time-entry re-anchoring pattern). ranker_run_id 'demo-agency-v1' keeps
+ * these distinct from the real ranker + the solo seed-recommendations
+ * script.
+ */
+async function seedMarketingRecommendations(
+	orgId: string,
+	contactIds: Record<string, string>,
+	leadIds: number[],
+): Promise<void> {
+	const RUN_ID = 'demo-agency-v1';
+	const PROMPT_VERSION = 'demo-seed';
+	const now = new Date();
+	const surfaced = now.toISOString();
+	const expires = new Date(now.getTime() + 7 * 86_400_000).toISOString();
+
+	// Northwind leads (qualified + proposal_sent) for the lead_reengagement
+	// audience grounding. leadIds order matches seedLeads: [Ellis(new),
+	// Frey(contacted), Northwind-marcus(qualified), Northwind-sana(proposal),
+	// Driftwood(won)].
+	const northwindLeadIds = [leadIds[2], leadIds[3]].filter((id): id is number => typeof id === 'number');
+
+	const recs: Array<{
+		card_type: string;
+		status: 'pending' | 'drafted';
+		urgency: number;
+		candidate_data: Record<string, any>;
+		ranker_output: Record<string, any>;
+	}> = [
+		// 1. Re-engage lapsed contact at Atlas (inactive client, overdue invoice)
+		{
+			card_type: 'dormant_clients',
+			status: 'pending',
+			urgency: 82,
+			candidate_data: {
+				type: 'dormant_clients',
+				signal: { contact_count: 1, avg_days_since_contact: 47, longest_gap_days: 47, tier: 'at_risk', lifetime_revenue_usd: 54000 },
+				audience: { size: 1, sample_names: ['Julia Holt'], contact_ids: [contactIds['julia@atlas.example']].filter(Boolean) },
+				recency_days: 0,
+				impact_score: 80,
+				deliverables: '1 partner re-engagement email',
+				token_estimate: 900,
+			},
+			ranker_output: {
+				why_now: 'Atlas Fintech has gone 47 days without a touchpoint and an $18K invoice is overdue — a partner-led note will outperform a generic newsletter.',
+				urgency: 82,
+				audience_overlap_with: [],
+			},
+		},
+		// 2. Re-engage Northwind / brand-strategy leads (qualified + proposal out)
+		{
+			card_type: 'lead_reengagement',
+			status: 'pending',
+			urgency: 70,
+			candidate_data: {
+				type: 'lead_reengagement',
+				signal: { lead_count: northwindLeadIds.length || 2, avg_days_inactive: 19, min_days_inactive: 12, max_days_inactive: 26 },
+				cluster: {
+					label: 'Mixed-use property',
+					size: northwindLeadIds.length || 2,
+					representative_intent: 'Brand + marketing site for a mixed-use development',
+					lead_sources_summary: '2 referral',
+					lead_ids: northwindLeadIds,
+				},
+				audience: {
+					size: 2,
+					sample_names: ['Marcus Levi', 'Sana Mirza'],
+					contact_ids: [contactIds['marcus@northwind.example'], contactIds['sana@northwind.example']].filter(Boolean),
+				},
+				recency_days: 3,
+				impact_score: 74,
+				deliverables: '1 case-study follow-up email',
+				token_estimate: 1300,
+			},
+			ranker_output: {
+				why_now: 'The Northwind proposal has been out for sig with no reply — a tailored case-study nudge keeps the $38K leasing-campaign deal warm.',
+				urgency: 70,
+				audience_overlap_with: [],
+			},
+		},
+		// 3. Meridian wrap → testimonial ask
+		{
+			card_type: 'project_complete',
+			status: 'pending',
+			urgency: 63,
+			candidate_data: {
+				type: 'project_complete',
+				phase: 'request_testimonial',
+				signal: {
+					project_title: 'Meridian Site Refresh',
+					client_name: 'Meridian Law Group',
+					primary_contact_name: 'Amara Okafor',
+					days_since_complete: 6,
+					budget_usd: 48000,
+				},
+				audience: { size: 1, sample_names: ['Amara Okafor'], contact_ids: [contactIds['amara@meridian.example']].filter(Boolean) },
+				recency_days: 6,
+				impact_score: 69,
+				deliverables: '1 testimonial-ask email',
+				token_estimate: 700,
+			},
+			ranker_output: {
+				why_now: 'The Meridian site refresh wrapped a week ago — a short testimonial ask lands best while the launch is still fresh.',
+				urgency: 63,
+				audience_overlap_with: [],
+			},
+		},
+		// 4. Helios West opening — event teaser
+		{
+			card_type: 'event_teaser',
+			status: 'pending',
+			urgency: 58,
+			candidate_data: {
+				type: 'event_teaser',
+				signal: { event_name: 'Helios West opening', client_name: 'Helios Hospitality Group', days_until_event: 21 },
+				audience: { size: 3, sample_names: ['Sonia Reyes', 'David Park', 'Maya Iyer'] },
+				recency_days: 0,
+				impact_score: 66,
+				deliverables: '1 teaser email + 2 social posts',
+				token_estimate: 1500,
+			},
+			ranker_output: {
+				why_now: 'Helios West opens in three weeks and only one social post mentions it — owned-channel teasers should ramp now to seed earned coverage.',
+				urgency: 58,
+				audience_overlap_with: [],
+			},
+		},
+		// 5. Pinecrest fall campaign — service promo
+		{
+			card_type: 'service_promo',
+			status: 'pending',
+			urgency: 49,
+			candidate_data: {
+				type: 'service_promo',
+				signal: { service: 'a fall patient-acquisition campaign', client_name: 'Pinecrest Clinic' },
+				audience: { size: 2, sample_names: ['Priya Shah', 'Glen Weaver'] },
+				recency_days: 0,
+				impact_score: 58,
+				deliverables: '1 campaign brief + email sequence outline',
+				token_estimate: 1200,
+			},
+			ranker_output: {
+				why_now: 'Pinecrest\'s patient portal launches into the fall — a paired acquisition campaign is the natural cross-sell while the relationship is active.',
+				urgency: 49,
+				audience_overlap_with: [],
+			},
+		},
+	];
+
+	for (const r of recs) {
+		const existing = await findOne<any>('marketing_recommendations', {
+			_and: [
+				{ organization: { _eq: orgId } },
+				{ ranker_run_id: { _eq: RUN_ID } },
+				{ card_type: { _eq: r.card_type } },
+			],
+		});
+		const payload = {
+			organization: orgId,
+			card_type: r.card_type,
+			status: r.status,
+			urgency: r.urgency,
+			candidate_data: r.candidate_data,
+			ranker_output: r.ranker_output,
+			ranker_run_id: RUN_ID,
+			ranker_prompt_version: PROMPT_VERSION,
+			surfaced_at: surfaced,
+			expires_at: expires,
+		};
+		if (existing) {
+			const res = await directusRequest(`/items/marketing_recommendations/${existing.id}`, 'PATCH', {
+				status: r.status,
+				urgency: r.urgency,
+				candidate_data: r.candidate_data,
+				ranker_output: r.ranker_output,
+				surfaced_at: surfaced,
+				expires_at: expires,
+			});
+			if (res.ok) console.log(`  [shift] recommendation "${r.card_type}" → refreshed`);
+			else console.warn(`  [warn] recommendation "${r.card_type}": ${res.error}`);
+		} else {
+			const res = await directusRequest('/items/marketing_recommendations', 'POST', payload);
+			if (res.ok) console.log(`  [ok]   recommendation "${r.card_type}" (urgency ${r.urgency})`);
+			else console.warn(`  [warn] recommendation "${r.card_type}": ${res.error}`);
+		}
+	}
+}
+
 async function seedProposal(
 	orgId: string,
 	leadIds: number[],
@@ -1251,6 +1597,14 @@ async function main() {
 	});
 	if (!adminUser) process.exit(1);
 
+	// Reset the admin's appearance to the default palette so the marketing
+	// screenshots show the default Fresh palette, not a stale stored choice.
+	{
+		const res = await directusRequest(`/users/${adminUser.id}`, 'PATCH', { app_palette: 'seaMist' });
+		if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${DEMO_ADMIN_EMAIL}`);
+		else console.warn(`  [warn] could not reset app_palette for ${DEMO_ADMIN_EMAIL}: ${res.error}`);
+	}
+
 	console.log('\n--- admin membership ---');
 	await ensureMembership(org.id, adminUser.id, roles.admin, 'agency demo → Admin');
 
@@ -1268,6 +1622,10 @@ async function main() {
 		});
 		if (user) {
 			teammateIds.push(user.id);
+			// Reset each teammate's appearance to the default palette too.
+			const res = await directusRequest(`/users/${user.id}`, 'PATCH', { app_palette: 'seaMist' });
+			if (res.ok) console.log(`  [ok]   reset app_palette → seaMist for ${t.email}`);
+			else console.warn(`  [warn] could not reset app_palette for ${t.email}: ${res.error}`);
 			await ensureMembership(org.id, user.id, roles.member, `teammate ${t.email}`);
 		}
 	}
@@ -1314,6 +1672,9 @@ async function main() {
 
 	console.log('\n--- marketing plans (dashboard + campaign) ---');
 	await seedMarketingPlans(org.id);
+
+	console.log('\n--- marketing recommendations (Earnest actions feed) ---');
+	await seedMarketingRecommendations(org.id, contactIds, leadIds);
 
 	console.log('\n--- proposal ---');
 	await seedProposal(org.id, leadIds, contactIds);

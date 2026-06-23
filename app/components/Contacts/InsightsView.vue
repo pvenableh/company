@@ -15,7 +15,7 @@
 				</div>
 				<ClientOnly>
 					<div v-if="contactGrowthSeries.length" class="h-8 -mx-1">
-						<VisXYContainer :data="contactGrowthSeries" :margin="{ left: 0, right: 0, top: 2, bottom: 2 }">
+						<VisXYContainer :data="contactGrowthSeries" :y-domain="[0, undefined]" :margin="{ left: 0, right: 0, top: 2, bottom: 2 }">
 							<VisLine
 								:x="(d: any) => d.weekIdx"
 								:y="(d: any) => d.count"
@@ -98,7 +98,7 @@
 				<div class="h-[160px] overflow-hidden">
 					<ClientOnly>
 						<div v-if="contactGrowthSeries.length" class="h-full">
-							<VisXYContainer :data="contactGrowthSeries" :height="160" :margin="{ left: 30, right: 8, top: 8, bottom: 24 }">
+							<VisXYContainer :data="contactGrowthSeries" :y-domain="[0, undefined]" :height="160" :margin="{ left: 30, right: 8, top: 8, bottom: 24 }">
 								<VisLine
 									:x="(d: any) => d.weekIdx"
 									:y="(d: any) => d.cumulative"
