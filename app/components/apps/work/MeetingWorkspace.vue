@@ -203,7 +203,7 @@ watch(() => props.meetingId, async (id) => { if (id) await fetchChat(); }, { imm
 // compact — the parent page owns the entity context.
 watch([meeting, adaptivePrompts], ([m, prompts]) => {
 	if (props.compact) return;
-	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting', { surface: 'recap', prompts: prompts as string[] });
+	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting', { surface: 'recap', prompts });
 }, { immediate: true });
 onBeforeUnmount(() => {
 	if (!props.compact) clearEntity();
