@@ -617,6 +617,35 @@ watch(
 	(s, prev) => { if (s === 'completed' && prev && prev !== 'completed') fetchRecordings(); },
 );
 
+// ── Snapshots (host-captured frames + annotations) ────────────────────────
+const snapshots = ref([]);
+const snapshotsLoading = ref(false);
+const snapshotsError = ref('');
+const previewSnapshot = ref(null);
+
+const fetchSnapshots = async () => {
+	if (!props.meetingId) return;
+	snapshotsLoading.value = true;
+	snapshotsError.value = '';
+	try {
+		const res = await $fetch(`/api/video/meetings/${props.meetingId}/snapshots`);
+		snapshots.value = res?.data || [];
+	} catch (err) {
+		snapshotsError.value = err.statusMessage || err.message || 'Could not load snapshots';
+		snapshots.value = [];
+	}
+	snapshotsLoading.value = false;
+};
+
+// Private files are streamed through an auth-gated proxy, not raw /assets/.
+const snapshotImgSrc = (snap) => {
+	const fileId = snap?.image?.id || snap?.image;
+	if (!fileId || !props.meetingId) return '';
+	return `/api/video/meetings/${props.meetingId}/snapshot-image?file=${fileId}`;
+};
+
+watch(() => props.meetingId, fetchSnapshots, { immediate: true });
+
 const formatRecordingDuration = (secs) => {
 	if (!secs || !Number.isFinite(secs)) return '—';
 	const m = Math.floor(secs / 60);
@@ -1057,6 +1086,86 @@ const promoteActionItem = async (idx) => {
 						/>
 					</li>
 				</ul>
+			</div>
+
+			<!-- Snapshots -->
+			<div
+				v-if="snapshotsLoading || snapshots.length > 0 || snapshotsError"
+				class="ios-card p-5 mb-4"
+			>
+				<div class="flex items-center justify-between mb-3">
+					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+						Snapshots
+						<span v-if="snapshots.length > 0" class="ml-1.5 text-muted-foreground/70 normal-case tracking-normal">({{ snapshots.length }})</span>
+					</h2>
+					<button
+						type="button"
+						class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-50"
+						:disabled="snapshotsLoading"
+						@click="fetchSnapshots"
+					>
+						<UIcon
+							:name="snapshotsLoading ? 'i-heroicons-arrow-path' : 'i-heroicons-arrow-path-rounded-square'"
+							:class="['w-3 h-3', snapshotsLoading ? 'animate-spin' : '']"
+						/>
+						Refresh
+					</button>
+				</div>
+
+				<div v-if="snapshotsError" class="text-[12px] text-destructive py-2">{{ snapshotsError }}</div>
+
+				<div v-else-if="snapshotsLoading && snapshots.length === 0" class="text-[12px] text-muted-foreground py-3 text-center">
+					Loading snapshots…
+				</div>
+
+				<div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+					<button
+						v-for="snap in snapshots"
+						:key="snap.id"
+						type="button"
+						class="group relative rounded-lg overflow-hidden border border-border/40 bg-muted/20 aspect-video transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-success/40"
+						:title="snap.caption || 'Open snapshot'"
+						@click="previewSnapshot = snap"
+					>
+						<img
+							:src="snapshotImgSrc(snap)"
+							:alt="snap.caption || 'Meeting snapshot'"
+							loading="lazy"
+							class="w-full h-full object-cover"
+						/>
+						<span class="absolute bottom-0 inset-x-0 px-2 py-1 text-[10px] text-white bg-black/50 truncate text-left">
+							{{ formatRecordingDate(snap.date_created) }}
+						</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- Snapshot lightbox -->
+			<div
+				v-if="previewSnapshot"
+				class="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-6"
+				@click="previewSnapshot = null"
+			>
+				<div class="max-w-5xl w-full" @click.stop>
+					<div class="flex items-center justify-between mb-2 text-white">
+						<span class="text-[12px]">
+							{{ previewSnapshot.caption || 'Snapshot' }}
+							<span class="opacity-60"> · {{ formatRecordingDate(previewSnapshot.date_created) }}</span>
+						</span>
+						<button
+							type="button"
+							class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+							@click="previewSnapshot = null"
+						>
+							<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+						</button>
+					</div>
+					<img
+						:src="snapshotImgSrc(previewSnapshot)"
+						:alt="previewSnapshot.caption || 'Meeting snapshot'"
+						class="w-full max-h-[80vh] object-contain rounded-lg bg-black"
+					/>
+				</div>
 			</div>
 
 			<!-- Summary -->

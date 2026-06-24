@@ -1,11 +1,16 @@
 <script setup lang="ts">
 interface StrokePoint { x: number; y: number; t: number; }
+type StrokeKind = 'freehand' | 'arrow' | 'rect' | 'text';
 interface StrokeSegment {
 	id: string;
 	authorId: string;
 	color: string;
 	size: number;
 	eraser?: boolean;
+	/** Defaults to 'freehand' when absent (back-compat with older senders). */
+	kind?: StrokeKind;
+	/** Text content when kind === 'text'. */
+	text?: string;
 	points: StrokePoint[];
 	complete: boolean;
 }
@@ -13,8 +18,18 @@ interface StrokeSegment {
 interface AnnotationBus {
 	sendStroke: (segment: StrokeSegment) => void;
 	sendClear: () => void;
+	sendClearMine: (authorId: string) => void;
+	sendUndo: (strokeId: string) => void;
+	/** Broadcast a request for the current annotation state (late-joiner sync). */
+	sendSyncRequest: () => void;
+	/** Reply to a sync request, targeted at the requester's session id. */
+	sendSyncResponse: (targetId: string, segments: StrokeSegment[]) => void;
 	onStroke: (cb: (segment: StrokeSegment) => void) => () => void;
 	onClear: (cb: () => void) => () => void;
+	onClearMine: (cb: (authorId: string) => void) => () => void;
+	onUndo: (cb: (strokeId: string) => void) => () => void;
+	onSyncRequest: (cb: (requesterId: string) => void) => () => void;
+	onSyncResponse: (cb: (segments: StrokeSegment[]) => void) => () => void;
 }
 
 const props = withDefaults(
@@ -24,8 +39,11 @@ const props = withDefaults(
 		/** Where the toolbar floats. Use "bottom" when overlaying the Daily iframe,
 		 *  whose own bottom bar is ~80px tall — the toolbar lifts above it. */
 		toolbarPosition?: 'top' | 'bottom';
+		/** Only the primary peer (the host) answers late-joiner sync requests, so
+		 *  a new joiner doesn't get N duplicate replies from every participant. */
+		isPrimary?: boolean;
 	}>(),
-	{ toolbarPosition: 'top' },
+	{ toolbarPosition: 'top', isPrimary: false },
 );
 
 const COLORS = [
@@ -40,6 +58,13 @@ const SIZES = [
 	{ label: 'M', value: 4 },
 	{ label: 'L', value: 8 },
 ];
+type ToolId = 'pen' | 'arrow' | 'rect' | 'text' | 'eraser';
+const TOOLS: { id: ToolId; icon: string; label: string }[] = [
+	{ id: 'pen', icon: 'i-heroicons-pencil', label: 'Pen' },
+	{ id: 'arrow', icon: 'i-heroicons-arrow-up-right', label: 'Arrow' },
+	{ id: 'rect', icon: 'i-heroicons-stop', label: 'Rectangle' },
+	{ id: 'eraser', icon: 'i-heroicons-backspace', label: 'Eraser' },
+];
 const ERASER_SIZE_MULT = 6;
 // 60ms throttle keeps each broadcast small (well under Daily's ~4KB limit) while
 // still feeling smooth at typical drawing speeds (~16 broadcasts/s).
@@ -48,11 +73,16 @@ const BROADCAST_INTERVAL_MS = 60;
 const MAX_POINTS_PER_SEGMENT = 30;
 // How long a remote cursor lingers after the last point before fading out.
 const CURSOR_LIFETIME_MS = 1500;
+// Sync responses are chunked so a busy whiteboard's full stroke set never blows
+// past Daily's ~4KB app-message cap.
+const SYNC_CHUNK_SIZE = 12;
 
 const annotateMode = ref(false);
 const selectedColor = ref(COLORS[0]!.value);
 const selectedSize = ref(SIZES[1]!.value);
-const eraser = ref(false);
+const selectedTool = ref<ToolId>('pen');
+const isEraser = computed(() => selectedTool.value === 'eraser');
+const isShapeTool = (t: ToolId) => t === 'arrow' || t === 'rect';
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -93,19 +123,8 @@ const setupCanvas = () => {
 	redraw();
 };
 
-const drawSegment = (seg: StrokeSegment) => {
-	if (!ctx || !seg.points.length) return;
-	ctx.save();
-	ctx.lineWidth = seg.size;
-	if (seg.eraser) {
-		ctx.globalCompositeOperation = 'destination-out';
-		ctx.strokeStyle = 'rgba(0,0,0,1)';
-		ctx.fillStyle = 'rgba(0,0,0,1)';
-	} else {
-		ctx.globalCompositeOperation = 'source-over';
-		ctx.strokeStyle = seg.color;
-		ctx.fillStyle = seg.color;
-	}
+const drawFreehand = (seg: StrokeSegment) => {
+	if (!ctx) return;
 	const pts = seg.points;
 	const first = pts[0]!;
 	const fx = first.x * cssWidth;
@@ -122,6 +141,66 @@ const drawSegment = (seg: StrokeSegment) => {
 			ctx.lineTo(p.x * cssWidth, p.y * cssHeight);
 		}
 		ctx.stroke();
+	}
+};
+
+const drawArrow = (seg: StrokeSegment) => {
+	if (!ctx || seg.points.length < 1) return;
+	const a = seg.points[0]!;
+	const b = seg.points[seg.points.length - 1]!;
+	const ax = a.x * cssWidth, ay = a.y * cssHeight;
+	const bx = b.x * cssWidth, by = b.y * cssHeight;
+	ctx.beginPath();
+	ctx.moveTo(ax, ay);
+	ctx.lineTo(bx, by);
+	ctx.stroke();
+	// Arrowhead
+	const angle = Math.atan2(by - ay, bx - ax);
+	const head = Math.max(10, seg.size * 3);
+	ctx.beginPath();
+	ctx.moveTo(bx, by);
+	ctx.lineTo(bx - head * Math.cos(angle - Math.PI / 6), by - head * Math.sin(angle - Math.PI / 6));
+	ctx.moveTo(bx, by);
+	ctx.lineTo(bx - head * Math.cos(angle + Math.PI / 6), by - head * Math.sin(angle + Math.PI / 6));
+	ctx.stroke();
+};
+
+const drawRect = (seg: StrokeSegment) => {
+	if (!ctx || seg.points.length < 1) return;
+	const a = seg.points[0]!;
+	const b = seg.points[seg.points.length - 1]!;
+	const ax = a.x * cssWidth, ay = a.y * cssHeight;
+	const bx = b.x * cssWidth, by = b.y * cssHeight;
+	ctx.strokeRect(ax, ay, bx - ax, by - ay);
+};
+
+const drawText = (seg: StrokeSegment) => {
+	if (!ctx || !seg.text || !seg.points.length) return;
+	const p = seg.points[0]!;
+	const fontPx = Math.max(14, seg.size * 5);
+	ctx.font = `600 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+	ctx.textBaseline = 'top';
+	ctx.fillText(seg.text, p.x * cssWidth, p.y * cssHeight);
+};
+
+const drawSegment = (seg: StrokeSegment) => {
+	if (!ctx || !seg.points.length) return;
+	ctx.save();
+	ctx.lineWidth = seg.size;
+	if (seg.eraser) {
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.strokeStyle = 'rgba(0,0,0,1)';
+		ctx.fillStyle = 'rgba(0,0,0,1)';
+	} else {
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.strokeStyle = seg.color;
+		ctx.fillStyle = seg.color;
+	}
+	switch (seg.kind) {
+		case 'arrow': drawArrow(seg); break;
+		case 'rect': drawRect(seg); break;
+		case 'text': drawText(seg); break;
+		default: drawFreehand(seg);
 	}
 	ctx.restore();
 };
@@ -190,18 +269,30 @@ const ptFromEvent = (ev: PointerEvent): StrokePoint => {
 	};
 };
 
+const currentStrokeKind = (): StrokeKind => {
+	if (isEraser.value) return 'freehand';
+	if (selectedTool.value === 'arrow') return 'arrow';
+	if (selectedTool.value === 'rect') return 'rect';
+	return 'freehand';
+};
+
 const flushBroadcast = (complete: boolean) => {
 	if (!currentStrokeId) return;
 	const stroke = liveStrokes.get(currentStrokeId);
 	if (!stroke) return;
-	if (pendingPoints.length === 0 && !complete) return;
+	const shape = stroke.kind === 'arrow' || stroke.kind === 'rect';
+	// Freehand sends only the new tail (remotes append). Shapes have just two
+	// points (start + current end) so we resend both each time (remotes replace).
+	const points = shape ? stroke.points : pendingPoints;
+	if (!shape && pendingPoints.length === 0 && !complete) return;
 	const seg: StrokeSegment = {
 		id: currentStrokeId,
 		authorId: props.authorId,
 		color: stroke.color,
 		size: stroke.size,
 		eraser: stroke.eraser,
-		points: pendingPoints,
+		kind: stroke.kind,
+		points: [...points],
 		complete,
 	};
 	props.bus.sendStroke(seg);
@@ -209,18 +300,45 @@ const flushBroadcast = (complete: boolean) => {
 	lastBroadcastAt = Date.now();
 };
 
+// Text isn't a drag gesture — placed on a single click via a prompt.
+const placeText = (p: StrokePoint) => {
+	const text = (typeof window !== 'undefined' ? window.prompt('Annotation text') : '')?.trim();
+	if (!text) return;
+	const id = newStrokeId();
+	const seg: StrokeSegment = {
+		id,
+		authorId: props.authorId,
+		color: selectedColor.value,
+		size: selectedSize.value,
+		kind: 'text',
+		text,
+		points: [p],
+		complete: true,
+	};
+	settledStrokes.set(id, seg);
+	redraw();
+	props.bus.sendStroke(seg);
+};
+
 const onPointerDown = (ev: PointerEvent) => {
 	if (!annotateMode.value) return;
 	ev.preventDefault();
+	const p = ptFromEvent(ev);
+
+	if (selectedTool.value === 'text') {
+		placeText(p);
+		return;
+	}
+
 	isDrawing = true;
 	currentStrokeId = newStrokeId();
-	const p = ptFromEvent(ev);
 	const stroke: StrokeSegment = {
 		id: currentStrokeId,
 		authorId: props.authorId,
 		color: selectedColor.value,
-		size: eraser.value ? selectedSize.value * ERASER_SIZE_MULT : selectedSize.value,
-		eraser: eraser.value,
+		size: isEraser.value ? selectedSize.value * ERASER_SIZE_MULT : selectedSize.value,
+		eraser: isEraser.value,
+		kind: currentStrokeKind(),
 		points: [p],
 		complete: false,
 	};
@@ -237,8 +355,15 @@ const onPointerMove = (ev: PointerEvent) => {
 	const p = ptFromEvent(ev);
 	const stroke = liveStrokes.get(currentStrokeId);
 	if (!stroke) return;
-	stroke.points.push(p);
-	pendingPoints.push(p);
+	if (stroke.kind === 'arrow' || stroke.kind === 'rect') {
+		// Shapes are anchored at the first point; the second point tracks the
+		// cursor (replace rather than append).
+		if (stroke.points.length < 2) stroke.points.push(p);
+		else stroke.points[1] = p;
+	} else {
+		stroke.points.push(p);
+		pendingPoints.push(p);
+	}
 	redraw();
 	const now = Date.now();
 	if (now - lastBroadcastAt >= BROADCAST_INTERVAL_MS || pendingPoints.length >= MAX_POINTS_PER_SEGMENT) {
@@ -273,9 +398,11 @@ const handleRemoteStroke = (seg: StrokeSegment) => {
 	// Daily's '*' broadcast skips the sender, but be defensive.
 	if (seg.authorId === props.authorId) return;
 
+	const isShape = seg.kind === 'arrow' || seg.kind === 'rect';
 	const existing = liveStrokes.get(seg.id) || settledStrokes.get(seg.id);
 	if (existing) {
-		existing.points.push(...seg.points);
+		if (isShape) existing.points = [...seg.points]; // shapes replace
+		else existing.points.push(...seg.points);        // freehand appends
 		if (seg.complete) {
 			existing.complete = true;
 			if (liveStrokes.has(seg.id)) {
@@ -289,7 +416,7 @@ const handleRemoteStroke = (seg: StrokeSegment) => {
 		else liveStrokes.set(seg.id, stroke);
 	}
 
-	if (!seg.complete && seg.points.length > 0) {
+	if (!seg.complete && seg.points.length > 0 && seg.kind !== 'text') {
 		const last = seg.points[seg.points.length - 1]!;
 		remoteCursors.set(seg.authorId, {
 			x: last.x,
@@ -309,21 +436,76 @@ const handleRemoteClear = () => {
 	redraw();
 };
 
+const handleRemoteClearMine = (authorId: string) => {
+	if (!authorId) return;
+	for (const [id, seg] of settledStrokes) if (seg.authorId === authorId) settledStrokes.delete(id);
+	for (const [id, seg] of liveStrokes) if (seg.authorId === authorId) liveStrokes.delete(id);
+	redraw();
+};
+
+const handleRemoteUndo = (strokeId: string) => {
+	if (!strokeId) return;
+	settledStrokes.delete(strokeId);
+	liveStrokes.delete(strokeId);
+	redraw();
+};
+
+// ─── Late-joiner sync ─────────────────────────────────────────────────────────
+const exportStrokes = (): StrokeSegment[] => [...settledStrokes.values()];
+
+const importStrokes = (segs: StrokeSegment[]) => {
+	if (!Array.isArray(segs)) return;
+	for (const seg of segs) {
+		if (!seg?.id || settledStrokes.has(seg.id)) continue;
+		settledStrokes.set(seg.id, { ...seg, points: [...(seg.points || [])], complete: true });
+	}
+	redraw();
+};
+
+const handleSyncRequest = (requesterId: string) => {
+	// Only the primary peer (host) answers, to avoid a flood of duplicate
+	// replies. Chunk the response so we never exceed Daily's app-message cap.
+	if (!props.isPrimary || !requesterId) return;
+	const all = exportStrokes();
+	for (let i = 0; i < all.length; i += SYNC_CHUNK_SIZE) {
+		props.bus.sendSyncResponse(requesterId, all.slice(i, i + SYNC_CHUNK_SIZE));
+	}
+};
+
 // ─── Toolbar actions ────────────────────────────────────────────────────────
-const onClear = () => {
+const onClearAll = () => {
 	liveStrokes.clear();
 	settledStrokes.clear();
 	redraw();
 	props.bus.sendClear();
 };
 
-// Exposed for parent: clear local view without broadcasting (e.g. on figma frame change).
+const onClearMine = () => {
+	for (const [id, seg] of settledStrokes) if (seg.authorId === props.authorId) settledStrokes.delete(id);
+	for (const [id, seg] of liveStrokes) if (seg.authorId === props.authorId) liveStrokes.delete(id);
+	redraw();
+	props.bus.sendClearMine(props.authorId);
+};
+
+const onUndo = () => {
+	// Pop my most-recently-settled stroke (Map preserves insertion order).
+	let lastId: string | null = null;
+	for (const [id, seg] of settledStrokes) if (seg.authorId === props.authorId) lastId = id;
+	if (!lastId) return;
+	settledStrokes.delete(lastId);
+	redraw();
+	props.bus.sendUndo(lastId);
+};
+
+// Exposed for parent: clear local view without broadcasting (e.g. on frame change).
 const clearAll = () => {
 	liveStrokes.clear();
 	settledStrokes.clear();
 	redraw();
 };
-defineExpose({ clearAll });
+// Exposed for the snapshot compositor on the meeting page.
+const getCanvasEl = () => canvasRef.value;
+defineExpose({ clearAll, getCanvasEl });
 
 // If the user disables annotate mode mid-stroke, finish the stroke so we don't
 // orphan an incomplete segment on remotes.
@@ -333,8 +515,7 @@ watch(annotateMode, (on) => {
 
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
 let resizeObserver: ResizeObserver | null = null;
-let unsubStroke: (() => void) | null = null;
-let unsubClear: (() => void) | null = null;
+const unsubs: Array<() => void> = [];
 
 onMounted(() => {
 	setupCanvas();
@@ -342,15 +523,18 @@ onMounted(() => {
 		resizeObserver = new ResizeObserver(() => setupCanvas());
 		resizeObserver.observe(containerRef.value);
 	}
-	unsubStroke = props.bus.onStroke(handleRemoteStroke);
-	unsubClear = props.bus.onClear(handleRemoteClear);
+	unsubs.push(props.bus.onStroke(handleRemoteStroke));
+	unsubs.push(props.bus.onClear(handleRemoteClear));
+	unsubs.push(props.bus.onClearMine(handleRemoteClearMine));
+	unsubs.push(props.bus.onUndo(handleRemoteUndo));
+	unsubs.push(props.bus.onSyncRequest(handleSyncRequest));
+	unsubs.push(props.bus.onSyncResponse(importStrokes));
 });
 
 onBeforeUnmount(() => {
 	resizeObserver?.disconnect();
 	if (cursorRaf != null) cancelAnimationFrame(cursorRaf);
-	unsubStroke?.();
-	unsubClear?.();
+	for (const u of unsubs) u();
 	if (isDrawing) flushBroadcast(true);
 });
 </script>
@@ -386,7 +570,7 @@ onBeforeUnmount(() => {
 							? 'bg-success text-white hover:bg-success/90'
 							: 'bg-muted/40 text-muted-foreground hover:bg-muted/60',
 					]"
-					:title="annotateMode ? 'Annotation on — click to pass clicks back to Figma' : 'Enable annotation (blocks Figma clicks while on)'"
+					:title="annotateMode ? 'Annotation on — click to pass clicks back to the screen share / video' : 'Enable annotation (blocks clicks on the screen share / video while on)'"
 					@click="annotateMode = !annotateMode"
 				>
 					<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
@@ -395,6 +579,36 @@ onBeforeUnmount(() => {
 
 				<template v-if="annotateMode">
 					<div class="w-px h-5 bg-border" />
+					<!-- Tools -->
+					<button
+						v-for="t in TOOLS"
+						:key="t.id"
+						:class="[
+							'inline-flex items-center justify-center w-7 h-7 rounded transition-colors',
+							selectedTool === t.id
+								? 'bg-foreground/10 text-foreground'
+								: 'text-muted-foreground hover:bg-muted/40',
+						]"
+						:title="t.label"
+						@click="selectedTool = t.id"
+					>
+						<UIcon :name="t.icon" class="w-3.5 h-3.5" />
+					</button>
+					<!-- Text tool (labelled glyph rather than an icon) -->
+					<button
+						:class="[
+							'inline-flex items-center justify-center w-7 h-7 rounded text-[13px] font-bold transition-colors',
+							selectedTool === 'text'
+								? 'bg-foreground/10 text-foreground'
+								: 'text-muted-foreground hover:bg-muted/40',
+						]"
+						title="Text"
+						@click="selectedTool = 'text'"
+					>
+						T
+					</button>
+
+					<div class="w-px h-5 bg-border" />
 					<!-- Color swatches -->
 					<button
 						v-for="c in COLORS"
@@ -402,12 +616,12 @@ onBeforeUnmount(() => {
 						:title="c.name"
 						:class="[
 							'w-5 h-5 rounded-full border-2 transition-transform',
-							selectedColor === c.value && !eraser
+							selectedColor === c.value
 								? 'border-foreground scale-110'
 								: 'border-transparent hover:scale-105',
 						]"
 						:style="{ background: c.value }"
-						@click="selectedColor = c.value; eraser = false"
+						@click="selectedColor = c.value"
 					/>
 
 					<div class="w-px h-5 bg-border" />
@@ -428,27 +642,30 @@ onBeforeUnmount(() => {
 					</button>
 
 					<div class="w-px h-5 bg-border" />
-					<!-- Eraser -->
+					<!-- Undo my last stroke -->
 					<button
-						:class="[
-							'inline-flex items-center justify-center w-7 h-7 rounded transition-colors',
-							eraser
-								? 'bg-foreground/10 text-foreground'
-								: 'text-muted-foreground hover:bg-muted/40',
-						]"
-						title="Eraser"
-						@click="eraser = !eraser"
+						class="inline-flex items-center justify-center w-7 h-7 rounded text-muted-foreground hover:bg-muted/40 transition-colors"
+						title="Undo my last mark"
+						@click="onUndo"
 					>
-						<UIcon name="i-heroicons-backspace" class="w-3.5 h-3.5" />
+						<UIcon name="i-heroicons-arrow-uturn-left" class="w-3.5 h-3.5" />
 					</button>
-					<!-- Clear -->
+					<!-- Clear mine -->
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2 rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted/40 transition-colors"
+						title="Clear only my marks"
+						@click="onClearMine"
+					>
+						Mine
+					</button>
+					<!-- Clear all -->
 					<button
 						class="inline-flex items-center gap-1 h-7 px-2.5 rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-						title="Clear all annotations (broadcasts to everyone)"
-						@click="onClear"
+						title="Clear everyone's marks (broadcasts to all)"
+						@click="onClearAll"
 					>
 						<UIcon name="i-heroicons-trash" class="w-3 h-3" />
-						Clear
+						All
 					</button>
 				</template>
 			</div>

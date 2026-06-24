@@ -1018,27 +1018,88 @@ export interface CdActivity {
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	contact?: CdContact | string | null;
-	type?:
-		| 'email'
-		| 'text'
-		| 'call'
-		| 'meeting'
-		| 'linkedin'
-		| 'other'
-		// Lifecycle / system events emitted by CardDesk (2026-06):
-		| 'contact_added'
-		| 'card_scanned'
-		| 'stage_change'
-		| 'converted_lead'
-		| 'converted_client'
-		| 'converted_partner'
-		| 'promoted_to_earnest'
-		| null;
+	type?: 'email' | 'text' | 'call' | 'meeting' | 'linkedin' | 'other' | 'card_scanned' | 'contact_added' | 'stage_change' | 'converted_client' | 'converted_partner' | 'converted_lead' | 'promoted_to_earnest' | null;
 	label?: string | null;
 	date?: string | null;
 	note?: string | null;
 	is_response?: boolean | null;
 	response_note?: string | null;
+}
+
+export interface CdAiUsageLog {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Which AI route was called, e.g. scan-card, ai-suggestions, ai-sayings. */
+	endpoint?: string | null;
+	/** @description Claude model used. */
+	model?: string | null;
+	/** @description Prompt tokens reported by Claude. */
+	input_tokens?: number | null;
+	/** @description Completion tokens reported by Claude. */
+	output_tokens?: number | null;
+	/** @description input + output tokens. */
+	total_tokens?: number | null;
+	/** @description Flat credits deducted for this action (the user-facing cost). */
+	credits_charged?: number | null;
+	/** @description Estimated real USD cost from Claude pricing — for tuning credit prices later. */
+	estimated_cost?: number | null;
+	/** @description Which balance was charged: the user's credit balance or their Earnest org token balance. */
+	billed_to?: 'user' | 'org' | null;
+	/** @description Earnest org charged, when billed_to = org. Null for standalone users. */
+	organization?: Organization | string | null;
+	/** @description The CardDesk contact/client this AI call related to. Null = general/portfolio-wide. */
+	contact?: CdContact | string | null;
+	/** @description Optional grouping id to thread related AI calls into one saved session. */
+	session_id?: string | null;
+	/** @description Endpoint-specific metadata (mode, emailType, etc.). */
+	metadata?: Record<string, any> | null;
+	/** @description The CardDesk user this AI call is billed to. Set explicitly by the server (admin) since logs are written with the service token. */
+	user?: DirectusUser | string | null;
+}
+
+export interface CdCard {
+	/** @primaryKey */
+	id: string;
+	/** @description Owner. */
+	user?: DirectusUser | string | null;
+	display_name?: string | null;
+	title?: string | null;
+	company?: string | null;
+	email?: string | null;
+	phone?: string | null;
+	website?: string | null;
+	linkedin?: string | null;
+	/** @description Short tagline. */
+	headline?: string | null;
+	/** @description Card photo/logo. */
+	image?: DirectusFile | string | null;
+	/** @description Share activity with connections in the feed. */
+	broadcast_activity?: boolean | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @description Instagram handle or URL. */
+	instagram?: string | null;
+	/** @description X/Twitter handle or URL. */
+	twitter?: string | null;
+	/** @description YouTube handle/channel or URL. */
+	youtube?: string | null;
+	/** @description Behance handle or URL. */
+	behance?: string | null;
+	/** @description Office / business address shown on the public CardDesk card. */
+	office_address?: string | null;
+}
+
+export interface CdConnection {
+	/** @primaryKey */
+	id: string;
+	status?: 'pending' | 'accepted' | 'declined' | 'blocked' | null;
+	/** @description User who initiated the connection. */
+	requester?: DirectusUser | string | null;
+	/** @description User who received the request. */
+	addressee?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface CdContact {
@@ -1063,58 +1124,218 @@ export interface CdContact {
 	hibernated?: boolean | null;
 	hibernated_at?: string | null;
 	notes?: string | null;
-	location?: string | null;
-	address?: string | null;
-	/** @description CardDesk pipeline stage (2026-06 restructure). */
-	pipeline_stage?: 'new' | 'warming' | 'opportunity' | 'client' | 'partner' | 'lost' | null;
-	/** @description When entering 'opportunity', what we're chasing. */
-	opportunity_goal?: 'client' | 'partner' | null;
-	/** @description Provenance of the card. */
-	source?: 'scan' | 'manual' | 'referral' | 'import' | 'event' | null;
-	estimated_value?: number | null;
-	lost_reason?: string | null;
 	is_client?: boolean | null;
 	client_at?: string | null;
-	is_partner?: boolean | null;
-	partner_at?: string | null;
-	/** @description What sealed the conversion — "Project", "Contract", "Referral", etc. */
-	conversion_reason?: string | null;
-	/** @description Free-text detail on what converted them. */
-	conversion_note?: string | null;
 	/** @description Earnest CRM contact this Card Desk card was promoted into. Null = unpromoted. */
 	promoted_contact?: Contact | string | null;
-	/** @description Earnest CRM lead opened for this card on client conversion. */
-	earnest_lead_id?: Lead | string | null;
-	/** @description Earnest CRM client created for this card on client/partner conversion. */
-	earnest_client_id?: Client | string | null;
+	/** @description LinkedIn handle or URL. */
+	linkedin?: string | null;
+	/** @description Instagram handle or URL. */
+	instagram?: string | null;
+	/** @description X/Twitter handle or URL. */
+	twitter?: string | null;
+	/** @description YouTube handle/channel or URL. */
+	youtube?: string | null;
+	/** @description Behance handle or URL. */
+	behance?: string | null;
+	/** @description Contact photo (CardDesk). */
+	image?: DirectusFile | string | null;
+	/** @description Directus user id of this contact if they joined CardDesk (stamped on invite redemption). Bridges contact ↔ connection so the same human isn't two unrelated records. */
+	linked_user?: string | null;
+	/** @description Mailing / physical address for this contact (CardDesk). */
+	address?: string | null;
+	/** @description City / region for this contact (used for AI analysis). Distinct from full mailing address. */
+	location?: string | null;
+	/** @description How this contact was acquired. */
+	source?: 'scan' | 'manual' | 'referral' | 'import' | 'event' | null;
+	/** @description cd_contacts id of the contact who introduced/spawned this one (referral graph). Null = not a referral. */
+	referred_by?: string | null;
+	/** @description Relationship ladder stage. */
+	pipeline_stage?: 'new' | 'warming' | 'opportunity' | 'client' | 'partner' | 'lost' | null;
+	/** @description Goal tag set at Opportunity stage. */
+	opportunity_goal?: 'client' | 'partner' | null;
+	/** @description Graduated to a referral/collaboration partner. */
+	is_partner?: boolean | null;
+	/** @description When marked as partner. */
+	partner_at?: string | null;
+	/** @description Estimated deal value (USD). */
+	estimated_value?: number | null;
+	/** @description Linked Earnest leads.id after graduation. */
+	earnest_lead_id?: string | null;
+	/** @description Why a deal was lost. */
+	lost_reason?: string | null;
+	/** @description What sealed the graduation. */
+	conversion_reason?: 'Project' | 'Contract' | 'Referral' | 'Retainer' | 'Collaboration' | null;
+	/** @description Free-text detail on the conversion (also Earnest sign-up hook). */
+	conversion_note?: string | null;
+	/** @description Website / portfolio URL */
+	website?: string | null;
+	/** @description Additional phone numbers beyond the primary phone: [{label,value}] */
+	phones?: Record<string, any> | null;
+	/** @description Touchpoints / interaction log for this contact (cd_activities). */
+	activities?: CdActivity[] | string[];
+}
+
+export interface CdCreditAccount {
+	/** @primaryKey */
+	id: string;
+	/** @description Owner of this credit balance. Set explicitly by the server (admin). */
+	user?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description Remaining AI credits (flat per-action units). */
+	ai_credit_balance?: number | null;
+	/** @description Lifetime credits consumed. */
+	ai_credits_used_total?: number | null;
+	/** @description Credits consumed in the current billing period. */
+	ai_credits_used_this_period?: number | null;
+	/** @description Start of the current credit billing period. */
+	ai_credit_period_start?: string | null;
+	/** @description True once the one-time onboarding grant has been applied. */
+	free_credits_granted?: boolean | null;
+	/** @description Stripe customer id for this user's CardDesk credit purchases. */
+	stripe_customer_id?: string | null;
+	/** @description Keys of one-time credit rewards already granted to this user (earn-as-you-go gamification). */
+	claimed_rewards?: Record<string, any> | null;
+}
+
+export interface CdCreditPurchase {
+	/** @primaryKey */
+	id: string;
+	/** @description Purchaser. Set explicitly by the server (admin). */
+	user?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description Stripe Checkout Session id. Unique — enforces idempotent fulfillment. */
+	stripe_session_id?: string | null;
+	/** @description Stripe PaymentIntent id. */
+	stripe_payment_intent?: string | null;
+	/** @description Purchased package id (e.g. credits_300). */
+	package_id?: string | null;
+	/** @description Credits granted by this purchase. */
+	credits?: number | null;
+	/** @description Amount paid, in cents. */
+	amount_cents?: number | null;
+	/** @description ISO currency code. */
+	currency?: string | null;
+	/** @description Fulfillment status. */
+	status?: 'paid' | 'pending' | 'failed' | null;
+}
+
+export interface CdFeedback {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description Client this feedback relates to. Null = general. */
+	contact?: CdContact | string | null;
+	/** @description Session this feedback is about. */
+	session?: CdSession | string | null;
+	/** @description Thumbs reaction. */
+	rating?: 'up' | 'down' | null;
+	/** @description Which AI feature the feedback is about (e.g. ai-suggestions, ai-sayings). */
+	source?: string | null;
+	/** @description Did the advice work out? */
+	outcome?: 'acted' | 'ignored' | 'worked' | 'didnt_work' | null;
+	/** @description Optional free-text note. */
+	note?: string | null;
+}
+
+export interface CdFeedEvent {
+	/** @primaryKey */
+	id: string;
+	actor?: DirectusUser | string | null;
+	type?: string | null;
+	visibility?: 'private' | 'connections' | 'public' | null;
+	payload?: Record<string, any> | null;
+	date_created?: string | null;
+}
+
+export interface CdInvite {
+	/** @primaryKey */
+	id: string;
+	/** @description Short URL-safe invite code. */
+	code?: string | null;
+	inviter?: DirectusUser | string | null;
+	/** @description Most recent redeemer (audit; evergreen codes can be reused). */
+	accepted_by?: DirectusUser | string | null;
+	accepted_at?: string | null;
+	/** @description Optional TTL; null = evergreen. */
+	expires_at?: string | null;
+	date_created?: string | null;
+	/** @description cd_contacts id this invite was aimed at (contact-targeted invite). Lets redemption link the joiner back to the exact source contact. */
+	contact?: string | null;
+	/** @description Email address the invite was sent to (for contact-targeted invites). */
+	target_email?: string | null;
 }
 
 export interface CdPlan {
 	/** @primaryKey */
 	id: string;
-	user?: DirectusUser | string | null;
-	contact?: CdContact | string | null;
+	/** @description Owner — directus_users id. Set server-side; all reads are scoped to this. */
+	user?: string | null;
+	/** @description cd_contacts id this plan is for. Null = general / portfolio-wide. */
+	contact?: string | null;
+	/** @description Short human-readable plan name, e.g. 'Sofia follow-up sequence'. */
 	title?: string | null;
+	/** @description Lifecycle of the plan. */
 	status?: 'active' | 'done' | 'archived' | null;
+	/** @description cd_sessions id (chat) this plan was generated from, if any. */
 	source_session?: string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
-	tasks?: CdTask[];
+}
+
+export interface CdReaction {
+	/** @primaryKey */
+	id: string;
+	user?: DirectusUser | string | null;
+	event?: CdFeedEvent | string | null;
+	emoji?: string | null;
+	date_created?: string | null;
+}
+
+export interface CdSession {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description Client this session relates to. Null = general/portfolio-wide. */
+	contact?: CdContact | string | null;
+	/** @description What kind of AI session. */
+	type?: 'coaching' | 'suggestions' | 'lead_review' | 'insights' | 'note' | 'event' | 'chat' | null;
+	/** @description Short human-readable title. */
+	title?: string | null;
+	/** @description Optional one-line summary. */
+	summary?: string | null;
+	/** @description Ordered conversation: array of { role, content, ai_generated, ts }. */
+	messages?: Record<string, any> | null;
+	/** @description Pinned to the top of the history. */
+	is_pinned?: boolean | null;
 }
 
 export interface CdTask {
 	/** @primaryKey */
 	id: string;
-	user?: DirectusUser | string | null;
-	plan?: CdPlan | string | null;
-	contact?: CdContact | string | null;
+	/** @description Owner — directus_users id. Set server-side; all reads are scoped to this. */
+	user?: string | null;
+	/** @description cd_plans id this task belongs to. Null = standalone one-off task. */
+	plan?: string | null;
+	/** @description cd_contacts id this task is about. Null = general. */
+	contact?: string | null;
+	/** @description What to do, e.g. 'Send LinkedIn connection request with personal note'. */
 	title?: string | null;
+	/** @description Outreach channel — powers the 'one channel at a time' rule. */
 	channel?: 'email' | 'linkedin' | 'call' | 'meet' | 'other' | null;
+	/** @description Optional detail — the specific thing to reference ('mention the Q4 partnership idea'). */
 	note?: string | null;
+	/** @description When this task is due. Drives the agenda + calendar placement. Null = someday/no date. */
 	due_at?: string | null;
+	/** @description Task state. */
 	status?: 'pending' | 'done' | 'skipped' | null;
+	/** @description When the task was marked done. */
 	completed_at?: string | null;
+	/** @description Order within the plan. */
 	sort?: number | null;
+	/** @description cd_sessions id (chat) this task was generated from, if any. */
 	source_session?: string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
@@ -1138,6 +1359,28 @@ export interface CdXpState {
 	completed_missions?: Record<string, any> | null;
 	missions_date?: string | null;
 	total_clients?: number | null;
+	/** @description XP earned in the current ISO week (Mon-based). Reset when week_start rolls over. */
+	week_xp?: number | null;
+	/** @description Monday (YYYY-MM-DD) of the week week_xp is counting. */
+	week_start?: string | null;
+	/** @description Date (YYYY-MM-DD) the daily hype was last claimed. One claim per day. */
+	hype_date?: string | null;
+	/** @description Streak shields held (max 2). Earned at 7-day streaks and revivals; one is auto-consumed when exactly one day is missed so the streak survives. */
+	streak_shields?: number | null;
+	/** @description Contacts moved into the pipeline. Drives the pipeline_builder badge (10+). */
+	pipeline_contacts?: number | null;
+	/** @description Contacts marked qualified. Drives the qualifier badge (5+). */
+	qualified_count?: number | null;
+	/** @description Proposals sent. Drives the proposal_pro badge (3+). */
+	proposals_sent?: number | null;
+	/** @description Deals marked won. Drives the deal_closer badge (3+). */
+	deals_won?: number | null;
+	/** @description Lost reasons logged on dead deals. Drives the pipeline_honest badge (5+). */
+	lost_reasons_logged?: number | null;
+	/** @description Date (YYYY-MM-DD) the daily Network Quiz was last completed. One round per day. */
+	quiz_date?: string | null;
+	/** @description Count of this user's invites that were accepted (someone joined via their link). Drives the Recruiter badge. */
+	invites_accepted?: number | null;
 }
 
 export interface Channel {
@@ -1539,6 +1782,37 @@ export interface DocumentBlock {
 	type?: 'rich_text' | 'cover' | 'signed_letter' | 'figure' | 'repeater' | 'grouped_list' | 'pull_quote' | 'scope_tree' | 'pricing_tiers' | 'line_items' | 'footnotes' | 'numbered_clauses' | 'definitions' | 'signature_block' | null;
 	/** @description Typed payload matching `type`. For rich_text: { heading, body_markdown }. */
 	payload?: Record<string, any> | null;
+}
+
+export interface EarlyAccess {
+	/** @primaryKey */
+	id: string;
+	status?: 'new' | 'contacted' | 'invited' | 'joined' | 'archived' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	/** @required */
+	name: string;
+	/** @required */
+	email: string;
+	/** @description Their role / title */
+	role?: string | null;
+	phone?: string | null;
+	company?: string | null;
+	business_type?: 'agency' | 'solo' | 'small_business' | 'startup' | 'other' | null;
+	team_size?: '1' | `2-5` | `6-15` | `16-50` | `50+` | null;
+	website?: string | null;
+	/** @description Tools they use today (what we'd replace) */
+	current_tools?: string | null;
+	/** @description What they want to achieve with Earnest */
+	goals?: string | null;
+	/** @description Features / apps they're most interested in */
+	features_interested?: string[] | null;
+	timeline?: 'exploring' | 'month' | 'now' | null;
+	source?: string | null;
+	/** @description Where they came from (page / utm) */
+	referrer?: string | null;
+	/** @description Anything else they told us */
+	notes?: string | null;
 }
 
 export interface EarnestHistory {
@@ -2313,6 +2587,8 @@ export interface MarketingTouche {
 	mailing_list?: MailingList | string | null;
 	/** @description Per-target subject + body variants. Keyed by `list:<id>` or `segment:<filter>`. Null when the touch has no forks. See [[project_composition_canvas_redesign]] Item A.2. */
 	body_variants?: Record<string, any> | null;
+	/** @description Email body as HTML (Tiptap output). New writes from the canvas land here; the legacy email_body_markdown column is kept one release as a fallback read source. See [[project_composition_canvas_redesign]] Item C / P4.3. */
+	email_body_html?: string | null;
 	/** @description Recipient buckets this touch targets. Reverse of marketing_touch_targets.touch. */
 	targets?: MarketingTouchTarget[] | string[];
 }
@@ -2425,6 +2701,19 @@ export interface MeetingRequest {
 	guest_company?: string | null;
 	/** @description Where this request originated */
 	source?: 'website' | 'internal' | 'phone' | 'referral' | null;
+}
+
+export interface MeetingSnapshot {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	/** @required */
+	meeting: VideoMeeting | string;
+	author?: DirectusUser | string | null;
+	image?: DirectusFile | string | null;
+	caption?: string | null;
+	/** @description Seconds into the meeting when the snapshot was taken. */
+	meeting_offset_seconds?: number | null;
 }
 
 export interface Menu {
@@ -4025,9 +4314,8 @@ export interface TimeEntry {
 	sort?: number | null;
 	/** @required */
 	organization: Organization | string;
-	/** Required on create, but nullable: FK is ON DELETE SET NULL, so this
-	 * becomes null when the assigned user is deleted (the entry is preserved). */
-	user?: DirectusUser | string | null;
+	/** @required */
+	user: DirectusUser | string;
 	client?: Client | string | null;
 	project?: Project | string | null;
 	ticket?: Ticket | string | null;
@@ -4553,6 +4841,8 @@ export interface DirectusUser {
 	app_pref_carddesk_promo_dismissed_at?: string | null;
 	/** @description Content Studio first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
 	app_pref_studio_intro_dismissed_at?: string | null;
+	/** @description CardDesk: opt in to being found by name/email in the network directory search. */
+	discoverable?: boolean | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
@@ -4787,7 +5077,19 @@ export interface Schema {
 	case_studies_portfolio: CaseStudiesPortfolio[];
 	case_studies_services: CaseStudiesService[];
 	cd_activities: CdActivity[];
+	cd_ai_usage_logs: CdAiUsageLog[];
+	cd_cards: CdCard[];
+	cd_connections: CdConnection[];
 	cd_contacts: CdContact[];
+	cd_credit_accounts: CdCreditAccount[];
+	cd_credit_purchases: CdCreditPurchase[];
+	cd_feedback: CdFeedback[];
+	cd_feed_events: CdFeedEvent[];
+	cd_invites: CdInvite[];
+	cd_plans: CdPlan[];
+	cd_reactions: CdReaction[];
+	cd_sessions: CdSession[];
+	cd_tasks: CdTask[];
 	cd_xp_state: CdXpState[];
 	channels: Channel[];
 	client_portal_users: ClientPortalUser[];
@@ -4804,6 +5106,7 @@ export interface Schema {
 	contracts: Contract[];
 	courses: Course[];
 	document_blocks: DocumentBlock[];
+	early_access: EarlyAccess[];
 	earnest_history: EarnestHistory[];
 	earnest_reviews: EarnestReview[];
 	earnest_scan_credits: EarnestScanCredit[];
@@ -4844,6 +5147,7 @@ export interface Schema {
 	meeting_chat_messages: MeetingChatMessage[];
 	meeting_notes: MeetingNote[];
 	meeting_requests: MeetingRequest[];
+	meeting_snapshots: MeetingSnapshot[];
 	menus: Menu[];
 	messages: Message[];
 	newsletter_blocks: NewsletterBlock[];
@@ -5021,7 +5325,19 @@ export enum CollectionNames {
 	case_studies_portfolio = 'case_studies_portfolio',
 	case_studies_services = 'case_studies_services',
 	cd_activities = 'cd_activities',
+	cd_ai_usage_logs = 'cd_ai_usage_logs',
+	cd_cards = 'cd_cards',
+	cd_connections = 'cd_connections',
 	cd_contacts = 'cd_contacts',
+	cd_credit_accounts = 'cd_credit_accounts',
+	cd_credit_purchases = 'cd_credit_purchases',
+	cd_feedback = 'cd_feedback',
+	cd_feed_events = 'cd_feed_events',
+	cd_invites = 'cd_invites',
+	cd_plans = 'cd_plans',
+	cd_reactions = 'cd_reactions',
+	cd_sessions = 'cd_sessions',
+	cd_tasks = 'cd_tasks',
 	cd_xp_state = 'cd_xp_state',
 	channels = 'channels',
 	client_portal_users = 'client_portal_users',
@@ -5038,6 +5354,7 @@ export enum CollectionNames {
 	contracts = 'contracts',
 	courses = 'courses',
 	document_blocks = 'document_blocks',
+	early_access = 'early_access',
 	earnest_history = 'earnest_history',
 	earnest_reviews = 'earnest_reviews',
 	earnest_scan_credits = 'earnest_scan_credits',
@@ -5078,6 +5395,7 @@ export enum CollectionNames {
 	meeting_chat_messages = 'meeting_chat_messages',
 	meeting_notes = 'meeting_notes',
 	meeting_requests = 'meeting_requests',
+	meeting_snapshots = 'meeting_snapshots',
 	menus = 'menus',
 	messages = 'messages',
 	newsletter_blocks = 'newsletter_blocks',

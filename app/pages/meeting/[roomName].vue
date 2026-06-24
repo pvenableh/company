@@ -161,6 +161,7 @@
 				ref="annotationCanvas"
 				:bus="annotationBus"
 				:author-id="annotationAuthorId"
+				:is-primary="isHost"
 				toolbar-position="bottom"
 			/>
 
@@ -219,6 +220,19 @@
 						:class="['w-3.5 h-3.5', recordingBusy ? 'animate-spin' : '']"
 					/>
 					<span>{{ recording ? 'Recording' : 'Record' }}</span>
+				</button>
+				<button
+					v-if="isHost && dailyJoined"
+					:disabled="snapshotBusy"
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50"
+					title="Capture the screen share + annotations as a snapshot on this meeting"
+					@click="captureSnapshot"
+				>
+					<UIcon
+						:name="snapshotBusy ? 'i-heroicons-arrow-path' : 'i-heroicons-camera'"
+						:class="['w-3.5 h-3.5', snapshotBusy ? 'animate-spin' : '']"
+					/>
+					<span>Snapshot</span>
 				</button>
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
@@ -310,6 +324,7 @@ const recording = ref(false);
 const recordingBusy = ref(false);
 const transcribing = ref(false);
 const transcriptionBusy = ref(false);
+const snapshotBusy = ref(false);
 
 const toggleRecording = async () => {
 	if (recordingBusy.value || !dailyCallObject || !dailyJoined.value) return;
@@ -360,6 +375,102 @@ const toggleTranscription = async () => {
 		});
 	} finally {
 		transcriptionBusy.value = false;
+	}
+};
+
+// ── Host-only snapshot ────────────────────────────────────────────────────
+// Flattens the current screen-share (or active video) + the annotation marks
+// into a single PNG and attaches it to the meeting. The annotation overlay is
+// a DOM canvas on top of Daily's iframe, so it never lands in Daily's cloud
+// recording — a composited snapshot is the only way to capture a marked-up
+// frame as a durable artifact.
+//
+// Caveat: the marks are scaled to the full overlay area, so alignment is exact
+// for a full-bleed screen share and approximate for tiled layouts (we can't
+// read the prebuilt's on-screen tile rect across the cross-origin iframe).
+const waitForVideoFrame = (video) =>
+	new Promise((resolve) => {
+		if (video.readyState >= 2 && video.videoWidth) return resolve();
+		const done = () => { video.removeEventListener('loadeddata', done); resolve(); };
+		video.addEventListener('loadeddata', done);
+		setTimeout(done, 1500);
+	});
+
+const pickCaptureTrack = () => {
+	const parts = dailyCallObject?.participants?.() || {};
+	// Prefer an active screen share — that's the design-review case.
+	for (const p of Object.values(parts)) {
+		const sv = p?.tracks?.screenVideo;
+		if (sv?.state === 'playable' && sv.persistentTrack) return sv.persistentTrack;
+	}
+	// Fall back to any playable camera track.
+	for (const p of Object.values(parts)) {
+		const v = p?.tracks?.video;
+		if (v?.state === 'playable' && v.persistentTrack) return v.persistentTrack;
+	}
+	return null;
+};
+
+const captureSnapshot = async () => {
+	if (snapshotBusy.value || !meeting.value?.id) return;
+	snapshotBusy.value = true;
+	let video = null;
+	try {
+		const annoEl = annotationCanvas.value?.getCanvasEl?.();
+		const track = pickCaptureTrack();
+		let canvas;
+
+		if (track) {
+			video = document.createElement('video');
+			video.muted = true;
+			video.playsInline = true;
+			video.srcObject = new MediaStream([track]);
+			try { await video.play(); } catch {}
+			await waitForVideoFrame(video);
+			const w = video.videoWidth || 1280;
+			const h = video.videoHeight || 720;
+			canvas = document.createElement('canvas');
+			canvas.width = w;
+			canvas.height = h;
+			const c = canvas.getContext('2d');
+			c.drawImage(video, 0, 0, w, h);
+			if (annoEl) c.drawImage(annoEl, 0, 0, w, h);
+		} else if (annoEl) {
+			// Marks-only fallback over a neutral background.
+			canvas = document.createElement('canvas');
+			canvas.width = annoEl.width;
+			canvas.height = annoEl.height;
+			const c = canvas.getContext('2d');
+			c.fillStyle = '#111827';
+			c.fillRect(0, 0, canvas.width, canvas.height);
+			c.drawImage(annoEl, 0, 0);
+			toast.add({
+				title: 'No active video',
+				description: 'Saved your annotations on their own.',
+				color: 'gray',
+			});
+		} else {
+			toast.add({ title: 'Nothing to capture', color: 'red' });
+			return;
+		}
+
+		const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+		if (!blob) throw new Error('Could not render the snapshot');
+
+		const fd = new FormData();
+		fd.append('file', blob, `snapshot-${Date.now()}.png`);
+		await $fetch(`/api/video/meetings/${meeting.value.id}/snapshots`, { method: 'POST', body: fd });
+		toast.add({ title: 'Snapshot saved', description: 'Added to the meeting recap.', color: 'green' });
+	} catch (err) {
+		console.error('[meeting] snapshot failed', err);
+		toast.add({
+			title: 'Snapshot failed',
+			description: err?.data?.message || err?.message || 'Could not capture a snapshot.',
+			color: 'red',
+		});
+	} finally {
+		if (video) video.srcObject = null;
+		snapshotBusy.value = false;
 	}
 };
 
@@ -419,6 +530,10 @@ let dailyCallObject = null;
 const mySessionId = ref(null);
 const strokeSubscribers = new Set();
 const clearSubscribers = new Set();
+const clearMineSubscribers = new Set();
+const undoSubscribers = new Set();
+const syncRequestSubscribers = new Set();
+const syncResponseSubscribers = new Set();
 const annotationCanvas = ref(null);
 
 // Stable per-tab id used to label annotation strokes. Daily's session_id from
@@ -436,6 +551,22 @@ const annotationBus = {
 		clearSubscribers.add(cb);
 		return () => clearSubscribers.delete(cb);
 	},
+	onClearMine(cb) {
+		clearMineSubscribers.add(cb);
+		return () => clearMineSubscribers.delete(cb);
+	},
+	onUndo(cb) {
+		undoSubscribers.add(cb);
+		return () => undoSubscribers.delete(cb);
+	},
+	onSyncRequest(cb) {
+		syncRequestSubscribers.add(cb);
+		return () => syncRequestSubscribers.delete(cb);
+	},
+	onSyncResponse(cb) {
+		syncResponseSubscribers.add(cb);
+		return () => syncResponseSubscribers.delete(cb);
+	},
 	sendStroke(segment) {
 		if (!dailyCallObject || !segment) return;
 		try {
@@ -449,6 +580,34 @@ const annotationBus = {
 				{ type: 'annotation-clear', authorId: annotationAuthorId.value },
 				'*',
 			);
+		} catch {}
+	},
+	sendClearMine(authorId) {
+		if (!dailyCallObject) return;
+		try {
+			dailyCallObject.sendAppMessage({ type: 'annotation-clear-mine', authorId }, '*');
+		} catch {}
+	},
+	sendUndo(strokeId) {
+		if (!dailyCallObject || !strokeId) return;
+		try {
+			dailyCallObject.sendAppMessage({ type: 'annotation-undo', strokeId }, '*');
+		} catch {}
+	},
+	sendSyncRequest() {
+		if (!dailyCallObject) return;
+		try {
+			dailyCallObject.sendAppMessage(
+				{ type: 'annotation-sync-request', requesterId: annotationAuthorId.value },
+				'*',
+			);
+		} catch {}
+	},
+	sendSyncResponse(targetId, segments) {
+		if (!dailyCallObject || !targetId || !segments?.length) return;
+		try {
+			// Targeted reply — only the late joiner receives the state dump.
+			dailyCallObject.sendAppMessage({ type: 'annotation-sync-response', segments }, targetId);
 		} catch {}
 	},
 };
@@ -502,6 +661,26 @@ const handleAppMessage = (e) => {
 		return;
 	}
 
+	if (data.type === 'annotation-clear-mine') {
+		for (const cb of clearMineSubscribers) cb(data.authorId);
+		return;
+	}
+
+	if (data.type === 'annotation-undo') {
+		for (const cb of undoSubscribers) cb(data.strokeId);
+		return;
+	}
+
+	if (data.type === 'annotation-sync-request') {
+		for (const cb of syncRequestSubscribers) cb(data.requesterId);
+		return;
+	}
+
+	if (data.type === 'annotation-sync-response') {
+		if (Array.isArray(data.segments)) for (const cb of syncResponseSubscribers) cb(data.segments);
+		return;
+	}
+
 	if (data.type === 'annotation-ping') {
 		// Diagnostic ping — visible in DevTools so we can tell at a glance
 		// whether app-message delivery is reaching remote participants.
@@ -535,6 +714,13 @@ const handleJoinedMeeting = (e) => {
 			'*',
 		);
 	} catch {}
+
+	// Late-joiner sync: ask whoever's already here for the current annotation
+	// state. Only the primary peer (host) answers, targeted back at us. Small
+	// delay so remote wrap'd objects are listening before we fire.
+	setTimeout(() => {
+		try { annotationBus.sendSyncRequest(); } catch {}
+	}, 1200);
 
 	// Recording + transcription auto-start happens server-side via the meeting
 	// token's `auto_start_recording` / `auto_start_transcription` properties
