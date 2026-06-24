@@ -336,7 +336,7 @@ export async function createDailyMeetingToken(params: {
 					? { auto_start_transcription: true }
 					: {}),
 				...(isOwner && params.autoStartRecording
-					? { auto_start_recording: true }
+					? { start_cloud_recording: true }
 					: {}),
 				...(params.redirectOnExit
 					? { redirect_on_meeting_exit: params.redirectOnExit }
