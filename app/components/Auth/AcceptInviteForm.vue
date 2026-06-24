@@ -112,7 +112,7 @@ const onSubmit = handleSubmit(async (values) => {
             </p>
             <button
               type="button"
-              class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              class="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               @click="emit('login')"
             >
               Continue to login
@@ -131,7 +131,7 @@ const onSubmit = handleSubmit(async (values) => {
                     id="firstName"
                     type="text"
                     v-bind="field"
-                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex h-10 w-full rounded-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     :class="{ 'border-destructive': errors.length }"
                   />
                   <p v-if="errors.length" class="text-sm text-destructive">
@@ -149,7 +149,7 @@ const onSubmit = handleSubmit(async (values) => {
                     id="lastName"
                     type="text"
                     v-bind="field"
-                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex h-10 w-full rounded-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     :class="{ 'border-destructive': errors.length }"
                   />
                   <p v-if="errors.length" class="text-sm text-destructive">
@@ -217,7 +217,7 @@ const onSubmit = handleSubmit(async (values) => {
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                class="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
               >
                 <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
                 {{ isSubmitting ? "Setting up..." : "Complete setup" }}

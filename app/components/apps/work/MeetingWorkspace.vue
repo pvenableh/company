@@ -849,7 +849,7 @@ const promoteActionItem = async (idx) => {
 		<!-- allow-legacy-link — full-page mode renders an in-shell back link. -->
 		<NuxtLink
 			v-if="!compact"
-			to="/apps/work?floor=meetings"
+			to="/apps/work?floor=calendar&history=1"
 			class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4"
 		>
 			<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
@@ -1400,7 +1400,7 @@ const promoteActionItem = async (idx) => {
 									<p v-if="selectedAttendee.contact.email" class="text-xs text-muted-foreground truncate">{{ selectedAttendee.contact.email }}</p>
 									<p v-if="selectedAttendee.contact.company" class="text-xs text-muted-foreground/80 truncate mt-0.5">{{ selectedAttendee.contact.company }}</p>
 								</div>
-								<button class="p-1.5 rounded-lg hover:bg-muted/60" @click="closeAttendeeInsight">
+								<button class="p-1.5 rounded-full hover:bg-muted/60" @click="closeAttendeeInsight">
 									<UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
 								</button>
 							</div>

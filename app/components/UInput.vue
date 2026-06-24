@@ -78,7 +78,7 @@ const hasTrailingIcon = computed(() => props.trailingIcon || props.loading);
 
 const inputClasses = computed(() =>
   cn(
-    "flex w-full rounded-md border border-input bg-background text-foreground",
+    "flex w-full rounded-full border border-input bg-background text-foreground",
     "ring-offset-background placeholder:text-muted-foreground",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",

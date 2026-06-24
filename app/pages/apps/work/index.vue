@@ -41,6 +41,8 @@ const FLOOR_KEYS: FloorKey[] = ['projects', 'tasks', 'tickets', 'meetings', 'cal
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
   if (v === 'gantt') return 'projects';
+  // Meetings folded into Calendar — its history is now a slide-over on Calendar.
+  if (v === 'meetings') return 'calendar';
   return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'projects';
 })();
 const floor = ref<FloorKey>(initialFloor);
@@ -53,7 +55,8 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
   { key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
-  { key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
+  // 'meetings' floor folded into 'calendar' — access via the Calendar floor's
+  // "History" button (meeting recaps live in a slide-over there now).
   { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
   { key: 'time', label: 'Time', icon: 'lucide:clock' },
   { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
@@ -79,6 +82,13 @@ watch(projectsView, (next) => {
 if (route.query.floor === 'gantt') {
   const { floor: _drop, ...rest } = route.query;
   router.replace({ query: rest });
+}
+
+// Meetings is no longer a standalone floor — it folds into Calendar as a
+// "History" slide-over. Rewrite legacy ?floor=meetings deep-links to open the
+// Calendar floor with the history panel already open.
+if (route.query.floor === 'meetings') {
+  router.replace({ query: { ...route.query, floor: 'calendar', history: '1' } });
 }
 
 // ── Insights floor ──────────────────────────────────────────────────────────

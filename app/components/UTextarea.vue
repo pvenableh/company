@@ -62,7 +62,7 @@ const sizeClasses = computed(() => {
 
 const textareaClasses = computed(() =>
   cn(
-    "flex w-full rounded-md border border-input bg-background text-foreground",
+    "flex w-full rounded-2xl border border-input bg-background text-foreground",
     "ring-offset-background placeholder:text-muted-foreground",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     "disabled:cursor-not-allowed disabled:opacity-50",

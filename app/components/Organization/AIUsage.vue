@@ -2,7 +2,7 @@
 	<div class="space-y-6">
 		<!-- Permission gate -->
 		<div v-if="!canViewUsage" class="flex flex-col items-center justify-center py-16">
-			<div class="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
+			<div class="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
 				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-destructive" />
 			</div>
 			<h3 class="font-semibold text-foreground mb-1">Access Restricted</h3>
@@ -19,7 +19,7 @@
 				<button
 					v-for="p in periods"
 					:key="p.value"
-					class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+					class="px-3 py-1.5 text-xs font-medium rounded-full transition-colors"
 					:class="period === p.value
 						? 'bg-primary/10 text-primary'
 						: 'text-muted-foreground hover:bg-muted/50'"
@@ -94,7 +94,7 @@
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+						<div class="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
 							<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-blue-500" />
 						</div>
 					</div>
@@ -103,7 +103,7 @@
 				</div>
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+						<div class="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
 							<UIcon name="i-heroicons-cpu-chip" class="w-4 h-4 text-purple-500" />
 						</div>
 					</div>
@@ -113,7 +113,7 @@
 				</div>
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+						<div class="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
 							<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-success" />
 						</div>
 					</div>
@@ -122,7 +122,7 @@
 				</div>
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center">
+						<div class="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center">
 							<UIcon name="i-heroicons-users" class="w-4 h-4 text-warning" />
 						</div>
 					</div>
@@ -282,7 +282,7 @@
 
 		<!-- Empty state -->
 		<div v-else-if="!stats" class="flex flex-col items-center justify-center py-16">
-			<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+			<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
 				<EarnestIcon class="w-6 h-6 text-primary" />
 			</div>
 			<h3 class="font-semibold text-foreground mb-1">No usage data yet</h3>

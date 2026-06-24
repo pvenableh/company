@@ -207,7 +207,7 @@ const filteredSuggestions = computed(() => {
 });
 
 const quickActions = [
-	{ label: 'Chat History', icon: 'i-heroicons-clock', route: '/command-center/ai' },
+	{ label: 'Chat History', icon: 'i-lucide-history', route: '/command-center/ai' },
 	{ label: 'New Task', icon: 'i-heroicons-plus-circle', route: '/tickets' },
 	{ label: 'Send Invoice', icon: 'i-heroicons-paper-airplane', route: '/invoices' },
 	{ label: 'Schedule Call', icon: 'i-heroicons-phone', route: '/scheduler' },
@@ -333,21 +333,21 @@ watch(quickStreamingContent, () => {
 						<button
 							v-if="canManageTokens"
 							@click="openManageTokens"
-							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+							class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground"
 							title="Manage AI tokens"
 						>
 							<UIcon name="i-heroicons-wallet" class="w-4 h-4" />
 						</button>
 						<button
 							@click="showPreferences = !showPreferences"
-							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+							class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
 							:class="showPreferences ? 'bg-primary/10 text-primary' : ''"
 						>
 							<UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" :class="showPreferences ? 'text-primary' : 'text-muted-foreground'" />
 						</button>
 						<button
 							@click="emit('close')"
-							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+							class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
 						>
 							<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
 						</button>
@@ -487,7 +487,7 @@ watch(quickStreamingContent, () => {
 								@click="openFullChat"
 								class="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
 							>
-								<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
+								<UIcon name="i-lucide-history" class="w-3.5 h-3.5" />
 								View Chat History
 							</button>
 						</div>
@@ -620,13 +620,13 @@ watch(quickStreamingContent, () => {
 									placeholder="Ask about clients, leads, tickets, projects, invoices..."
 									:disabled="isQuickSending"
 									@keydown="handleChatKeydown"
-									class="w-full bg-muted/40 rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+									class="w-full bg-muted/40 rounded-full pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
 								/>
 							</div>
 							<button
 								type="submit"
 								:disabled="!chatInput.trim() || isQuickSending"
-								class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+								class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
 							>
 								<UIcon
 									v-if="isQuickSending"
@@ -760,7 +760,7 @@ watch(quickStreamingContent, () => {
 						<input
 							v-model="trayNotesSearch"
 							placeholder="Search notes..."
-							class="w-full text-xs px-3 py-2 border border-border rounded-lg bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+							class="w-full text-xs px-3 py-2 border border-border rounded-full bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
 						/>
 					</div>
 

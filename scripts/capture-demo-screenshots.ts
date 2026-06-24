@@ -156,7 +156,9 @@ const SHOTS: Shot[] = [
 		slug: 'leads-pipeline',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/leads`,
+		// Apps-shell Leads floor (was classic /leads) — keeps the marketing
+		// site on the unified /apps/* chrome.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/clients?view=leads`,
 	},
 	{
 		slug: 'contact-detail',
@@ -168,43 +170,52 @@ const SHOTS: Shot[] = [
 		slug: 'client-detail',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/clients', ctx.baseUrl)}`,
+		// Apps-shell client workspace (was classic /clients/[id]).
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/clients/${await firstItemId(ctx.page, 'clients', ctx.baseUrl)}`,
 	},
 	{
 		slug: 'project-timeline',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/projects', ctx.baseUrl)}`,
+		// Apps-shell project workspace (was classic /projects/[id]).
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
 	},
 	{
 		slug: 'tickets-kanban',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/tickets`,
+		// Apps-shell Tickets floor (was classic /tickets).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/work?floor=tickets`,
 	},
 	{
 		slug: 'financials-overview',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/financials`,
+		// Apps-shell Money app, Cash flow floor (was classic /financials).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/money`,
 	},
 	{
 		slug: 'people-dashboard',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/contacts?view=insights`,
+		// Apps-shell Clients app, Intelligence floor (was classic /contacts?view=insights).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/clients?view=intelligence`,
 	},
 	{
 		slug: 'scheduler-day',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/scheduler`,
+		// Apps-shell Work app, Calendar floor (was classic /scheduler).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/work?floor=calendar`,
 	},
 	{
 		slug: 'quick-tasks',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/tasks`,
+		// Apps-shell Work app, Tasks floor (was classic /tasks).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/work?floor=tasks`,
 	},
 	{
 		slug: 'time-tracker',
@@ -253,7 +264,10 @@ const SHOTS: Shot[] = [
 		slug: 'contracts-list',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/contracts`,
+		// Apps-shell Money app, Documents floor, Contracts sub-tab (the floor
+		// stacks proposals + contracts and defaults to proposals; was classic
+		// /contracts).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/money?floor=documents&tab=contracts`,
 	},
 	{
 		slug: 'contracts-signed',
@@ -268,7 +282,9 @@ const SHOTS: Shot[] = [
 		slug: 'ai-sidebar',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/clients', ctx.baseUrl)}`,
+		// Apps-shell client workspace + contextual AI panel (was classic /clients/[id]).
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/clients/${await firstItemId(ctx.page, 'clients', ctx.baseUrl)}`,
 		// Open the contextual AI panel after the page settles. The trigger
 		// is an "Ask Earnest" button in the client header; the sidebar state
 		// is module-level so the click flips it open.
@@ -290,7 +306,9 @@ const SHOTS: Shot[] = [
 		// AI Actions is the same contextual sidebar surface as ai-sidebar, but
 		// scoped to a project so the marketing copy ("Reschedule a project —
 		// every linked event and task shifts automatically") matches the shot.
-		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/projects', ctx.baseUrl)}`,
+		// Apps-shell project workspace (was classic /projects/[id]).
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
 		waitFor: async (page) => {
 			const trigger = page.getByRole('button', { name: /ask earnest/i });
 			try {
@@ -382,17 +400,17 @@ const SHOTS: Shot[] = [
 		slug: 'marketing-overview',
 		viewport: 'inline',
 		persona: 'agency',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/marketing`,
+		// Apps-shell Marketing app, Pulse floor (was classic /marketing).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/marketing`,
 	},
 	{
 		slug: 'marketing-recommendations',
 		viewport: 'inline',
 		persona: 'agency',
-		// Same /marketing page, scrolled to the recommendation feed (the
-		// MarketingFeedSection that was folded in from /marketing-feed). We
-		// scroll the section into view so the campaign cards are in frame
+		// Apps-shell Marketing app (Pulse floor), scrolled to the recommendation
+		// feed (the MarketingFeedSection) so the campaign cards are in frame
 		// instead of the KPI strip.
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/marketing`,
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/marketing`,
 		waitFor: async (page) => {
 			await page
 				.evaluate(() => {
@@ -422,21 +440,23 @@ const SHOTS: Shot[] = [
 		slug: 'organization-overview',
 		viewport: 'inline',
 		persona: 'agency',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/organization`,
+		// Apps-shell Organization app, Overview floor (was classic /organization).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/organization`,
 	},
 	{
 		slug: 'organization-branding',
 		viewport: 'tall',
 		persona: 'agency',
-		// Same /organization page — but scrolled to the Branding card so
-		// the Whitelabel toggle is in frame. The card lives mid-page; we
-		// bring it into view via #branding hash + scrollIntoView fallback.
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/organization#branding`,
+		// Apps-shell Organization app, Settings floor — branding/whitelabel now
+		// lives here as the Document theme + brand identity editor (was the
+		// classic /organization#branding card). Scroll the theme/brand block
+		// into frame.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/organization?floor=settings`,
 		waitFor: async (page) => {
 			await page
 				.evaluate(() => {
-					const el = Array.from(document.querySelectorAll('h2, h3')).find((h) =>
-						/branding/i.test(h.textContent ?? ''),
+					const el = Array.from(document.querySelectorAll('h1, h2, h3')).find((h) =>
+						/brand|theme|whitelabel|document/i.test(h.textContent ?? ''),
 					);
 					if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
 				})
@@ -450,7 +470,8 @@ const SHOTS: Shot[] = [
 		slug: 'organization-teams',
 		viewport: 'inline',
 		persona: 'agency',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/organization/teams`,
+		// Apps-shell Organization app, Teams floor (was classic /organization/teams).
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/organization?floor=teams`,
 	},
 	{
 		slug: 'team-detail',

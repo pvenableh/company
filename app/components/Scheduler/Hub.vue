@@ -20,7 +20,16 @@
 			<SchedulerNewMeetingButton @created="handleMeetingCreated" />
 			<button
 				type="button"
-				class="p-2 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+				class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+				title="Meeting history — recordings & recaps"
+				aria-label="Meeting history"
+				@click="showHistory = true"
+			>
+				<UIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
 				title="Scheduler settings"
 				aria-label="Open scheduler settings"
 				@click="showSettings = true"
@@ -128,6 +137,16 @@
 		<AppSlideOver v-model="showSettings" title="Scheduler Settings" :ui="{ body: 'p-0' }">
 			<SchedulerSettingsPanel :in-overlay="true" />
 		</AppSlideOver>
+
+		<!-- Meeting history slide-over — the former Meetings floor, nested here. -->
+		<AppSlideOver
+			v-model="showHistory"
+			title="Meeting History"
+			description="Recordings, transcripts, and AI-written recaps for every video call."
+			:ui="{ body: 'p-0' }"
+		>
+			<SchedulerHistoryPanel />
+		</AppSlideOver>
 	</div>
 </template>
 
@@ -147,7 +166,25 @@ const videoMeetings = ref<any[]>([]);
 const meetingRequests = ref<any[]>([]);
 const showRequestsModal = ref(false);
 const showSettings = ref(false);
+const showHistory = ref(false);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
+
+// The Apps-layout Work app can deep-link the meeting history open via
+// ?floor=calendar&history=1 (used by the floor strip's Meetings entry, which
+// now folds into this calendar floor instead of a separate floor).
+const route = useRoute();
+const syncHistoryFromQuery = () => {
+	showHistory.value = route.query.history === '1' || route.query.history === 'true';
+};
+watch(() => route.query.history, syncHistoryFromQuery);
+onMounted(syncHistoryFromQuery);
+watch(showHistory, (open) => {
+	if (!open && (route.query.history === '1' || route.query.history === 'true')) {
+		const q = { ...route.query };
+		delete q.history;
+		router.replace({ query: q });
+	}
+});
 
 // Filters
 const activeFilters = ref(new Set(['appointments', 'video', 'follow_ups']));

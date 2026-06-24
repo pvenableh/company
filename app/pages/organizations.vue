@@ -51,7 +51,7 @@ const handleSelectOrg = (orgId: string) => {
       <div class="ios-card p-8">
         <!-- Header -->
         <div class="text-center mb-8">
-          <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+          <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
             <Building2 class="w-6 h-6 text-gray-500" />
           </div>
           <h1 class="text-xl font-semibold">Your Organizations</h1>
@@ -127,7 +127,7 @@ const handleSelectOrg = (orgId: string) => {
             to="/organization/new"
             class="w-full flex items-center gap-3 p-4 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
           >
-            <div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
+            <div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
               <Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
             </div>
             <div class="text-left">
@@ -141,7 +141,7 @@ const handleSelectOrg = (orgId: string) => {
             to="/organization"
             class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all group"
           >
-            <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
               <Settings class="size-4 text-gray-400" />
             </div>
             <div class="text-left">

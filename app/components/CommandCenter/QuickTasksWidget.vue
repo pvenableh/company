@@ -115,7 +115,7 @@
 
 			<!-- AI suggest button -->
 			<button
-				class="w-full flex items-center justify-center gap-2 h-9 rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-600/10 border border-primary/15 text-xs font-medium text-primary hover:from-violet-500/15 hover:to-purple-600/15 transition-all disabled:opacity-50"
+				class="w-full flex items-center justify-center gap-2 h-9 rounded-full bg-gradient-to-r from-violet-500/10 to-purple-600/10 border border-primary/15 text-xs font-medium text-primary hover:from-violet-500/15 hover:to-purple-600/15 transition-all disabled:opacity-50"
 				:disabled="aiLoading"
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
@@ -301,7 +301,7 @@
 		<!-- AI Suggest (when tasks exist) -->
 		<div v-if="tasks.length > 0" class="mt-3 pt-3 border-t border-border/30">
 			<button
-				class="w-full flex items-center justify-center gap-2 h-8 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50"
+				class="w-full flex items-center justify-center gap-2 h-8 rounded-full text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50"
 				:disabled="aiLoading"
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>

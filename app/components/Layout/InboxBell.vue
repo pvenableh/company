@@ -82,7 +82,7 @@ function activityIcon(type: string) {
           :class="!a.read ? 'bg-primary/5' : ''"
         >
           <div class="relative shrink-0">
-            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+            <div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
               <component :is="activityIcon(a.type)" class="h-3.5 w-3.5 text-primary" />
             </div>
             <span

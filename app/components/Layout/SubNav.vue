@@ -12,7 +12,7 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
     { label: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
     { label: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
     { label: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
-    { label: 'Meetings', to: '/meetings', icon: 'heroicons:video-camera' },
+    { label: 'Meetings', to: '/scheduler?history=1', icon: 'heroicons:video-camera' },
     { label: 'Files', to: '/files', icon: 'heroicons:folder-open' },
     { label: 'Goals', to: '/goals', icon: 'lucide:target' },
   ],

@@ -50,7 +50,7 @@
 				v-model="searchQuery"
 				type="text"
 				placeholder="Search users..."
-				class="w-full h-8 rounded-lg border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+				class="w-full h-8 rounded-full border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
 			/>
 			<div class="max-h-40 overflow-y-auto space-y-1">
 				<button

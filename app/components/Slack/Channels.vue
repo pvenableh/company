@@ -45,7 +45,7 @@ const refreshAll = () => {
 
     <!-- Connection warning -->
     <div v-if="!isFullyConnected && !isLoading" class="ios-card p-3 flex items-center gap-2 border-warning/30 dark:border-warning">
-      <div class="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+      <div class="w-7 h-7 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
         <Icon name="lucide:wifi-off" class="w-3.5 h-3.5 text-warning" />
       </div>
       <div class="flex-1 min-w-0">
@@ -57,7 +57,7 @@ const refreshAll = () => {
 
     <!-- Error -->
     <div v-if="hasError" class="ios-card p-3 flex items-center gap-2 border-destructive/30 dark:border-destructive">
-      <div class="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+      <div class="w-7 h-7 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
         <Icon name="lucide:alert-circle" class="w-3.5 h-3.5 text-destructive" />
       </div>
       <div class="flex-1 min-w-0">
@@ -93,7 +93,7 @@ const refreshAll = () => {
         class="ios-card p-4 flex items-center justify-between ios-press"
       >
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+          <div class="w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
             <Icon name="lucide:hash" class="w-4 h-4 text-violet-500" />
           </div>
           <div class="min-w-0">

@@ -793,12 +793,12 @@ onUnmounted(() => {
 						:disabled="isSending"
 						placeholder="Ask about a client, project, or invoice..."
 						rows="1"
-						class="flex-1 resize-none text-sm border border-border rounded-lg px-3 py-2.5 bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+						class="flex-1 resize-none text-sm border border-border rounded-2xl px-3 py-2.5 bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
 					/>
 					<button
 						@click="sendMessage"
 						:disabled="!newMessage.trim() || isSending"
-						class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+						class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
 					>
 						<UIcon
 							v-if="isSending"

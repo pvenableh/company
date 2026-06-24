@@ -129,7 +129,7 @@ const workLinks = [
 	{ to: '/tickets', label: 'Tickets' },
 	{ to: '/tasks', label: 'Tasks' },
 	{ to: '/scheduler', label: 'Scheduler' },
-	{ to: '/meetings', label: 'Meetings' },
+	{ to: '/scheduler?history=1', label: 'Meetings' },
 	{ to: '/files', label: 'Files' },
 	{ to: '/goals', label: 'Goals' },
 ];

@@ -314,7 +314,7 @@ onUnmounted(() => {
 				<button
 					@click="sendMessage"
 					:disabled="!newMessage.trim() || !selectedChannel || isSending"
-					class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+					class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
 				>
 					<UIcon v-if="isSending" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 					<UIcon v-else name="i-heroicons-paper-airplane" class="w-4 h-4" />

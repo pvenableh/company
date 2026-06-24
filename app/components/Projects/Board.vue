@@ -204,7 +204,7 @@
 		<UModal v-model="showTimelinePrompt" title="Generate Timeline?">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+					<div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
 						<EarnestIcon class="h-3.5 w-3.5 text-white" />
 					</div>
 					<h3 class="text-sm font-bold uppercase tracking-wide">Generate Timeline?</h3>

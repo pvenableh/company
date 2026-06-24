@@ -31,7 +31,7 @@
 									v-model="form.date"
 									type="date"
 									required
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 								/>
 							</div>
 							<div>
@@ -42,7 +42,7 @@
 									min="0"
 									max="24"
 									step="1"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 									placeholder="0"
 								/>
 							</div>
@@ -54,7 +54,7 @@
 									min="0"
 									max="59"
 									step="5"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 									placeholder="0"
 								/>
 							</div>
@@ -66,7 +66,7 @@
 							<textarea
 								v-model="form.description"
 								rows="2"
-								class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+								class="w-full rounded-2xl border bg-background px-3 py-2 text-sm"
 								placeholder="What did you work on?"
 							/>
 						</div>
@@ -77,7 +77,7 @@
 								<label class="block text-xs font-medium text-muted-foreground mb-1">Client</label>
 								<select
 									v-model="form.client"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 								>
 									<option :value="null">No client</option>
 									<option
@@ -93,7 +93,7 @@
 								<label class="block text-xs font-medium text-muted-foreground mb-1">Project</label>
 								<select
 									v-model="form.project"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 								>
 									<option :value="null">No project</option>
 									<option
@@ -113,7 +113,7 @@
 								<label class="block text-xs font-medium text-muted-foreground mb-1">Ticket</label>
 								<select
 									v-model="form.ticket"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 								>
 									<option :value="null">No ticket</option>
 									<option
@@ -129,7 +129,7 @@
 								<label class="block text-xs font-medium text-muted-foreground mb-1">Task</label>
 								<select
 									v-model="form.task"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 								>
 									<option :value="null">No task</option>
 									<option
@@ -148,7 +148,7 @@
 							<label class="block text-xs font-medium text-muted-foreground mb-1">Working on a post</label>
 							<select
 								v-model="form.source_social_post"
-								class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+								class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 							>
 								<option :value="null">No post</option>
 								<option
@@ -178,7 +178,7 @@
 									type="number"
 									min="0"
 									step="0.01"
-									class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 									placeholder="0.00"
 								/>
 							</div>

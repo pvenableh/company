@@ -268,6 +268,18 @@
   position: fixed;
 }
 
+/* Slide-over panels sit flush against the screen edge, so the inherited
+ * `.glass-surface` 1rem radius left rounded corners floating mid-screen.
+ * Square them on desktop (where the panel docks to an edge). Below 768px
+ * AppSlideOver falls back to a bottom sheet, which intentionally keeps its
+ * rounded top (`rounded-t-xl`) per the iOS sheet pattern — so scope this to
+ * desktop and leave the mobile radius alone. */
+@media (min-width: 768px) {
+  [data-slot="sheet-content"] {
+    border-radius: 0;
+  }
+}
+
 /* ---- Dialog overlay glass ----
  * Accent-tinted blurred backdrop for modals — replaces the flat bg-black/80
  * default so the underlying app reads as "behind glass" instead of dimmed-out.

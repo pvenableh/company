@@ -1,7 +1,8 @@
 <template>
 	<div class="quick-tasks">
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-3">
+		<!-- Header — hidden in the floating dock, where the dock panel already
+		     renders a "Quick Tasks" title (avoids a duplicate header). -->
+		<div v-if="!hideHeader" class="flex items-center justify-between mb-3">
 			<h2 class="text-lg font-medium">Quick Tasks</h2>
 			<div class="flex items-center gap-2">
 				<button
@@ -44,7 +45,7 @@
 					v-model="newTaskTitle"
 					type="text"
 					placeholder="Add a task..."
-					class="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+					class="w-full h-9 rounded-full border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
 					:class="{ 'pr-8': !selectedAssignee, 'pr-[120px]': selectedAssignee }"
 					@keydown.enter="handleAddTask"
 					@input="handleInputChange"
@@ -107,7 +108,7 @@
 				</div>
 			</div>
 			<button
-				class="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+				class="h-9 px-3 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
 				:disabled="!newTaskTitle.trim()"
 				@click="handleAddTask"
 			>
@@ -187,11 +188,11 @@
 						v-model="aiPrompt"
 						type="text"
 						placeholder="What are you working on? (optional)"
-						class="flex-1 h-8 rounded-lg border border-border bg-muted/30 px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+						class="flex-1 h-8 rounded-full border border-border bg-muted/30 px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
 						@keydown.enter="fetchAiSuggestions"
 					/>
 					<button
-						class="h-8 px-3 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
+						class="h-8 px-3 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
 						:disabled="aiLoading"
 						@click="fetchAiSuggestions"
 					>
@@ -294,6 +295,13 @@
 					<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-success" />
 					<span>Completed</span>
 					<span class="schedule-count">{{ completedTasks.length }}</span>
+					<button
+						v-if="hideHeader"
+						class="ml-auto normal-case text-[10px] text-muted-foreground hover:text-foreground transition-colors tracking-wide"
+						@click="clearCompleted"
+					>
+						Clear done
+					</button>
 				</div>
 				<div
 					v-for="task in completedTasks"
@@ -333,6 +341,13 @@
 
 <script setup>
 import confetti from 'canvas-confetti';
+
+// `hideHeader` drops the internal "Quick Tasks" title + top "Clear done" so the
+// floating dock (which renders its own panel header) doesn't show two headers.
+// Clear-done is relocated into the Completed section header in this mode.
+defineProps({
+	hideHeader: { type: Boolean, default: false },
+});
 
 const {
 	activeTasks,

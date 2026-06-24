@@ -9,14 +9,14 @@
           <!-- Header -->
           <div class="relative px-6 pt-6 pb-4">
             <button
-              class="absolute right-4 top-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              class="absolute right-4 top-4 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               @click="$emit('close')"
             >
               <Icon name="lucide:x" class="w-4 h-4" />
             </button>
 
             <div class="flex items-center gap-3 mb-1">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <EarnestIcon class="w-4 h-4 text-white" />
               </div>
               <div>
@@ -257,7 +257,7 @@
 
             <!-- Error state -->
             <div v-else-if="error" class="py-8 text-center">
-              <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
                 <Icon name="lucide:alert-circle" class="w-6 h-6 text-destructive" />
               </div>
               <h3 class="font-semibold text-foreground mb-1">Generation failed</h3>

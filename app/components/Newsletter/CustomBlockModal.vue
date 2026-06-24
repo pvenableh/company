@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between px-5 py-4 border-b border-border/30 shrink-0">
         <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center">
+          <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
             <Icon name="lucide:code-2" class="w-3.5 h-3.5 text-primary" />
           </div>
           <h3 class="text-sm font-semibold">Custom MJML Block</h3>

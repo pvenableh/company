@@ -330,7 +330,7 @@ function getStylePreviewClass(styleId: string): string {
 }
 
 .theme-card__icon {
-	@apply flex items-center justify-center size-9 rounded-lg bg-muted/60 text-foreground/80 shrink-0;
+	@apply flex items-center justify-center size-9 rounded-full bg-muted/60 text-foreground/80 shrink-0;
 }
 
 .theme-card__icons {

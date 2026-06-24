@@ -363,7 +363,7 @@ const integrationsList = computed(() => {
       status: 'active' as IntegrationStatus,
       statusLabel: 'Built-in',
       action: 'Open meetings',
-      onClick: () => router.push('/apps/work?floor=meetings'),
+      onClick: () => router.push('/apps/work?floor=calendar&history=1'),
     },
     {
       key: 'instagram',

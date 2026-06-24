@@ -76,7 +76,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 		<!-- Header -->
 		<div class="flex items-start justify-between gap-3 mb-3">
 			<div class="flex items-center gap-2.5 min-w-0">
-				<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" :class="categoryInfo.bg">
+				<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" :class="categoryInfo.bg">
 					<UIcon :name="categoryInfo.icon" class="w-4 h-4" :class="categoryInfo.color" />
 				</div>
 				<div class="min-w-0">
@@ -90,7 +90,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 				[{ label: 'Edit', icon: 'i-heroicons-pencil-square', click: () => emit('edit', goal) }],
 				[{ label: 'Delete', icon: 'i-heroicons-trash', click: () => emit('delete', goal) }],
 			]">
-				<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted">
+				<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted">
 					<UIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4 text-muted-foreground" />
 				</button>
 			</UDropdown>

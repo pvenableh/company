@@ -66,7 +66,7 @@ const dismissOptions = () => {
 			:value="modelValue"
 			@input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
 			:rows="rows || 3"
-			class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+			class="w-full rounded-2xl border bg-background px-3 py-2 text-sm"
 			:placeholder="placeholder"
 		/>
 

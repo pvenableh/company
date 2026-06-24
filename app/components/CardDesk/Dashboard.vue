@@ -421,7 +421,7 @@ onMounted(async () => {
 			class="w-full flex items-center gap-3 mb-6 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left"
 			@click="jamOpen = true"
 		>
-			<span class="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shrink-0">
+			<span class="w-11 h-11 rounded-full flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shrink-0">
 				<Icon name="lucide:puzzle" class="size-5" />
 			</span>
 			<span class="flex-1 min-w-0">

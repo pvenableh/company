@@ -52,7 +52,7 @@ onMounted(() => {
 		<!-- Header -->
 		<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
 			<div class="flex items-center gap-2">
-				<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+				<div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
 					<UIcon name="i-heroicons-identification" class="w-5 h-5 text-white" />
 				</div>
 				<div>

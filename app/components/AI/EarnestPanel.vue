@@ -252,7 +252,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 				<div class="border-b border-border/30 shrink-0">
 					<div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-violet-500/5">
 						<div class="flex items-center gap-2.5 min-w-0">
-							<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+							<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
 								<EarnestIcon class="w-4 h-4 text-primary" />
 							</div>
 							<div class="min-w-0">
@@ -264,14 +264,14 @@ const titleLine = computed(() => (aware.hasEntity.value
 							<button
 								v-if="hasHistory"
 								@click="clearChat"
-								class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+								class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
 								title="New conversation"
 							>
 								<Icon name="lucide:plus" class="w-3.5 h-3.5 text-muted-foreground" />
 							</button>
 							<button
 								@click="closeEarnestPanel"
-								class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+								class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
 							>
 								<Icon name="lucide:x" class="w-4 h-4 text-muted-foreground" />
 							</button>
@@ -314,7 +314,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 					<div v-else-if="!messages.length && !isStreaming" class="flex flex-col h-full">
 						<AIAwarenessChip :items="aware.knowledge.value" @toggle="aware.toggle" />
 						<div class="flex-1 flex flex-col items-center justify-center text-center px-2 py-6">
-							<div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+							<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
 								<EarnestIcon class="w-6 h-6 text-primary" />
 							</div>
 							<p class="text-sm font-medium text-foreground mb-1">{{ activePersona.label }}</p>
@@ -383,7 +383,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 										<textarea
 											v-model="correctionText"
 											placeholder="What was wrong? (optional)"
-											class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+											class="flex-1 text-[11px] rounded-2xl border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
 											rows="2"
 											@keydown.enter.ctrl="submitCorrection"
 										/>
@@ -423,13 +423,13 @@ const titleLine = computed(() => (aware.hasEntity.value
 							placeholder="Ask Earnest…"
 							:disabled="isSending"
 							rows="1"
-							class="flex-1 resize-none rounded-xl border border-border bg-muted/50 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+							class="flex-1 resize-none rounded-2xl border border-border bg-muted/50 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
 							style="max-height: 96px"
 						/>
 						<button
 							@click="isStreaming ? cancelStream() : handleSend()"
 							:disabled="!isStreaming && (!newMessage.trim() || isSending)"
-							class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+							class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
 							:class="isStreaming ? 'bg-destructive text-white' : newMessage.trim() ? 'bg-primary hover:bg-primary/90 text-white' : 'bg-muted text-muted-foreground/70'"
 						>
 							<Icon :name="isStreaming ? 'lucide:square' : 'lucide:arrow-up'" class="w-3.5 h-3.5" />

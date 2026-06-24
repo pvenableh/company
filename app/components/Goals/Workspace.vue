@@ -340,7 +340,7 @@ const viewTabs = [
 				<button
 					@click="fetchAISuggestions"
 					:disabled="loadingSuggestions"
-					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-warning/30 text-warning dark:text-warning rounded-lg hover:bg-warning/10 transition-colors"
+					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-warning/30 text-warning dark:text-warning rounded-full hover:bg-warning/10 transition-colors"
 				>
 					<UIcon v-if="loadingSuggestions" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 					<EarnestIcon v-else class="w-4 h-4" />
@@ -348,7 +348,7 @@ const viewTabs = [
 				</button>
 				<button
 					@click="openNewGoal"
-					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
 				>
 					<UIcon name="i-heroicons-plus" class="w-4 h-4" />
 					New Goal
@@ -397,13 +397,13 @@ const viewTabs = [
 								v-model="aiContext"
 								type="text"
 								placeholder="Optional: describe your focus (e.g., 'grow revenue', 'expand network')"
-								class="flex-1 bg-card border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+								class="flex-1 bg-card border border-border rounded-full px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
 								@keydown.enter="fetchAISuggestions"
 							/>
 							<button
 								@click="fetchAISuggestions"
 								:disabled="loadingSuggestions"
-								class="px-3 py-1.5 text-xs font-medium bg-warning/10 text-warning dark:text-warning rounded-lg hover:bg-warning/20 transition-colors"
+								class="px-3 py-1.5 text-xs font-medium bg-warning/10 text-warning dark:text-warning rounded-full hover:bg-warning/20 transition-colors"
 							>
 								{{ loadingSuggestions ? 'Thinking...' : 'Refresh' }}
 							</button>
@@ -433,7 +433,7 @@ const viewTabs = [
 								</div>
 								<button
 									@click="adoptSuggestion(suggestion)"
-									class="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg opacity-80 group-hover:opacity-100 transition-opacity"
+									class="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-full opacity-80 group-hover:opacity-100 transition-opacity"
 								>
 									<UIcon name="i-heroicons-plus" class="w-3 h-3" />
 									Add
@@ -507,7 +507,7 @@ const viewTabs = [
 						v-for="tab in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'All', value: 'all' }] as const"
 						:key="tab.value"
 						@click="statusFilter = tab.value"
-						class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+						class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
 						:class="statusFilter === tab.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
 					>
 						{{ tab.label }}
@@ -523,14 +523,14 @@ const viewTabs = [
 
 			<!-- Empty state -->
 			<div v-else-if="!goals.length" class="text-center py-20">
-				<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+				<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
 					<UIcon name="i-heroicons-flag" class="w-7 h-7 text-primary" />
 				</div>
 				<h3 class="text-base font-semibold mb-1">No goals yet</h3>
 				<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">Create your first goal to start tracking your progress. Goals help Earnest provide personalized suggestions.</p>
 				<button
 					@click="openNewGoal"
-					class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
 				>
 					Create Your First Goal
 				</button>
@@ -575,7 +575,7 @@ const viewTabs = [
 					<input
 						v-model.number="progressValue"
 						type="number"
-						class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+						class="w-full bg-card border border-border rounded-full px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
 					/>
 					<p class="text-xs text-muted-foreground mt-1">
 						Target: {{ progressGoal.target_value }} {{ progressGoal.target_unit }}
@@ -587,7 +587,7 @@ const viewTabs = [
 						v-model="progressNotes"
 						rows="2"
 						placeholder="What changed?"
-						class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+						class="w-full bg-card border border-border rounded-2xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
 					/>
 				</div>
 
@@ -610,7 +610,7 @@ const viewTabs = [
 				<div class="flex justify-end gap-2">
 					<button
 						@click="closeProgress"
-						class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg"
+						class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-full"
 					>
 						{{ reflection || reflectionLoading ? 'Done' : 'Cancel' }}
 					</button>
@@ -618,7 +618,7 @@ const viewTabs = [
 						v-if="!reflection && !reflectionLoading"
 						@click="saveProgress"
 						:disabled="savingProgress"
-						class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+						class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 disabled:opacity-50 transition-colors"
 					>
 						{{ savingProgress ? 'Saving...' : 'Save Progress' }}
 					</button>

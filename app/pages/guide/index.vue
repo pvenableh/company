@@ -158,7 +158,7 @@ const goPrev = () => {
 
 						<div class="space-y-3">
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-warning/30 dark:border-warning bg-warning/10 dark:bg-warning/10">
-								<div class="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center shrink-0">
+								<div class="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
 									<UIcon name="i-heroicons-crown" class="w-4 h-4 text-warning" />
 								</div>
 								<div>
@@ -167,7 +167,7 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+								<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
 									<UIcon name="i-heroicons-shield-check" class="w-4 h-4 text-primary" />
 								</div>
 								<div>
@@ -176,7 +176,7 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+								<div class="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
 									<UIcon name="i-heroicons-briefcase" class="w-4 h-4 text-violet-500" />
 								</div>
 								<div>
@@ -185,7 +185,7 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+								<div class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
 									<UIcon name="i-heroicons-user" class="w-4 h-4 text-success" />
 								</div>
 								<div>
@@ -194,7 +194,7 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+								<div class="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
 									<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info" />
 								</div>
 								<div>

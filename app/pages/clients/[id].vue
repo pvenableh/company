@@ -947,7 +947,7 @@ onUnmounted(() => clearEntity());
                 v-model="newSidebarTag"
                 type="text"
                 placeholder="Add tag..."
-                class="flex-1 h-7 px-2.5 text-xs rounded-lg border border-border bg-transparent placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                class="flex-1 h-7 px-2.5 text-xs rounded-full border border-border bg-transparent placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
               />
               <Button type="submit" variant="ghost" size="sm" class="h-7 w-7 p-0" :disabled="!newSidebarTag.trim()">
                 <Icon name="lucide:plus" class="w-3.5 h-3.5" />

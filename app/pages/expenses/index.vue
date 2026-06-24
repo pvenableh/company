@@ -135,7 +135,7 @@ const statusOptions = [
 				v-model="searchQuery"
 				type="text"
 				placeholder="Search expenses..."
-				class="flex-1 min-w-[180px] bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+				class="flex-1 min-w-[180px] bg-card border border-border rounded-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
 			/>
 			<select
 				v-model="filterCategory"
@@ -272,7 +272,7 @@ const statusOptions = [
 			>
 				<div class="flex items-start gap-3">
 					<!-- Category Icon -->
-					<div class="w-9 h-9 rounded-lg bg-muted/40 flex items-center justify-center flex-shrink-0">
+					<div class="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
 						<UIcon
 							:name="getCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
 							class="w-4.5 h-4.5"

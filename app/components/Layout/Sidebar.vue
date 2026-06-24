@@ -14,7 +14,7 @@
 		<!-- Logo / Brand -->
 		<div class="sidebar-header">
 			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl" :class="{ 'justify-center px-0': collapsed }">
-				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+				<div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
 					<UIcon name="i-heroicons-command-line" class="w-4 h-4 text-primary" />
 				</div>
 				<span v-if="!collapsed" class="text-sm font-semibold text-foreground">Earnest</span>

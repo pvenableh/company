@@ -117,7 +117,7 @@ const initials = computed(() => {
 				<button
 					v-if="!isHome"
 					@click="goBack"
-					class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/50 text-muted-foreground transition-colors shrink-0"
+					class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors shrink-0"
 				>
 					<Icon name="lucide:chevron-left" class="w-4 h-4" />
 				</button>

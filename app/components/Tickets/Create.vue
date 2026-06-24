@@ -119,7 +119,7 @@
 								<div class="grid grid-cols-2 gap-3">
 									<UFormGroup label="Due Date">
 										<UPopover v-model:open="calendarOpen" class="w-full">
-											<button type="button" class="w-full flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
+											<button type="button" class="w-full flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
 												<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 												<span :class="form.due_date ? 'text-foreground' : 'text-muted-foreground'">
 													{{ formatDisplayDate(form.due_date) || formatDisplayDate(new Date()) }}

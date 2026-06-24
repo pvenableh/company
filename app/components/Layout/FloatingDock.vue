@@ -143,7 +143,7 @@
 
 					<!-- Tasks Panel -->
 					<div v-else-if="activePanel === 'tasks'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
-						<TasksQuickTaskGenerator />
+						<TasksQuickTaskGenerator hide-header />
 
 						<!-- Link to full page -->
 						<NuxtLink
@@ -208,7 +208,7 @@
 
 						<!-- Start form when no timer -->
 						<div v-else>
-							<TimeTrackerStartForm />
+							<TimeTrackerStartForm flush />
 						</div>
 
 						<!-- Link to full page -->

@@ -79,7 +79,7 @@ const ALL_WORK_ITEMS: NavItem[] = [
 	{ name: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
 	{ name: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
 	{ name: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
-	{ name: 'Meetings', to: '/meetings', icon: 'heroicons:video-camera' },
+	{ name: 'Meetings', to: '/scheduler?history=1', icon: 'heroicons:video-camera' },
 	{ name: 'Files', to: '/files', icon: 'heroicons:folder-open' },
 	{ name: 'Goals', to: '/goals', icon: 'lucide:target' },
 ]

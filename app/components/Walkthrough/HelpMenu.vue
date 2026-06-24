@@ -141,7 +141,7 @@ function handleReset() {
             class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
             @click="handleFeedback(action.id)"
           >
-            <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
               <UIcon :name="action.icon" class="w-3.5 h-3.5 text-primary" />
             </div>
             <div class="min-w-0">

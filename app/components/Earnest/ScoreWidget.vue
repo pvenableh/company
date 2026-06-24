@@ -3,7 +3,7 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
-				<div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+				<div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
 					<EarnestIcon class="w-4 h-4 text-primary" />
 				</div>
 				<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Earnest Score</h3>

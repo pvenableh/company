@@ -478,7 +478,7 @@ async function handleFinish() {
         <!-- ═══ STEP 1: Name + Industry ═══ -->
         <div v-if="currentStep === 1">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Building2 class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Create Your Organization</h1>
@@ -492,7 +492,7 @@ async function handleFinish() {
                 v-model="orgName"
                 type="text"
                 placeholder="e.g. Acme Creative Agency"
-                class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
                 autofocus
                 @keydown.enter="canProceed && nextStep()"
               />
@@ -520,7 +520,7 @@ async function handleFinish() {
         <!-- ═══ STEP 2: Plan Selection ═══ -->
         <div v-if="currentStep === 2">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Sparkles class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Choose Your Plan</h1>
@@ -596,7 +596,7 @@ async function handleFinish() {
         <!-- ═══ STEP 3: Details (Optional) ═══ -->
         <div v-if="currentStep === 3">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Icon name="lucide:palette" class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Organization Details</h1>
@@ -610,7 +610,7 @@ async function handleFinish() {
                 v-model="orgLocation"
                 type="text"
                 placeholder="e.g. Miami, FL"
-                class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
               />
             </div>
 
@@ -620,7 +620,7 @@ async function handleFinish() {
                 v-model="orgWebsite"
                 type="text"
                 placeholder="e.g. https://yourcompany.com"
-                class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
               />
             </div>
 
@@ -636,7 +636,7 @@ async function handleFinish() {
                   type="text"
                   placeholder="#000000"
                   maxlength="7"
-                  class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                  class="w-full rounded-full border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
                 />
               </div>
             </div>
@@ -646,7 +646,7 @@ async function handleFinish() {
         <!-- ═══ STEP 4: Payment ═══ -->
         <div v-if="currentStep === 4">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <CreditCard class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Set Up Payment</h1>
@@ -724,7 +724,7 @@ async function handleFinish() {
         <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
         <div v-if="currentStep === 5">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <PackagePlus class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Round it out with add-ons</h1>
@@ -773,7 +773,7 @@ async function handleFinish() {
         <!-- ═══ STEP 6: Invite Team (Optional) ═══ -->
         <div v-if="currentStep === 6">
           <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Icon name="lucide:users" class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Invite Your Team</h1>
@@ -787,7 +787,7 @@ async function handleFinish() {
                 v-model="newInviteEmail"
                 type="email"
                 placeholder="team@example.com"
-                class="flex-1 rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="flex-1 rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
                 @keydown.enter.prevent="addInvite"
               />
               <select
@@ -797,7 +797,7 @@ async function handleFinish() {
                 <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option>
               </select>
               <button
-                class="w-10 h-10 rounded-lg bg-[var(--cyan)] text-white flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity disabled:opacity-40"
+                class="w-10 h-10 rounded-full bg-[var(--cyan)] text-white flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity disabled:opacity-40"
                 :disabled="!newInviteEmail.includes('@')"
                 @click="addInvite"
               >
@@ -822,7 +822,7 @@ async function handleFinish() {
                   </div>
                 </div>
                 <button
-                  class="w-7 h-7 rounded-lg hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  class="w-7 h-7 rounded-full hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                   @click="removeInvite(i)"
                 >
                   <X class="w-3.5 h-3.5" />

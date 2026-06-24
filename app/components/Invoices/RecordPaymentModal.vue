@@ -18,7 +18,7 @@
 								Invoice {{ invoice?.invoice_code || '' }}
 							</p>
 						</div>
-						<button class="p-1.5 rounded-md hover:bg-muted text-muted-foreground" @click="close">
+						<button class="p-1.5 rounded-full hover:bg-muted text-muted-foreground" @click="close">
 							<Icon name="lucide:x" class="w-4 h-4" />
 						</button>
 					</div>
@@ -34,7 +34,7 @@
 							v-model="form.payment_method"
 							type="text"
 							placeholder="e.g. Wire transfer, ACH, money order…"
-							class="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+							class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 						/>
 					</div>
 
@@ -49,7 +49,7 @@
 									type="number"
 									step="0.01"
 									min="0"
-									class="w-full rounded-lg border bg-background pl-6 pr-3 py-2 text-sm tabular-nums"
+									class="w-full rounded-full border bg-background pl-6 pr-3 py-2 text-sm tabular-nums"
 								/>
 							</div>
 							<p v-if="remainingBalance > 0 && !isEdit" class="text-[10px] text-muted-foreground">
@@ -61,7 +61,7 @@
 							<input
 								v-model="form.date_received"
 								type="date"
-								class="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+								class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 							/>
 						</div>
 					</div>
@@ -75,7 +75,7 @@
 							v-model="form.reference"
 							type="text"
 							:placeholder="referencePlaceholder"
-							class="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+							class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 						/>
 					</div>
 
@@ -86,7 +86,7 @@
 							v-model="form.note"
 							rows="2"
 							placeholder="Optional internal note…"
-							class="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none"
+							class="w-full rounded-2xl border bg-background px-3 py-2 text-sm resize-none"
 						/>
 					</div>
 
@@ -103,7 +103,7 @@
 						<input
 							type="file"
 							accept="image/*,application/pdf"
-							class="w-full rounded-lg border bg-background px-3 py-2 text-xs file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:text-primary"
+							class="w-full rounded-full border bg-background px-3 py-2 text-xs file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:text-primary"
 							:disabled="uploading"
 							@change="handleImageUpload"
 						/>
@@ -116,7 +116,7 @@
 						<input
 							v-model="form.deposit_date"
 							type="date"
-							class="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+							class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 						/>
 						<p class="text-[10px] text-muted-foreground">Optional — set when you actually deposit the check.</p>
 					</div>
@@ -129,14 +129,14 @@
 					<!-- Actions -->
 					<div class="flex justify-end gap-2 pt-1">
 						<button
-							class="text-sm px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted"
+							class="text-sm px-3 py-2 rounded-full text-muted-foreground hover:bg-muted"
 							:disabled="saving"
 							@click="close"
 						>
 							Cancel
 						</button>
 						<button
-							class="text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-1.5"
+							class="text-sm px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-1.5"
 							:disabled="!canSubmit"
 							@click="handleSubmit"
 						>

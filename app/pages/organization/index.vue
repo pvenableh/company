@@ -1692,7 +1692,7 @@ watch(searchEmail, (val) => {
 										<button
 											v-if="canManageOrg && member.id !== user?.id"
 											type="button"
-											class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+											class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
 											:title="`Remove ${member.first_name}`"
 											@click="confirmRemoveMember(member)"
 										>

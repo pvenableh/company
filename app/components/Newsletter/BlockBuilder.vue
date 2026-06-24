@@ -307,7 +307,7 @@
           <!-- Raw MJML fallback: template has source but no blocks yet -->
           <div v-else-if="builder.rawMjmlSource.value" class="py-6 sm:py-10">
             <div class="ios-card p-5 max-w-lg mx-auto text-center">
-              <div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mb-3 mx-auto">
+              <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-3 mx-auto">
                 <Icon name="lucide:layout-template" class="w-5 h-5 text-success" />
               </div>
               <h3 class="text-sm font-semibold text-foreground mb-1">Seeded from a starter</h3>
@@ -350,7 +350,7 @@
                 class="ios-card p-5 cursor-pointer group text-center bg-violet-50/30 dark:bg-violet-900/10 hover:shadow-md transition-all"
                 @click="showAIWizard = true"
               >
-                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-transform">
+                <div class="w-12 h-12 rounded-full bg-violet-500/10 flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-transform">
                   <EarnestIcon class="w-5 h-5 text-violet-500" />
                 </div>
                 <h3 class="text-sm font-semibold text-foreground mb-0.5">Start with Earnest</h3>
@@ -367,7 +367,7 @@
                 class="ios-card p-5 cursor-pointer group text-center hover:shadow-md transition-all"
                 @click="showSidebar = true"
               >
-                <div class="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-3 mx-auto group-hover:bg-primary/10 transition-colors">
+                <div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3 mx-auto group-hover:bg-primary/10 transition-colors">
                   <Icon name="lucide:layout-template" class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <h3 class="text-sm font-semibold text-foreground mb-0.5">Build Manually</h3>
@@ -480,7 +480,7 @@
               v-model="pastedHtmlContent"
               rows="12"
               placeholder="Paste your HTML or MJML here..."
-              class="w-full rounded-xl border border-border bg-muted/20 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
+              class="w-full rounded-2xl border border-border bg-muted/20 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
             />
           </div>
           <div class="flex items-center justify-between px-5 py-3 border-t border-border/30">

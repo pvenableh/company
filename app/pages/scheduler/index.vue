@@ -3,9 +3,20 @@
 		<!-- Client scheduler view (non-admin users) -->
 		<div v-if="!isAdmin" class="min-h-screen">
 			<!-- Client Header -->
-			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6">
-				<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">Schedule a Meeting</h1>
-				<p class="text-[15px] text-muted-foreground mt-0.5">View availability and request a meeting</p>
+			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6 flex items-start justify-between gap-4">
+				<div>
+					<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">Schedule a Meeting</h1>
+					<p class="text-[15px] text-muted-foreground mt-0.5">View availability and request a meeting</p>
+				</div>
+				<button
+					type="button"
+					class="flex items-center gap-1.5 h-9 px-3 rounded-full bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press shrink-0"
+					title="Your past meetings, recordings & recaps"
+					@click="showHistory = true"
+				>
+					<UIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground" />
+					History
+				</button>
 			</div>
 
 			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
@@ -188,7 +199,16 @@
 						<SchedulerNewMeetingButton @created="handleMeetingCreated" />
 						<button
 							type="button"
-							class="p-2 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+							class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+							title="Meeting history — recordings & recaps"
+							aria-label="Meeting history"
+							@click="showHistory = true"
+						>
+							<UIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
+						</button>
+						<button
+							type="button"
+							class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
 							title="Scheduler settings"
 							aria-label="Open scheduler settings"
 							@click="showSettings = true"
@@ -302,6 +322,17 @@
 				<SchedulerSettingsPanel :in-overlay="true" />
 			</AppSlideOver>
 		</template>
+
+		<!-- Meeting history slide-over — shared by admin + client views.
+		     Replaces the standalone /meetings list page. -->
+		<AppSlideOver
+			v-model="showHistory"
+			title="Meeting History"
+			description="Recordings, transcripts, and AI-written recaps for every video call."
+			:ui="{ body: 'p-0' }"
+		>
+			<SchedulerHistoryPanel />
+		</AppSlideOver>
 	</div>
 </template>
 
@@ -318,6 +349,27 @@ const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('appointments'));
 const toast = useToast();
 const router = useRouter();
+const route = useRoute();
+
+// Meeting history slide-over (the former /meetings list, now nested here).
+// Deep-linkable via ?history=1 so the legacy /meetings route + nav links can
+// redirect straight into the panel.
+const showHistory = ref(false);
+const syncHistoryFromQuery = () => {
+	showHistory.value = route.query.history === '1' || route.query.history === 'true';
+};
+watch(() => route.query.history, syncHistoryFromQuery);
+onMounted(syncHistoryFromQuery);
+
+// Keep the URL honest: clearing the panel drops the ?history param so a
+// reload/back doesn't re-open it, and the deep-link state stays accurate.
+watch(showHistory, (open) => {
+	if (!open && (route.query.history === '1' || route.query.history === 'true')) {
+		const q = { ...route.query };
+		delete q.history;
+		router.replace({ query: q });
+	}
+});
 
 // ═══ Calendar Events (unified) ═══
 const calendarEvents = useCalendarEvents();

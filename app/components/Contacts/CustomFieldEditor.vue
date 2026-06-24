@@ -5,13 +5,13 @@
       <input
         v-model="fields[index].key"
         placeholder="Key"
-        class="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
+        class="flex-1 rounded-full border bg-background px-3 py-1.5 text-sm"
         @input="emitUpdate"
       />
       <input
         v-model="fields[index].value"
         placeholder="Value"
-        class="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
+        class="flex-1 rounded-full border bg-background px-3 py-1.5 text-sm"
         @input="emitUpdate"
       />
       <Button variant="ghost" size="icon-sm" @click="removeField(index)">

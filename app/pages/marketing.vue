@@ -107,7 +107,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-info/10 flex items-center justify-center">
+						<div class="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center">
 							<Icon name="lucide:mail" class="w-4 h-4 text-info" />
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Email</h3>
@@ -201,7 +201,7 @@
 			<div class="ios-card p-5 lg:col-span-2">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
+						<div class="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center">
 							<Icon name="lucide:share-2" class="w-4 h-4 text-violet-500" />
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Social</h3>
@@ -228,7 +228,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-success/10 flex items-center justify-center">
+						<div class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
 							<Icon name="lucide:rocket" class="w-4 h-4 text-success" />
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Active Campaigns</h3>
@@ -305,7 +305,7 @@
 				@click="aiToolsOpen = !aiToolsOpen"
 			>
 				<div class="flex items-center gap-3">
-					<div class="w-8 h-8 rounded-xl bg-warning/10 flex items-center justify-center">
+					<div class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center">
 						<Icon name="lucide:wand" class="w-4 h-4 text-warning" />
 					</div>
 					<div class="text-left">

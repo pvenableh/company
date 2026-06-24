@@ -255,7 +255,7 @@ onMounted(() => {
         v-model="search"
         type="search"
         placeholder="Search clients..."
-        class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+        class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
         @input="debouncedFetch"
       />
       <select

@@ -475,7 +475,7 @@ function handleCloseDetail() {
 					</button>
 				</UTooltip>
 				<button @click="handleZoomOut" class="gantt-ctrl-btn" :disabled="zoom <= 1"><Icon name="lucide:minus" class="w-3.5 h-3.5" /></button>
-				<button @click="scrollToToday" class="px-2 h-7 rounded-lg text-[10px] font-medium text-muted-foreground hover:bg-muted/50 transition-colors">Today</button>
+				<button @click="scrollToToday" class="px-2 h-7 rounded-full text-[10px] font-medium text-muted-foreground hover:bg-muted/50 transition-colors">Today</button>
 				<button @click="handleZoomIn" class="gantt-ctrl-btn" :disabled="zoom >= 5"><Icon name="lucide:plus" class="w-3.5 h-3.5" /></button>
 				<button @click="fetchAllData" class="gantt-ctrl-btn ml-1"><Icon :name="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" /></button>
 			</div>

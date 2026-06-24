@@ -9,14 +9,14 @@
           <!-- Header -->
           <div class="relative px-6 pt-6 pb-4 shrink-0">
             <button
-              class="absolute right-4 top-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              class="absolute right-4 top-4 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               @click="$emit('close')"
             >
               <Icon name="lucide:x" class="w-4 h-4" />
             </button>
 
             <div class="flex items-center gap-3 mb-1">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <EarnestIcon class="w-4 h-4 text-white" />
               </div>
               <div>
@@ -113,7 +113,7 @@
                   <input
                     v-model="form.startDate"
                     type="date"
-                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
+                    class="w-full rounded-full border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -124,7 +124,7 @@
                   <input
                     v-model="form.targetDeadline"
                     type="date"
-                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
+                    class="w-full rounded-full border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
                   />
                 </div>
               </div>
@@ -140,7 +140,7 @@
                   rows="2"
                   maxlength="500"
                   placeholder="e.g. Needs accessibility audit, multi-language support, rush delivery..."
-                  class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all placeholder:text-muted-foreground/60"
+                  class="w-full rounded-2xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all placeholder:text-muted-foreground/60"
                 />
                 <span v-if="form.specialRequirements.length > 400" class="text-xs text-muted-foreground text-right block mt-1">{{ form.specialRequirements.length }}/500</span>
               </div>
@@ -179,7 +179,7 @@
 
             <!-- Error state -->
             <div v-else-if="error" class="py-8 text-center">
-              <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
                 <Icon name="lucide:alert-circle" class="w-6 h-6 text-destructive" />
               </div>
               <h3 class="font-semibold text-foreground mb-1">Generation failed</h3>

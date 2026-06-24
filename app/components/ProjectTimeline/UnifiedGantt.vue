@@ -887,10 +887,10 @@ const showUndated = ref(false);
 						:class="viewMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
 					>Flat</button>
 				</div>
-				<button @click="scrollToToday" class="px-2 h-6 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+				<button @click="scrollToToday" class="px-2 h-6 rounded-full text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
 					Today
 				</button>
-				<button @click="fetchAllData" class="w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+				<button @click="fetchAllData" class="w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
 					<Icon :name="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" class="w-3 h-3" :class="loading ? 'animate-spin' : ''" />
 				</button>
 			</div>

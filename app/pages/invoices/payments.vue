@@ -56,7 +56,7 @@ const totalReceived = computed(() => {
 			<div class="flex items-center gap-3">
 				<NuxtLink
 					to="/invoices"
-					class="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+					class="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
 				>
 					<Icon name="lucide:chevron-left" class="w-5 h-5" />
 				</NuxtLink>

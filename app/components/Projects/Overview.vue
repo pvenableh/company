@@ -6,7 +6,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center gap-2">
-						<div class="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+						<div class="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
 							<Icon name="lucide:flag" class="w-4 h-4 text-blue-500" />
 						</div>
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
@@ -37,13 +37,13 @@
 					<textarea
 						v-model="newStatusText"
 						rows="2"
-						class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
+						class="w-full rounded-2xl border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
 						placeholder="What's the latest on this project?"
 					/>
 					<div class="flex justify-end gap-2">
 						<button class="text-xs text-muted-foreground hover:text-foreground" @click="showUpdateForm = false">Cancel</button>
 						<button
-							class="px-3 py-1 rounded-lg text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+							class="px-3 py-1 rounded-full text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
 							:disabled="!newStatusText.trim() || postingUpdate"
 							@click="postStatusUpdate"
 						>
@@ -85,7 +85,7 @@
 			<!-- Project Details Widget -->
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+					<div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
 						<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Details</span>
@@ -125,7 +125,7 @@
 			<!-- Financial Summary Widget -->
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+					<div class="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
 						<UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-success" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financials</span>
@@ -166,7 +166,7 @@
 		<div class="ios-card p-3 sm:p-5 overflow-hidden">
 			<div class="flex items-center justify-between gap-2 mb-4">
 				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-info/10 flex items-center justify-center shrink-0">
+					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
 						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-info" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
@@ -434,7 +434,7 @@
 		<ResponsiveModal v-model="showMeetingDetail" size="lg">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<div class="h-7 w-7 rounded-xl bg-purple-500/10 flex items-center justify-center">
+					<div class="h-7 w-7 rounded-full bg-purple-500/10 flex items-center justify-center">
 						<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
 					</div>
 					<h3 class="text-sm font-bold uppercase tracking-wide">Meeting</h3>

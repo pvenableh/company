@@ -211,7 +211,7 @@ function goToDemo() {
 					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
 					@click="goToSignup"
 				>
-					<div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
+					<div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
 						<Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
 					</div>
 					<div class="text-left">

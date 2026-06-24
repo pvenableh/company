@@ -64,7 +64,7 @@ const shareViaEmail = () => {
 	<DropdownMenu>
 		<DropdownMenuTrigger as-child>
 			<button
-				class="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+				class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
 				title="Share"
 			>
 				<Icon name="lucide:share-2" class="w-4 h-4" />

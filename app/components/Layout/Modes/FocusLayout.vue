@@ -138,7 +138,7 @@ function isActiveItem(to: string): boolean {
 @reference "~/assets/css/tailwind.css";
 
 .rail-btn {
-	@apply flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors relative;
+	@apply flex items-center justify-center w-9 h-9 rounded-full text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors relative;
 }
 
 .rail-btn-active {

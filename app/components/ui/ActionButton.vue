@@ -1,6 +1,6 @@
 <template>
 	<button
-		class="ui-action-button inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium transition-[colors,transform] duration-150"
+		class="ui-action-button inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border text-xs font-medium transition-[colors,transform] duration-150"
 		:class="variantClasses"
 		:disabled="disabled || loading"
 		@click="$emit('click', $event)"

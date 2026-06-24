@@ -3,7 +3,7 @@
 		<!-- Header card -->
 		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-4">
 			<div class="flex items-center gap-4">
-				<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+				<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
 					<EarnestIcon class="w-7 h-7 text-primary" />
 				</div>
 				<div class="flex-1 min-w-0">
