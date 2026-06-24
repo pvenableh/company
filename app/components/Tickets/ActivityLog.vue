@@ -149,7 +149,7 @@ const loadActivity = async () => {
       type: 'comment',
       action: 'commented',
       content: comment.comment,
-      user: `${comment.user.first_name} ${comment.user.last_name}`,
+      user: userName(comment.user),
       timestamp: new Date(comment.date_created)
     }));
     

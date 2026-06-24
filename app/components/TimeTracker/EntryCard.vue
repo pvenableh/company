@@ -147,8 +147,9 @@ const postCaption = computed(() => {
 
 const userName = computed(() => {
 	const u = props.entry.user as any;
-	if (!u || typeof u !== 'object') return null;
-	return [u.first_name, u.last_name].filter(Boolean).join(' ') || null;
+	// null/missing reference => the user was deleted (FK nulled on delete)
+	if (!u || typeof u !== 'object') return 'Deleted user';
+	return [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Deleted user';
 });
 
 const userAvatar = computed(() => {

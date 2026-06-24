@@ -23,8 +23,7 @@
 				<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
 					<div class="w-full flex items-center gap-2 mb-1 relative text-[10px] font-bold">
 						<span class="font-medium uppercase">
-							{{ comment.user?.first_name }}
-							{{ comment.user?.last_name }}
+							{{ userName(comment.user) }}
 						</span>
 						<div class="absolute -right-2 flex items-center gap-0.5">
 							<!-- Delete (own comment) -->

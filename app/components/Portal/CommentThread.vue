@@ -143,7 +143,7 @@ watch(() => props.itemId, load);
 
 					<div class="flex-1 min-w-0">
 						<div class="flex items-baseline gap-2">
-							<span class="text-xs font-medium">{{ comment.user?.first_name }} {{ comment.user?.last_name }}</span>
+							<span class="text-xs font-medium">{{ userName(comment.user) }}</span>
 							<span class="text-[10px] text-muted-foreground">{{ timeAgo(comment.date_created) }}</span>
 						</div>
 						<div class="mt-0.5 text-sm leading-relaxed" v-html="comment.comment" />
@@ -179,7 +179,7 @@ watch(() => props.itemId, load);
 						</div>
 						<div class="flex-1 min-w-0">
 							<div class="flex items-baseline gap-2">
-								<span class="text-xs font-medium">{{ reply.user?.first_name }} {{ reply.user?.last_name }}</span>
+								<span class="text-xs font-medium">{{ userName(reply.user) }}</span>
 								<span class="text-[10px] text-muted-foreground">{{ timeAgo(reply.date_created) }}</span>
 							</div>
 							<div class="mt-0.5 text-sm leading-relaxed" v-html="reply.comment" />

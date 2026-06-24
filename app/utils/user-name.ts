@@ -1,8 +1,10 @@
 import type { User } from '~~/types';
 
-export function userName(user: Partial<User>): string {
+export function userName(user: Partial<User> | null | undefined): string {
+	// A null/undefined reference means the user row is gone (e.g. deleted, with
+	// the FK nulled on delete). Distinguish that from a present-but-unnamed user.
 	if (!user) {
-		return 'Unknown User' as string;
+		return 'Deleted user' as string;
 	}
 
 	if (user.first_name && user.last_name) {
@@ -20,7 +22,7 @@ export function userName(user: Partial<User>): string {
 	return 'Unknown User' as string;
 }
 
-export function userAvatar(user: Partial<User>): string {
+export function userAvatar(user: Partial<User> | null | undefined): string {
 	if (user) {
 		if (user.avatar) {
 			return `https://admin.earnest.guru/assets/${user.avatar}?key=medium`;
@@ -31,5 +33,5 @@ export function userAvatar(user: Partial<User>): string {
 		}
 	}
 
-	return 'https://ui-avatars.com/api/?name=Unknown%20User&background=eeeeee&color=00bfff';
+	return 'https://ui-avatars.com/api/?name=Deleted%20user&background=eeeeee&color=00bfff';
 }

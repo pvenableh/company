@@ -50,9 +50,9 @@
 									{{ ticket?.project.title }}
 								</p>
 
-								<p v-if="ticket?.user_created" class="text-[9px] text-muted-foreground uppercase">
+								<p v-if="ticket?.date_created" class="text-[9px] text-muted-foreground uppercase">
 									<span class="opacity-50 mr-1">Created by:</span>
-									{{ ticket?.user_created.first_name }} {{ ticket?.user_created.last_name }}
+									{{ userName(ticket?.user_created) }}
 								</p>
 
 								<p v-if="ticket?.date_created" class="text-[9px] text-muted-foreground uppercase">
@@ -91,9 +91,9 @@
 					{{ ticket?.project.title }}
 				</p>
 
-				<p v-if="ticket?.user_created" class="text-[9px] text-muted-foreground uppercase">
+				<p v-if="ticket?.date_created" class="text-[9px] text-muted-foreground uppercase">
 					<span class="opacity-50 mr-1">Created by:</span>
-					{{ ticket?.user_created.first_name }} {{ ticket?.user_created.last_name }}
+					{{ userName(ticket?.user_created) }}
 				</p>
 
 				<p v-if="ticket?.date_created" class="text-[9px] text-muted-foreground uppercase">

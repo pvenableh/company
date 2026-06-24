@@ -249,7 +249,7 @@ const formatCompletionDate = (date) => formatDateTimeCompact(date);
 const formatDate = (date) => formatDateWithTime(date);
 
 const getCreatorInfo = (task) => {
-	if (!task.user_created) return 'Unknown user';
+	if (!task.user_created) return 'Deleted user';
 	return `Created by ${task.user_created.first_name} ${task.user_created.last_name}\non ${formatDate(task.date_created)}`;
 };
 

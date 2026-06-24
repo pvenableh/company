@@ -2,7 +2,7 @@
 	<div class="relative flex flex-col gap-2" :class="`depth-${depth}`">
 		<!-- Reply Context -->
 		<div v-if="replyingTo" class="flex items-center gap-2 text-[10px] p-1 bg-gray-50 dark:bg-gray-900 rounded-lg">
-			<span class="text-gray-500">Replying to {{ replyingTo.user?.first_name }}'s comment:</span>
+			<span class="text-gray-500">Replying to {{ userName(replyingTo.user) }}'s comment:</span>
 			<p class="font-medium truncate flex-1 italic">"{{ sanitizedComment }}"</p>
 			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>

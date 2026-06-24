@@ -4025,8 +4025,9 @@ export interface TimeEntry {
 	sort?: number | null;
 	/** @required */
 	organization: Organization | string;
-	/** @required */
-	user: DirectusUser | string;
+	/** Required on create, but nullable: FK is ON DELETE SET NULL, so this
+	 * becomes null when the assigned user is deleted (the entry is preserved). */
+	user?: DirectusUser | string | null;
 	client?: Client | string | null;
 	project?: Project | string | null;
 	ticket?: Ticket | string | null;

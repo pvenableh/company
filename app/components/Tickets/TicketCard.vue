@@ -106,12 +106,10 @@ if (props.ticket.category === 'Completed') {
 					<template #panel>
 						<div class="p-4 ticket-card__created">
 							<p v-if="ticket.date_updated" class="mb-1">
-								Updated {{ getRelativeTime(ticket.date_updated) }} by {{ ticket.user_updated.first_name }}
-								{{ getFirstLetter(ticket.user_updated.last_name) }}
+								Updated {{ getRelativeTime(ticket.date_updated) }} by {{ userName(ticket.user_updated) }}
 							</p>
 							<p class="">
-								Created {{ getRelativeTime(ticket.date_created) }} by {{ ticket.user_created.first_name }}
-								{{ getFirstLetter(ticket.user_created.last_name) }}
+								Created {{ getRelativeTime(ticket.date_created) }} by {{ userName(ticket.user_created) }}
 							</p>
 						</div>
 					</template>
