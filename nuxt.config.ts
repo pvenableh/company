@@ -1,10 +1,40 @@
 // nuxt.config.ts
 // Migrated to Tailwind CSS v4 + shadcn-vue + Directus with nuxt-auth-utils
 
+import { execSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
-import { version as appVersion } from './package.json';
+import { version as pkgVersion } from './package.json';
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Build-time app version, auto-counted from git.
+//
+// The version is MAJOR.MINOR.<commits-since-tag>. The MAJOR.MINOR base is the
+// most recent `vX.Y` tag (the only manual lever — tag `v2.1` / `v3.0` to bump
+// it); the PATCH is the number of commits since that tag, so it climbs by
+// itself on every push. `git describe --long` gives us "v2.0-686-g12b6e2e7"
+// → "2.0.686".
+//
+// Falls back to package.json when git/tags aren't reachable (e.g. a shallow
+// clone with no tags). On Vercel the `prebuild` script unshallows + fetches
+// tags so the count is correct; package.json is just the safety net.
+function resolveAppVersion(): string {
+	try {
+		const desc = execSync("git describe --tags --long --match 'v[0-9]*' --exclude '*archive*'", {
+			stdio: ['ignore', 'pipe', 'ignore'],
+		})
+			.toString()
+			.trim();
+		// "v2.0-686-g12b6e2e7" or "v2.1.0-3-gabc1234" → major.minor.count
+		const m = desc.match(/^v?(\d+)\.(\d+)(?:\.\d+)?-(\d+)-g[0-9a-f]+$/);
+		if (m) return `${m[1]}.${m[2]}.${m[3]}`;
+	} catch {
+		// no git, or shallow clone without the tag in history — fall back below
+	}
+	return pkgVersion;
+}
+
+const appVersion = resolveAppVersion();
 
 export default defineNuxtConfig({
 	ssr: true,

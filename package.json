@@ -1,8 +1,9 @@
 {
 	"name": "earnest",
 	"private": true,
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"scripts": {
+		"prebuild": "git fetch --tags --unshallow 2>/dev/null || git fetch --tags 2>/dev/null || true",
 		"build": "nuxt build",
 		"dev": "nuxt dev",
 		"start": "nuxt start",
@@ -20,7 +21,6 @@
 		"test:watch": "vitest",
 		"generate:icons": "node scripts/generate-icons.js",
 		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./shared/directus.ts'",
-		"release": "node scripts/bump-version.mjs patch",
 		"release:minor": "node scripts/bump-version.mjs minor",
 		"release:major": "node scripts/bump-version.mjs major"
 	},
