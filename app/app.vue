@@ -44,10 +44,14 @@ const avatar = computed(() => {
 updateAvatarSource(avatar.value);
 
 const { visibleLinks } = useNavPreferences();
+
+// Directional app-to-app page transitions: slide left/right based on each
+// app's position in the rail sequence (see composable for the ordering).
+const { transition: pageTransition } = useDirectionalPageTransition();
 </script>
 <template>
 	<NuxtLayout>
-		<NuxtPage :transition="{ name: 'page-fade-up', mode: 'out-in' }" />
+		<NuxtPage :transition="pageTransition" />
 	</NuxtLayout>
 	<SupportReportModal v-if="user" />
 	<NuxtLoadingIndicator
