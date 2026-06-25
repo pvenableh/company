@@ -1,19 +1,6 @@
 <template>
 	<div class="account-page">
-		<AppHeader title="Account" />
 		<LayoutPageContainer>
-			<!-- Identity card -->
-			<div class="ios-card flex items-center gap-4 p-4 mb-6">
-				<UserAvatar size="md" />
-				<div class="min-w-0">
-					<p class="text-base font-semibold truncate">{{ fullName || 'Account' }}</p>
-					<p class="text-xs text-muted-foreground truncate">{{ user?.email }}</p>
-				</div>
-				<div class="ml-auto">
-					<AccountLogout v-if="user" />
-				</div>
-			</div>
-
 			<AppFloorStrip
 				v-model="section"
 				:items="sections"
@@ -295,7 +282,6 @@ import { Switch } from '@/components/ui/switch';
 
 type SectionKey = 'profile' | 'goals' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
 
-const { user } = useDirectusAuth();
 const { isAppsMode, railShowLabels, setMode, setRailShowLabels } = useAppsMode();
 const route = useRoute();
 const router = useRouter();
@@ -330,12 +316,6 @@ const section = ref<SectionKey>(initialSection);
 
 watch(section, (next) => {
 	router.replace({ query: { ...route.query, section: next === 'profile' ? undefined : next } });
-});
-
-const fullName = computed(() => {
-	const u = user.value as Record<string, any> | null;
-	if (!u) return '';
-	return [u.first_name, u.last_name].filter(Boolean).join(' ');
 });
 
 // ── Notification preferences ────────────────────────────────────────────────

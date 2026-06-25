@@ -188,7 +188,7 @@
 			     Buttons are host-only and gate on `dailyJoined` so we don't
 			     fire `startTranscription()` before Daily's internal state
 			     machine is ready. -->
-			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
+			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex flex-wrap items-center justify-end gap-2 max-w-[calc(100vw-2rem)] pointer-events-auto">
 				<button
 					v-if="isHost && dailyJoined"
 					:disabled="transcriptionBusy"
@@ -222,7 +222,7 @@
 					<span>{{ recording ? 'Recording' : 'Record' }}</span>
 				</button>
 				<button
-					v-if="isHost && dailyJoined"
+					v-if="isHost && hasJoined"
 					:disabled="snapshotBusy"
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50"
 					title="Capture the screen share + annotations as a snapshot on this meeting"
@@ -241,6 +241,19 @@
 				>
 					<EarnestIcon class="w-3.5 h-3.5" />
 					<span>Ask Earnest</span>
+				</button>
+				<button
+					v-if="isHost"
+					:disabled="endingMeeting"
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/80 hover:bg-destructive backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50"
+					title="End the meeting for everyone, clear annotations, and generate the recap"
+					@click="endMeeting"
+				>
+					<UIcon
+						:name="endingMeeting ? 'i-heroicons-arrow-path' : 'i-heroicons-phone-x-mark'"
+						:class="['w-3.5 h-3.5', endingMeeting ? 'animate-spin' : '']"
+					/>
+					<span>{{ endingMeeting ? 'Ending…' : 'End meeting' }}</span>
 				</button>
 			</div>
 		</div>
@@ -527,6 +540,7 @@ const linkedEvent = computed(() => {
 // app-message API for broadcasting annotation strokes between participants.
 
 let dailyCallObject = null;
+let dailyJoinedPoll = null;
 const mySessionId = ref(null);
 const strokeSubscribers = new Set();
 const clearSubscribers = new Set();
@@ -649,6 +663,15 @@ const handleAppMessage = (e) => {
 	// invaluable for verifying chat-msg / annotation-* delivery without
 	// having to rebuild.
 	console.log('[meeting] app-message received', { fromId: e?.fromId, data });
+
+	if (data.type === 'meeting-ended') {
+		// The host ended the meeting — clear our marks and leave so we land on
+		// the recap (logged-in) or the follow-up screen (guest).
+		try { annotationCanvas.value?.clearAll?.(); } catch {}
+		try { dailyCallObject?.leave?.(); } catch {}
+		finishMeeting();
+		return;
+	}
 
 	if (data.type === 'annotation-stroke') {
 		if (!data.segment) return;
@@ -808,6 +831,27 @@ const wrapDailyIframe = async () => {
 			mySessionId.value = local.session_id;
 			dailyJoined.value = true;
 		}
+
+		// Belt-and-suspenders: the prebuilt iframe owns the join, so the wrap'd
+		// object's `joined-meeting` event is not always delivered. Poll the
+		// meeting state until it reports joined so the host controls (Transcribe
+		// / Record / Snapshot / End) reliably appear instead of staying hidden
+		// behind a `dailyJoined` flag that never flips.
+		if (!dailyJoinedPoll) {
+			dailyJoinedPoll = setInterval(() => {
+				try {
+					if (dailyCallObject?.meetingState?.() === 'joined-meeting') {
+						dailyJoined.value = true;
+						const l = dailyCallObject.participants?.()?.local;
+						if (l?.session_id && !mySessionId.value) mySessionId.value = l.session_id;
+					}
+				} catch {}
+				if (dailyJoined.value && dailyJoinedPoll) {
+					clearInterval(dailyJoinedPoll);
+					dailyJoinedPoll = null;
+				}
+			}, 800);
+		}
 	} catch (err) {
 		console.warn('[meeting] Daily wrap failed', err);
 	}
@@ -816,16 +860,51 @@ const wrapDailyIframe = async () => {
 const router = useRouter();
 
 const finishMeeting = () => {
+	// Wipe the annotation canvas so strokes from this session never linger into
+	// a re-join (the in-memory stroke maps would otherwise survive a remount
+	// via the late-joiner sync from another still-connected participant).
+	try { annotationCanvas.value?.clearAll?.(); } catch {}
+
 	// Tear down the live iframe + annotation canvas immediately so they don't
 	// linger on top of the dom while we transition.
 	dailyUrl.value = null;
 	hasJoined.value = false;
 	meetingEnded.value = true;
 
-	// Logged-in attendees get the recap page; the small "Meeting Ended" card is
+	// Logged-in attendees get sent back into Earnest — the recap if we know the
+	// meeting id, otherwise the scheduler. The small "Meeting Ended" card is
 	// kept as the public-facing follow-up screen for unauthenticated guests.
-	if (currentUser.value && meeting.value?.id) {
-		router.replace(`/meetings/${meeting.value.id}`);
+	if (currentUser.value) {
+		router.replace(meeting.value?.id ? `/meetings/${meeting.value.id}` : '/apps/work?floor=calendar');
+	}
+};
+
+// Host-only: end the meeting for everyone. Clears all annotations, tells other
+// participants to leave, marks the meeting completed server-side, then leaves
+// the call (which fires `left-meeting` → finishMeeting → recap).
+const endingMeeting = ref(false);
+const endMeeting = async () => {
+	if (endingMeeting.value || !meeting.value?.id) return;
+	endingMeeting.value = true;
+	try {
+		// Wipe annotations for everyone still in the room.
+		try { annotationBus.sendClear(); } catch {}
+		try { annotationCanvas.value?.clearAll?.(); } catch {}
+		// Ask remote participants' clients to leave + redirect.
+		try { dailyCallObject?.sendAppMessage({ type: 'meeting-ended' }, '*'); } catch {}
+		// Mark the meeting completed (status + actual_end).
+		await $fetch(`/api/video/meetings/${meeting.value.id}/end`, { method: 'POST' });
+		// Leave the call — `left-meeting` fires finishMeeting() for the redirect.
+		try { await dailyCallObject?.leave(); } catch {}
+		finishMeeting();
+	} catch (err) {
+		toast.add({
+			title: 'Could not end meeting',
+			description: err?.data?.message || err?.message || 'Please try again.',
+			color: 'red',
+		});
+	} finally {
+		endingMeeting.value = false;
 	}
 };
 
@@ -1028,6 +1107,7 @@ watch(hasJoined, (joined) => {
 
 onBeforeUnmount(() => {
 	if (statusPollInterval) clearInterval(statusPollInterval);
+	if (dailyJoinedPoll) { clearInterval(dailyJoinedPoll); dailyJoinedPoll = null; }
 	if (import.meta.client) delete window.__earnestMeetingStart;
 	if (dailyCallObject) {
 		try { dailyCallObject.destroy(); } catch {}

@@ -89,16 +89,21 @@ export default defineEventHandler(async (event) => {
 			identity = `Guest-${Math.random().toString(36).substring(2, 8)}`;
 		}
 
-		// Anonymous guests get redirected to the marketing follow-up page when
-		// they click Leave. Logged-in users MUST NOT get this redirect — our
-		// `left-meeting` listener navigates the parent to /meetings/[id], and
-		// Daily's iframe redirect races that and wins, kicking the host off to
-		// the marketing page instead of the recap.
+		// Post-leave redirect. The Daily domain (configured in the Daily
+		// dashboard) has a default `redirect_on_meeting_exit` pointing at a
+		// marketing/sell-sheet page. That default applies to ANY token that
+		// doesn't override it — which is why logged-in users were being kicked
+		// to the sell sheet too.
+		//
+		//  • Logged-in users → override it back into Earnest (the scheduler).
+		//    Our in-app `left-meeting` handler aims for the recap and usually
+		//    wins; this guarantees that even when Daily's own redirect wins the
+		//    race, the user lands inside Earnest rather than on the sell sheet.
+		//  • Anonymous guests → leave unset so the Daily domain default (the
+		//    sell sheet) applies, which is the desired behaviour for them.
 		let redirectOnExit: string | undefined;
-		if (!session?.user) {
-			const config = useRuntimeConfig();
-			const marketingUrl = (config.public as any)?.marketingUrl || 'https://earnest.guru';
-			redirectOnExit = `${marketingUrl.replace(/\/$/, '')}/meeting-follow-up`;
+		if (session?.user) {
+			redirectOnExit = `${getRequestURL(event).origin}/apps/work?floor=calendar`;
 		}
 
 		// Generate Daily.co meeting token

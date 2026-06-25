@@ -192,7 +192,7 @@
 						@keydown.enter="fetchAiSuggestions"
 					/>
 					<button
-						class="h-8 px-3 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
+						class="h-8 px-3 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
 						:disabled="aiLoading"
 						@click="fetchAiSuggestions"
 					>
@@ -306,7 +306,7 @@
 				<div
 					v-for="task in completedTasks"
 					:key="task.id"
-					class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group"
+					class="flex items-start gap-2 px-2 py-1 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group"
 				>
 					<button class="flex-shrink-0 pt-0.5" @click="handleToggle(task.id)">
 						<div class="w-[18px] h-[18px] rounded-[6px] bg-[hsl(var(--primary))] border-2 border-[hsl(var(--primary))] flex items-center justify-center">
@@ -314,7 +314,7 @@
 						</div>
 					</button>
 					<div class="flex-1 min-w-0">
-						<span class="text-sm leading-snug line-through text-muted-foreground" v-html="task.title" />
+						<span class="text-xs leading-tight line-through text-muted-foreground" v-html="task.title" />
 						<div v-if="task.assignee" class="flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/60">
 							<span class="w-3.5 h-3.5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold uppercase">{{ (task.assignee.first_name?.[0] || '') + (task.assignee.last_name?.[0] || '') }}</span>
 							{{ task.assignee.first_name }} {{ task.assignee.last_name?.charAt(0) || '' }}.
@@ -569,12 +569,12 @@ const TaskRow = defineComponent({
 		];
 
 		return () =>
-			h('div', { class: 'flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group' }, [
+			h('div', { class: 'flex items-start gap-2 px-2 py-1 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group' }, [
 				h('button', { class: 'flex-shrink-0 pt-0.5', onClick: () => emit('toggle') }, [
 					h('div', { class: 'w-[18px] h-[18px] rounded-[6px] border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors flex items-center justify-center' }),
 				]),
 				h('div', { class: 'flex-1 min-w-0' }, [
-					h('span', { class: 'text-sm leading-snug', innerHTML: props.task.title }),
+					h('span', { class: 'text-xs leading-tight', innerHTML: props.task.title }),
 					h('div', { class: 'flex items-center gap-2 mt-0.5' }, [
 						props.task.priority !== 'medium'
 							? h('span', {
