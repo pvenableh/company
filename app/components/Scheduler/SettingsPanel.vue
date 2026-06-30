@@ -419,6 +419,20 @@ const copyEmbedSnippet = async () => {
 	toast.add({ title: 'Snippet copied', color: 'green' });
 };
 
+// CardDesk card embed — the full digital business card with this booking flow
+// built in, hosted by CardDesk. Distinct from the booking-only embed above.
+const cardEmbedSnippet = computed(() => {
+	const config = useRuntimeConfig();
+	const base = String(config.public.cardDeskUrl || 'https://carddesk.earnest.guru').replace(/\/$/, '');
+	const cid = user.value?.id || 'YOUR_USER_ID';
+	return `<div class="carddesk-embed" data-card-id="${cid}"></div>\n<script async src="${base}/embed.js"><\/script>`;
+});
+
+const copyCardEmbed = async () => {
+	await navigator.clipboard.writeText(cardEmbedSnippet.value);
+	toast.add({ title: 'Card embed copied', color: 'green' });
+};
+
 onMounted(() => {
 	if (route.query.google === 'connected') {
 		toast.add({ title: 'Google Calendar connected!', color: 'green' });
@@ -679,6 +693,23 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 // Wire any element you've already styled:
 &lt;a href="#" data-earnest-book="true"&gt;Book&lt;/a&gt;</code></pre>
 					</details>
+				</div>
+
+				<!-- CardDesk card embed -->
+				<div class="ios-card p-5 space-y-4 max-w-3xl">
+					<div>
+						<h2 class="text-base font-semibold text-foreground">Embed your CardDesk card</h2>
+						<p class="text-xs text-muted-foreground mt-0.5">
+							Shows your full digital business card — with this booking flow built in — anywhere. Hosted by CardDesk; always matches your saved card design.
+						</p>
+					</div>
+					<div class="flex gap-2">
+						<UTextarea :model-value="cardEmbedSnippet" readonly :rows="2" class="flex-1 font-mono text-xs" />
+						<UButton color="gray" icon="i-heroicons-clipboard" @click="copyCardEmbed" />
+					</div>
+					<p class="text-xs text-muted-foreground">
+						Want a button instead? Add <code>data-mode="popup" data-label="Book a Call"</code> to the div to open the card in a modal.
+					</p>
 				</div>
 			</template>
 

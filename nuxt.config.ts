@@ -512,6 +512,11 @@ export default defineNuxtConfig({
 		// as permanent redirects.
 		'/time-tracker': { redirect: { to: '/apps/work?floor=time', statusCode: 301 } },
 		'/apps/work/time': { redirect: { to: '/apps/work?floor=time', statusCode: 301 } },
+		// The booking flow is framed cross-origin — by CardDesk's card embed
+		// (carddesk.earnest.guru) and by Earnest's own third-party booking embed.
+		// No X-Frame-Options is sent today; set frame-ancestors explicitly so
+		// framing stays allowed by intent and survives any future global CSP.
+		'/book/**': { headers: { 'Content-Security-Policy': 'frame-ancestors *' } },
 	},
 
 	nitro: {
