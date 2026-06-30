@@ -188,6 +188,7 @@ const saveEmailBranding = async () => {
 const startEditInfo = () => {
 	infoForm.value = {
 		name: org.value?.name || '',
+		slug: org.value?.slug || '',
 		website: org.value?.website || '',
 		notes: org.value?.notes || '',
 		brand_color: org.value?.brand_color || '',
@@ -197,12 +198,62 @@ const startEditInfo = () => {
 	editingInfo.value = true;
 };
 
+// ── Booking URL slug ──
+// Mirrors the server's generation rules in server/api/org/create.post.ts:
+// lowercase, non-alphanumerics → hyphens, no leading/trailing/double hyphens,
+// max 40 chars. The slug is the org portion of the public booking URL
+// (/book/<slug>/<user-slug>) and has a unique index in Directus.
+function sanitizeSlug(raw) {
+	return (raw || '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.replace(/-{2,}/g, '-')
+		.slice(0, 40);
+}
+// Live-cleaned preview of what will actually be saved.
+const slugPreview = computed(() => sanitizeSlug(infoForm.value?.slug));
+const slugValid = computed(() => slugPreview.value.length >= 2 && slugPreview.value.length <= 40);
+const slugChanged = computed(() => slugPreview.value !== (org.value?.slug || ''));
+const bookingUrlBase = computed(() =>
+	config.public.siteUrl || (import.meta.client ? window.location.origin : ''),
+);
+
 const saveInfo = async () => {
 	if (!org.value?.id) return;
+
+	const nextSlug = slugPreview.value;
+	if (!slugValid.value) {
+		toast.add({
+			title: 'Invalid booking slug',
+			description: 'Use 2–40 lowercase letters, numbers, or hyphens.',
+			color: 'red',
+		});
+		return;
+	}
+
 	savingInfo.value = true;
 	try {
+		// Best-effort uniqueness pre-check (the DB unique index is the real guard;
+		// org-scoped read perms may hide the conflict, so we still catch below).
+		if (slugChanged.value) {
+			try {
+				const dupes = await organizationItems.list({
+					filter: { slug: { _eq: nextSlug }, id: { _neq: org.value.id } },
+					fields: ['id'],
+					limit: 1,
+				});
+				if (dupes?.length) {
+					toast.add({ title: 'Slug already taken', description: `"${nextSlug}" is in use by another organization.`, color: 'red' });
+					savingInfo.value = false;
+					return;
+				}
+			} catch { /* perms may block cross-org reads — fall through to the catch */ }
+		}
+
 		await organizationItems.update(org.value.id, {
 			name: infoForm.value.name,
+			slug: nextSlug,
 			website: infoForm.value.website || null,
 			notes: infoForm.value.notes || null,
 			brand_color: infoForm.value.brand_color || null,
@@ -215,7 +266,12 @@ const saveInfo = async () => {
 		await fetchOrganizationDetails();
 	} catch (error) {
 		console.error('Error updating info:', error);
-		const msg = error?.data?.message || error?.message || 'Failed to update organization info';
+		const raw = error?.data?.message || error?.message || '';
+		// Surface the unique-constraint violation as a friendly message.
+		const isDupe = /unique|already exists|RECORD_NOT_UNIQUE|FIELD_NOT_UNIQUE/i.test(raw);
+		const msg = isDupe
+			? `That booking slug is already taken — try another.`
+			: (raw || 'Failed to update organization info');
 		toast.add({ title: 'Error', description: msg, color: 'red' });
 	} finally {
 		savingInfo.value = false;
@@ -877,14 +933,14 @@ const pendingInvites = computed(() => {
 
 // Function to fetch organization data with correct fields
 const ORG_DETAIL_FIELDS = [
-	'id', 'name', 'logo', 'category', 'notes', 'website', 'phone', 'address',
+	'id', 'name', 'slug', 'logo', 'category', 'notes', 'website', 'phone', 'address',
 	'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location', 'default_hourly_rate',
 	'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent',
 	'stripe_account_id', 'stripe_account_status', 'stripe_account_country',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent', 'stripe_account_id', 'stripe_account_status', 'stripe_account_country'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'slug', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent', 'stripe_account_id', 'stripe_account_status', 'stripe_account_country'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
@@ -1236,6 +1292,10 @@ watch(searchEmail, (val) => {
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Name</span>
 											<span class="font-medium">{{ org.name }}</span>
 										</div>
+										<div class="flex justify-between items-start gap-3">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">Booking Slug</span>
+											<span class="font-mono text-xs text-right break-all">{{ org.slug || '—' }}</span>
+										</div>
 										<div class="flex justify-between">
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Industry</span>
 											<span>{{ org.industry?.name || '—' }}</span>
@@ -1289,6 +1349,21 @@ watch(searchEmail, (val) => {
 										<UFormGroup label="Name" required>
 											<UInput v-model="infoForm.name" placeholder="Organization name" />
 										</UFormGroup>
+										<UFormGroup
+											label="Booking URL slug"
+											:error="infoForm.slug && !slugValid ? 'Use 2–40 lowercase letters, numbers, or hyphens.' : undefined"
+										>
+											<UInput v-model="infoForm.slug" placeholder="your-org" class="font-mono" />
+											<template #hint>
+												<span class="text-[10px] text-muted-foreground">The org portion of your public booking link.</span>
+											</template>
+											<p v-if="slugPreview" class="mt-1.5 text-[11px] text-muted-foreground break-all">
+												{{ bookingUrlBase.replace(/^https?:\/\//, '') }}/book/<span class="font-semibold text-foreground">{{ slugPreview }}</span>/…
+											</p>
+											<p v-if="slugChanged && org.slug" class="mt-1 text-[11px] text-amber-600 dark:text-amber-500">
+												Changing this breaks any booking links that use the old slug ({{ org.slug }}).
+											</p>
+										</UFormGroup>
 										<UFormGroup label="Industry">
 											<select
 												v-model="infoForm.industry"
@@ -1324,7 +1399,7 @@ watch(searchEmail, (val) => {
 										</UFormGroup>
 										<div class="flex justify-end gap-2 pt-2">
 											<UButton color="gray" variant="ghost" size="xs" @click="editingInfo = false">Cancel</UButton>
-											<UButton color="primary" size="xs" :loading="savingInfo" :disabled="!infoForm.name" @click="saveInfo">Save</UButton>
+											<UButton color="primary" size="xs" :loading="savingInfo" :disabled="!infoForm.name || !slugValid" @click="saveInfo">Save</UButton>
 										</div>
 									</div>
 								</UCard>

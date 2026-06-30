@@ -4,7 +4,7 @@
 		:title="isEditing ? 'Edit Invoice' : 'New Invoice'"
 		:is-editing="isEditing"
 		:saving="saving"
-		:submit-disabled="!formRef?.hasLineItems"
+		:submit-disabled="!formRef?.canSubmit"
 		:statuses="invoiceStatuses"
 		:current-status="currentStatus"
 		collection="invoices"

@@ -140,34 +140,52 @@
 			</Transition>
 		</div>
 
-		<!-- Task List: List View -->
-		<div v-else-if="viewMode === 'list'" class="space-y-1">
-			<div
-				v-for="task in displayTasks"
-				:key="task.id"
-				class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/30 transition-colors group"
+		<!-- Task List: List View (drag the grip handle to reorder) -->
+		<div v-else-if="viewMode === 'list'">
+			<VueDraggable
+				v-model="orderedTasks"
+				item-key="id"
+				handle=".qt-drag-handle"
+				ghost-class="qt-ghost"
+				:animation="200"
+				class="space-y-1"
+				@end="onReorder"
 			>
-				<button class="flex-shrink-0" @click="handleToggle(task.id)">
-					<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
-						<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+				<template #item="{ element: task }">
+					<div
+						class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-muted/30 transition-colors group"
+					>
+						<button
+							v-if="!task.completed"
+							class="qt-drag-handle flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+							aria-label="Drag to reorder"
+						>
+							<UIcon name="i-heroicons-bars-2" class="w-3.5 h-3.5 text-muted-foreground/60" />
+						</button>
+						<span v-else class="w-3.5 flex-shrink-0" />
+						<button class="flex-shrink-0" @click="handleToggle(task.id)">
+							<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
+								<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+							</div>
+							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
+						</button>
+						<span
+							class="flex-1 text-xs truncate"
+							:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
+							v-html="task.title"
+						/>
+						<span v-if="!task.completed && task.schedule" class="text-[8px] text-muted-foreground uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 bg-muted/40 rounded">
+							{{ scheduleLabel(task.schedule) }}
+						</span>
+						<button
+							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+							@click="removeTask(task.id)"
+						>
+							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+						</button>
 					</div>
-					<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
-				</button>
-				<span
-					class="flex-1 text-xs truncate"
-					:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
-					v-html="task.title"
-				/>
-				<span v-if="!task.completed && task.schedule" class="text-[8px] text-muted-foreground uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 bg-muted/40 rounded">
-					{{ scheduleLabel(task.schedule) }}
-				</span>
-				<button
-					class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-					@click="removeTask(task.id)"
-				>
-					<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-				</button>
-			</div>
+				</template>
+			</VueDraggable>
 
 			<!-- Overflow indicator -->
 			<div v-if="activeTasks.length > 15" class="text-center pt-2">
@@ -330,6 +348,7 @@
 
 <script setup>
 import confetti from 'canvas-confetti';
+import VueDraggable from 'vuedraggable';
 
 
 const {
@@ -344,6 +363,7 @@ const {
 	addTask,
 	removeTask,
 	toggleTask,
+	persistOrder,
 	clearCompleted,
 } = useQuickTasks();
 
@@ -362,16 +382,35 @@ const scheduleOptions = [
 	{ label: 'Later', value: 'later' },
 ];
 
-// Display tasks: active sorted by schedule, then completed (list view)
+// Display tasks: active first (manual drag order, then schedule), then completed.
 const displayTasks = computed(() => {
 	const schedulePriority = { today: 0, this_week: 1, later: 2, unscheduled: 3 };
 	const active = [...activeTasks.value]
-		.sort((a, b) => (schedulePriority[a.schedule] ?? 3) - (schedulePriority[b.schedule] ?? 3))
+		.sort((a, b) => {
+			// Hand-dragged order (`sort`) wins; unsorted tasks fall back to schedule.
+			const sa = a.sort ?? Infinity;
+			const sb = b.sort ?? Infinity;
+			if (sa !== sb) return sa - sb;
+			return (schedulePriority[a.schedule] ?? 3) - (schedulePriority[b.schedule] ?? 3);
+		})
 		.slice(0, 15);
 	const remaining = 15 - active.length;
 	const completed = remaining > 0 ? completedTasks.value.slice(0, remaining) : [];
 	return [...active, ...completed];
 });
+
+// VueDraggable needs a mutable array to reorder. Mirror displayTasks into a
+// local ref and sync whenever the authoritative list changes (load, add,
+// toggle). Dragging mutates this ref directly; onReorder persists the result.
+const orderedTasks = ref([]);
+watch(displayTasks, (v) => { orderedTasks.value = [...v]; }, { immediate: true });
+
+async function onReorder() {
+	// Only active (incomplete) tasks carry a manual sort; completed ones stay
+	// pinned to the bottom regardless of where they land mid-drag.
+	const activeInOrder = orderedTasks.value.filter((t) => !t.completed);
+	await persistOrder(activeInOrder);
+}
 
 // Completed tasks for grouped view
 const todayCompleted = computed(() =>
@@ -473,5 +512,10 @@ onUnmounted(() => {
 .widget-motivate-leave-to {
 	opacity: 0;
 	transform: translateY(-4px);
+}
+.qt-ghost {
+	opacity: 0.5;
+	background: rgba(var(--primary-rgb, 99 102 241) / 0.08);
+	border-radius: 0.5rem;
 }
 </style>

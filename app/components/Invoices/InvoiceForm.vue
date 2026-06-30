@@ -450,11 +450,18 @@ function formatAmount(value: number): string {
 }
 
 function handleSubmit() {
+  // Belt-and-suspenders: the Save button is already disabled when invalid, but
+  // guard here too so a programmatic trigger can't persist a dateless invoice.
+  if (!canSubmit.value) return;
   const payload: any = {
     bill_to: formData.bill_to || undefined,
     invoice_code: formData.invoice_code || undefined,
-    invoice_date: formData.invoice_date,
-    due_date: formData.due_date,
+    // Empty date inputs come through as '' — Postgres rejects that for a date
+    // column ("invalid input syntax for type date") and the whole create 500s,
+    // so the invoice silently fails and the list never refreshes. Coerce blanks
+    // to null (matches `date_mailed` below).
+    invoice_date: formData.invoice_date || null,
+    due_date: formData.due_date || null,
     status: statusModel.value,
     note: formData.note || undefined,
     memo: formData.memo || undefined,
@@ -520,10 +527,16 @@ function handleSubmit() {
   emit('save', payload);
 }
 
-// Expose submit so parent (FormModal wrapper) can trigger it from the footer Save button
+// Expose submit so parent (FormModal wrapper) can trigger it from the footer Save button.
+// `canSubmit` gates the Save button: an invoice needs at least one line item AND
+// both required dates. Invoice/Due date are marked required (*) in the template,
+// but native `required` doesn't fire without a real form submit, so we enforce here.
+const hasLineItems = computed(() => lineItems.value.length > 0);
+const canSubmit = computed(() => hasLineItems.value && !!formData.invoice_date && !!formData.due_date);
 defineExpose({
   triggerSubmit: handleSubmit,
-  hasLineItems: computed(() => lineItems.value.length > 0),
+  hasLineItems,
+  canSubmit,
 });
 
 // --- Auto-generate invoice code when client or invoice_date changes (new invoices only) ---

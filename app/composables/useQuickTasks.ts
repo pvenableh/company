@@ -23,6 +23,7 @@ export interface QuickTask {
 	completedAt?: string;
 	dueDate?: string;
 	schedule: TaskSchedule;
+	sort?: number | null;
 	ticketId?: string;
 	projectId?: string;
 	projectEventId?: string;
@@ -105,6 +106,7 @@ function directusToQuickTask(record: any): QuickTask {
 		completedAt: record.date_completed || undefined,
 		dueDate: record.due_date || undefined,
 		schedule: record.schedule || 'unscheduled',
+		sort: record.sort ?? null,
 		ticketId: typeof record.ticket_id === 'object' ? record.ticket_id?.id : record.ticket_id || undefined,
 		projectId: typeof record.project_id === 'object' ? record.project_id?.id : record.project_id || undefined,
 		projectEventId: typeof record.project_event_id === 'object' ? record.project_event_id?.id : record.project_event_id || undefined,
@@ -202,8 +204,10 @@ export const useQuickTasks = () => {
 
 			const records = await taskItems.list({
 				fields: TASK_FIELDS,
+				// Manual drag order (`sort`) wins; newest-first is the tiebreak for
+				// tasks that have never been hand-ordered (sort null → last).
+				sort: ['sort', '-date_created'],
 				filter,
-				sort: ['-date_created'],
 				limit: 200,
 			});
 
@@ -368,6 +372,30 @@ export const useQuickTasks = () => {
 		tasks.value = newOrder;
 	};
 
+	/**
+	 * Persist a hand-dragged ordering. Assigns sequential `sort` values to the
+	 * given active tasks (in their new visual order) and PATCHes only the rows
+	 * whose sort actually changed, so a small nudge isn't 15 writes.
+	 */
+	const persistOrder = async (orderedActive: QuickTask[]) => {
+		const updates: Array<{ id: string; sort: number }> = [];
+		orderedActive.forEach((t, i) => {
+			const newSort = i + 1;
+			const local = tasks.value.find((x) => x.id === t.id);
+			if (local && local.sort !== newSort) {
+				local.sort = newSort;
+				updates.push({ id: t.id, sort: newSort });
+			}
+		});
+		if (updates.length === 0) return;
+		try {
+			await Promise.all(updates.map((u) => taskItems.update(u.id, { sort: u.sort })));
+		} catch (err) {
+			console.error('[useQuickTasks] Failed to persist task order:', err);
+			await load(); // Reload authoritative order on failure
+		}
+	};
+
 	const clearCompleted = async () => {
 		const completedIds = tasks.value.filter((t) => t.completed).map((t) => t.id);
 		tasks.value = tasks.value.filter((t) => !t.completed);
@@ -395,11 +423,14 @@ export const useQuickTasks = () => {
 		});
 	});
 
-	// Grouped by schedule
-	const todayTasks = computed(() => activeTasks.value.filter((t) => t.schedule === 'today'));
-	const thisWeekTasks = computed(() => activeTasks.value.filter((t) => t.schedule === 'this_week'));
-	const laterTasks = computed(() => activeTasks.value.filter((t) => t.schedule === 'later'));
-	const unscheduledTasks = computed(() => activeTasks.value.filter((t) => t.schedule === 'unscheduled'));
+	// Grouped by schedule, honoring the manual drag order (`sort`). Hand-sorted
+	// tasks lead; never-dragged ones (sort null) fall to the end in load order.
+	const bySortField = (arr: QuickTask[]) =>
+		[...arr].sort((a, b) => (a.sort ?? Infinity) - (b.sort ?? Infinity));
+	const todayTasks = computed(() => bySortField(activeTasks.value.filter((t) => t.schedule === 'today')));
+	const thisWeekTasks = computed(() => bySortField(activeTasks.value.filter((t) => t.schedule === 'this_week')));
+	const laterTasks = computed(() => bySortField(activeTasks.value.filter((t) => t.schedule === 'later')));
+	const unscheduledTasks = computed(() => bySortField(activeTasks.value.filter((t) => t.schedule === 'unscheduled')));
 
 	// Progress for motivational messages
 	const progress = computed(() => {
@@ -463,6 +494,7 @@ export const useQuickTasks = () => {
 		toggleTask,
 		updateTask,
 		reorderTasks,
+		persistOrder,
 		clearCompleted,
 		refresh: load,
 	};

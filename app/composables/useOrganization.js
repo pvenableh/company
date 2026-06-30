@@ -202,6 +202,7 @@ export function useOrganization() {
 				return {
 					id: org.id,
 					name: org.name,
+					slug: org.slug ?? null,
 					logo: org.logo ?? null,
 					icon: org.icon ?? null,
 					plan: org.plan ?? null,

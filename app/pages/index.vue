@@ -147,12 +147,68 @@ const handleTrayClose = () => {
 };
 
 // ── Prioritized Actions ──
+// Locally-resolved actions: when the user changes an item's status inline we
+// drop the card immediately (optimistic) and reconcile against server truth in
+// the background via runAnalysis().
+const handledActionIds = ref<Set<string>>(new Set());
+
+// App filter — narrow the priority list to one app. The engine already fetches
+// every category (cheap, cached per-module), so the pills filter the
+// already-loaded set client-side: switching is instant and never re-runs the
+// ~12-read analysis. Default 'all' shows the global top by score.
+type ActionApp = 'people' | 'work' | 'money' | 'marketing';
+const CATEGORY_TO_APP: Record<string, ActionApp> = {
+	tasks: 'work', projects: 'work', scheduling: 'work', goals: 'work', communication: 'work',
+	invoices: 'money',
+	leads: 'people', carddesk: 'people', phone: 'people',
+	social: 'marketing',
+};
+const actionApps = [
+	{ key: 'all', label: 'All' },
+	{ key: 'people', label: 'People' },
+	{ key: 'work', label: 'Work' },
+	{ key: 'money', label: 'Money' },
+	{ key: 'marketing', label: 'Marketing' },
+] as const;
+const actionAppFilter = ref<'all' | ActionApp>('all');
+
+// All urgent/high actions before the app filter — drives the per-pill counts.
+const allTopActions = computed(() =>
+	suggestions.value.filter(
+		s => (s.priority === 'urgent' || s.priority === 'high') && !handledActionIds.value.has(s.id),
+	),
+);
+const actionAppCounts = computed<Record<ActionApp, number>>(() => {
+	const counts = { people: 0, work: 0, money: 0, marketing: 0 } as Record<ActionApp, number>;
+	for (const a of allTopActions.value) {
+		const app = CATEGORY_TO_APP[a.category];
+		if (app) counts[app] += 1;
+	}
+	return counts;
+});
 const topActions = computed(() => {
-	return suggestions.value.filter(s => s.priority === 'urgent' || s.priority === 'high').slice(0, 6);
+	const filtered = actionAppFilter.value === 'all'
+		? allTopActions.value
+		: allTopActions.value.filter(a => CATEGORY_TO_APP[a.category] === actionAppFilter.value);
+	return filtered.slice(0, 6);
 });
 
+function onActionStatusUpdated(action: any, newStatus: string) {
+	const closing = ['completed', 'archived'].includes((newStatus || '').toLowerCase());
+	if (closing) {
+		// Item is resolved — drop the card and reconcile against server truth.
+		handledActionIds.value = new Set([...handledActionIds.value, action.id]);
+		runAnalysis();
+	} else if (action.entity) {
+		// Still active — keep the card but reflect the new status on its pill.
+		action.entity.status = newStatus;
+	}
+}
+
 const otherSuggestions = computed(() => {
-	return suggestions.value.filter(s => s.priority !== 'urgent' && s.priority !== 'high').slice(0, 4);
+	// Shown as a horizontal snap-scroll carousel, so we surface more than the
+	// old 2x2 grid's 4 — the rest scroll into view.
+	return suggestions.value.filter(s => s.priority !== 'urgent' && s.priority !== 'high').slice(0, 12);
 });
 
 // ── CRM Pulse (drives the slim glass callout — full breakdown lives on
@@ -409,6 +465,28 @@ watch(activeTab, (t) => {
 								</button>
 							</div>
 
+							<!-- App filters — narrow the list to one app. Counts reflect the
+							     full urgent/high set so you can see where attention is needed
+							     before clicking in. -->
+							<div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar -mx-0.5 px-0.5">
+								<button
+									v-for="app in actionApps"
+									:key="app.key"
+									@click="actionAppFilter = app.key"
+									class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors"
+									:class="actionAppFilter === app.key
+										? 'bg-primary text-primary-foreground'
+										: 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+								>
+									{{ app.label }}
+									<span
+										v-if="app.key !== 'all' && actionAppCounts[app.key]"
+										class="text-[9px] tabular-nums rounded-full px-1"
+										:class="actionAppFilter === app.key ? 'bg-white/20' : 'bg-background/70'"
+									>{{ actionAppCounts[app.key] }}</span>
+								</button>
+							</div>
+
 							<!-- Loading State -->
 							<div v-if="isAnalyzing && topActions.length === 0" class="space-y-2">
 								<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-xl animate-pulse"></div>
@@ -445,6 +523,14 @@ watch(activeTab, (t) => {
 											<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ action.description }}</p>
 										</div>
 										<div class="flex-shrink-0 flex items-center gap-2">
+											<!-- Inline quick-status: change an item's status (or mark it
+											     done) without leaving the dashboard. Only rendered for
+											     cards backed by a concrete ticket/project/task record. -->
+											<CommandCenterPriorityActionQuickStatus
+												v-if="action.entity"
+												:entity="action.entity"
+												@updated="(s) => onActionStatusUpdated(action, s)"
+											/>
 											<span
 												class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
 												:class="priorityChipClasses(action.priority)"
@@ -556,12 +642,17 @@ watch(activeTab, (t) => {
 						</button>
 					</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-						<CommandCenterSuggestionCard
+					<!-- Horizontal snap-scroll carousel — each card is a fixed-width
+					     snap target; the row scrolls sideways when suggestions
+					     overflow. -->
+					<div class="flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar -mx-1 px-1 pb-1 scroll-px-1">
+						<div
 							v-for="suggestion in otherSuggestions"
 							:key="suggestion.id"
-							:suggestion="suggestion"
-						/>
+							class="snap-start shrink-0 w-[280px] sm:w-[300px]"
+						>
+							<CommandCenterSuggestionCard :suggestion="suggestion" class="h-full" />
+						</div>
 					</div>
 				</div>
 

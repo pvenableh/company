@@ -228,14 +228,24 @@
 					<span>Today</span>
 					<span class="schedule-count">{{ todayTasks.length }}</span>
 				</div>
-				<TaskRow
-					v-for="task in todayTasks"
-					:key="task.id"
-					:task="task"
-					@toggle="handleToggle(task.id)"
-					@remove="removeTask(task.id)"
-					@update-schedule="(s) => updateTask(task.id, { schedule: s })"
-				/>
+				<VueDraggable
+					v-model="order.today"
+					item-key="id"
+					handle=".qt-handle"
+					ghost-class="qt-ghost"
+					:animation="200"
+					class="space-y-0.5"
+					@end="onReorder"
+				>
+					<template #item="{ element: task }">
+						<TaskRow
+							:task="task"
+							@toggle="handleToggle(task.id)"
+							@remove="removeTask(task.id)"
+							@update-schedule="(s) => updateTask(task.id, { schedule: s })"
+						/>
+					</template>
+				</VueDraggable>
 			</template>
 
 			<!-- This Week -->
@@ -245,14 +255,24 @@
 					<span>This Week</span>
 					<span class="schedule-count">{{ thisWeekTasks.length }}</span>
 				</div>
-				<TaskRow
-					v-for="task in thisWeekTasks"
-					:key="task.id"
-					:task="task"
-					@toggle="handleToggle(task.id)"
-					@remove="removeTask(task.id)"
-					@update-schedule="(s) => updateTask(task.id, { schedule: s })"
-				/>
+				<VueDraggable
+					v-model="order.this_week"
+					item-key="id"
+					handle=".qt-handle"
+					ghost-class="qt-ghost"
+					:animation="200"
+					class="space-y-0.5"
+					@end="onReorder"
+				>
+					<template #item="{ element: task }">
+						<TaskRow
+							:task="task"
+							@toggle="handleToggle(task.id)"
+							@remove="removeTask(task.id)"
+							@update-schedule="(s) => updateTask(task.id, { schedule: s })"
+						/>
+					</template>
+				</VueDraggable>
 			</template>
 
 			<!-- Later -->
@@ -262,14 +282,24 @@
 					<span>Later</span>
 					<span class="schedule-count">{{ laterTasks.length }}</span>
 				</div>
-				<TaskRow
-					v-for="task in laterTasks"
-					:key="task.id"
-					:task="task"
-					@toggle="handleToggle(task.id)"
-					@remove="removeTask(task.id)"
-					@update-schedule="(s) => updateTask(task.id, { schedule: s })"
-				/>
+				<VueDraggable
+					v-model="order.later"
+					item-key="id"
+					handle=".qt-handle"
+					ghost-class="qt-ghost"
+					:animation="200"
+					class="space-y-0.5"
+					@end="onReorder"
+				>
+					<template #item="{ element: task }">
+						<TaskRow
+							:task="task"
+							@toggle="handleToggle(task.id)"
+							@remove="removeTask(task.id)"
+							@update-schedule="(s) => updateTask(task.id, { schedule: s })"
+						/>
+					</template>
+				</VueDraggable>
 			</template>
 
 			<!-- Unscheduled -->
@@ -279,14 +309,24 @@
 					<span>Unscheduled</span>
 					<span class="schedule-count">{{ unscheduledTasks.length }}</span>
 				</div>
-				<TaskRow
-					v-for="task in unscheduledTasks"
-					:key="task.id"
-					:task="task"
-					@toggle="handleToggle(task.id)"
-					@remove="removeTask(task.id)"
-					@update-schedule="(s) => updateTask(task.id, { schedule: s })"
-				/>
+				<VueDraggable
+					v-model="order.unscheduled"
+					item-key="id"
+					handle=".qt-handle"
+					ghost-class="qt-ghost"
+					:animation="200"
+					class="space-y-0.5"
+					@end="onReorder"
+				>
+					<template #item="{ element: task }">
+						<TaskRow
+							:task="task"
+							@toggle="handleToggle(task.id)"
+							@remove="removeTask(task.id)"
+							@update-schedule="(s) => updateTask(task.id, { schedule: s })"
+						/>
+					</template>
+				</VueDraggable>
 			</template>
 
 			<!-- Completed tasks -->
@@ -341,6 +381,7 @@
 
 <script setup>
 import confetti from 'canvas-confetti';
+import VueDraggable from 'vuedraggable';
 
 // `hideHeader` drops the internal "Quick Tasks" title + top "Clear done" so the
 // floating dock (which renders its own panel header) doesn't show two headers.
@@ -362,8 +403,31 @@ const {
 	removeTask,
 	toggleTask,
 	updateTask,
+	persistOrder,
 	clearCompleted,
 } = useQuickTasks();
+
+// ── Drag-to-sort ──
+// VueDraggable mutates its bound array, so each schedule group gets a local
+// mirror synced from the composable's (sort-ordered) computed. Dragging
+// rewrites the mirror; onReorder() persists a fresh global `sort` across all
+// active tasks (groups concatenated in display order) so the order survives a
+// reload and stays consistent across the dashboard widget too.
+const order = reactive({ today: [], this_week: [], later: [], unscheduled: [] });
+watch(todayTasks, (v) => { order.today = [...v]; }, { immediate: true });
+watch(thisWeekTasks, (v) => { order.this_week = [...v]; }, { immediate: true });
+watch(laterTasks, (v) => { order.later = [...v]; }, { immediate: true });
+watch(unscheduledTasks, (v) => { order.unscheduled = [...v]; }, { immediate: true });
+
+async function onReorder() {
+	const fullActiveOrder = [
+		...order.today,
+		...order.this_week,
+		...order.later,
+		...order.unscheduled,
+	];
+	await persistOrder(fullActiveOrder);
+}
 
 const inputRef = ref(null);
 const mentionSearchRef = ref(null);
@@ -569,7 +633,13 @@ const TaskRow = defineComponent({
 		];
 
 		return () =>
-			h('div', { class: 'flex items-start gap-2 px-2 py-1 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group' }, [
+			h('div', { class: 'flex items-start gap-1.5 px-2 py-1 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group' }, [
+				h('span', {
+					class: 'qt-handle flex-shrink-0 pt-0.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-muted-foreground',
+					title: 'Drag to reorder',
+				}, [
+					h(resolveComponent('UIcon'), { name: 'i-heroicons-bars-2', class: 'w-3.5 h-3.5' }),
+				]),
 				h('button', { class: 'flex-shrink-0 pt-0.5', onClick: () => emit('toggle') }, [
 					h('div', { class: 'w-[18px] h-[18px] rounded-[6px] border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors flex items-center justify-center' }),
 				]),
@@ -763,5 +833,12 @@ const TaskRow = defineComponent({
 
 .mention-option:hover {
 	background: hsl(var(--muted) / 0.5);
+}
+
+/* Drag ghost (placeholder slot while reordering tasks) */
+.qt-ghost {
+	opacity: 0.5;
+	background: hsl(var(--primary) / 0.08);
+	border-radius: 8px;
 }
 </style>

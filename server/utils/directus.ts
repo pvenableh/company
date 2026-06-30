@@ -112,23 +112,33 @@ export async function getUserDirectus(
 
   // getUserSession triggers the session "fetch" hook which refreshes
   // expired tokens automatically before we read them here.
-  let session = await getUserSession(event);
+  const session = await getUserSession(event);
 
-  // If forceRefresh is requested, proactively refresh the token
-  if (forceRefresh) {
+  let accessToken = getSessionAccessToken(session);
+
+  // Refresh when explicitly forced, or when the session is at/near expiry.
+  //
+  // Important: we do NOT trust a re-read of `session` to reflect the refresh.
+  // `updateSessionTokens()` (and the fetch hook) persist new tokens via
+  // `setUserSession()`, which writes a *new* object — the `session` reference
+  // we hold here can still carry the stale (expired) access token. During a
+  // client-side navigation burst, that stale token gets used, Directus rejects
+  // it, and the request 500s (a hard refresh works because SSR refreshes
+  // serially). So when we refresh, we use the returned token DIRECTLY.
+  const needsRefresh = forceRefresh || isSessionExpired(session, 60000);
+  if (needsRefresh) {
     const refreshToken = getSessionRefreshToken(session);
     if (refreshToken) {
       try {
         const newTokens = await dedupedDirectusRefresh(refreshToken);
         await updateSessionTokens(event, session, newTokens);
-        session = await getUserSession(event);
+        accessToken = newTokens.access_token;
       } catch {
-        // If refresh fails, continue with existing token
+        // If refresh fails, fall through with whatever token we have and let
+        // the downstream request surface the auth error.
       }
     }
   }
-
-  const accessToken = getSessionAccessToken(session);
 
   if (!accessToken) {
     throw createError({

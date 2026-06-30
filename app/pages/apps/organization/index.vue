@@ -686,6 +686,9 @@ function onClientInvited() {
                     >
                       {{ org.website.replace(/^https?:\/\//, '') }}
                     </a>
+                    <p v-if="org.slug" class="text-[11px] text-muted-foreground mt-0.5">
+                      Booking slug: <span class="font-mono text-foreground">{{ org.slug }}</span>
+                    </p>
                   </div>
                 </div>
               </div>

@@ -40,6 +40,11 @@ const invoiceSlide = useAppSlideOver('invoice');
 function openInvoice(invoiceId: string) {
   invoiceSlide.open(invoiceId);
 }
+// Open the full rendered invoice in a new tab — staff viewers get the printable
+// view, which carries its own "Download PDF" button (DocumentsDocumentPdfGenerator).
+function openInvoicePdf(invoiceId: string) {
+  window.open(`/invoices/${invoiceId}`, '_blank', 'noopener');
+}
 const route = useRoute();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
@@ -771,6 +776,7 @@ const headerAction = computed(() => {
                   <th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Amount</th>
                   <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Due Date</th>
                   <th class="text-center py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Items</th>
+                  <th class="text-center py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider sr-only">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -815,6 +821,15 @@ const headerAction = computed(() => {
                     </span>
                   </td>
                   <td class="py-3 px-4 text-center text-muted-foreground">{{ getInvoiceLineItemCount(inv) }}</td>
+                  <td class="py-3 px-2 text-center" @click.stop>
+                    <button
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      title="Open / download PDF in a new tab"
+                      @click="openInvoicePdf(inv.id)"
+                    >
+                      <Icon name="lucide:file-down" class="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>

@@ -15,6 +15,13 @@ export interface TaskSuggestion {
 	actionLabel: string;
 	actionRoute?: string;
 	actionFn?: () => void;
+	// Optional link to the underlying record so the dashboard can offer quick
+	// status changes (mark done / advance status) without navigating away.
+	entity?: {
+		collection: 'tickets' | 'projects' | 'tasks';
+		id: string;
+		status?: string;
+	};
 	category:
 		| 'tasks'
 		| 'invoices'
@@ -299,6 +306,10 @@ export const useAIProductivityEngine = () => {
 			let completedToday = 0;
 
 			for (const ticket of tickets) {
+				// Skip any closed status regardless of casing (filter excludes
+				// 'Completed'/'Archived'; this catches lowercase variants too).
+				const st = (ticket.status || '').toLowerCase();
+				if (st === 'completed' || st === 'archived') continue;
 				const dueDate = ticket.due_date ? new Date(ticket.due_date) : null;
 				const isOverdue = dueDate && dueDate < t;
 				const isDueToday = dueDate && dueDate.toDateString() === t.toDateString();
@@ -315,6 +326,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'Complete Now',
 						actionRoute: `/tickets/${ticket.id}`,
 						category: 'tasks',
+						entity: { collection: 'tickets', id: ticket.id, status: ticket.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue }),
 					});
@@ -329,6 +341,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'Work on it',
 						actionRoute: `/tickets/${ticket.id}`,
 						category: 'tasks',
+						entity: { collection: 'tickets', id: ticket.id, status: ticket.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', isToday: true }),
 					});
@@ -372,7 +385,11 @@ export const useAIProductivityEngine = () => {
 			const projects = await projectItems.list({
 				fields: ['id', 'title', 'status', 'due_date', 'start_date', 'organization.name'],
 				filter: {
-					status: { _nin: ['completed', 'Archived'] },
+					// Directus `_nin` is case-SENSITIVE and project rows carry mixed
+					// casing ('Completed' AND 'completed', 'Archived' AND 'archived').
+					// Exclude every variant or capital-'Completed' projects leak back
+					// in and show as "overdue". See the normalize guard below too.
+					status: { _nin: ['completed', 'Completed', 'archived', 'Archived'] },
 					...orgFilter(),
 					...clientFilter(),
 				},
@@ -385,6 +402,10 @@ export const useAIProductivityEngine = () => {
 			let overdueCount = 0;
 
 			for (const project of projects) {
+				// Belt-and-suspenders: skip any closed status regardless of casing,
+				// in case a new variant slips past the filter above.
+				const st = (project.status || '').toLowerCase();
+				if (st === 'completed' || st === 'archived') continue;
 				activeCount++;
 				const dueDate = project.due_date ? new Date(project.due_date) : null;
 				const isOverdue = dueDate && dueDate < t;
@@ -403,6 +424,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'Review Project',
 						actionRoute: `/projects/${project.id}`,
 						category: 'projects',
+						entity: { collection: 'projects', id: project.id, status: project.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
 					});
@@ -418,6 +440,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'View Project',
 						actionRoute: `/projects/${project.id}`,
 						category: 'projects',
+						entity: { collection: 'projects', id: project.id, status: project.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', isToday: daysLeft === 0, isTomorrow: daysLeft === 1 }),
 					});
@@ -490,6 +513,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'Complete',
 						actionRoute: '/tasks',
 						category: 'tasks',
+						entity: { collection: 'tasks', id: task.id, status: task.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
 					});
@@ -504,6 +528,7 @@ export const useAIProductivityEngine = () => {
 						actionLabel: 'Do It',
 						actionRoute: '/tasks',
 						category: 'tasks',
+						entity: { collection: 'tasks', id: task.id, status: task.status },
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', isToday: true }),
 					});
@@ -1520,7 +1545,12 @@ export const useAIProductivityEngine = () => {
 		const all: TaskSuggestion[] = [];
 		for (const arr of _moduleResults.values()) all.push(...arr);
 		all.push(...generateBusinessSuggestions());
-		all.sort((a, b) => b.score - a.score);
+		// Sort by score, then by a STABLE tiebreaker (id). Many items legitimately
+		// tie at the same score (e.g. every overdue item caps at 100); without a
+		// deterministic tiebreak the order among ties depends on which analyzer
+		// resolved first (they run in parallel), so each refresh surfaced a
+		// different — seemingly random — top 6. Ids are stable, so this fixes it.
+		all.sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
 		suggestions.value = all;
 		metrics.value.productivityScore = calculateProductivityScore();
 	};
