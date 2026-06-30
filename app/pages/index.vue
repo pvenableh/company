@@ -173,24 +173,74 @@ const actionApps = [
 const actionAppFilter = ref<'all' | ActionApp>('all');
 
 // All urgent/high actions before the app filter — drives the per-pill counts.
-const allTopActions = computed(() =>
-	suggestions.value.filter(
-		s => (s.priority === 'urgent' || s.priority === 'high') && !handledActionIds.value.has(s.id),
-	),
+const unhandledActions = computed(() =>
+	suggestions.value.filter(s => !handledActionIds.value.has(s.id)),
 );
+// Pill counts reflect ALL priorities per app (not just urgent/high) so an app
+// with only medium-priority items — e.g. CardDesk follow-ups — still shows a
+// count and isn't a dead pill.
 const actionAppCounts = computed<Record<ActionApp, number>>(() => {
 	const counts = { people: 0, work: 0, money: 0, marketing: 0 } as Record<ActionApp, number>;
-	for (const a of allTopActions.value) {
+	for (const a of unhandledActions.value) {
 		const app = CATEGORY_TO_APP[a.category];
 		if (app) counts[app] += 1;
 	}
 	return counts;
 });
 const topActions = computed(() => {
-	const filtered = actionAppFilter.value === 'all'
-		? allTopActions.value
-		: allTopActions.value.filter(a => CATEGORY_TO_APP[a.category] === actionAppFilter.value);
-	return filtered.slice(0, 6);
+	// "All" keeps the urgent/high focus (the cross-app priority queue). Drilling
+	// into a specific app shows ALL of that app's actions by score — so People
+	// surfaces medium CardDesk/lead nudges that the urgent-only view hides.
+	if (actionAppFilter.value === 'all') {
+		return unhandledActions.value
+			.filter(s => s.priority === 'urgent' || s.priority === 'high')
+			.slice(0, 6);
+	}
+	return unhandledActions.value
+		.filter(a => CATEGORY_TO_APP[a.category] === actionAppFilter.value)
+		.slice(0, 6);
+});
+
+// Several app categories come from deferred analyzers (CardDesk, deals, channels)
+// that only run when their dashboard widget scrolls into view. Selecting an app
+// pill loads that app's modules on demand so the filter is populated even if the
+// user hasn't scrolled to those widgets. loadModule is cached + idempotent.
+const APP_MODULES: Record<ActionApp, string[]> = {
+	people: ['carddesk', 'deals', 'phone'],
+	work: ['tickets', 'projects', 'tasks', 'scheduling', 'goals', 'channels'],
+	money: ['invoices', 'deals'],
+	marketing: ['social'],
+};
+watch(actionAppFilter, (app) => {
+	if (app === 'all') return;
+	for (const m of APP_MODULES[app]) loadModule(m);
+});
+
+// App tag per card — since "All" ranks purely by score (invoices dominate),
+// each card shows which app it belongs to, colour-coded with that app's accent
+// from the active palette. Built as a category→tag lookup so the template does
+// a cheap key access instead of recomputing per render.
+const { accents } = useAppAccent();
+const APP_LABELS: Record<ActionApp, string> = {
+	people: 'People', work: 'Work', money: 'Money', marketing: 'Marketing',
+};
+const APP_ACCENT_ID: Record<ActionApp, string> = {
+	people: 'clients', work: 'work', money: 'money', marketing: 'marketing',
+};
+const appTagByCategory = computed(() => {
+	const out: Record<string, { label: string; style: Record<string, string> }> = {};
+	for (const [cat, app] of Object.entries(CATEGORY_TO_APP)) {
+		const acc = accents.value?.[APP_ACCENT_ID[app]];
+		if (!acc) continue;
+		out[cat] = {
+			label: APP_LABELS[app],
+			style: {
+				backgroundColor: `hsl(${acc.h} ${acc.s}% ${acc.l}% / 0.14)`,
+				color: `hsl(${acc.h} ${acc.s}% ${acc.l}%)`,
+			},
+		};
+	}
+	return out;
 });
 
 function onActionStatusUpdated(action: any, newStatus: string) {
@@ -481,8 +531,10 @@ watch(activeTab, (t) => {
 									{{ app.label }}
 									<span
 										v-if="app.key !== 'all' && actionAppCounts[app.key]"
-										class="text-[9px] tabular-nums rounded-full px-1"
-										:class="actionAppFilter === app.key ? 'bg-white/20' : 'bg-background/70'"
+										class="inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[9px] font-semibold leading-none tabular-nums"
+										:class="actionAppFilter === app.key
+											? 'bg-primary-foreground/25 text-primary-foreground'
+											: 'bg-primary text-primary-foreground'"
 									>{{ actionAppCounts[app.key] }}</span>
 								</button>
 							</div>
@@ -531,6 +583,15 @@ watch(activeTab, (t) => {
 												:entity="action.entity"
 												@updated="(s) => onActionStatusUpdated(action, s)"
 											/>
+											<!-- App tag — which app this action lives in, tinted with that
+											     app's palette accent. -->
+											<span
+												v-if="appTagByCategory[action.category]"
+												class="hidden sm:inline-flex items-center text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md whitespace-nowrap"
+												:style="appTagByCategory[action.category].style"
+											>
+												{{ appTagByCategory[action.category].label }}
+											</span>
 											<span
 												class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
 												:class="priorityChipClasses(action.priority)"
