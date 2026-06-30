@@ -9,6 +9,8 @@
  * - Appropriate behavior guidelines
  */
 
+import { EARNEST_VOICE_CHARTER } from './voice';
+
 export interface OrgContext {
   orgName?: string;
   userName?: string;
@@ -38,6 +40,9 @@ export function buildSystemPrompt(context?: OrgContext): string {
     'When referencing data, cite specifics (client names, amounts, dates) and include [Source: X] tags inline to attribute where the data came from (e.g. [Source: Invoices], [Source: Client Profile], [Source: Tasks]). ' +
     'Be proactive: if you see overdue invoices, stale clients, or blocked projects, mention them.',
   );
+
+  // Brand voice — accuracy & honesty floor that every persona inherits
+  parts.push(EARNEST_VOICE_CHARTER);
 
   // Org + user context
   if (context?.orgName) {

@@ -1,4 +1,5 @@
 import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~~/server/utils/llm/types';
 
@@ -49,7 +50,7 @@ export default defineEventHandler(async (event) => {
 		default: 'a balanced, professional, and warm business assistant named Earnest',
 		director: 'a direct, no-nonsense executive assistant who gets straight to the point',
 		buddy: 'a friendly, casual work buddy who uses emoji occasionally and keeps things light',
-		motivator: 'an enthusiastic motivational coach who believes in the user and uses energy and emoji',
+		motivator: 'an encouraging coach who motivates the user from their real progress, with energy but never exaggeration or empty hype',
 	};
 
 	const personaDesc = personaDescriptions[persona] || personaDescriptions.default;
@@ -64,12 +65,14 @@ export default defineEventHandler(async (event) => {
 
 	const systemPrompt = `You are ${personaDesc}. Generate a personalized greeting for the user.
 
+${EARNEST_VOICE_CHARTER}
+
 Rules:
 - The user's name is "${firstName}" and it's ${period}
 - Return ONLY a JSON object with "greeting" and "subtitle" fields
 - greeting: A warm, unique greeting (under 60 chars). Address them by name.
-- subtitle: A brief motivational or contextual line (under 80 chars)${contextHint}
-- Stay in character for the persona
+- subtitle: A brief contextual line (under 80 chars)${contextHint}
+- Stay in character for the persona, but never exaggerate. If there is nothing notable to say, keep it simple and honest rather than manufacturing excitement.
 - Be creative — don't use generic "Good morning" style greetings
 - No quotes around the name`;
 

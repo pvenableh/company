@@ -19,6 +19,7 @@
  *   - Wellbeing/learning goals get the same factual treatment as revenue.
  */
 import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 import { getGoalTemplate } from '~~/shared/goal-templates';
 import type { ChatMessage } from '~~/server/utils/llm/types';
@@ -51,6 +52,8 @@ interface CoachInput {
 }
 
 const SYSTEM_PROMPT = `You are coaching a user on one of their own goals. You only know what their data shows. You speak directly to them.
+
+${EARNEST_VOICE_CHARTER}
 
 Output strictly as JSON matching:
 {

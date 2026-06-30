@@ -181,14 +181,14 @@ export const useAIProductivityEngine = () => {
 				evening: [`${name}, final push. What needs to close today?`, `Evening, ${name}. Any blockers before we wrap?`, `Let's tie up loose ends, ${name}.`, `${name}, debrief time.`, `End of day, ${name}. Status report.`, `${name}, close it out strong.`],
 			},
 			buddy: {
-				morning: [`Heyyy ${name}! Ready to crush it? ☕`, `Morning, ${name}! Let's do this 🙌`, `What's good, ${name}? New day, new wins!`, `Hey hey, ${name}! Coffee time ☕`, `${name}! Another beautiful day to be awesome`, `Let's gooo ${name}! Fresh start 🌟`],
-				afternoon: [`How's your day going, ${name}?`, `${name}! Still going strong? 💪`, `Hey ${name}, need a hand with anything?`, `What's the vibe, ${name}?`, `${name}, you're doing great today!`, `Afternoon check-in, ${name}! All good? 👋`],
-				evening: [`${name}! Almost done for the day 🌅`, `Hey ${name}, nice work today!`, `Wrapping up, ${name}? You earned it!`, `${name}, great job today! 🎉`, `Time to wind down, ${name} — you killed it`, `${name}! Calling it a day? Well deserved 🙏`],
+				morning: [`Hey ${name}! Ready when you are ☕`, `Morning, ${name}! Let's get into it 🙌`, `What's good, ${name}? Fresh start today`, `Hey hey, ${name}! Coffee time ☕`, `Morning, ${name} — here for whatever you need`, `Let's go, ${name}! New day`],
+				afternoon: [`How's your day going, ${name}?`, `${name}! Still going? 💪`, `Hey ${name}, need a hand with anything?`, `What's the vibe, ${name}?`, `${name}, how's it shaping up?`, `Afternoon check-in, ${name}! All good? 👋`],
+				evening: [`${name}! Winding down for the day 🌅`, `Hey ${name}, how'd today go?`, `Wrapping up, ${name}?`, `${name}, ready to call it? 🎉`, `Time to wind down, ${name}`, `${name}! Calling it a day? 🙏`],
 			},
 			motivator: {
-				morning: [`${name}, today is YOUR day! Let's go! 🔥`, `You showed up, ${name} — that's already a win!`, `New day, new possibilities, ${name}!`, `${name}, greatness starts now! 💫`, `The world needs what you bring, ${name}!`, `Every morning is a chance to be amazing, ${name}! 🌅`],
-				afternoon: [`You're doing amazing, ${name}! Keep going! 🚀`, `${name}, look how far you've come today!`, `Halfway there and crushing it, ${name}!`, `Don't stop now, ${name}! You're on fire! 🔥`, `${name}, your momentum is unstoppable!`, `Keep pushing, ${name}! Excellence is a habit! 💪`],
-				evening: [`${name}, what a day! Be proud of yourself! ⭐`, `You made it through, ${name} — incredible!`, `${name}, you've earned this evening. Great work!`, `Reflect on your wins today, ${name}! 🏆`, `${name}, tomorrow will be even better!`, `Rest up, ${name}. Champions need recovery too! 🌟`],
+				morning: [`Morning, ${name} — let's pick a good first move`, `You're here, ${name} — that's the start`, `New day, ${name}. Where do you want to begin?`, `${name}, let's set up a solid day`, `Morning, ${name} — one step at a time`, `Let's make today count, ${name}`],
+				afternoon: [`Keep it going, ${name} — what's next?`, `${name}, let's look at where things stand`, `Halfway through, ${name} — steady progress`, `Still going, ${name}? Let's keep moving`, `${name}, let's hold the momentum`, `Keep at it, ${name} — one task at a time`],
+				evening: [`Good work today, ${name} — let's wrap up`, `You made it through the day, ${name}`, `${name}, you've earned the evening`, `Let's close out what's left, ${name}`, `${name}, a steady day — finish what matters`, `Rest up, ${name} — tomorrow's another go`],
 			},
 		};
 
@@ -216,14 +216,14 @@ export const useAIProductivityEngine = () => {
 				evening: ['End-of-day debrief — review the status', 'Final items requiring sign-off', "Tomorrow's blockers start here", 'Close-of-business status report', 'Outstanding items need resolution', 'Wrap-up briefing loaded'],
 			},
 			buddy: {
-				morning: ["Let's see what we're working with today!", "I pulled together your stuff — take a peek", "Here's your vibe check for the day", "Got your back today — here's the scoop", "Let me catch you up on everything!", "Here's the daily rundown, friend"],
-				afternoon: ["Here's the scoop on what's going on", "Quick update on all the things!", "Keeping you in the loop — here's what's up", "Just checking in — here's where we're at", "Let me fill you in on the latest", "Here's what's been happening"],
-				evening: ["Almost there! Here's what's left", "You crushed it today — just a few more things", "Winding down? Let me show you what's open", "You're so close to being done!", "Just a handful of things left", "Finish line is in sight!"],
+				morning: ["Let's see what we're working with today", "I pulled your items together — take a peek", "Here's the lay of the land for today", "Got your back — here's the scoop", "Let me catch you up on what's open", "Here's the daily rundown, friend"],
+				afternoon: ["Here's what's going on right now", "Quick update on your open items", "Keeping you in the loop — here's what's up", "Just checking in — here's where we're at", "Let me fill you in on the latest", "Here's what's been happening"],
+				evening: ["Here's what's still open", "A few things left — here they are", "Winding down? Let me show you what's open", "Almost through the list", "Just a handful of items left", "Here's where the day landed"],
 			},
 			motivator: {
-				morning: ["Every task you tackle today is a step forward!", "Your potential is unlimited — here's where to start", "Today's challenges are tomorrow's achievements!", "You have the power to make today extraordinary!", "Small steps lead to big victories!", "Your best work is ahead of you!"],
-				afternoon: ["You're making incredible progress!", "Look at you go — here's what's next", "Keep that energy flowing!", "You're building something amazing!", "Each completed task is a victory!", "The momentum is all yours!"],
-				evening: ["What a productive day — here's the final stretch!", "You've done so much today! Just a few items left", "Finish strong — you've got this!", "Celebrate your wins today!", "You've earned every bit of progress!", "Tomorrow starts with today's momentum!"],
+				morning: ["Every task you tackle is a step forward — here's where to start", "Here's where to begin today", "One step at a time — here's the list", "Let's set up a focused day", "Small steps add up — here's the first", "Here's what's worth your energy today"],
+				afternoon: ["Here's your progress so far and what's next", "Here's what's next", "Steady as you go — here's the rundown", "Let's keep moving — here's where things stand", "Each finished task counts — here's what's open", "Here's where to put your focus next"],
+				evening: ["Here's the final stretch for today", "A few items left — here they are", "Let's finish what matters — here's what's open", "Here's where the day landed", "Here's what's still on your plate", "Tomorrow builds on today — here's what's left"],
 			},
 		};
 

@@ -12,6 +12,7 @@
 
 import { readItem, readItems, updateItem } from '@directus/sdk';
 import { getLLMProvider } from './llm/factory';
+import { EARNEST_VOICE_CHARTER } from './llm/voice';
 
 export interface MeetingSummaryResult {
 	summary: string;
@@ -165,11 +166,14 @@ function buildContextBlock(meeting: MeetingForSummary): string {
 
 const SYSTEM_PROMPT = `You are Earnest, an executive-assistant AI that recaps meetings for creative agencies and freelancers.
 
+${EARNEST_VOICE_CHARTER}
+
 Given a meeting transcript and the surrounding context (project, milestone, client, attendees), produce a tight, useful recap that helps the team move forward without re-reading the call.
 
 Rules:
 - Reference the project/milestone/client by name where it grounds the recap.
 - Don't invent decisions or commitments. If the transcript is sparse or noisy, say so.
+- Recap what was actually said. Do not inflate the significance of the meeting or its outcomes.
 - Action items must be concrete enough that the assignee knows exactly what to do.
 - Use the attendee list to attribute action items to real people. If unclear, leave assignee null.
 - Output STRICT JSON only — no commentary, no markdown fence.

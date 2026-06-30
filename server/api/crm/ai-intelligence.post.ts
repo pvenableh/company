@@ -12,6 +12,7 @@
  * - pipeline-review: Deal pipeline analysis with forecasting
  */
 import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { getCRMContext } from '~~/server/utils/crm-intelligence';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
@@ -135,9 +136,12 @@ function getUserMessage(type: string, focus?: string): string {
 function buildPrompt(type: string, context: any, focus?: string): string {
 	const dataBlock = `CRM DATA SNAPSHOT:\n${JSON.stringify(context, null, 2)}`;
 
-	const baseRules = `RULES:
+	const baseRules = `${EARNEST_VOICE_CHARTER}
+
+RULES:
 - Return ONLY valid JSON, no markdown fences, no extra text
 - Base your analysis on the actual data provided — don't make up numbers
+- Score health and impact honestly. Do not inflate health scores or overstate the impact/effort of recommendations to sound encouraging
 - Reference specific data points (counts, dates, names) in your analysis
 - Insights should be specific, actionable, and prioritized
 - If data is sparse, note it as an opportunity rather than a weakness
