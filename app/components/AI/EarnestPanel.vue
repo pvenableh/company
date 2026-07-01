@@ -327,7 +327,7 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 
 				<!-- Activity tab: org-wide AI actions audit log -->
 				<div v-if="activeTab === 'activity'" class="flex-1 overflow-y-auto px-4 py-3">
-					<AiActivityList />
+					<AiActivityList show-filters />
 				</div>
 
 				<!-- Messages -->

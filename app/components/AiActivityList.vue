@@ -10,11 +10,18 @@
  * Per the Earnest voice charter: rows present plainly what the AI did and link
  * to the real artifacts (drafted proposal/contract) — no editorializing.
  */
-const props = defineProps<{
+import { Button } from '~/components/ui/button';
+
+const props = withDefaults(defineProps<{
   entityType?: string | null;
   entityId?: string | null;
-}>();
+  /** Show the status filter chips (turns the org-wide feed into a review queue). */
+  showFilters?: boolean;
+}>(), {
+  showFilters: false,
+});
 
+const toast = useToast();
 const { selectedOrg } = useOrganization();
 const organizationId = computed(() => (selectedOrg.value as any)?.id || selectedOrg.value || '');
 
@@ -24,6 +31,15 @@ const contractSlide = useAppSlideOver('contract');
 const actions = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+// ── Status filter (review queue) ──────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { key: '', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'executed', label: 'Done' },
+  { key: 'failed', label: 'Failed' },
+] as const;
+const statusFilter = ref<string>('');
 
 async function load() {
   if (!organizationId.value) { actions.value = []; loading.value = false; return; }
@@ -36,6 +52,7 @@ async function load() {
         ...(props.entityType && props.entityId
           ? { entityType: props.entityType, entityId: props.entityId }
           : {}),
+        ...(statusFilter.value ? { status: statusFilter.value } : {}),
       },
     });
     actions.value = res?.actions || [];
@@ -50,6 +67,45 @@ async function load() {
 onMounted(load);
 watch(organizationId, load);
 watch(() => [props.entityType, props.entityId], load);
+watch(statusFilter, load);
+
+// ── Approve / reject (optimistic, with rollback per iOS reactive-CRUD policy) ──
+const busyIds = ref<Set<string | number>>(new Set());
+function isBusy(id: string | number) { return busyIds.value.has(id); }
+
+async function resolveAction(a: any, decision: 'approve' | 'reject') {
+  if (isBusy(a.id)) return;
+  const prevStatus = a.status;
+  const prevResult = a.result;
+  // Optimistic: approve → Done, reject → Rejected.
+  a.status = decision === 'approve' ? 'executed' : 'rejected';
+  busyIds.value = new Set(busyIds.value).add(a.id);
+  try {
+    const res = await $fetch<{ status: string; result?: any }>(`/api/ai/actions/${a.id}/${decision}`, {
+      method: 'POST',
+    });
+    a.status = res?.status || a.status;
+    if (res?.result) a.result = res.result;
+    a.error = null;
+    toast.add({
+      title: decision === 'approve' ? 'Action approved' : 'Action rejected',
+      color: 'green',
+    });
+  } catch (err: any) {
+    // Rollback.
+    a.status = prevStatus;
+    a.result = prevResult;
+    toast.add({
+      title: decision === 'approve' ? 'Could not approve action' : 'Could not reject action',
+      description: err?.data?.message || err?.message,
+      color: 'red',
+    });
+  } finally {
+    const next = new Set(busyIds.value);
+    next.delete(a.id);
+    busyIds.value = next;
+  }
+}
 
 // ── Presentation ─────────────────────────────────────────────────────────────
 const ACTION_LABELS: Record<string, string> = {
@@ -103,6 +159,22 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
 
 <template>
   <div>
+    <!-- Status filter chips (review queue) -->
+    <div v-if="showFilters && !(entityType && entityId)" class="flex items-center gap-1.5 mb-3">
+      <button
+        v-for="f in STATUS_FILTERS"
+        :key="f.key"
+        type="button"
+        class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors"
+        :class="statusFilter === f.key
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-muted/50 text-muted-foreground hover:bg-muted'"
+        @click="statusFilter = f.key"
+      >
+        {{ f.label }}
+      </button>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="space-y-3">
       <div v-for="n in 4" :key="n" class="flex items-start gap-3">
@@ -162,6 +234,30 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 <UIcon name="lucide:external-link" class="w-3 h-3" />
                 {{ link.label }}
               </button>
+            </div>
+
+            <!-- HITL controls: only pending actions are actionable. -->
+            <div v-if="a.status === 'pending'" class="flex items-center gap-2 mt-2">
+              <Button
+                size="sm"
+                class="h-7 rounded-full px-3 text-[11px]"
+                :disabled="isBusy(a.id)"
+                @click="resolveAction(a, 'approve')"
+              >
+                <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                <UIcon v-else name="lucide:check" class="w-3 h-3" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                class="h-7 rounded-full px-3 text-[11px]"
+                :disabled="isBusy(a.id)"
+                @click="resolveAction(a, 'reject')"
+              >
+                <UIcon name="lucide:x" class="w-3 h-3" />
+                Reject
+              </Button>
             </div>
           </div>
         </div>
