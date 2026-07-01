@@ -201,6 +201,43 @@ async function bulkResolve(decision: 'approve' | 'reject') {
   }
 }
 
+// ── Undo (executed update_field only) ──────────────────────────────────────────
+// The forward executor captured `previous`, so an executed update_field can be
+// reversed one-click. The row stays `executed` but its result is stamped `undone`.
+function canUndo(a: any): boolean {
+  return a?.action_type === 'update_field'
+    && a?.status === 'executed'
+    && !!a?.result
+    && !a.result.undone
+    && a.result.collection != null && a.result.field != null && a.result.id != null;
+}
+function isUndone(a: any): boolean {
+  return !!a?.result?.undone;
+}
+
+async function undoAction(a: any) {
+  if (isBusy(a.id)) return;
+  const prevResult = a.result;
+  // Optimistic: mark undone.
+  a.result = { ...(a.result || {}), undone: true };
+  busyIds.value = new Set(busyIds.value).add(a.id);
+  try {
+    await $fetch(`/api/ai/actions/${a.id}/undo`, { method: 'POST' });
+    toast.add({ title: 'Change reverted', color: 'green' });
+  } catch (err: any) {
+    a.result = prevResult; // rollback
+    toast.add({
+      title: 'Could not undo',
+      description: err?.data?.message || err?.message,
+      color: 'red',
+    });
+  } finally {
+    const next = new Set(busyIds.value);
+    next.delete(a.id);
+    busyIds.value = next;
+  }
+}
+
 // ── Presentation ─────────────────────────────────────────────────────────────
 const ACTION_LABELS: Record<string, string> = {
   generate_documents: 'Drafted documents',
@@ -381,6 +418,14 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 <UIcon name="lucide:sparkles" class="w-2.5 h-2.5" />
                 Proactive
               </span>
+              <span
+                v-if="isUndone(a)"
+                class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide bg-muted text-muted-foreground"
+                title="This change was reverted"
+              >
+                <UIcon name="lucide:undo-2" class="w-2.5 h-2.5" />
+                Undone
+              </span>
               <span class="text-[10px] text-muted-foreground">{{ formatTime(a.date_created) }}</span>
             </div>
             <p v-if="a.title" class="text-[11px] text-muted-foreground mt-0.5 break-words">{{ a.title }}</p>
@@ -445,6 +490,22 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
               >
                 <UIcon name="lucide:x" class="w-3 h-3" />
                 Reject
+              </Button>
+            </div>
+
+            <!-- Undo: reverse an executed field change (writes the captured
+                 previous value back). Hidden once already undone. -->
+            <div v-if="canUndo(a)" class="mt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                class="h-7 rounded-full px-3 text-[11px]"
+                :disabled="isBusy(a.id)"
+                @click="undoAction(a)"
+              >
+                <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                <UIcon v-else name="lucide:undo-2" class="w-3 h-3" />
+                Undo
               </Button>
             </div>
           </div>

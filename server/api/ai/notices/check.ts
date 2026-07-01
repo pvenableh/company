@@ -16,7 +16,7 @@
  * Returns: { organizations: number, checked: number, sent: number, skipped: number }
  */
 
-import { createItem, createNotification, readItems } from '@directus/sdk';
+import { aggregate, createItem, createNotification, readItems } from '@directus/sdk';
 import { createHash } from 'crypto';
 import {
   generateClientNotices,
@@ -75,6 +75,8 @@ export default defineEventHandler(async (event) => {
   const directus = getServerDirectus();
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  // Digest dedups per DAY (this cron runs daily) so a manual re-POST won't double-notify.
+  const dayKey = `${monthKey}-${String(now.getDate()).padStart(2, '0')}`;
 
   // Resolve which orgs to check
   let orgIds: string[] = [];
@@ -106,6 +108,7 @@ export default defineEventHandler(async (event) => {
   let totalSent = 0;
   let totalSkipped = 0;
   let totalProposed = 0;
+  let totalDigested = 0;
 
   for (const orgId of orgIds) {
     const result = await checkOrgNotices(directus, orgId, now, monthKey);
@@ -113,10 +116,127 @@ export default defineEventHandler(async (event) => {
     totalSent += result.sent;
     totalSkipped += result.skipped;
     totalProposed += result.proposed;
+    // Independent of notices: nudge admins about the HITL review backlog so
+    // proposals get reviewed before the expiry cron retires them.
+    totalDigested += await sendPendingQueueDigest(directus, orgId, now, dayKey).catch(() => 0);
   }
 
-  return { organizations: orgIds.length, checked: totalChecked, sent: totalSent, skipped: totalSkipped, proposed: totalProposed };
+  return { organizations: orgIds.length, checked: totalChecked, sent: totalSent, skipped: totalSkipped, proposed: totalProposed, digested: totalDigested };
 });
+
+/**
+ * Daily "N AI proposals awaiting review" nudge to an org's owners/admins. Runs
+ * independent of the notice pipeline (a backlog reminder must fire even on days
+ * with no new notices). Fires at most once/day/org via an ai_notice_history hash.
+ * Fails soft to 0 — a digest must never break the cron. Returns 1 if it notified.
+ */
+async function sendPendingQueueDigest(
+  directus: any, organizationId: string, now: Date, dayKey: string,
+): Promise<number> {
+  // 1. Count pending ai_actions (the review backlog).
+  let pendingCount = 0;
+  try {
+    const res = (await directus.request(
+      (aggregate as any)('ai_actions', {
+        aggregate: { count: ['*'] },
+        query: { filter: { _and: [
+          { organization: { _eq: organizationId } },
+          { status: { _eq: 'pending' } },
+        ] } },
+      }),
+    )) as any[];
+    pendingCount = Number(res?.[0]?.count ?? 0);
+  } catch {
+    return 0;
+  }
+  if (pendingCount === 0) return 0;
+
+  // 2. Count "aging" ones (past half the expiry window → nearing auto-expiry).
+  const windowDays = Math.max(1, Number(process.env.AI_ACTION_EXPIRY_DAYS) || 14);
+  const agingBeforeIso = new Date(now.getTime() - Math.ceil(windowDays / 2) * 24 * 60 * 60 * 1000).toISOString();
+  let agingCount = 0;
+  try {
+    const res = (await directus.request(
+      (aggregate as any)('ai_actions', {
+        aggregate: { count: ['*'] },
+        query: { filter: { _and: [
+          { organization: { _eq: organizationId } },
+          { status: { _eq: 'pending' } },
+          { date_created: { _lte: agingBeforeIso } },
+        ] } },
+      }),
+    )) as any[];
+    agingCount = Number(res?.[0]?.count ?? 0);
+  } catch { /* aging is best-effort */ }
+
+  // 3. Once/day dedup.
+  const hash = createHash('md5').update(`pending-digest:${organizationId}:${dayKey}`).digest('hex');
+  try {
+    const existing = await directus.request(
+      (readItems as any)('ai_notice_history', {
+        filter: { _and: [
+          { organization: { _eq: organizationId } },
+          { notice_hash: { _eq: hash } },
+        ] },
+        fields: ['id'],
+        limit: 1,
+      }),
+    ) as any[];
+    if ((existing?.length || 0) > 0) return 0;
+  } catch { /* history collection may be absent — treat as not-yet-sent */ }
+
+  // 4. Resolve owners/admins.
+  let adminUserIds: string[] = [];
+  try {
+    const memberships = await directus.request(
+      (readItems as any)('org_memberships', {
+        filter: { _and: [
+          { organization: { _eq: organizationId } },
+          { status: { _eq: 'active' } },
+          { role: { slug: { _in: ['owner', 'admin'] } } },
+        ] },
+        fields: ['user'],
+        limit: 50,
+      }),
+    ) as any[];
+    adminUserIds = memberships.map((m: any) => m.user).filter(Boolean);
+  } catch {
+    return 0;
+  }
+  if (adminUserIds.length === 0) return 0;
+
+  // 5. Notify (accuracy-first, no hype): plain count + optional aging note.
+  const plural = pendingCount === 1 ? '' : 's';
+  const agingNote = agingCount > 0 ? ` ${agingCount} ${agingCount === 1 ? 'is' : 'are'} nearing auto-expiry.` : '';
+  const notifyResults = await Promise.allSettled(
+    adminUserIds.map((adminId) =>
+      directus.request(
+        createNotification({
+          recipient: adminId,
+          subject: `${pendingCount} AI proposal${plural} awaiting review`,
+          message: `You have ${pendingCount} AI proposal${plural} pending approval.${agingNote} Review them in the AI Activity queue.`,
+          collection: 'ai_actions',
+          status: 'inbox',
+        }),
+      ),
+    ),
+  );
+  if (notifyResults.filter((r) => r.status === 'fulfilled').length === 0) return 0;
+
+  // 6. Record dedup marker.
+  try {
+    await directus.request(
+      (createItem as any)('ai_notice_history', {
+        organization: organizationId,
+        notice_hash: hash,
+        notice_id: 'pending-queue-digest',
+        sent_at: now.toISOString(),
+      }),
+    );
+  } catch { /* best-effort */ }
+
+  return 1;
+}
 
 /**
  * Idempotency guard for proactive proposals: true if an OPEN (pending/approved/

@@ -139,7 +139,7 @@ const createTasksExecutor: AiActionExecutor = async ({ action, organizationId })
 // pairs in this hard-coded allow-list. The safety is entirely in the allow-list
 // — never a free-form update. See UpdateFieldPayload in the contract doc.
 
-const UPDATE_FIELD_ALLOWLIST: Record<string, string[]> = {
+export const UPDATE_FIELD_ALLOWLIST: Record<string, string[]> = {
   leads: ['status', 'stage'],
   clients: ['status'],
   projects: ['status'],
@@ -147,7 +147,7 @@ const UPDATE_FIELD_ALLOWLIST: Record<string, string[]> = {
 };
 
 // Org column per allow-listed collection (tasks uses organization_id).
-const UPDATE_ORG_FIELD: Record<string, string> = {
+export const UPDATE_ORG_FIELD: Record<string, string> = {
   leads: 'organization',
   clients: 'organization',
   projects: 'organization',
@@ -194,6 +194,68 @@ const updateFieldExecutor: AiActionExecutor = async ({ action, organizationId })
 
   return { collection, id, field, previous, value };
 };
+
+/**
+ * Reverse an already-executed `update_field` action — the one-click undo behind
+ * POST /api/ai/actions/[id]/undo. Because the executor captured `previous`, undo
+ * is just writing it back, gated by the SAME safety net as the forward path:
+ *   - only executed update_field rows with a complete result;
+ *   - collection/field still on the allow-list;
+ *   - target row still in the caller's org;
+ *   - AND the field still holds the value we set — if someone changed it since,
+ *     we ABORT rather than clobber their edit.
+ * Returns the revert descriptor; THROWS a readable Error otherwise.
+ */
+export async function undoUpdateField(
+  action: Record<string, any>,
+  organizationId: string,
+): Promise<Record<string, any>> {
+  if (action?.action_type !== 'update_field') throw new Error('undo: not an update_field action');
+  if (action?.status !== 'executed') throw new Error(`undo: action is ${action?.status}, not executed`);
+
+  const result = action?.result || {};
+  const collection = (result.collection ?? '').toString();
+  const field = (result.field ?? '').toString();
+  const id = result.id;
+  const previous = result.previous;
+  const applied = result.value;
+  if (!collection || !field || id == null || id === '') {
+    throw new Error('undo: action result is missing collection/field/id (nothing to reverse)');
+  }
+  if (result.undone) throw new Error('undo: this action was already undone');
+
+  // Allow-list gate (defense in depth — never trust the stored result blindly).
+  const allowedFields = UPDATE_FIELD_ALLOWLIST[collection];
+  if (!allowedFields || !allowedFields.includes(field)) {
+    throw new Error(`undo: ${collection}.${field} is not allow-listed`);
+  }
+
+  const directus = getServerDirectus();
+  const orgField = UPDATE_ORG_FIELD[collection];
+  if (!orgField) throw new Error(`undo: no org column mapped for "${collection}"`);
+
+  let current: unknown;
+  try {
+    const row = (await directus.request(
+      readItem(collection as any, id, { fields: ['id', field, orgField] as any }),
+    )) as any;
+    if (!row) throw new Error('not found');
+    const rowOrg = resolveId(orgField.split('.').reduce((acc: any, k) => (acc == null ? acc : acc[k]), row));
+    if (rowOrg !== organizationId) throw new Error('belongs to another organization');
+    current = row[field];
+  } catch (err: any) {
+    throw new Error(`undo: ${collection} ${id} — ${err?.message || 'access denied'}`);
+  }
+
+  // Don't clobber a later edit: only revert if the field still holds what we set.
+  if (JSON.stringify(current) !== JSON.stringify(applied)) {
+    throw new Error(`undo: ${collection}.${field} changed since execution — not reverting`);
+  }
+
+  await directus.request(updateItem(collection as any, id, { [field]: previous }));
+
+  return { collection, id, field, revertedTo: previous, from: applied };
+}
 
 // ── send_email ────────────────────────────────────────────────────────────────
 // Irreversible → last to ship, and DEFAULTS to dry-run. The full render + audit
