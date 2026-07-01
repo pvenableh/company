@@ -280,6 +280,7 @@ export default defineEventHandler(async (event) => {
       dealsSummary: cachedContext?.dealsSummary || undefined,
       ticketsSummary: cachedContext?.ticketsSummary || undefined,
       contactsSummary: cachedContext?.contactsSummary || undefined,
+      momentumSummary: cachedContext?.momentumSummary || undefined,
     };
 
     // Brand context: client-specific override takes priority, else use broker's org-level brand

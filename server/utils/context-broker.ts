@@ -23,6 +23,8 @@ export interface CachedOrgContext {
   ticketsSummary: string;
   brandSummary: string;
   contactsSummary: string;
+  /** Recent, real wins/momentum (deals won, invoices paid, projects completed). Balances the risk-biased summaries above. */
+  momentumSummary: string;
   tokenEstimate: number;
   builtAt: number;
   expiresAt: number;
@@ -68,6 +70,7 @@ function emptyContext(): CachedOrgContext {
     ticketsSummary: '',
     brandSummary: '',
     contactsSummary: '',
+    momentumSummary: '',
     tokenEstimate: 0,
     builtAt: now,
     expiresAt: now + L1_TTL_MS,
@@ -120,8 +123,8 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
   const orgFilter = { organization: { _eq: organizationId } };
   const now = new Date();
 
-  // Run all 7 scope builders in parallel
-  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary] = await Promise.all([
+  // Run all scope builders in parallel
+  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary, momentumSummary] = await Promise.all([
     buildClientsSummary(directus, orgFilter, now),
     buildProjectsSummary(directus, orgFilter, now),
     buildInvoicesSummary(directus, orgFilter, now),
@@ -129,9 +132,10 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
     buildTicketsSummary(directus, orgFilter, now),
     buildBrandSummary(directus, organizationId),
     buildContactsSummary(directus, organizationId, now),
+    buildMomentumSummary(directus, orgFilter, organizationId, now),
   ]);
 
-  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary].join('');
+  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary, momentumSummary].join('');
   const tokenEstimate = Math.ceil(allText.length / 4);
 
   const context: CachedOrgContext = {
@@ -142,6 +146,7 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
     ticketsSummary,
     brandSummary,
     contactsSummary,
+    momentumSummary,
     tokenEstimate,
     builtAt: Date.now(),
     expiresAt: Date.now() + L1_TTL_MS,
@@ -205,6 +210,7 @@ async function readFromL2(organizationId: string): Promise<CachedOrgContext | nu
     ticketsSummary: data.ticketsSummary || '',
     brandSummary: data.brandSummary || '',
     contactsSummary: data.contactsSummary || '',
+    momentumSummary: data.momentumSummary || '',
     tokenEstimate: row.token_estimate || 0,
     builtAt: new Date(row.date_created).getTime(),
     expiresAt: Date.now() + L1_TTL_MS, // Reset L1 TTL from L2 read
@@ -223,6 +229,7 @@ async function writeToL2(organizationId: string, context: CachedOrgContext): Pro
     ticketsSummary: context.ticketsSummary,
     brandSummary: context.brandSummary,
     contactsSummary: context.contactsSummary,
+    momentumSummary: context.momentumSummary,
   };
 
   // Upsert: check for existing row, update or create
@@ -418,6 +425,85 @@ async function buildTicketsSummary(directus: any, orgFilter: any, now: Date): Pr
     const result = `${tickets.length} open tickets${urgentCount ? ` (${urgentCount} urgent)` : ''}${highCount ? `, ${highCount} high priority` : ''}:\n${lines.join('\n')}`;
     return truncateToTokenBudget(result);
   } catch { return ''; }
+}
+
+/**
+ * Recent, real WINS — the counterweight to the risk-biased summaries above.
+ * Every other builder surfaces problems (stale/overdue/urgent); without this
+ * the AI can only ever see what's on fire, so any "motivating" persona has
+ * nothing genuine to celebrate. This computes actual positives from the same
+ * data over a trailing window. Returns '' when there's nothing real to report
+ * — we never manufacture momentum (see the voice charter's honesty floor).
+ */
+async function buildMomentumSummary(directus: any, orgFilter: any, organizationId: string, now: Date): Promise<string> {
+  const days30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const days7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const lines: string[] = [];
+
+  // Deals won in the last 30 days (value from actual, fallback estimated)
+  try {
+    const won = await directus.request(
+      readItems('leads', {
+        filter: { ...orgFilter, stage: { _eq: 'won' }, closed_date: { _gte: days30 } },
+        fields: ['id', 'actual_value', 'estimated_value', 'project_type', 'closed_date'],
+        sort: ['-closed_date'],
+        limit: 25,
+      }),
+    ) as Array<{ actual_value: number; estimated_value: number; project_type: string }>;
+    if (won.length) {
+      const total = won.reduce((s, l) => s + (Number(l.actual_value) || Number(l.estimated_value) || 0), 0);
+      lines.push(`- ${won.length} deal${won.length === 1 ? '' : 's'} won in the last 30 days${total ? `, worth $${total.toLocaleString()}` : ''}.`);
+    }
+  } catch { /* skip this signal */ }
+
+  // Invoices marked paid in the last 30 days (date_updated is the recency proxy — no dedicated paid-date field)
+  try {
+    const paid = await directus.request(
+      readItems('invoices', {
+        filter: { ...orgFilter, status: { _eq: 'paid' }, date_updated: { _gte: days30 } },
+        fields: ['id', 'total_amount', 'date_updated'],
+        sort: ['-date_updated'],
+        limit: 50,
+      }),
+    ) as Array<{ total_amount: number }>;
+    if (paid.length) {
+      const total = paid.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+      lines.push(`- ${paid.length} invoice${paid.length === 1 ? '' : 's'} marked paid in the last 30 days${total ? `, totaling $${total.toLocaleString()}` : ''}.`);
+    }
+  } catch { /* skip this signal */ }
+
+  // Projects completed in the last 30 days (status is inconsistently cased in the schema — match both)
+  try {
+    const done = await directus.request(
+      readItems('projects', {
+        filter: { ...orgFilter, status: { _in: ['Completed', 'completed'] }, date_updated: { _gte: days30 } },
+        fields: ['id', 'title', 'client.name', 'date_updated'],
+        sort: ['-date_updated'],
+        limit: 15,
+      }),
+    ) as Array<{ title: string; client: { name: string } | null }>;
+    if (done.length) {
+      const names = done.slice(0, 4).map(p => p.title).filter(Boolean).join(', ');
+      lines.push(`- ${done.length} project${done.length === 1 ? '' : 's'} completed in the last 30 days${names ? ` (${names}${done.length > 4 ? ', …' : ''})` : ''}.`);
+    }
+  } catch { /* skip this signal */ }
+
+  // Tasks completed in the last 7 days (org-scoped; skipped silently if tasks aren't org-scoped)
+  try {
+    const tasks = await directus.request(
+      readItems('tasks', {
+        filter: { ...orgFilter, status: { _eq: 'completed' }, date_updated: { _gte: days7 } },
+        fields: ['id'],
+        limit: 200,
+      }),
+    ) as Array<{ id: string }>;
+    if (tasks.length) {
+      lines.push(`- ${tasks.length} task${tasks.length === 1 ? '' : 's'} completed in the last 7 days.`);
+    }
+  } catch { /* skip this signal */ }
+
+  if (!lines.length) return '';
+  return truncateToTokenBudget(`Recent wins (real, from data — celebrate these honestly, do not exaggerate):\n${lines.join('\n')}`);
 }
 
 async function buildContactsSummary(directus: any, organizationId: string, now: Date): Promise<string> {

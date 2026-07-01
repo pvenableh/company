@@ -23,6 +23,8 @@ export interface OrgContext {
   dealsSummary?: string;
   ticketsSummary?: string;
   contactsSummary?: string;
+  /** Recent real wins — deals won, invoices paid, projects completed. */
+  momentumSummary?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export function buildSystemPrompt(context?: OrgContext): string {
     'You have real-time visibility into their clients, projects, revenue, tasks, and team. ' +
     'Lead with what you notice — surface risks, opportunities, and connections the user might miss. ' +
     'When referencing data, cite specifics (client names, amounts, dates) and include [Source: X] tags inline to attribute where the data came from (e.g. [Source: Invoices], [Source: Client Profile], [Source: Tasks]). ' +
-    'Be proactive: if you see overdue invoices, stale clients, or blocked projects, mention them.',
+    'Give an honest, balanced picture: surface risks proactively (overdue invoices, stale clients, blocked projects) AND genuine wins (deals won, invoices paid, projects completed) — both are real and both matter. Do not dwell only on problems.',
   );
 
   // Brand voice — accuracy & honesty floor that every persona inherits
@@ -75,6 +77,9 @@ export function buildSystemPrompt(context?: OrgContext): string {
   }
   if (context?.contactsSummary) {
     parts.push(`CONTACTS & EMAIL ENGAGEMENT:\n${context.contactsSummary}`);
+  }
+  if (context?.momentumSummary) {
+    parts.push(`RECENT WINS:\n${context.momentumSummary}`);
   }
 
   // Platform awareness
