@@ -40,11 +40,18 @@
 							<LayoutNotificationsMenu />
 						</ClientOnly>
 						<button
-							class="apps-shell__chrome-btn hidden sm:flex"
+							class="apps-shell__chrome-btn hidden sm:flex relative"
 							aria-label="Earnest assistant"
 							@click="handleOpenAI"
 						>
 							<EarnestIcon class="size-4 text-foreground" />
+							<span
+								v-if="aiPendingCount > 0"
+								class="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-[15px] px-1 rounded-full bg-warning text-[9px] font-semibold text-warning-foreground tabular-nums leading-none"
+								:aria-label="`${aiPendingCount} action${aiPendingCount === 1 ? '' : 's'} awaiting approval`"
+							>
+								{{ aiPendingCount > 9 ? '9+' : aiPendingCount }}
+							</span>
 						</button>
 						<ClientOnly>
 							<LayoutUserMenu v-if="user" class="shrink-0" />
@@ -135,6 +142,10 @@ useAppSlideOverStackUrlSync();
 
 // The unified Earnest panel self-derives entity vs route context.
 const handleOpenAI = () => openEarnestPanel();
+
+// Pending AI actions (HITL queue) badge on the assistant launcher.
+const { pendingCount: aiPendingCount, refresh: refreshAiPending } = useAiPendingActions();
+onMounted(() => { refreshAiPending(); });
 
 const spotlightOpen = ref(false);
 const showOrgSwitcher = ref(false);

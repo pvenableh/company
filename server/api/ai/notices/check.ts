@@ -27,6 +27,7 @@ import {
   generateTicketNotices,
   type AINotice,
 } from '~~/server/utils/ai-notices';
+import { logAiAction } from '~~/server/utils/ai-actions';
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
@@ -81,20 +82,60 @@ export default defineEventHandler(async (event) => {
   let totalChecked = 0;
   let totalSent = 0;
   let totalSkipped = 0;
+  let totalProposed = 0;
 
   for (const orgId of orgIds) {
     const result = await checkOrgNotices(directus, orgId, now, monthKey);
     totalChecked += result.checked;
     totalSent += result.sent;
     totalSkipped += result.skipped;
+    totalProposed += result.proposed;
   }
 
-  return { organizations: orgIds.length, checked: totalChecked, sent: totalSent, skipped: totalSkipped };
+  return { organizations: orgIds.length, checked: totalChecked, sent: totalSent, skipped: totalSkipped, proposed: totalProposed };
 });
+
+/**
+ * Idempotency guard for proactive proposals: true if an OPEN (pending/approved/
+ * executed) ai_action of this type already exists for the same entity within the
+ * dedup window — so repeated cron runs don't queue duplicates. Fails CLOSED
+ * (returns true → skip) on error, favouring "no duplicate" over "no gap".
+ */
+async function hasRecentOpenAction(
+  directus: any,
+  organizationId: string,
+  actionType: string,
+  entityType: string | undefined,
+  entityId: string | undefined,
+  sinceIso: string,
+): Promise<boolean> {
+  if (!entityType || !entityId) return false;
+  try {
+    const rows = await directus.request(
+      (readItems as any)('ai_actions', {
+        filter: {
+          _and: [
+            { organization: { _eq: organizationId } },
+            { action_type: { _eq: actionType } },
+            { entity_type: { _eq: entityType } },
+            { entity_id: { _eq: entityId } },
+            { status: { _in: ['pending', 'approved', 'executed'] } },
+            { date_created: { _gte: sinceIso } },
+          ],
+        },
+        fields: ['id'],
+        limit: 1,
+      }),
+    ) as any[];
+    return (rows?.length || 0) > 0;
+  } catch {
+    return true; // fail-closed: don't risk a duplicate if the check errored
+  }
+}
 
 async function checkOrgNotices(
   directus: any, organizationId: string, now: Date, monthKey: string,
-): Promise<{ checked: number; sent: number; skipped: number }> {
+): Promise<{ checked: number; sent: number; skipped: number; proposed: number }> {
 
   try {
     // 1. Fetch all active clients, projects, invoices, leads, proposals, tickets for this org
@@ -225,7 +266,38 @@ async function checkOrgNotices(
     );
 
     if (actionableNotices.length === 0) {
-      return { checked: allNotices.length, sent: 0, skipped: 0 };
+      return { checked: allNotices.length, sent: 0, skipped: 0, proposed: 0 };
+    }
+
+    // 3b. Proactive proposals — log a `pending` ai_actions row for any actionable
+    // notice carrying a proposedAction (Phase 5). Idempotent via hasRecentOpenAction
+    // so repeated cron runs don't queue duplicates. Runs INDEPENDENT of the admin
+    // notification below (a proposal is queued even when no admin is notifiable).
+    let proposed = 0;
+    const proposalWindowIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    for (const notice of actionableNotices) {
+      const pa = notice.proposedAction;
+      if (!pa) continue;
+      try {
+        if (await hasRecentOpenAction(directus, organizationId, pa.actionType, notice.entityType, notice.entityId, proposalWindowIso)) {
+          continue;
+        }
+        const id = await logAiAction({
+          organizationId,
+          userId: null,
+          actionType: pa.actionType,
+          status: 'pending',
+          title: pa.title,
+          payload: pa.payload,
+          // Provenance the queue UI reads to tag proactive proposals.
+          preview: { source: 'proactive', summary: notice.description, noticeId: notice.id },
+          entityType: notice.entityType || null,
+          entityId: notice.entityId || null,
+        });
+        if (id != null) proposed++;
+      } catch (err: any) {
+        console.warn('[ai/notices/check] Failed to log proactive proposal:', err?.message);
+      }
     }
 
     // 4. Check which notices have already been sent this month
@@ -271,11 +343,11 @@ async function checkOrgNotices(
       adminUserIds = memberships.map((m: any) => m.user).filter(Boolean);
     } catch {
       console.warn('[ai/notices/check] Could not resolve org admins');
-      return { checked: allNotices.length, sent: 0, skipped: actionableNotices.length };
+      return { checked: allNotices.length, sent: 0, skipped: actionableNotices.length, proposed };
     }
 
     if (adminUserIds.length === 0) {
-      return { checked: allNotices.length, sent: 0, skipped: actionableNotices.length };
+      return { checked: allNotices.length, sent: 0, skipped: actionableNotices.length, proposed };
     }
 
     // 6. Create notifications for new notices
@@ -327,9 +399,9 @@ async function checkOrgNotices(
       }
     }
 
-    return { checked: allNotices.length, sent, skipped };
+    return { checked: allNotices.length, sent, skipped, proposed };
   } catch (error: any) {
     console.error(`[ai/notices/check] Error for org ${organizationId}:`, error.message);
-    return { checked: 0, sent: 0, skipped: 0 };
+    return { checked: 0, sent: 0, skipped: 0, proposed: 0 };
   }
 }

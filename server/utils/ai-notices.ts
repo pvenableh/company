@@ -22,6 +22,25 @@ export interface AINotice {
   /** Entity this notice is about (used for notification routing) */
   entityType?: string;
   entityId?: string;
+  /**
+   * Optional pre-validated, deterministic action Earnest proposes for this
+   * notice (Phase 5). When present, the notices cron logs it as a `pending`
+   * ai_actions row for human approval — reusing the same payload contracts +
+   * executors as chat-proposed actions (docs/ai-action-payloads.md). Kept
+   * conservative: reversible, allow-listed effects only; NO send_email here
+   * (the only genuinely-outbound executor) so proactive proposals never
+   * transmit email.
+   */
+  proposedAction?: ProposedAction;
+}
+
+export interface ProposedAction {
+  /** Only the reversible, internal-effect executors are proposed proactively. */
+  actionType: 'create_tasks' | 'update_field';
+  /** One-line summary for the ai_actions row title. */
+  title: string;
+  /** EXACT contract shape for the matching executor (docs/ai-action-payloads.md). */
+  payload: Record<string, any>;
 }
 
 // ─── Client Notices ──────────────────────────────────────────────────────────
@@ -200,6 +219,21 @@ export async function generateProjectNotices(
         description: `"${project.title}" was due ${project.due_date}. Review status and update the timeline or resolve blockers.`,
         entityType: 'project',
         entityId: projectId,
+        // Reversible proposal: a replan task linked to the project.
+        proposedAction: {
+          actionType: 'create_tasks',
+          title: `Review & replan "${project.title}"`,
+          payload: {
+            tasks: [{
+              title: `Review & replan "${project.title}"`,
+              description: `Project was due ${project.due_date} (${Math.abs(daysUntil)} day${Math.abs(daysUntil) > 1 ? 's' : ''} overdue). Update the timeline or resolve blockers.`,
+              priority: 'urgent',
+              schedule: 'today',
+              category: 'project',
+              project_id: projectId,
+            }],
+          },
+        },
       });
     } else if (daysUntil <= 7) {
       notices.push({
@@ -409,6 +443,20 @@ export async function generateLeadNotices(
         actionRoute: '/command-center/ai',
         entityType: 'lead',
         entityId: String(lead.id),
+        // Reversible proposal: a concrete follow-up task the user can approve.
+        proposedAction: {
+          actionType: 'create_tasks',
+          title: `Follow up with ${label}`,
+          payload: {
+            tasks: [{
+              title: `Follow up with ${label}`,
+              description: `Follow-up was due ${lead.next_follow_up.split('T')[0]} (${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue). Reach out to keep the deal warm.`,
+              priority: daysOverdue >= 7 ? 'urgent' : 'high',
+              schedule: 'today',
+              category: 'quick',
+            }],
+          },
+        },
       });
     }
   }
