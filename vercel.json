@@ -5,6 +5,10 @@
       "schedule": "0 13 * * *"
     },
     {
+      "path": "/api/ai/actions/expire-stale",
+      "schedule": "30 13 * * *"
+    },
+    {
       "path": "/api/org/cleanup-archived",
       "schedule": "0 11 * * *"
     },

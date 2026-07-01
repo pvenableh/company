@@ -411,7 +411,7 @@ export async function generateLeadNotices(
     readItem('leads', leadKey as any, {
       fields: [
         'id', 'stage', 'priority', 'lead_score', 'estimated_value', 'next_follow_up',
-        'date_updated', 'assigned_to',
+        'date_updated', 'assigned_to', 'converted_to_customer', 'resulting_client',
         'related_contact.first_name', 'related_contact.last_name', 'related_contact.company',
         'related_contact.email_bounced', 'related_contact.email_subscribed',
       ],
@@ -517,6 +517,32 @@ export async function generateLeadNotices(
       description: `${label} is in "${stage}" with no next-step date. Add a follow-up to keep the pipeline moving.`,
       entityType: 'lead',
       entityId: String(lead.id),
+    });
+  }
+
+  // Converted but stage not advanced — a data-integrity mismatch we can fix with
+  // high confidence: the lead has a resulting client (or is flagged converted)
+  // yet its pipeline stage still isn't "won". Propose the (reversible, allow-
+  // listed) stage bump so the pipeline reflects reality. This is the one proactive
+  // `update_field` producer — the executor captures the previous value for undo.
+  const resultingClientId = lead.resulting_client && typeof lead.resulting_client === 'object'
+    ? lead.resulting_client.id
+    : lead.resulting_client;
+  if ((resultingClientId || lead.converted_to_customer) && stage !== 'won') {
+    notices.push({
+      id: `lead-converted-not-won-${lead.id}`,
+      priority: 'high',
+      type: 'suggestion',
+      icon: 'i-heroicons-trophy',
+      title: 'Converted lead not marked won',
+      description: `${label} already converted to a client but its pipeline stage is still "${stage}". Advance it to "won" so the pipeline reflects reality.`,
+      entityType: 'lead',
+      entityId: String(lead.id),
+      proposedAction: {
+        actionType: 'update_field',
+        title: `Mark ${label} as won`,
+        payload: { collection: 'leads', field: 'stage', id: lead.id, value: 'won' },
+      },
     });
   }
 

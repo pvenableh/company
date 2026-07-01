@@ -29,6 +29,29 @@ import {
 } from '~~/server/utils/ai-notices';
 import { logAiAction } from '~~/server/utils/ai-actions';
 
+/**
+ * AINotice.entityType is singular ('lead', 'project') — that's the contract the
+ * frontend notices.get.ts dispatches on. But ai_actions.entity_type is written as
+ * the PLURAL collection name everywhere else (generate-documents writes
+ * 'proposals'), and hasRecentOpenAction cross-references those rows. Normalise to
+ * the plural collection name at the ai_actions boundary so dedup + cross-producer
+ * lookups line up. Unknown types fall through unchanged.
+ */
+const NOTICE_ENTITY_COLLECTION: Record<string, string> = {
+  client: 'clients',
+  contact: 'contacts',
+  invoice: 'invoices',
+  lead: 'leads',
+  project: 'projects',
+  proposal: 'proposals',
+  team: 'teams',
+  ticket: 'tickets',
+};
+function toActionEntityType(entityType?: string | null): string | undefined {
+  if (!entityType) return undefined;
+  return NOTICE_ENTITY_COLLECTION[entityType] || entityType;
+}
+
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
   const body = method === 'POST' ? (await readBody(event).catch(() => ({})) || {}) : {};
@@ -278,8 +301,11 @@ async function checkOrgNotices(
     for (const notice of actionableNotices) {
       const pa = notice.proposedAction;
       if (!pa) continue;
+      // Normalise to the plural collection name so dedup + cross-producer lookups
+      // (generate-documents, chat) all key off the same entity_type.
+      const actionEntityType = toActionEntityType(notice.entityType);
       try {
-        if (await hasRecentOpenAction(directus, organizationId, pa.actionType, notice.entityType, notice.entityId, proposalWindowIso)) {
+        if (await hasRecentOpenAction(directus, organizationId, pa.actionType, actionEntityType, notice.entityId, proposalWindowIso)) {
           continue;
         }
         const id = await logAiAction({
@@ -291,7 +317,7 @@ async function checkOrgNotices(
           payload: pa.payload,
           // Provenance the queue UI reads to tag proactive proposals.
           preview: { source: 'proactive', summary: notice.description, noticeId: notice.id },
-          entityType: notice.entityType || null,
+          entityType: actionEntityType || null,
           entityId: notice.entityId || null,
         });
         if (id != null) proposed++;
