@@ -18,7 +18,16 @@ const { mutationSignal: aiMutationSignal } = useContextualChat();
 watch(aiMutationSignal, () => { onProjectUpdated(); });
 
 import type { ProjectTabKey } from '~/components/apps/work/ProjectTabsBar.vue';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu';
 const VALID_TABS: ProjectTabKey[] = ['activity', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
+
+const PROJECT_STATUSES = [
+  { label: 'Pending', value: 'Pending' },
+  { label: 'Scheduled', value: 'Scheduled' },
+  { label: 'In Progress', value: 'In Progress' },
+  { label: 'Completed', value: 'completed' },
+  { label: 'Archived', value: 'Archived' },
+];
 
 const initialTab: ProjectTabKey = (() => {
   const v = route.query.tab;
@@ -28,6 +37,13 @@ const initialTab: ProjectTabKey = (() => {
 const project = ref<any | null>(null);
 const showEditModal = ref(false);
 const workspaceRef = ref<any>(null);
+
+const { getStatusBadgeClasses, getStatusAccent } = useStatusStyle();
+
+function setStatus(value: string) {
+  if (value === project.value?.status) return;
+  workspaceRef.value?.patchProject?.({ status: value });
+}
 
 function onWorkspaceLoaded(p: any) {
   project.value = p;
@@ -52,6 +68,36 @@ onUnmounted(() => clearEntity());
 <template>
   <div class="apps-page">
     <AppHeader :title="project?.title || 'Project'" back-label="Work" back-to="/apps/work" :show-back="true">
+      <template #default>
+        <span class="inline-flex items-center gap-2 min-w-0">
+          <span class="truncate">{{ project?.title || 'Project' }}</span>
+          <DropdownMenu v-if="project">
+            <DropdownMenuTrigger as-child>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 hover:opacity-80 transition-opacity"
+                :class="project.status ? getStatusBadgeClasses(project.status) : 'bg-muted text-muted-foreground'"
+                title="Change status"
+              >
+                {{ project.status || 'Set status' }}
+                <Icon name="lucide:chevron-down" class="w-2.5 h-2.5 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                v-for="s in PROJECT_STATUSES"
+                :key="s.value"
+                class="text-xs cursor-pointer"
+                @select="setStatus(s.value)"
+              >
+                <span class="w-2 h-2 rounded-full mr-2 shrink-0" :style="{ backgroundColor: getStatusAccent(s.value) }" />
+                {{ s.label }}
+                <Icon v-if="project.status === s.value" name="lucide:check" class="w-3 h-3 ml-auto" />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
+      </template>
       <template #actions>
         <button
           v-if="project"
@@ -69,15 +115,6 @@ onUnmounted(() => clearEntity());
           <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
           <span class="hidden sm:inline">Edit</span>
         </button>
-        <NuxtLink
-          v-if="project"
-          :to="`/projects/${projectId}`"
-          class="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
-          title="Open the legacy project page with Gantt, time-block editor, and file drag-drop upload"
-        >
-          <Icon name="lucide:external-link" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline">Full Editor</span>
-        </NuxtLink>
       </template>
     </AppHeader>
 

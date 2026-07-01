@@ -32,11 +32,11 @@ function onLoaded(c: Client) {
 		<template v-if="client" #actions>
 			<NuxtLink
 				:to="`/apps/clients/${client.id}`"
-				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
 				:title="`Open full page for ${client.name}`"
 			>
-				<Icon name="lucide:external-link" class="w-3 h-3" />
-				Full Page
+				<Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
+				Open Client
 			</NuxtLink>
 		</template>
 

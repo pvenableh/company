@@ -1323,7 +1323,7 @@ watch(searchEmail, (val) => {
 										<div class="flex justify-between items-center">
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand Color</span>
 											<div v-if="org.brand_color" class="flex items-center gap-1.5">
-												<div class="w-4 h-4 rounded border border-gray-200" :style="{ backgroundColor: org.brand_color }"></div>
+												<div class="w-4 h-4 rounded-full border border-gray-200" :style="{ backgroundColor: org.brand_color }"></div>
 												<span>{{ org.brand_color }}</span>
 											</div>
 											<span v-else>—</span>
@@ -1384,7 +1384,7 @@ watch(searchEmail, (val) => {
 												<input
 													type="color"
 													v-model="infoForm.brand_color"
-													class="w-8 h-8 rounded cursor-pointer border border-gray-200"
+													class="w-8 h-8 rounded-full cursor-pointer border border-gray-200"
 												/>
 												<UInput v-model="infoForm.brand_color" placeholder="#000000" class="flex-1" />
 											</div>

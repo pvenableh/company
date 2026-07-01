@@ -34,7 +34,8 @@
 		</form>
 
 		<template #footer>
-			<div class="flex items-center gap-1">
+			<!-- Left: destructive + secondary nav, kept away from Save -->
+			<div class="flex items-center gap-2">
 				<UTooltip v-if="isEditing && canDelete" text="Delete">
 					<Button
 						variant="ghost"
@@ -46,20 +47,21 @@
 						<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 					</Button>
 				</UTooltip>
-				<Button size="sm" :disabled="saving || submitDisabled" @click="$emit('submit')">
-					<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
-					<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
-					{{ submitLabel || (isEditing ? 'Save' : 'Create') }}
-				</Button>
+				<NuxtLink
+					v-if="isEditing && detailRoute"
+					:to="detailRoute"
+					class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+				>
+					Full Details
+					<Icon name="lucide:chevron-right" class="w-3 h-3" />
+				</NuxtLink>
 			</div>
-			<NuxtLink
-				v-if="isEditing && detailRoute"
-				:to="detailRoute"
-				class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
-			>
-				Full Details
-				<Icon name="lucide:chevron-right" class="w-3 h-3" />
-			</NuxtLink>
+			<!-- Right: primary action -->
+			<Button size="sm" :disabled="saving || submitDisabled" @click="$emit('submit')">
+				<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
+				<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
+				{{ submitLabel || (isEditing ? 'Save' : 'Create') }}
+			</Button>
 		</template>
 	</AppsAppBottomSheet>
 </template>

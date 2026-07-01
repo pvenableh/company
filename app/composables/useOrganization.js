@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -216,6 +216,15 @@ export function useOrganization() {
 					whitelabel: org.whitelabel ?? false,
 					document_theme: org.document_theme ?? null,
 					document_accent: org.document_accent ?? null,
+					brand_color: org.brand_color ?? null,
+					brand_direction: org.brand_direction ?? null,
+					goals: org.goals ?? null,
+					target_audience: org.target_audience ?? null,
+					location: org.location ?? null,
+					website: org.website ?? null,
+					notes: org.notes ?? null,
+					email_reply_to: org.email_reply_to ?? null,
+					mailing_address: org.mailing_address ?? null,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,

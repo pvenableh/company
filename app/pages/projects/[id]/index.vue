@@ -7,7 +7,6 @@ const taskItems = useDirectusItems('tasks');
 const invoiceItems = useDirectusItems('invoices');
 const timeEntryItems = useDirectusItems('time_entries');
 const fileItems = useDirectusItems('directus_files');
-const projectFilesItems = useDirectusItems('projects_files');
 
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -336,11 +335,9 @@ const fileSearchQuery = ref('');
 const loadDocuments = async () => {
 	loadingDocs.value = true;
 	try {
-		const files = await projectFilesItems.list({
-			fields: ['id', 'directus_files_id.id', 'directus_files_id.title', 'directus_files_id.filename_download', 'directus_files_id.type', 'directus_files_id.filesize', 'directus_files_id.uploaded_on'],
-			filter: { projects_id: { _eq: params.id } },
-			sort: ['-directus_files_id.uploaded_on'],
-		});
+		// projects_files has no user-level read permission — proxy via the
+		// admin-token endpoint (org-membership gated).
+		const files = await $fetch(`/api/projects/${params.id}/files`);
 		documents.value = files || [];
 	} catch (err) {
 		console.error('Error loading documents:', err);
@@ -368,20 +365,18 @@ const handleFileUpload = async (event) => {
 			}
 
 			// Upload file to Directus
-			const config = useRuntimeConfig();
-			const response = await $fetch(`${config.public.directusUrl}/files`, {
+			const response = await $fetch('/api/directus/files/upload', {
 				method: 'POST',
 				body: formData,
-				headers: {
-					Authorization: `Bearer ${useDirectusToken().value}`,
-				},
 			});
 
-			if (response?.data?.id) {
-				// Link file to project
-				await projectFilesItems.create({
-					projects_id: params.id,
-					directus_files_id: response.data.id,
+			const fileId = response?.id ?? response?.data?.id;
+			if (fileId) {
+				// Link via admin-token endpoint (projects_files has no
+				// user-level create permission).
+				await $fetch('/api/projects/attach-file', {
+					method: 'POST',
+					body: { projectId: params.id, fileId },
 				});
 			}
 		}
@@ -456,9 +451,9 @@ const filteredExistingFiles = computed(() => {
 
 const attachFile = async (fileId) => {
 	try {
-		await projectFilesItems.create({
-			projects_id: params.id,
-			directus_files_id: fileId,
+		await $fetch('/api/projects/attach-file', {
+			method: 'POST',
+			body: { projectId: params.id, fileId },
 		});
 		existingFiles.value = existingFiles.value.filter((f) => f.id !== fileId);
 		toast.add({ title: 'File attached to project', color: 'green' });

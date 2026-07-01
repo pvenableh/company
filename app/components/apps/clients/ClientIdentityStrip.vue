@@ -16,10 +16,8 @@ const props = defineProps<{
 }>();
 
 const config = useRuntimeConfig();
-const { getStatusBadgeClasses } = useStatusStyle();
 
 const logoSize = computed(() => (props.size === 'sm' ? 'w-10 h-10' : 'w-12 h-12'));
-const titleSize = computed(() => (props.size === 'sm' ? 'text-lg' : 'text-xl'));
 
 const logoUrl = computed(() => {
 	const c = props.client;
@@ -34,7 +32,7 @@ const cleanWebsite = computed(() => props.client.website?.replace(/^https?:\/\//
 </script>
 
 <template>
-	<div class="flex items-start gap-3">
+	<div class="flex items-center gap-3">
 		<div class="shrink-0">
 			<img
 				v-if="logoUrl"
@@ -52,27 +50,15 @@ const cleanWebsite = computed(() => props.client.website?.replace(/^https?:\/\//
 			</div>
 		</div>
 		<div class="min-w-0 flex-1">
-			<div class="flex items-center gap-2 flex-wrap">
-				<h1 class="font-semibold truncate" :class="titleSize">{{ client.name }}</h1>
-				<span
-					v-if="client.account_state"
-					class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-					:class="getStatusBadgeClasses(client.account_state)"
-				>
-					{{ client.account_state }}
-				</span>
-				<span
-					v-if="client.status === 'archived'"
-					class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-zinc-400/15 text-zinc-500"
-				>
-					archived
-				</span>
-			</div>
-			<p v-if="cleanWebsite" class="text-xs text-muted-foreground truncate mt-0.5">
-				<a :href="client.website!" target="_blank" rel="noopener" class="hover:text-foreground">
+			<!-- Name + status live in the page hero (AppHeader); this strip is
+			     the metadata row so the name isn't repeated. -->
+			<p v-if="cleanWebsite" class="text-xs text-muted-foreground truncate inline-flex items-center gap-1">
+				<Icon name="lucide:globe" class="w-3 h-3 shrink-0" />
+				<a :href="client.website!" target="_blank" rel="noopener" class="hover:text-foreground truncate">
 					{{ cleanWebsite }}
 				</a>
 			</p>
+			<p v-else class="text-xs text-muted-foreground italic">No website set</p>
 		</div>
 		<div v-if="$slots.actions" class="flex items-center gap-1.5 shrink-0">
 			<slot name="actions" />

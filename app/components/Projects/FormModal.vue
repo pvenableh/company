@@ -9,7 +9,7 @@
 		:current-status="currentStatus"
 		collection="projects"
 		:item-id="project?.id ?? null"
-		:detail-route="project ? `/projects/${project.id}` : null"
+		:detail-route="detailRoute"
 		@submit="handleSubmit"
 		@delete="handleDelete"
 		@status-change="e => currentStatus = e.newStatus"
@@ -194,6 +194,18 @@ const emit = defineEmits(['created', 'updated', 'deleted']);
 const isOpen = defineModel({ default: false });
 const isEditing = computed(() => !!props.project?.id);
 const saving = ref(false);
+
+// "Full Details" routes within the CURRENT layout — Apps users stay in the
+// Apps workspace, legacy users stay on the legacy page. Hidden when we're
+// already on that detail page (no redundant self-link).
+const route = useRoute();
+const detailRoute = computed(() => {
+	if (!props.project?.id) return null;
+	const target = route.path.startsWith('/apps')
+		? `/apps/work/projects/${props.project.id}`
+		: `/projects/${props.project.id}`;
+	return route.path === target ? null : target;
+});
 
 const projectItems = useDirectusItems('projects');
 const { getClientOptions } = useClients();

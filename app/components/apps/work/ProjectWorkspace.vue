@@ -16,12 +16,16 @@
     - Outer chrome (AppHeader vs AppSlideOverShell)
     - Edit modal (page-only; panel has the "Open full page" CTA)
     - AI sidebar entity context (page-only)
-    - Heavy editors: full Gantt (project_events), time-block editor,
-      file drag-drop upload — kept on the legacy /projects/[id] page
-      with a CTA from the workspace.
+
+  The Apps workspace is self-contained: the Files tab uploads directly
+  (via /api/directus/files/upload) so Apps users never need the legacy
+  /projects/[id] page. The legacy page stays for non-Apps users only; the
+  two layouts are kept separate (no cross-layout "Full Editor" hop). The
+  legacy page still owns the heavier Gantt / time-block editors.
 -->
 <script setup lang="ts">
 import VueDraggable from 'vuedraggable';
+import { toast } from 'vue-sonner';
 import type { ProjectTabKey } from './ProjectTabsBar.vue';
 
 const props = defineProps<{
@@ -53,7 +57,6 @@ const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
 const invoiceItemsApi = useDirectusItems('invoices');
-const projectFilesItemsApi = useDirectusItems('projects_files');
 const projectsContactsApi = useDirectusItems('projects_contacts');
 const contactItemsApi = useDirectusItems('contacts');
 
@@ -180,6 +183,28 @@ async function loadProject() {
 		error.value = e?.message || 'Failed to load project';
 	} finally {
 		loading.value = false;
+	}
+}
+
+// Inline quick-edit (status pill in the hero, dates in the identity strip).
+// Optimistic: patch local state + re-emit `loaded` so the page hero updates
+// immediately, then persist. Rolls back + toasts on failure.
+async function patchProject(fields: Record<string, any>) {
+	if (!project.value?.id || !fields || !Object.keys(fields).length) return;
+	const prev = { ...project.value };
+	Object.assign(project.value, fields);
+	emit('loaded', project.value);
+	try {
+		// Persist only — we deliberately do NOT merge the response. A bare
+		// update returns relations (client/service) as scalar FK ids, which
+		// would clobber the deep-fetched objects the identity strip renders
+		// (making the client name disappear). The optimistic scalar assign
+		// above is already the correct new state.
+		await projectItemsApi.update(project.value.id, fields);
+	} catch (e: any) {
+		Object.assign(project.value, prev);
+		emit('loaded', project.value);
+		toast.error(e?.data?.message || e?.message || 'Failed to update project');
 	}
 }
 
@@ -378,23 +403,66 @@ function openContactSlideOver(id: string) {
 async function loadFiles() {
 	filesLoading.value = true;
 	try {
-		files.value = await projectFilesItemsApi.list({
-			fields: [
-				'id',
-				'directus_files_id.id',
-				'directus_files_id.title',
-				'directus_files_id.filename_download',
-				'directus_files_id.type',
-				'directus_files_id.filesize',
-				'directus_files_id.uploaded_on',
-			],
-			filter: { projects_id: { _eq: props.projectId } },
-			sort: ['-directus_files_id.uploaded_on'],
-			limit: -1,
-		}).catch(() => []) as any[];
+		// projects_files has no user-level read permission — proxy via
+		// the admin-token endpoint (org-membership gated).
+		files.value = (await $fetch(`/api/projects/${props.projectId}/files`).catch(() => [])) as any[];
 	} finally {
 		filesLoading.value = false;
 	}
+}
+
+// ── File upload (self-contained; no legacy-page hop) ──────────────────────
+const uploadingFile = ref(false);
+const isDraggingFile = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+function triggerFileUpload() {
+	fileInputRef.value?.click();
+}
+
+async function handleFileUpload(fileList: FileList | File[] | null | undefined) {
+	if (!fileList || !fileList.length) return;
+	uploadingFile.value = true;
+	try {
+		for (const file of Array.from(fileList)) {
+			const formData = new FormData();
+			formData.append('file', file);
+			if (project.value?.title) {
+				formData.append('title', `${project.value.title} - ${file.name}`);
+			}
+			// Server endpoint handles auth (same path as the legacy page).
+			const response: any = await $fetch('/api/directus/files/upload', {
+				method: 'POST',
+				body: formData,
+			});
+			const fileId = response?.id ?? response?.data?.id;
+			if (fileId) {
+				// Junction write goes through an admin-token endpoint —
+				// projects_files has no user-level create permission.
+				await $fetch('/api/projects/attach-file', {
+					method: 'POST',
+					body: { projectId: props.projectId, fileId },
+				});
+			}
+		}
+		toast.success('Files uploaded');
+		await loadFiles();
+	} catch (err: any) {
+		console.error('Error uploading file:', err);
+		toast.error(err?.data?.message || err?.message || 'Upload failed');
+	} finally {
+		uploadingFile.value = false;
+		if (fileInputRef.value) fileInputRef.value.value = '';
+	}
+}
+
+function onFileInputChange(e: Event) {
+	handleFileUpload((e.target as HTMLInputElement).files);
+}
+
+function onFileDrop(e: DragEvent) {
+	isDraggingFile.value = false;
+	handleFileUpload(e.dataTransfer?.files);
 }
 
 // ── Inline create / attach modals ─────────────────────────────────────────
@@ -538,6 +606,7 @@ defineExpose({
 	loading,
 	error,
 	reload: loadProject,
+	patchProject,
 	tabCounts,
 	activeTab,
 });
@@ -565,6 +634,7 @@ watch(() => props.projectId, () => {
 				:project="project"
 				size="sm"
 				class="mb-5"
+				@update="patchProject"
 			>
 				<template v-if="$slots.actions" #actions>
 					<slot name="actions" />
@@ -1004,48 +1074,68 @@ watch(() => props.projectId, () => {
 				<!-- Files -->
 				<div v-else-if="activeTab === 'files'">
 					<div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
-						<p class="text-xs text-muted-foreground">
-							Drag-and-drop upload lives on the
-							<NuxtLink :to="`/projects/${projectId}`" class="text-primary hover:underline">full project page</NuxtLink>.
-						</p>
-					</div>
-					<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
-						<div
-							v-for="i in skeletonRows(files.length, 4, 6)"
-							:key="`file-skel-${i}`"
-							class="ios-card p-3 flex items-center gap-3"
+						<p class="text-xs text-muted-foreground">Files attached to this project.</p>
+						<button
+							class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50"
+							:disabled="uploadingFile"
+							@click="triggerFileUpload"
 						>
-							<USkeleton class="w-4 h-4 shrink-0" />
-							<div class="flex-1 space-y-1.5">
-								<USkeleton class="h-3.5 w-3/4" />
-								<USkeleton class="h-2.5 w-20" />
-							</div>
-						</div>
+							<Icon :name="uploadingFile ? 'lucide:loader-2' : 'lucide:upload'" :class="['w-3.5 h-3.5', uploadingFile && 'animate-spin']" />
+							{{ uploadingFile ? 'Uploading…' : 'Upload' }}
+						</button>
+						<input ref="fileInputRef" type="file" multiple class="hidden" @change="onFileInputChange" />
 					</div>
-					<div v-else-if="!files.length" class="text-sm text-muted-foreground text-center py-10">
-						No documents uploaded to this project.
-					</div>
-					<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-						<a
-							v-for="doc in files"
-							:key="doc.id"
-							:href="`${config.public.directusUrl}/assets/${doc.directus_files_id?.id}`"
-							target="_blank"
-							rel="noopener"
-							class="ios-card p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
-						>
-							<Icon :name="getFileIcon(doc.directus_files_id?.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
-								<div class="flex items-center gap-2 mt-0.5">
-									<span class="text-[10px] text-muted-foreground">{{ formatFileSize(doc.directus_files_id?.filesize) }}</span>
-									<span v-if="doc.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">
-										{{ fmtDate(doc.directus_files_id.uploaded_on) }}
-									</span>
+
+					<div
+						class="rounded-2xl border-2 border-dashed transition-colors"
+						:class="isDraggingFile ? 'border-primary bg-primary/5 p-2' : 'border-transparent'"
+						@dragover.prevent="isDraggingFile = true"
+						@dragleave.prevent="isDraggingFile = false"
+						@drop.prevent="onFileDrop"
+					>
+						<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
+							<div
+								v-for="i in skeletonRows(files.length, 4, 6)"
+								:key="`file-skel-${i}`"
+								class="ios-card p-3 flex items-center gap-3"
+							>
+								<USkeleton class="w-4 h-4 shrink-0" />
+								<div class="flex-1 space-y-1.5">
+									<USkeleton class="h-3.5 w-3/4" />
+									<USkeleton class="h-2.5 w-20" />
 								</div>
 							</div>
-							<Icon name="lucide:download" class="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
-						</a>
+						</div>
+						<button
+							v-else-if="!files.length"
+							type="button"
+							class="w-full text-sm text-muted-foreground text-center py-10 hover:text-foreground transition-colors"
+							@click="triggerFileUpload"
+						>
+							Drag files here or click to upload documents.
+						</button>
+						<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+							<a
+								v-for="doc in files"
+								:key="doc.id"
+								:href="`${config.public.directusUrl}/assets/${doc.directus_files_id?.id}`"
+								target="_blank"
+								rel="noopener"
+								class="ios-card p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+							>
+								<Icon :name="getFileIcon(doc.directus_files_id?.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
+									<div class="flex items-center gap-2 mt-0.5">
+										<span class="text-[10px] text-muted-foreground">{{ formatFileSize(doc.directus_files_id?.filesize) }}</span>
+										<span v-if="doc.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">
+											{{ fmtDate(doc.directus_files_id.uploaded_on) }}
+										</span>
+									</div>
+								</div>
+								<Icon name="lucide:download" class="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+							</a>
+						</div>
 					</div>
 				</div>
 

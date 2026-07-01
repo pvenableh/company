@@ -70,14 +70,22 @@
 					</VueDraggable>
 
 					<!-- Quick add -->
-					<div class="flex gap-1.5 mt-2">
+					<div class="flex items-center gap-1.5 mt-2 h-8 rounded-lg border border-dashed border-border px-2 focus-within:border-primary/50 focus-within:bg-primary/5 transition-colors">
+						<Icon name="lucide:plus" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 						<input
 							v-model="newTaskTitles[col.key]"
 							type="text"
-							:placeholder="`Add task...`"
-							class="flex-1 h-7 rounded-lg border border-border/50 bg-transparent px-2 text-[11px] placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/30 transition-colors"
+							placeholder="Add task"
+							class="flex-1 min-w-0 bg-transparent text-[11px] placeholder:text-muted-foreground/60 focus:outline-none"
 							@keydown.enter="quickAdd(col.key)"
 						/>
+						<button
+							v-if="newTaskTitles[col.key]?.trim()"
+							class="shrink-0 text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors"
+							@click="quickAdd(col.key)"
+						>
+							Add
+						</button>
 					</div>
 				</div>
 			</div>

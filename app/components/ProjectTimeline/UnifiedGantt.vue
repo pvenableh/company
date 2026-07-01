@@ -662,11 +662,31 @@ const selectedProjectChildren = computed(() => {
 	return items;
 });
 
+// Clicking a project opens the full project surface. Internal users get
+// the rich `work-project` slide-over (8-tab workspace + "Open Project"
+// pill) — the same panel used everywhere else — instead of the old cramped
+// preview modal. Portal users (read-only, no apps shell) keep the modal.
+const route = useRoute();
+const { push: pushSlideOver } = useAppSlideOverStack();
+
+function openProject(id: string) {
+	if (props.portal) {
+		selectedProjectId.value = id;
+		showProjectPreview.value = true;
+		return;
+	}
+	if (route.path.startsWith('/apps')) {
+		// Apps shell has the slide-over stack mounted — open it in place.
+		pushSlideOver('work-project', id);
+	} else {
+		// Legacy full-page context (no stack) — land on the full project page.
+		navigateTo(`/projects/${id}`);
+	}
+}
+
 function handleRowClick(row: GanttRow) {
 	if (row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section') {
-		// Open project preview modal
-		selectedProjectId.value = row.id;
-		showProjectPreview.value = true;
+		openProject(row.id);
 	} else if (row.type === 'event') {
 		selectedEventId.value = row.id;
 		showEventDetail.value = true;

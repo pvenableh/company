@@ -33,6 +33,17 @@ const subtitle = computed(() => {
     :subtitle="subtitle"
     @close="$emit('close')"
   >
+    <template v-if="invoice" #actions>
+      <NuxtLink
+        :to="`/invoices/detail/${id}`"
+        class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
+        :title="`Open full page for ${title}`"
+      >
+        <Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
+        Open Invoice
+      </NuxtLink>
+    </template>
+
     <AppsMoneyInvoiceWorkspace
       :invoice-id="id"
       compact
