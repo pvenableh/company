@@ -131,10 +131,55 @@ export const GENERATE_DOCUMENTS_TOOL: ToolDefinition = {
   },
 };
 
+export const SEND_EMAIL_TOOL: ToolDefinition = {
+  name: 'send_email',
+  description:
+    'PROPOSES sending an email to a client or contact. This does NOT send anything — it queues the email for the user to review and approve in the AI Activity queue. Use when the user asks you to "email", "send a note to", "follow up with", or "reach out to" someone. Compose a complete, ready-to-send email (subject + body). Provide either an explicit recipient address in `to`, or a `contact_id` that appears verbatim in the context to resolve the recipient. Always describe this as a proposal the user still needs to approve — never say the email was sent.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      to: {
+        type: 'string',
+        description: 'Explicit recipient email address. Provide this OR contact_id.',
+      },
+      contact_id: {
+        type: 'string',
+        description: 'Directus contact id to resolve the recipient from. Pass ONLY an id present verbatim in the context; the server verifies it belongs to this org.',
+      },
+      subject: {
+        type: 'string',
+        description: 'The email subject line.',
+      },
+      heading: {
+        type: 'string',
+        description: 'Optional heading shown at the top of the email body. Defaults to the subject.',
+      },
+      body_html: {
+        type: 'string',
+        description: 'The email body as simple HTML (paragraphs, <strong>, <em>, links). No <html>/<head>/<body> wrapper — the server wraps it in the org-branded shell.',
+      },
+      cta_label: {
+        type: 'string',
+        description: 'Optional call-to-action button label. Requires cta_url.',
+      },
+      cta_url: {
+        type: 'string',
+        description: 'Optional call-to-action button URL (https). Requires cta_label.',
+      },
+      reply_to: {
+        type: 'string',
+        description: 'Optional reply-to address override.',
+      },
+    },
+    required: ['subject', 'body_html'],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
   RESCHEDULE_PROJECT_TOOL,
   UPDATE_FIELD_TOOL,
   ADD_TASK_TOOL,
   GENERATE_DOCUMENTS_TOOL,
+  SEND_EMAIL_TOOL,
 ];

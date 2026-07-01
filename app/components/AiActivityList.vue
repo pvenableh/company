@@ -24,6 +24,7 @@ const props = withDefaults(defineProps<{
 const toast = useToast();
 const { selectedOrg } = useOrganization();
 const organizationId = computed(() => (selectedOrg.value as any)?.id || selectedOrg.value || '');
+const { refresh: refreshPendingActions } = useAiPendingActions();
 
 const proposalSlide = useAppSlideOver('proposal');
 const contractSlide = useAppSlideOver('contract');
@@ -56,6 +57,8 @@ async function load() {
       },
     });
     actions.value = res?.actions || [];
+    // Keep the shared pending badge in sync with the feed.
+    refreshPendingActions();
   } catch (err: any) {
     error.value = err?.data?.message || err?.message || 'Failed to load activity';
     actions.value = [];
@@ -91,6 +94,8 @@ async function resolveAction(a: any, decision: 'approve' | 'reject') {
       title: decision === 'approve' ? 'Action approved' : 'Action rejected',
       color: 'green',
     });
+    // A pending row just left the queue — update the shared badge.
+    refreshPendingActions();
   } catch (err: any) {
     // Rollback.
     a.status = prevStatus;

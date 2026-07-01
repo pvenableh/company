@@ -43,6 +43,7 @@ const { saveNoteFromMessage } = useAINotes();
 const { personas, selectedPersona, activePersona } = useAIPersona();
 const { usageSummary, refresh: refreshTokenUsage } = useAITokens();
 const { canAccess } = useOrgRole();
+const { pendingCount: aiPendingCount, refresh: refreshPendingActions } = useAiPendingActions();
 
 // ── Compositor-driven enter/leave (no Vue <Transition>) ──────────────────────
 const SPRING = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
@@ -59,6 +60,7 @@ watch(panelOpen, (open) => {
 		// runs the CSS transition (setTimeout, not RAF — survives throttling).
 		setTimeout(() => { visible.value = true; }, 16);
 		refreshTokenUsage();
+		refreshPendingActions();
 	} else {
 		visible.value = false;
 		leaveTimer = setTimeout(() => { mounted.value = false; }, ANIM_MS);
@@ -296,6 +298,12 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 						>
 							<Icon :name="t.icon" class="w-3 h-3" />
 							{{ t.label }}
+							<span
+								v-if="t.key === 'activity' && aiPendingCount > 0"
+								class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-warning text-[9px] font-semibold text-warning-foreground tabular-nums"
+							>
+								{{ aiPendingCount > 99 ? '99+' : aiPendingCount }}
+							</span>
 						</button>
 					</div>
 

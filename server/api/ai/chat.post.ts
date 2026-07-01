@@ -25,6 +25,7 @@ import { getOrgContext } from '~~/server/utils/context-broker';
 import type { ChatMessage } from '~~/server/utils/llm/types';
 import { MUTATION_TOOLS } from '~~/server/utils/llm/tools';
 import { executeToolCall } from '~~/server/utils/llm/tool-handlers';
+import { isProposalTool, proposeToolCall } from '~~/server/utils/llm/tool-proposals';
 import type { ClaudeProvider } from '~~/server/utils/llm/claude';
 
 export default defineEventHandler(async (event) => {
@@ -349,7 +350,7 @@ export default defineEventHandler(async (event) => {
     // calling reschedule_project / update_field with the real UUID.
     const useMutationTools = allowMutations === true && entityType && entityId && organizationId && allowCtx('entity');
     const toolNudge = useMutationTools
-      ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. When the user asks to draft/write up a proposal or contract, call generate_documents with an overview of the deliverables (it saves editable drafts for review — it does not send anything). Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
+      ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. When the user asks to draft/write up a proposal or contract, call generate_documents with an overview of the deliverables (it saves editable drafts for review — it does not send anything). When the user asks to email/follow up with/reach out to someone, call send_email to PROPOSE the email — this does NOT send; it queues the email for the user to approve in the AI Activity queue. After calling send_email, tell the user you've drafted and queued the email for their approval — never say it was sent. Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
       : '';
 
     // Route awareness — the human "right now you're looking at …" sentence the
@@ -405,7 +406,20 @@ export default defineEventHandler(async (event) => {
               `data: ${JSON.stringify({ type: 'tool_start', tool: tc.name, input: tc.input })}\n\n`,
             );
 
-            const result = await executeToolCall(tc.name, tc.input, { organizationId, userId, entityType, entityId, directus });
+            // Outbound/destructive tools are NOT executed here — they are
+            // proposed into the HITL approval queue (pending ai_actions row).
+            // Everything else (draft/note/tag writes, project_ai_mutations)
+            // stays inline. The assistant's follow-up text must say it
+            // *proposed* the action, not that it did it (voice charter).
+            const result = isProposalTool(tc.name)
+              ? await proposeToolCall(tc.name, tc.input, {
+                  organizationId,
+                  userId,
+                  sessionId: chatSessionId ? String(chatSessionId) : null,
+                  entityType,
+                  entityId,
+                })
+              : await executeToolCall(tc.name, tc.input, { organizationId, userId, entityType, entityId, directus });
 
             responseWriter.write(
               `data: ${JSON.stringify({
