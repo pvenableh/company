@@ -26,6 +26,7 @@ import {
   createAnalyticsSnapshot,
 } from '~~/server/utils/social-directus'
 import { safeDecryptSocialToken } from '~~/server/utils/social-crypto'
+import { isSocialPublishingEnabled } from '~~/server/utils/social-publishing'
 import type { PlatformAdapter } from '~~/server/adapters/types'
 import type { SocialAccount, SocialPlatform, PublishResult } from '~~/shared/social'
 
@@ -47,6 +48,13 @@ export default defineEventHandler(async (event) => {
     const session = await requireUserSession(event)
     const userId = (session as any).user?.id
     if (!userId) throw createError({ statusCode: 401, message: 'Authentication required' })
+  }
+
+  // Kill-switch: analytics/insights need the same approved platform credentials
+  // as publishing, so the metrics cron no-ops while publishing is disabled — no
+  // outbound platform calls until the Meta/LinkedIn app keys are approved.
+  if (!isSocialPublishingEnabled(event)) {
+    return { disabled: true, accounts: 0, posts: 0 }
   }
 
   const capturedAt = new Date().toISOString()

@@ -17,6 +17,7 @@ import {
   getDecryptedAccessToken,
   logSocialActivity,
 } from './social-directus'
+import { isSocialPublishingEnabled } from './social-publishing'
 import { publishLinkedInPost } from '~~/server/adapters/linkedin'
 import {
   publishFacebookTextPost,
@@ -35,7 +36,7 @@ import {
   publishThreadsVideo,
   publishThreadsCarousel,
 } from '~~/server/adapters/threads'
-import type { SocialAccount, SocialPost, SocialPostTarget, PublishResult } from '~~/shared/social'
+import type { SocialAccount, SocialPost, SocialPostTarget, SocialPlatform, PublishResult } from '~~/shared/social'
 
 /**
  * Resolve the caption that should publish to a specific platform.
@@ -212,6 +213,16 @@ export interface PublishOutcome {
  * Publish a single post to all its targets and persist the results.
  */
 export async function publishSocialPost(postId: string): Promise<PublishOutcome> {
+  // Defense-in-depth kill-switch. The two entry points (publish-now route,
+  // publish-scheduled cron) already refuse when publishing is disabled, but we
+  // guard the choke point too so NO caller — a future worker, Directus flow, or
+  // new endpoint — can post externally while the Meta/LinkedIn app credentials
+  // aren't approved. The post's state is left untouched (never flips to
+  // publishing/published). See isSocialPublishingEnabled + the kill-switch memo.
+  if (!isSocialPublishingEnabled()) {
+    throw new Error('Social publishing is disabled (kill-switch); no external post was made.')
+  }
+
   const post = await getSocialPostById(postId)
   if (!post) throw new Error(`Post ${postId} not found`)
   if (post.status === 'published') {
