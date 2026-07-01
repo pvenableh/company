@@ -64,5 +64,38 @@ export function useEarnestDraft() {
     }
   }
 
-  return { isGenerating, generateSocialPosts };
+  /**
+   * Generate ready-to-use plain-text copy for a single field (proposal overview,
+   * email body, task description, …) from a brief. Backed by /api/ai/draft-text.
+   */
+  async function generateText(ctx: {
+    brief: string;
+    kind?: string;
+    tone?: string;
+    currentValue?: string | null;
+    maxWords?: number;
+    clientId?: string | null;
+    organizationId?: string | null;
+  }): Promise<string> {
+    isGenerating.value = true;
+    try {
+      const res = await $fetch<{ text: string }>('/api/ai/draft-text', {
+        method: 'POST',
+        body: {
+          brief: ctx.brief,
+          kind: ctx.kind,
+          tone: ctx.tone,
+          currentValue: ctx.currentValue ?? undefined,
+          maxWords: ctx.maxWords,
+          clientId: ctx.clientId ?? undefined,
+          organizationId: ctx.organizationId ?? undefined,
+        },
+      });
+      return (res?.text ?? '').trim();
+    } finally {
+      isGenerating.value = false;
+    }
+  }
+
+  return { isGenerating, generateSocialPosts, generateText };
 }

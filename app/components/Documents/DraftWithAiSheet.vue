@@ -47,6 +47,25 @@ const wantProposal = ref(true);
 const wantContract = ref(true);
 const loading = ref(false);
 
+// Inline "Draft with Earnest" — turn a one-line brief into a starter overview
+// the user can edit before generating the full documents.
+const { generateText, isGenerating: draftingOverview } = useEarnestDraft();
+async function handleDraftOverview(brief: string) {
+  try {
+    const text = await generateText({
+      brief,
+      kind: 'a project deliverables overview for a proposal and contract — scope, deliverables, timeline, and pricing if given',
+      currentValue: overview.value || null,
+      organizationId: selectedOrg.value ?? null,
+      clientId: props.clientId ?? null,
+      maxWords: 180,
+    });
+    if (text) overview.value = text;
+  } catch (err: any) {
+    toast.error(err?.data?.message || 'Earnest could not draft an overview.');
+  }
+}
+
 const canSubmit = computed(
   () => overview.value.trim().length >= 12 && (wantProposal.value || wantContract.value) && !loading.value,
 );
@@ -128,7 +147,14 @@ async function generate() {
   >
     <div class="space-y-4">
       <div>
-        <label class="text-sm font-medium mb-1.5 block">Project deliverables overview</label>
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <label class="text-sm font-medium block">Project deliverables overview</label>
+          <AIEarnestDraftButton
+            :loading="draftingOverview"
+            placeholder="One line about the work — client, scope, timeline, budget."
+            @submit="handleDraftOverview"
+          />
+        </div>
         <Textarea
           v-model="overview"
           :rows="6"
