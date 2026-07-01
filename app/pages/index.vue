@@ -137,6 +137,9 @@ const orgTeamGoalCount = computed(() => {
 // flips this ref. Lazy v-if keeps the modal tree out of the SSR payload.
 const checkinOpen = ref(false);
 
+// ── Director's Office (org-wide command center overlay) ──
+const { open: openDirectorOffice } = useDirectorOffice();
+
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
 const aiTrayPrompt = ref('');
@@ -406,6 +409,16 @@ watch(activeTab, (t) => {
 					<div class="flex items-center gap-2 shrink-0">
 						<!-- Lens toggle removed — the header DataScopeSelect (Mine/All) is
 						     now the single source of truth for band ordering. -->
+						<!-- Director's Office — convene an org-wide working meeting where
+						     Earnest reviews the business and proposes a plan you approve
+						     step by step. -->
+						<button
+							@click="openDirectorOffice()"
+							class="flex items-center gap-1.5 px-3.5 py-2 bg-foreground text-background rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
+						>
+							<UIcon name="i-lucide-presentation" class="w-4 h-4" />
+							<span class="hidden sm:inline">Director's office</span>
+						</button>
 						<button
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
 							class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"

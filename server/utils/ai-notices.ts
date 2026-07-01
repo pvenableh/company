@@ -914,3 +914,176 @@ export async function generateTeamNotices(
 
 /** Priority sort order for notices */
 export const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+// ─── Director's Office agenda ─────────────────────────────────────────────────
+// The "board packet" for the Director's Office command center. Reuses the
+// per-entity generators above and rolls them up into a prioritized,
+// subject-grouped agenda. Two modes: org-wide (sweep the org's active entities,
+// mirroring notices/check.ts) or focused (one entity's generator).
+
+export type DirectorSubjectKey =
+  | 'projects' | 'leads' | 'proposals' | 'money' | 'clients' | 'tickets';
+
+/** Notice.entityType (singular) → agenda subject. */
+const SUBJECT_OF_ENTITY: Record<string, DirectorSubjectKey> = {
+  project: 'projects',
+  lead: 'leads',
+  proposal: 'proposals',
+  invoice: 'money',
+  client: 'clients',
+  ticket: 'tickets',
+};
+
+const SUBJECT_LABEL: Record<DirectorSubjectKey, string> = {
+  projects: 'Projects',
+  leads: 'Leads',
+  proposals: 'Proposals',
+  money: 'Money',
+  clients: 'Clients',
+  tickets: 'Tickets',
+};
+
+/** Focused mode: plural collection name → its single-entity generator. */
+const FOCUSED_GENERATOR: Record<
+  string,
+  (directus: any, id: string, orgId: string, now: Date) => Promise<AINotice[]>
+> = {
+  projects: generateProjectNotices,
+  clients: generateClientNotices,
+  leads: (d, id, org, now) => generateLeadNotices(d, String(id), org, now),
+  proposals: generateProposalNotices,
+  invoices: generateInvoiceNotices,
+  tickets: generateTicketNotices,
+};
+
+export interface DirectorAgendaGroup {
+  subject: DirectorSubjectKey;
+  label: string;
+  /** The highest priority present in this group — drives group sort + accent. */
+  topPriority: AINotice['priority'];
+  notices: AINotice[];
+  /** How many of this group's notices carry a ready-to-propose action. */
+  proposedCount: number;
+}
+
+export interface DirectorAgenda {
+  mode: 'org' | 'entity';
+  entityType?: string;
+  entityId?: string;
+  groups: DirectorAgendaGroup[];
+  totalNotices: number;
+  totalProposed: number;
+}
+
+/** Cap per group so the org-wide payload stays reasonable. */
+const AGENDA_GROUP_LIMIT = 12;
+
+function buildAgendaGroups(notices: AINotice[]): DirectorAgendaGroup[] {
+  const bySubject = new Map<DirectorSubjectKey, AINotice[]>();
+  for (const n of notices) {
+    const subject = n.entityType ? SUBJECT_OF_ENTITY[n.entityType] : undefined;
+    if (!subject) continue; // contacts/teams aren't agenda subjects (first slice)
+    if (!bySubject.has(subject)) bySubject.set(subject, []);
+    bySubject.get(subject)!.push(n);
+  }
+
+  const groups: DirectorAgendaGroup[] = [];
+  for (const [subject, list] of bySubject) {
+    list.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
+    const capped = list.slice(0, AGENDA_GROUP_LIMIT);
+    groups.push({
+      subject,
+      label: SUBJECT_LABEL[subject],
+      topPriority: capped[0]?.priority ?? 'low',
+      notices: capped,
+      proposedCount: list.filter((n) => n.proposedAction).length,
+    });
+  }
+
+  // Most urgent subjects first; break ties by how much is on the table.
+  groups.sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.topPriority] ?? 9;
+    const pb = PRIORITY_ORDER[b.topPriority] ?? 9;
+    if (pa !== pb) return pa - pb;
+    return b.notices.length - a.notices.length;
+  });
+  return groups;
+}
+
+/**
+ * Build the Director's Office agenda. Org-wide by default; pass entityType
+ * (plural collection) + entityId for a focused one-item meeting. Never throws —
+ * a failed sub-fetch degrades to fewer notices, matching the notices cron.
+ */
+export async function collectDirectorAgenda(
+  directus: any,
+  organizationId: string,
+  now: Date,
+  focus?: { entityType?: string | null; entityId?: string | null },
+): Promise<DirectorAgenda> {
+  // ── Focused: one entity's generator ────────────────────────────────────────
+  if (focus?.entityType && focus.entityId) {
+    const gen = FOCUSED_GENERATOR[focus.entityType];
+    const notices = gen
+      ? await gen(directus, focus.entityId, organizationId, now).catch(() => [])
+      : [];
+    const groups = buildAgendaGroups(notices);
+    return {
+      mode: 'entity',
+      entityType: focus.entityType,
+      entityId: focus.entityId,
+      groups,
+      totalNotices: notices.length,
+      totalProposed: notices.filter((n) => n.proposedAction).length,
+    };
+  }
+
+  // ── Org-wide: sweep active entities (same filters as notices/check.ts) ──────
+  // `(readItems as any)` per the untyped-SDK `never` convention (the schema-less
+  // client types every collection arg as `never` otherwise).
+  const ri = readItems as any;
+  const [clients, projects, invoices, leads, proposals, tickets] = await Promise.all([
+    directus.request(ri('clients', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _eq: 'active' } }] },
+      fields: ['id'], limit: 100,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('projects', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } }] },
+      fields: ['id'], limit: 100,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('invoices', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _in: ['pending', 'processing'] } }] },
+      fields: ['id'], limit: 100,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('leads', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { stage: { _nin: ['won', 'lost'] } }] },
+      fields: ['id'], limit: 200,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('proposals', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { proposal_status: { _nin: ['accepted', 'rejected'] } }] },
+      fields: ['id'], limit: 100,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('tickets', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } }] },
+      fields: ['id'], limit: 200,
+    })).catch(() => []) as Promise<any[]>,
+  ]);
+
+  const results = await Promise.all([
+    Promise.all((clients || []).map((c: any) => generateClientNotices(directus, c.id, organizationId, now).catch(() => []))),
+    Promise.all((projects || []).map((p: any) => generateProjectNotices(directus, p.id, organizationId, now).catch(() => []))),
+    Promise.all((invoices || []).map((i: any) => generateInvoiceNotices(directus, i.id, organizationId, now).catch(() => []))),
+    Promise.all((leads || []).map((l: any) => generateLeadNotices(directus, String(l.id), organizationId, now).catch(() => []))),
+    Promise.all((proposals || []).map((p: any) => generateProposalNotices(directus, p.id, organizationId, now).catch(() => []))),
+    Promise.all((tickets || []).map((t: any) => generateTicketNotices(directus, t.id, organizationId, now).catch(() => []))),
+  ]);
+
+  const allNotices: AINotice[] = results.flat(2);
+  const groups = buildAgendaGroups(allNotices);
+  return {
+    mode: 'org',
+    groups,
+    totalNotices: allNotices.length,
+    totalProposed: allNotices.filter((n) => n.proposedAction).length,
+  };
+}

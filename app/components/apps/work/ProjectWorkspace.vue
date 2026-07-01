@@ -48,6 +48,17 @@ const emit = defineEmits<{
 	(e: 'tab-change', tab: ProjectTabKey): void;
 }>();
 
+// Director's Office — convene a focused meeting scoped to just this project.
+const { open: openDirectorOffice } = useDirectorOffice();
+function conveneMeeting() {
+	openDirectorOffice({
+		mode: 'entity',
+		entityType: 'projects',
+		entityId: props.projectId,
+		label: (project.value as any)?.title || 'this project',
+	});
+}
+
 const config = useRuntimeConfig();
 const { selectedOrg } = useOrganization();
 
@@ -636,7 +647,18 @@ watch(() => props.projectId, () => {
 				class="mb-5"
 				@update="patchProject"
 			>
-				<template v-if="$slots.actions" #actions>
+				<template #actions>
+					<!-- Convene a focused Director's Office meeting on just this
+					     project — same overlay as the org-wide command center,
+					     scoped to this entity. -->
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-[12px] font-medium ios-press shrink-0"
+						@click="conveneMeeting"
+					>
+						<UIcon name="i-lucide-presentation" class="w-3.5 h-3.5" />
+						<span class="hidden sm:inline">Convene a meeting</span>
+					</button>
 					<slot name="actions" />
 				</template>
 			</AppsWorkProjectIdentityStrip>

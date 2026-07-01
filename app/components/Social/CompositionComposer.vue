@@ -252,6 +252,70 @@ const PLATFORM_LIMIT: Record<SocialPlatform, number> = {
   facebook: 4000,
 };
 const trimming = ref(false);
+
+// ── Draft with Earnest (generate a caption + per-platform variants) ──
+// When every selected account belongs to one client, ground the draft in that
+// client's brand; otherwise fall back to the org brand.
+const draftClientId = computed<string | null>(() => {
+  const ids = new Set(
+    selectedAccountDetails.value.map((a) => a.client).filter(Boolean) as string[],
+  );
+  return ids.size === 1 ? [...ids][0]! : null;
+});
+const { generateSocialPosts } = useEarnestDraft();
+const drafting = ref(false);
+function draftCaptionText(post: { content: string; hashtags?: string[] }): string {
+  const tags = Array.isArray(post.hashtags) && post.hashtags.length
+    ? `\n\n${post.hashtags.join(' ')}`
+    : '';
+  return `${(post.content || '').trim()}${tags}`.trim();
+}
+async function handleRequestDraft(brief: string) {
+  if (drafting.value) return;
+  drafting.value = true;
+  try {
+    const posts = await generateSocialPosts({
+      brief,
+      platforms: selectedPlatforms.value,
+      organizationId: selectedOrg.value ?? null,
+      clientId: draftClientId.value,
+    });
+    if (!posts.length) {
+      toast.add({ title: 'No draft returned', icon: 'i-lucide-alert-circle', color: 'yellow' });
+      return;
+    }
+    // Master seeds from the first post; every selected platform keeps its own
+    // tailored copy as a forked variant so later master edits don't clobber it.
+    caption.value = draftCaptionText(posts[0]!);
+    if (selectedPlatforms.value.length) {
+      const next: Partial<Record<SocialPlatform, string>> = { ...captionVariants.value };
+      for (const post of posts) {
+        if (selectedPlatforms.value.includes(post.platform)) {
+          next[post.platform] = draftCaptionText(post);
+        }
+      }
+      captionVariants.value = next;
+    }
+    toast.add({
+      title: 'Draft ready',
+      description: selectedPlatforms.value.length
+        ? `Master caption + ${selectedPlatforms.value.length} channel variant${selectedPlatforms.value.length > 1 ? 's' : ''}.`
+        : 'Master caption drafted.',
+      icon: 'i-lucide-sparkles',
+      color: 'green',
+    });
+  } catch (err: any) {
+    toast.add({
+      title: 'Draft failed',
+      description: err?.data?.message || 'Earnest could not draft this caption.',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    drafting.value = false;
+  }
+}
+
 async function handleRequestTrim(lane: SocialPlatform | 'master') {
   if (trimming.value) return;
   let targetPlatform: SocialPlatform;
@@ -283,7 +347,7 @@ async function handleRequestTrim(lane: SocialPlatform | 'master') {
       toast.add({
         title: 'No trim returned',
         icon: 'i-lucide-alert-circle',
-        color: 'amber',
+        color: 'yellow',
       });
       return;
     }
@@ -482,7 +546,9 @@ async function save() {
         :platforms="selectedPlatforms"
         :cta-url="ctaUrl"
         :cta-label="ctaLabel"
+        :drafting="drafting"
         @request-trim="handleRequestTrim"
+        @request-draft="handleRequestDraft"
       />
 
       <UCard>

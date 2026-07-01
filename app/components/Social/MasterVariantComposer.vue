@@ -50,12 +50,16 @@ const props = defineProps<{
   /** Disable the trim affordance when the parent has no AI endpoint wired
    *  yet. Defaults to enabled. */
   enableTrim?: boolean;
+  /** Parent is generating a draft — drives the "Drafting…" state on the
+   *  inline "Draft with Earnest" button. */
+  drafting?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:caption', value: string): void;
   (e: 'update:variants', value: Partial<Record<SocialPlatform, string>>): void;
   (e: 'request-trim', lane: SocialPlatform | 'master'): void;
+  (e: 'request-draft', brief: string): void;
 }>();
 
 type Lane = 'master' | SocialPlatform;
@@ -294,9 +298,18 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
       />
     </div>
 
-    <!-- Lane footer: resync + trim affordances -->
+    <!-- Lane footer: draft + resync + trim affordances -->
     <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3">
+        <AIEarnestDraftButton
+          :loading="drafting"
+          :placeholder="
+            activeLane === 'master'
+              ? 'What is this post about? Earnest drafts the caption + a version per channel.'
+              : `What should the ${platformLabel(activeLane as SocialPlatform)} post say?`
+          "
+          @submit="(brief) => emit('request-draft', brief)"
+        />
         <button
           v-if="activeLane !== 'master' && isForked(activeLane as SocialPlatform)"
           type="button"

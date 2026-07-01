@@ -16,6 +16,8 @@
  *   entityType?    — e.g. 'proposals' | 'contracts' | 'leads' (paired w/ entityId)
  *   entityId?      — record id (paired w/ entityType)
  *   status?        — pending | approved | rejected | executed | failed
+ *   planId?        — Director's Office plan id (matches session_id); returns just
+ *                    that plan's step rows
  *   limit?         — default 50, max 200
  */
 import { readItems } from '@directus/sdk';
@@ -35,6 +37,7 @@ export default defineEventHandler(async (event) => {
   const entityType = (query.entityType || '').toString().trim();
   const entityId = (query.entityId || '').toString().trim();
   const status = (query.status || '').toString().trim();
+  const planId = (query.planId || '').toString().trim();
   const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
 
   await requireOrgMembership(event, organizationId);
@@ -44,6 +47,10 @@ export default defineEventHandler(async (event) => {
   if (entityType && entityId) {
     conditions.push({ entity_type: { _eq: entityType } });
     conditions.push({ entity_id: { _eq: entityId } });
+  }
+  // Director's Office plan grouping — the plan id lives in session_id.
+  if (planId) {
+    conditions.push({ session_id: { _eq: planId } });
   }
   if (status && VALID_STATUSES.includes(status)) {
     conditions.push({ status: { _eq: status } });
