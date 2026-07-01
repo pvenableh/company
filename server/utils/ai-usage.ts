@@ -7,15 +7,29 @@
 import { createItem } from '@directus/sdk';
 import type { H3Event } from 'h3';
 
-// Pricing per 1M tokens (USD) — Claude models as of 2025
+// Pricing per 1M tokens (USD). Current models first; legacy ids kept so
+// historical usage rows still cost out. Prefix-match in estimateCost() catches
+// dated variants (e.g. claude-sonnet-5-YYYYMMDD).
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  // Current
+  'claude-sonnet-5': { input: 3, output: 15 },
+  'claude-opus-4-8': { input: 15, output: 75 },
+  'claude-haiku-4-5': { input: 1, output: 5 },
+  'claude-haiku-4-5-20251001': { input: 1, output: 5 },
+  // Legacy (historical rows)
   'claude-sonnet-4-20250514': { input: 3, output: 15 },
   'claude-haiku-4-20250414': { input: 0.8, output: 4 },
   'claude-opus-4-20250514': { input: 15, output: 75 },
 };
 
+const FALLBACK_PRICING = { input: 3, output: 15 }; // sonnet-tier default
+
 function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = MODEL_PRICING[model] || MODEL_PRICING['claude-sonnet-4-20250514'];
+  const pricing =
+    MODEL_PRICING[model]
+    // Tolerate dated/suffixed ids by matching the longest known prefix.
+    || Object.entries(MODEL_PRICING).find(([id]) => model.startsWith(id))?.[1]
+    || FALLBACK_PRICING;
   return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
 }
 

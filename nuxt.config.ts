@@ -249,7 +249,7 @@ export default defineNuxtConfig({
 		llm: {
 			provider: process.env.LLM_PROVIDER || 'claude',
 			apiKey: process.env.LLM_API_KEY || process.env.ANTHROPIC_API_KEY || '',
-			model: process.env.LLM_MODEL || 'claude-sonnet-4-20250514',
+			model: process.env.LLM_MODEL || 'claude-sonnet-5',
 		},
 
 		// Notification webhook secret

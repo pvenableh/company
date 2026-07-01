@@ -27,7 +27,9 @@ import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { generateDocuments, persistDraftDocuments } from '~~/server/utils/generate-documents';
 import { logAiAction } from '~~/server/utils/ai-actions';
 
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+// Usage-log label only — the actual generation uses the shared provider's
+// configured default model (see getLLMProvider / ClaudeProvider).
+const DEFAULT_MODEL = 'claude-sonnet-5';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

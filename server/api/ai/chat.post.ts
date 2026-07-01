@@ -451,7 +451,7 @@ export default defineEventHandler(async (event) => {
 
           const round2 = await claudeProvider.chatWithTools(round2Messages, llmOptions);
           fullResponse = round2.text;
-          streamResult = round2.usage ? { usage: round2.usage, model: model || 'claude-sonnet-4-20250514' } : undefined;
+          streamResult = round2.usage ? { usage: round2.usage, model: model || 'claude-sonnet-5' } : undefined;
 
           if (fullResponse) {
             responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: fullResponse })}\n\n`);
@@ -459,7 +459,7 @@ export default defineEventHandler(async (event) => {
         } else {
           // No tool call — plain text response
           fullResponse = round1.text;
-          streamResult = round1.usage ? { usage: round1.usage, model: model || 'claude-sonnet-4-20250514' } : undefined;
+          streamResult = round1.usage ? { usage: round1.usage, model: model || 'claude-sonnet-5' } : undefined;
           if (fullResponse) {
             responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: fullResponse })}\n\n`);
           }
@@ -495,7 +495,7 @@ export default defineEventHandler(async (event) => {
       logAIUsage({
         event,
         endpoint: 'ai/chat',
-        model: streamResult.model || model || 'claude-sonnet-4-20250514',
+        model: streamResult.model || model || 'claude-sonnet-5',
         inputTokens: streamResult.usage.inputTokens,
         outputTokens: streamResult.usage.outputTokens,
         sessionId: String(chatSessionId),

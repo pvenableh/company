@@ -35,7 +35,7 @@ export interface ToolResult {
 }
 
 export interface LLMOptions {
-  /** Model identifier (provider-specific, e.g. 'claude-sonnet-4-20250514') */
+  /** Model identifier (provider-specific, e.g. 'claude-sonnet-5') */
   model?: string;
   /** Maximum tokens in the response */
   maxTokens?: number;

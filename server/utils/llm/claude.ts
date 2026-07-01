@@ -9,15 +9,21 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider, ChatMessage, LLMOptions, LLMResponse, ToolCall } from './types';
 
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+// Fallback model when neither a per-call `options.model` nor a configured
+// default (runtimeConfig.llm.model / LLM_MODEL / NUXT_LLM_MODEL) is set. Keep
+// this a CURRENT, valid model id — a decommissioned id here 404s every AI call.
+const DEFAULT_MODEL = 'claude-sonnet-5';
 const DEFAULT_MAX_TOKENS = 4096;
 
 export class ClaudeProvider implements LLMProvider {
   readonly name = 'claude';
   private client: Anthropic;
+  /** Instance default (from runtime config), used when a call omits `model`. */
+  private defaultModel: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, defaultModel?: string) {
     this.client = new Anthropic({ apiKey, maxRetries: 3 });
+    this.defaultModel = defaultModel || DEFAULT_MODEL;
   }
 
   async chat(messages: ChatMessage[], options?: LLMOptions): Promise<LLMResponse> {
@@ -25,9 +31,10 @@ export class ClaudeProvider implements LLMProvider {
     const userMessages = this.toAnthropicMessages(messages);
 
     const response = await this.client.messages.create({
-      model: options?.model || DEFAULT_MODEL,
+      // NOTE: `temperature` is intentionally omitted — current Claude models
+      // (sonnet-5+) deprecated it and reject the request when it's present.
+      model: options?.model || this.defaultModel,
       max_tokens: options?.maxTokens || DEFAULT_MAX_TOKENS,
-      temperature: options?.temperature,
       system: systemPrompt || undefined,
       messages: userMessages,
     });
@@ -56,9 +63,9 @@ export class ClaudeProvider implements LLMProvider {
     const userMessages = this.toAnthropicMessages(messages);
 
     const stream = this.client.messages.stream({
-      model: options?.model || DEFAULT_MODEL,
+      // `temperature` omitted — deprecated/rejected by current Claude models.
+      model: options?.model || this.defaultModel,
       max_tokens: options?.maxTokens || DEFAULT_MAX_TOKENS,
-      temperature: options?.temperature,
       system: systemPrompt || undefined,
       messages: userMessages,
     });
@@ -111,7 +118,7 @@ export class ClaudeProvider implements LLMProvider {
     }));
 
     const response = await this.client.messages.create({
-      model: options?.model || DEFAULT_MODEL,
+      model: options?.model || this.defaultModel,
       max_tokens: options?.maxTokens || DEFAULT_MAX_TOKENS,
       system: options?.systemPrompt || undefined,
       messages: anthropicMessages,
@@ -151,9 +158,9 @@ export class ClaudeProvider implements LLMProvider {
 
   models(): string[] {
     return [
-      'claude-sonnet-4-20250514',
-      'claude-haiku-4-20250414',
-      'claude-opus-4-20250514',
+      'claude-sonnet-5',
+      'claude-opus-4-8',
+      'claude-haiku-4-5-20251001',
     ];
   }
 
@@ -161,8 +168,9 @@ export class ClaudeProvider implements LLMProvider {
    * Extract system prompt from messages array (if first message is system role).
    */
   private extractSystemPrompt(messages: ChatMessage[]): string | null {
-    if (messages.length > 0 && messages[0].role === 'system') {
-      return messages[0].content;
+    const first = messages[0];
+    if (first && first.role === 'system') {
+      return first.content;
     }
     return null;
   }

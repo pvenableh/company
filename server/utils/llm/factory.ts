@@ -44,7 +44,9 @@ export function getLLMProvider(providerOverride?: string): LLMProvider {
       if (!apiKey) {
         throw new Error('LLM API key not configured. Set NUXT_LLM_API_KEY in environment.');
       }
-      provider = new ClaudeProvider(apiKey);
+      // Pass the configured default model (runtimeConfig.llm.model, overridable
+      // via LLM_MODEL / NUXT_LLM_MODEL) so it's not pinned to a hardcoded id.
+      provider = new ClaudeProvider(apiKey, llmConfig.model);
       break;
     }
 
