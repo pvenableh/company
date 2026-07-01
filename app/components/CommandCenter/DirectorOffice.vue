@@ -32,12 +32,27 @@ const planning = ref(false);
 const planIntro = ref('');
 const planId = ref<string | null>(null);
 const steps = ref<Step[]>([]);
+const finance = ref<any | null>(null); // money-mode snapshot metrics
+const topicInput = ref(''); // free-text "raise a topic" steer for the plan
 const mutated = ref(false); // any step executed → refresh page behind on close
+
+const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
+const netClass = (n: number) => (Number(n) >= 0 ? 'text-green-600' : 'text-red-600');
 
 const scopeLabel = computed(() => {
   if (scope.value?.mode === 'entity') return scope.value.label || 'this item';
   return 'the organization';
 });
+
+const meetingActive = computed(() =>
+  !!activeSubject.value || planning.value || !!planIntro.value || steps.value.length > 0 || !!finance.value,
+);
+
+function raiseTopic() {
+  if (!topicInput.value.trim() || planning.value) return;
+  // Free-text topic: draft against the current subject if one is open, else org-wide.
+  draftPlan(activeSubject.value || '');
+}
 
 const rollup = computed(() => {
   const done = steps.value.filter((s) => s.status === 'executed').length;
@@ -65,6 +80,7 @@ async function loadAgenda() {
   steps.value = [];
   planId.value = null;
   planIntro.value = '';
+  finance.value = null;
   try {
     const q: Record<string, string> = { organizationId: selectedOrg.value };
     if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
@@ -90,17 +106,20 @@ async function draftPlan(subject: string) {
   steps.value = [];
   planId.value = null;
   planIntro.value = '';
+  finance.value = null;
   try {
     const body: Record<string, any> = { organizationId: selectedOrg.value, subject };
+    if (topicInput.value.trim()) body.topic = topicInput.value.trim();
     if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
       body.entityType = scope.value.entityType;
       body.entityId = scope.value.entityId;
     }
-    const res = await $fetch<{ planId: string; intro: string; stepCount: number }>(
+    const res = await $fetch<{ planId: string; intro: string; stepCount: number; finance?: any }>(
       '/api/ai/director/plan', { method: 'POST', body },
     );
     planId.value = res.planId;
     planIntro.value = res.intro || '';
+    finance.value = res.finance || null;
     if (res.stepCount > 0) await loadSteps(res.planId);
     else toast.add({ title: 'Nothing to propose', description: 'Earnest had no concrete actions for this area right now.', icon: 'i-lucide-info', color: 'blue' });
   } catch (err: any) {
@@ -226,23 +245,76 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                       </span>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                      {{ g.notices.length }} item{{ g.notices.length === 1 ? '' : 's' }} needing attention
+                      <template v-if="g.subject === 'money'">
+                        Financial review — income, expenses &amp; forecast<template v-if="g.notices.length">, {{ g.notices.length }} flag{{ g.notices.length === 1 ? '' : 's' }}</template>
+                      </template>
+                      <template v-else>
+                        {{ g.notices.length }} item{{ g.notices.length === 1 ? '' : 's' }} needing attention
+                      </template>
                     </p>
+                  </button>
+                </div>
+
+                <!-- Raise a topic (free-text steer) -->
+                <div class="mt-3 flex items-center gap-2">
+                  <input
+                    v-model="topicInput"
+                    type="text"
+                    placeholder="Raise a topic — e.g. “Are we on track to hit Q3 revenue?”"
+                    class="flex-1 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    @keydown.enter="raiseTopic"
+                  />
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-foreground text-background disabled:opacity-50"
+                    :disabled="!topicInput.trim() || planning"
+                    @click="raiseTopic"
+                  >
+                    <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
+                    Discuss
                   </button>
                 </div>
               </div>
 
-              <!-- Active meeting: plan for the chosen subject -->
-              <div v-if="activeSubject" class="rounded-2xl border border-border bg-background p-4 space-y-3">
+              <!-- Active meeting: plan / analysis for the chosen subject or topic -->
+              <div v-if="meetingActive" class="rounded-2xl border border-border bg-background p-4 space-y-3">
                 <div class="flex items-center gap-2">
                   <EarnestIcon class="w-4 h-4 text-primary" />
-                  <span class="text-sm font-medium">Proposed plan</span>
+                  <span class="text-sm font-medium">{{ finance ? 'Financial briefing' : 'Proposed plan' }}</span>
                   <span v-if="planning" class="text-xs text-muted-foreground flex items-center gap-1">
-                    <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> drafting…
+                    <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ finance ? 'analyzing…' : 'drafting…' }}
                   </span>
                 </div>
 
-                <p v-if="planIntro && !planning" class="text-sm text-muted-foreground leading-relaxed">{{ planIntro }}</p>
+                <!-- Money mode: metrics strip -->
+                <div v-if="finance" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div class="rounded-xl bg-muted/40 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Income / mo (avg)</p>
+                    <p class="text-sm font-semibold">{{ fmtMoney(finance.trailing.income) }}</p>
+                  </div>
+                  <div class="rounded-xl bg-muted/40 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expenses / mo (avg)</p>
+                    <p class="text-sm font-semibold">{{ fmtMoney(finance.trailing.expenses) }}</p>
+                  </div>
+                  <div class="rounded-xl bg-muted/40 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Net / mo (avg)</p>
+                    <p class="text-sm font-semibold" :class="netClass(finance.trailing.net)">{{ fmtMoney(finance.trailing.net) }}</p>
+                  </div>
+                  <div class="rounded-xl bg-muted/40 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding AR</p>
+                    <p class="text-sm font-semibold">{{ fmtMoney(finance.outstanding.total) }}</p>
+                    <p v-if="finance.outstanding.overdueTotal > 0" class="text-[10px] text-red-600">{{ fmtMoney(finance.outstanding.overdueTotal) }} overdue</p>
+                  </div>
+                  <div class="col-span-2 sm:col-span-4 rounded-xl bg-primary/5 border border-primary/20 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Projected next {{ finance.projection.horizonMonths }} months (run-rate)</p>
+                    <p class="text-sm">
+                      Income {{ fmtMoney(finance.projection.income) }} · Expenses {{ fmtMoney(finance.projection.expenses) }} ·
+                      <span class="font-semibold" :class="netClass(finance.projection.net)">Net {{ fmtMoney(finance.projection.net) }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <p v-if="planIntro && !planning" class="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ planIntro }}</p>
 
                 <!-- Step cards -->
                 <div v-if="steps.length" class="space-y-2">

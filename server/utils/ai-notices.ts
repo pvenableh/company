@@ -1052,7 +1052,11 @@ export async function collectDirectorAgenda(
       fields: ['id'], limit: 100,
     })).catch(() => []) as Promise<any[]>,
     directus.request(ri('invoices', {
-      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _in: ['pending', 'processing'] } }] },
+      // Invoices have no direct org column — scope via bill_to OR client.organization.
+      filter: { _and: [
+        { status: { _in: ['pending', 'processing'] } },
+        { _or: [{ bill_to: { _eq: organizationId } }, { client: { organization: { _eq: organizationId } } }] },
+      ] },
       fields: ['id'], limit: 100,
     })).catch(() => []) as Promise<any[]>,
     directus.request(ri('leads', {
@@ -1080,6 +1084,14 @@ export async function collectDirectorAgenda(
 
   const allNotices: AINotice[] = results.flat(2);
   const groups = buildAgendaGroups(allNotices);
+
+  // Money is always on the agenda in org-wide mode — the financial review /
+  // critical analysis is valuable even with no overdue invoices. Append an empty
+  // 'money' group when the notice sweep didn't already produce one.
+  if (!groups.some((g) => g.subject === 'money')) {
+    groups.push({ subject: 'money', label: SUBJECT_LABEL.money, topPriority: 'low', notices: [], proposedCount: 0 });
+  }
+
   return {
     mode: 'org',
     groups,

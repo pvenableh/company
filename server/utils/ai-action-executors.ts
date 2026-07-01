@@ -329,6 +329,103 @@ const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) =
   return { sent: true, to, subject };
 };
 
+// ── reschedule_project ─────────────────────────────────────────────────────────
+// Shifts a project's start/deadline by a delta (or to an explicit new start) and
+// cascades that same shift to its events + dated tasks. Mirrors the inline
+// tool-handlers logic (handleRescheduleProject) but runs from an approved
+// ai_actions row via the admin client. Reversible in spirit (re-run with the
+// negated delta), org-verified, fail-hard on a cross-org / missing project.
+const rescheduleProjectExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const projectId = payload.project_id ?? payload.projectId;
+  const shiftEvents = payload.shift_events !== false;
+  const shiftTasks = payload.shift_tasks !== false;
+  if (!projectId) throw new Error('reschedule_project: project_id is required');
+
+  const directus = getServerDirectus();
+
+  const project = (await directus.request(
+    readItem('projects' as any, projectId, { fields: ['id', 'title', 'start_date', 'due_date', 'organization'] as any }),
+  )) as any;
+  if (!project) throw new Error('reschedule_project: project not found');
+  if (resolveId(project.organization) !== organizationId) {
+    throw new Error('reschedule_project: project belongs to another organization');
+  }
+
+  // Resolve the day delta from delta_days or an explicit new_start_date.
+  let delta: number;
+  if (payload.delta_days != null) {
+    delta = Math.round(Number(payload.delta_days));
+  } else if (payload.new_start_date != null) {
+    if (!project.start_date) throw new Error('reschedule_project: project has no start_date — provide delta_days instead');
+    delta = Math.round(
+      (new Date(payload.new_start_date).getTime() - new Date(project.start_date).getTime()) / (1000 * 60 * 60 * 24),
+    );
+  } else {
+    throw new Error('reschedule_project: provide delta_days or new_start_date');
+  }
+  if (!Number.isFinite(delta)) throw new Error('reschedule_project: could not compute a valid day delta');
+  if (delta === 0) return { project_id: projectId, delta: 0, eventsShifted: 0, tasksShifted: 0, note: 'No change — dates already correct.' };
+
+  const shiftDate = (dateStr: string | null | undefined): string | null => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().split('T')[0]!;
+  };
+
+  const projectUpdate: Record<string, any> = {};
+  if (project.start_date) projectUpdate.start_date = shiftDate(project.start_date);
+  if (project.due_date) projectUpdate.due_date = shiftDate(project.due_date);
+  if (Object.keys(projectUpdate).length) {
+    await directus.request(updateItem('projects' as any, projectId, projectUpdate));
+  }
+
+  let eventsShifted = 0;
+  let tasksShifted = 0;
+
+  if (shiftEvents) {
+    const events = (await directus.request(
+      readItems('project_events' as any, {
+        filter: { project: { _eq: projectId } }, fields: ['id', 'event_date', 'end_date'] as any, limit: 200,
+      }),
+    )) as any[];
+    for (const ev of events) {
+      const evUpdate: Record<string, any> = {};
+      if (ev.event_date) evUpdate.event_date = shiftDate(ev.event_date);
+      if (ev.end_date) evUpdate.end_date = shiftDate(ev.end_date);
+      if (Object.keys(evUpdate).length) {
+        await directus.request(updateItem('project_events' as any, ev.id, evUpdate));
+        eventsShifted++;
+      }
+    }
+  }
+
+  if (shiftTasks) {
+    const tasks = (await directus.request(
+      readItems('tasks' as any, {
+        filter: { _and: [{ project_id: { _eq: projectId } }, { due_date: { _nnull: true } }] },
+        fields: ['id', 'due_date'] as any, limit: 500,
+      }),
+    )) as any[];
+    for (const t of tasks) {
+      if (t.due_date) {
+        await directus.request(updateItem('tasks' as any, t.id, { due_date: shiftDate(t.due_date) }));
+        tasksShifted++;
+      }
+    }
+  }
+
+  return {
+    project_id: projectId,
+    delta,
+    eventsShifted,
+    tasksShifted,
+    newStartDate: projectUpdate.start_date ?? null,
+    newDueDate: projectUpdate.due_date ?? null,
+  };
+};
+
 // ── stubs for not-yet-outbound types ──────────────────────────────────────────
 // generate_documents draft-creation is non-outbound and logged straight to
 // `executed`, so it never flows through approval — but we register a stub anyway
@@ -351,6 +448,7 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   create_tasks: createTasksExecutor,
   update_field: updateFieldExecutor,
   send_email: sendEmailExecutor,
+  reschedule_project: rescheduleProjectExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),
   other: makeStub('other'),

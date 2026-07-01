@@ -157,9 +157,60 @@ export async function proposeDirectorStep(
     case 'add_task':
     case 'create_tasks':
       return await proposeDirectorCreateTasks(input, ctx);
+    case 'reschedule_project':
+      return await proposeDirectorReschedule(input, ctx);
     default:
       return { success: false, summary: '', error: `Unsupported director step: ${toolName}` };
   }
+}
+
+async function proposeDirectorReschedule(
+  input: Record<string, any>,
+  ctx: DirectorStepContext,
+): Promise<ToolHandlerResult> {
+  const projectId = input.project_id ?? input.projectId ?? input.entity_id;
+  if (!projectId) return { success: false, summary: '', error: 'reschedule_project needs project_id' };
+  if (input.delta_days == null && input.new_start_date == null) {
+    return { success: false, summary: '', error: 'reschedule_project needs delta_days or new_start_date' };
+  }
+
+  const payload: Record<string, any> = {
+    project_id: projectId,
+    shift_events: input.shift_events !== false,
+    shift_tasks: input.shift_tasks !== false,
+  };
+  if (input.delta_days != null) payload.delta_days = Math.round(Number(input.delta_days));
+  if (input.new_start_date != null) payload.new_start_date = String(input.new_start_date);
+
+  const title = input.delta_days != null
+    ? `Reschedule project by ${payload.delta_days} day${Math.abs(payload.delta_days) === 1 ? '' : 's'}`
+    : `Reschedule project to start ${payload.new_start_date}`;
+  const preview = {
+    kind: 'reschedule_project' as const,
+    source: 'director',
+    planId: ctx.planId,
+    ...payload,
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'reschedule_project',
+    status: 'pending',
+    title,
+    payload,
+    preview,
+    entityType: 'projects',
+    entityId: String(projectId),
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the reschedule.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${title}. Waiting for your approval.`,
+    data: { actionId, proposed: true, status: 'pending', project_id: projectId },
+  };
 }
 
 async function proposeDirectorUpdateField(

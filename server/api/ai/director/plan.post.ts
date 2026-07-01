@@ -24,15 +24,16 @@ import { randomUUID } from 'crypto';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import type { ClaudeProvider } from '~~/server/utils/llm/claude';
-import { ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL } from '~~/server/utils/llm/tools';
+import { ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCHEDULE_PROJECT_TOOL } from '~~/server/utils/llm/tools';
 import { proposeDirectorStep } from '~~/server/utils/llm/tool-proposals';
 import { collectDirectorAgenda, type AINotice, type DirectorSubjectKey } from '~~/server/utils/ai-notices';
+import { buildFinancialSnapshot, type FinancialSnapshot } from '~~/server/utils/financial-snapshot';
 import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 
-// Only the three action types with real executors are plannable in this slice.
-const DIRECTOR_TOOLS = [ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL];
+// Action types with real executors that the Director may propose as steps.
+const DIRECTOR_TOOLS = [ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCHEDULE_PROJECT_TOOL];
 
 // notice.entityType (singular) → plural collection, for grounding update_field/add_task.
 const ENTITY_COLLECTION: Record<string, string> = {
@@ -98,15 +99,34 @@ export default defineEventHandler(async (event) => {
       ? `the "${subject}" area of the business`
       : 'the organization';
 
+  // Money mode — pull an org financial snapshot to ground a critical analysis.
+  const isMoney = subject === 'money' || entityType === 'invoices';
+  let finance: FinancialSnapshot | null = null;
+  if (isMoney) {
+    finance = await buildFinancialSnapshot(directus, organizationId, new Date()).catch(() => null);
+  }
+
   const systemPrompt = [
     EARNEST_VOICE_CHARTER,
     '',
     'You are Earnest acting as a Director reporting to the user (the CEO). You have just reviewed the current state of the business and are convening a working meeting.',
-    'Produce a SHORT, coherent plan of concrete next actions for the scope in question — ideally 2 to 4 steps, never more than 5.',
+    ...(isMoney ? [
+      'MONEY MODE — this meeting is about the organization\'s finances. Before any steps, deliver a CRITICAL financial briefing in your reply text. Be direct and unsentimental:',
+      '  1. Income outlook — read the monthly trend + trailing run-rate. Is income growing, flat, or declining? Say which, with the actual numbers.',
+      '  2. Expense outlook — are expenses rising, and faster than income? Name the biggest categories.',
+      '  3. Prediction — treat the naive projection as a starting point, then adjust for the trend and any overdue AR you would NOT bank on. Give a candid ~3-month net outlook.',
+      '  4. Verdict — an honest, direct assessment. If the trajectory is bad, SAY SO plainly; harsh is acceptable when the numbers warrant it — never flatter or soften a real problem. If it is genuinely strong, say that too, proportionate to the data.',
+      '  Cite real figures from the snapshot below. Never invent numbers. Round to whole dollars. Keep it tight — a few sharp sentences per point, not an essay.',
+      '  Write in PLAIN PROSE — no markdown headers, no "#", no "**bold**", no bullet characters. Label the points as "Income:", "Expenses:", "Prediction:", "Verdict:" on their own lines.',
+      '  After the briefing, propose 2-4 concrete steps grounded in the numbers (chase specific overdue AR, cut/renegotiate a named cost, collect or raise revenue).',
+    ] : [
+      'Produce a SHORT, coherent plan of concrete next actions for the scope in question — ideally 2 to 4 steps, never more than 5.',
+    ]),
     'Emit each step as a tool call, ALL in this single turn (multiple tool calls at once). Do NOT ask follow-up questions first.',
-    'You may ONLY use these tools: add_task, update_field, send_email. Every action is a PROPOSAL the user must approve one-by-one — nothing happens automatically, so frame your summary as proposals, never as done.',
-    'Ground every step in the items below: use the exact target collection + id shown. Never invent an id. If a step needs an id you do not have, describe it as a task instead of an update_field.',
+    'You may ONLY use these tools: add_task, update_field, send_email, reschedule_project. Every action is a PROPOSAL the user must approve one-by-one — nothing happens automatically, so frame your summary as proposals, never as done.',
+    'Ground every step in the items below: use the exact target collection + id shown. Never invent an id. If a step needs an id you do not have, describe it as a task instead.',
     'update_field is only for: leads.status, leads.stage, clients.status, projects.status, tasks.status, tasks.priority, tasks.schedule, tasks.due_date. For anything else, create a task.',
+    'reschedule_project shifts a project timeline — use it only with a real project id and a delta_days (or new_start_date).',
     'Each step MUST be distinct — never propose the same action, task, or field change twice. If several records share one issue, address them in a SINGLE task, not one per record.',
     'Keep the plan tight and genuinely useful. Do not pad it to hit a number.',
   ].join('\n');
@@ -115,10 +135,11 @@ export default defineEventHandler(async (event) => {
     `Scope of this meeting: ${scopeLabel}.`,
     topic ? `The user specifically wants to focus on: ${topic}` : '',
     '',
+    finance ? `${finance.text}\n` : '',
     'Current items needing attention:',
     contextBlock,
     '',
-    'Draft the plan now as tool calls.',
+    isMoney ? 'Give the critical financial briefing, then draft the steps as tool calls.' : 'Draft the plan now as tool calls.',
   ].filter(Boolean).join('\n');
 
   // 2. Ask Claude for the plan (multiple tool_use blocks in one turn).
@@ -132,7 +153,7 @@ export default defineEventHandler(async (event) => {
   try {
     round = await provider.chatWithTools(
       [{ role: 'user', content: userMessage }],
-      { systemPrompt, maxTokens: 2048, tools: DIRECTOR_TOOLS },
+      { systemPrompt, maxTokens: isMoney ? 3500 : 2048, tools: DIRECTOR_TOOLS },
     );
   } catch (err: any) {
     console.error('[ai/director/plan] LLM error:', err?.message);
@@ -180,5 +201,15 @@ export default defineEventHandler(async (event) => {
     intro: round.text || '',
     steps,
     stepCount: steps.length,
+    // Money mode: compact metrics for the UI to render alongside the briefing.
+    finance: finance ? {
+      months: finance.months,
+      totals: finance.totals,
+      trailing: finance.trailing,
+      projection: finance.projection,
+      outstanding: finance.outstanding,
+      recurring: finance.recurring,
+      expensesByCategory: finance.expensesByCategory.slice(0, 6),
+    } : null,
   };
 });
