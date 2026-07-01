@@ -349,7 +349,7 @@ export default defineEventHandler(async (event) => {
     // calling reschedule_project / update_field with the real UUID.
     const useMutationTools = allowMutations === true && entityType && entityId && organizationId && allowCtx('entity');
     const toolNudge = useMutationTools
-      ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
+      ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. When the user asks to draft/write up a proposal or contract, call generate_documents with an overview of the deliverables (it saves editable drafts for review — it does not send anything). Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
       : '';
 
     // Route awareness — the human "right now you're looking at …" sentence the

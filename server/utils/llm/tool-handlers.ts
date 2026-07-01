@@ -8,6 +8,8 @@
 // account and break "Mine" filters and audit trails.
 
 import { readItem, readItems, updateItem, createItem } from '@directus/sdk';
+import { getLLMProvider } from './factory';
+import { generateDocuments, persistDraftDocuments } from '../generate-documents';
 
 interface ToolHandlerContext {
   organizationId: string;
@@ -289,6 +291,57 @@ async function handleAddTask(
   };
 }
 
+// ─── generate_documents ──────────────────────────────────────────────────────
+// Generates DRAFT proposal + contract from an overview and saves them for
+// review. Unlike the other handlers, persistence uses the admin client (via
+// persistDraftDocuments) because create perms on proposals/contracts are
+// FK-walked, which Directus 11 doesn't enforce on create. Org membership is
+// implied by the authenticated chat session + the entity-focus gate.
+async function handleGenerateDocuments(
+  input: Record<string, any>,
+  ctx: ToolHandlerContext,
+): Promise<ToolHandlerResult> {
+  const overview = (input.overview || '').toString().trim();
+  if (!overview) {
+    return { success: false, summary: '', error: 'overview is required to generate documents' };
+  }
+
+  const targets: Array<'proposal' | 'contract'> = Array.isArray(input.targets) && input.targets.length
+    ? input.targets.filter((t: string) => t === 'proposal' || t === 'contract')
+    : ['proposal', 'contract'];
+
+  // Prefer an explicit lead_id; otherwise use the focused lead, if any.
+  const leadId = input.lead_id ?? (ctx.entityType === 'leads' ? ctx.entityId : null);
+
+  const provider = getLLMProvider();
+  const gen = await generateDocuments({
+    overview,
+    organizationId: ctx.organizationId,
+    leadId,
+    targets,
+    provider,
+  });
+
+  const { proposalId, contractId } = await persistDraftDocuments(gen, {
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    leadId,
+    targets,
+    overview,
+  });
+
+  const made = [proposalId && 'proposal', contractId && 'contract'].filter(Boolean).join(' and ');
+  if (!made) {
+    return { success: false, summary: '', error: 'The AI produced no usable document content. Please refine the overview.' };
+  }
+
+  return {
+    success: true,
+    summary: `Drafted a ${made} titled "${gen.title}" in draft status for your review and editing. Nothing has been sent.`,
+    data: { proposalId, contractId, title: gen.title, total_value: gen.total_value },
+  };
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 export async function executeToolCall(
@@ -304,6 +357,8 @@ export async function executeToolCall(
         return await handleUpdateField(toolInput, ctx);
       case 'add_task':
         return await handleAddTask(toolInput, ctx);
+      case 'generate_documents':
+        return await handleGenerateDocuments(toolInput, ctx);
       default:
         return { success: false, summary: '', error: `Unknown tool: ${toolName}` };
     }

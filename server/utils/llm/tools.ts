@@ -106,9 +106,35 @@ export const ADD_TASK_TOOL: ToolDefinition = {
   },
 };
 
+export const GENERATE_DOCUMENTS_TOOL: ToolDefinition = {
+  name: 'generate_documents',
+  description:
+    'Generates a DRAFT proposal and/or contract from a plain-language overview of the project deliverables, and saves them in "draft" status for the user to review and edit. Use when the user asks to "draft a proposal", "write up a contract", "put together a proposal and contract for this", etc. The overview is whatever the user described (scope, deliverables, pricing if mentioned). Nothing is sent or signed — these are editable drafts. If the chat is focused on a lead, its id is used automatically to ground and link the documents; do not invent client details not present in the conversation.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      overview: {
+        type: 'string',
+        description: 'Plain-language description of the project deliverables / scope to base the documents on. Summarize what the user described.',
+      },
+      targets: {
+        type: 'array',
+        items: { type: 'string', enum: ['proposal', 'contract'] },
+        description: 'Which documents to generate. Defaults to both a proposal and a contract.',
+      },
+      lead_id: {
+        type: 'string',
+        description: 'Optional lead id to ground + link the documents. Pass ONLY an id present verbatim in the context; otherwise omit (the server uses the focused lead if any).',
+      },
+    },
+    required: ['overview'],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
   RESCHEDULE_PROJECT_TOOL,
   UPDATE_FIELD_TOOL,
   ADD_TASK_TOOL,
+  GENERATE_DOCUMENTS_TOOL,
 ];
