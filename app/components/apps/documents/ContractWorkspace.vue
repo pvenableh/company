@@ -42,7 +42,7 @@ const blocks = ref<any[]>([]);
 const blocksDirty = ref(false);
 const savingBlocks = ref(false);
 
-type Mode = 'view' | 'edit';
+type Mode = 'view' | 'edit' | 'activity';
 const route = useRoute();
 const mode = ref<Mode>(route.query.edit ? 'edit' : 'view');
 
@@ -257,6 +257,14 @@ if (!props.compact) {
               <UIcon name="lucide:pencil" class="w-3.5 h-3.5 inline -mt-0.5" />
               <span class="ml-1 hidden sm:inline">Edit</span>
             </button>
+            <button
+              class="h-6 px-2.5 rounded-md transition-colors"
+              :class="mode === 'activity' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+              @click="mode = 'activity'"
+            >
+              <UIcon name="lucide:history" class="w-3.5 h-3.5 inline -mt-0.5" />
+              <span class="ml-1 hidden sm:inline">Activity</span>
+            </button>
           </div>
 
           <button
@@ -387,6 +395,11 @@ if (!props.compact) {
 
           <DocumentsDocumentFooter :hidden="hideFooter" />
         </DocumentsDocumentShell>
+      </div>
+
+      <!-- ACTIVITY mode: AI actions + change history -->
+      <div v-else-if="mode === 'activity'" class="max-w-2xl mx-auto w-full">
+        <DocumentActivityTimeline collection="contracts" :item-id="String(contract.id)" />
       </div>
 
       <!-- EDIT mode -->

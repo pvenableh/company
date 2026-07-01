@@ -321,17 +321,61 @@ export async function persistDraftDocuments(
     contractId = created?.id ?? null;
   }
 
-  await logAiAction({
-    organizationId: input.organizationId,
-    userId: input.userId,
-    actionType: 'generate_documents',
-    status: 'executed',
-    title: `Drafted ${[proposalId && 'proposal', contractId && 'contract'].filter(Boolean).join(' + ') || 'documents'}: ${gen.title}`,
-    payload: { overview: input.overview, targets: input.targets, leadId: input.leadId, clientId: input.clientId, contactId: input.contactId },
-    result: { proposalId, contractId, total_value: gen.total_value },
-    entityType: input.leadId != null ? 'leads' : null,
-    entityId: input.leadId != null ? String(input.leadId) : null,
-  });
+  // Audit log. We tag one row PER created document (entity_type =
+  // 'proposals'/'contracts', entity_id = the new row id) so each document's
+  // Activity tab shows a complete AI history — a single combined row could
+  // only point at one entity. `result` carries both ids so either row links
+  // to both artifacts; `payload` keeps the originating lead/client/contact.
+  const auditPayload = {
+    overview: input.overview,
+    targets: input.targets,
+    leadId: input.leadId,
+    clientId: input.clientId,
+    contactId: input.contactId,
+  };
+  const auditResult = { proposalId, contractId, total_value: gen.total_value };
+
+  if (proposalId) {
+    await logAiAction({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      actionType: 'generate_documents',
+      status: 'executed',
+      title: `Drafted proposal: ${gen.title}`,
+      payload: auditPayload,
+      result: auditResult,
+      entityType: 'proposals',
+      entityId: String(proposalId),
+    });
+  }
+  if (contractId) {
+    await logAiAction({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      actionType: 'generate_documents',
+      status: 'executed',
+      title: `Drafted contract: ${gen.title}`,
+      payload: auditPayload,
+      result: auditResult,
+      entityType: 'contracts',
+      entityId: String(contractId),
+    });
+  }
+  // Edge case: generation ran but nothing was persisted — keep a lead-tagged
+  // (or org-wide) summary so the action isn't lost from the audit trail.
+  if (!proposalId && !contractId) {
+    await logAiAction({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      actionType: 'generate_documents',
+      status: 'executed',
+      title: `Drafted documents: ${gen.title}`,
+      payload: auditPayload,
+      result: auditResult,
+      entityType: input.leadId != null ? 'leads' : null,
+      entityId: input.leadId != null ? String(input.leadId) : null,
+    });
+  }
 
   return { proposalId, contractId };
 }
