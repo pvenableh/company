@@ -12,6 +12,43 @@ export interface ExtensionSeoMetadata {
     no_follow?: boolean;
 }
 
+export interface AiAction {
+	/** @primaryKey */
+	id: number;
+	/** @description Owning organization. */
+	organization?: Organization | string | null;
+	/** @description User who triggered the AI action. */
+	user?: DirectusUser | string | null;
+	/** @description The kind of action proposed. Free values allowed as the tool set grows. @required */
+	action_type: 'generate_documents' | 'draft_email' | 'send_email' | 'create_tasks' | 'update_field' | 'other';
+	/** @description HITL lifecycle. Outbound/destructive actions start pending; safe draft-creation may start executed. @required */
+	status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
+	/** @description Human-readable one-line summary of the proposed action. */
+	title?: string | null;
+	/** @description The action parameters (tool input). */
+	payload?: Record<string, any> | null;
+	/** @description Optional preview of what will happen on approval. */
+	preview?: Record<string, any> | null;
+	/** @description Execution result (created ids, etc.). */
+	result?: Record<string, any> | null;
+	/** @description Error message when status=failed. */
+	error?: string | null;
+	/** @description Optional related collection (e.g. "leads", "projects"). */
+	entity_type?: string | null;
+	/** @description Optional related record id. */
+	entity_id?: string | null;
+	/** @description Optional ai_chat_sessions id that produced this action. */
+	session_id?: string | null;
+	/** @description User who approved/rejected. */
+	approved_by?: DirectusUser | string | null;
+	/** @description When approved/rejected. */
+	approved_at?: string | null;
+	/** @description When the action executed. */
+	executed_at?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
 export interface AiChatMessage {
 	/** @primaryKey */
 	id: number;
@@ -1088,6 +1125,12 @@ export interface CdCard {
 	behance?: string | null;
 	/** @description Office / business address shown on the public CardDesk card. */
 	office_address?: string | null;
+	/** @description Visual design template for the public card: carddesk | editorial | glass | tech. */
+	card_theme?: 'carddesk' | 'editorial' | 'glass' | 'tech' | null;
+	/** @description Optional cover/banner image (16:9) shown across the top of the public card. */
+	cover_image?: string | null;
+	/** @description Optional company logo, shown opposite the profile photo. */
+	logo_image?: string | null;
 }
 
 export interface CdConnection {
@@ -1755,6 +1798,32 @@ export interface Course {
 	description?: string | null;
 	menu_id?: Menu | string | null;
 	options?: Option[] | string[];
+}
+
+export interface CurrentWork {
+	/** @primaryKey */
+	id: number;
+	/** @description Only Published items appear on the site. */
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @description Client / project name. @required */
+	name: string;
+	/** @description Small label shown at rest, e.g. "Brand & Digital". */
+	category?: string | null;
+	/** @description Status pill copy. */
+	stage?: string | null;
+	/** @description One short, editorial descriptor — revealed on interaction. Keep it NDA-safe. */
+	descriptor?: string | null;
+	/** @description Discipline tags revealed on hover. */
+	disciplines?: string[] | null;
+	/** @description Base color for the gradient used when no image is set. */
+	tint?: string | null;
+	/** @description Optional crop. Omit for an NDA-safe gradient fallback. */
+	image?: string | null;
+	/** @description Optional URL once there's a public page to point at. */
+	link?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface DocumentBlock {
@@ -5021,6 +5090,7 @@ export interface DirectusDeploymentRun {
 }
 
 export interface Schema {
+	ai_actions: AiAction[];
 	ai_chat_messages: AiChatMessage[];
 	ai_chat_sessions: AiChatSession[];
 	ai_context_snapshots: AiContextSnapshot[];
@@ -5105,6 +5175,7 @@ export interface Schema {
 	content_plans: ContentPlan[];
 	contracts: Contract[];
 	courses: Course[];
+	current_work: CurrentWork[];
 	document_blocks: DocumentBlock[];
 	early_access: EarlyAccess[];
 	earnest_history: EarnestHistory[];
@@ -5269,6 +5340,7 @@ export interface Schema {
 }
 
 export enum CollectionNames {
+	ai_actions = 'ai_actions',
 	ai_chat_messages = 'ai_chat_messages',
 	ai_chat_sessions = 'ai_chat_sessions',
 	ai_context_snapshots = 'ai_context_snapshots',
@@ -5353,6 +5425,7 @@ export enum CollectionNames {
 	content_plans = 'content_plans',
 	contracts = 'contracts',
 	courses = 'courses',
+	current_work = 'current_work',
 	document_blocks = 'document_blocks',
 	early_access = 'early_access',
 	earnest_history = 'earnest_history',
