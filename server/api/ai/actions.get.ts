@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       readItems('ai_actions' as any, {
         filter: { _and: conditions },
         fields: [
-          'id', 'action_type', 'status', 'title', 'result',
+          'id', 'action_type', 'status', 'title', 'result', 'preview',
           'entity_type', 'entity_id', 'error', 'date_created',
           'user.id', 'user.first_name', 'user.last_name', 'user.avatar',
         ],

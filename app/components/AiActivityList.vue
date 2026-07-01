@@ -151,6 +151,33 @@ function formatTime(ts?: string | null) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// ── Email preview (send_email) ─────────────────────────────────────────────────
+// Once AI_SEND_EMAIL_DRYRUN=false a send is real, so an approver must see the
+// recipient + subject + body before clicking Approve. The preview is captured
+// at propose time (server/utils/llm/tool-proposals.ts).
+const expandedIds = ref<Set<string | number>>(new Set());
+function toggleExpanded(id: string | number) {
+  const next = new Set(expandedIds.value);
+  next.has(id) ? next.delete(id) : next.add(id);
+  expandedIds.value = next;
+}
+function emailPreview(a: any): { to: string | null; subject: string; body: string } | null {
+  const p = a?.preview;
+  if (a?.action_type !== 'send_email' || !p || p.kind !== 'email') return null;
+  const to = p.to || (p.contactId ? `contact ${p.contactId}` : null);
+  const body = stripHtml(p.bodyHtml || '');
+  return { to, subject: p.subject || '', body };
+}
+function stripHtml(html: string): string {
+  return String(html)
+    .replace(/<br\s*\/?>(?=\S)/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // Real artifacts this action produced, as clickable links into the slide-over stack.
 function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
   const links: Array<{ label: string; open: () => void }> = [];
@@ -223,6 +250,14 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
               >
                 {{ statusStyle(a).label }}
               </span>
+              <span
+                v-if="a.preview?.source === 'proactive'"
+                class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide bg-primary/10 text-primary"
+                title="Earnest proposed this proactively"
+              >
+                <UIcon name="lucide:sparkles" class="w-2.5 h-2.5" />
+                Proactive
+              </span>
               <span class="text-[10px] text-muted-foreground">{{ formatTime(a.date_created) }}</span>
             </div>
             <p v-if="a.title" class="text-[11px] text-muted-foreground mt-0.5 break-words">{{ a.title }}</p>
@@ -239,6 +274,31 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 <UIcon name="lucide:external-link" class="w-3 h-3" />
                 {{ link.label }}
               </button>
+            </div>
+
+            <!-- Email preview (send_email): recipient + subject always shown so a
+                 live send is never approved blind; body behind a toggle. -->
+            <div v-if="emailPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5">
+              <div class="flex items-baseline gap-1.5 text-[11px]">
+                <span class="text-muted-foreground shrink-0">To</span>
+                <span class="font-medium text-foreground break-all">{{ emailPreview(a)!.to || '—' }}</span>
+              </div>
+              <div class="flex items-baseline gap-1.5 text-[11px] mt-0.5">
+                <span class="text-muted-foreground shrink-0">Subject</span>
+                <span class="font-medium text-foreground break-words">{{ emailPreview(a)!.subject || '—' }}</span>
+              </div>
+              <button
+                type="button"
+                class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                @click="toggleExpanded(a.id)"
+              >
+                <UIcon :name="expandedIds.has(a.id) ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
+                {{ expandedIds.has(a.id) ? 'Hide email' : 'Show email' }}
+              </button>
+              <p
+                v-if="expandedIds.has(a.id)"
+                class="mt-1.5 text-[11px] text-muted-foreground whitespace-pre-wrap break-words border-t border-border/40 pt-1.5"
+              >{{ emailPreview(a)!.body }}</p>
             </div>
 
             <!-- HITL controls: only pending actions are actionable. -->

@@ -83,6 +83,18 @@ async function proposeSendEmail(
   const recipientLabel = to || `contact ${contactId}`;
   const title = `Email to ${recipientLabel}: ${subject}`;
 
+  // Human-readable preview so an approver sees exactly what will go out BEFORE
+  // approving — critical once AI_SEND_EMAIL_DRYRUN=false makes this a real send.
+  const preview = {
+    kind: 'email' as const,
+    to: to || null,
+    contactId: contactId ?? null,
+    subject,
+    heading: payload.heading ?? subject,
+    bodyHtml,
+    cta: payload.cta,
+  };
+
   const actionId = await logAiAction({
     organizationId: ctx.organizationId,
     userId: ctx.userId,
@@ -90,6 +102,7 @@ async function proposeSendEmail(
     status: 'pending',
     title,
     payload,
+    preview,
     entityType: ctx.entityType ?? null,
     entityId: ctx.entityId ?? null,
     sessionId: ctx.sessionId ?? null,
