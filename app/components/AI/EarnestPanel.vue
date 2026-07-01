@@ -230,6 +230,13 @@ const renderMarkdown = (text: string): string => {
 const titleLine = computed(() => (aware.hasEntity.value
 	? `Ask about this ${aware.entityReadable.value}`
 	: 'Earnest assistant'));
+
+// ── Chat ↔ Activity switch ────────────────────────────────────────────────────
+// The Activity tab surfaces the org-wide ai_actions audit log (<AiActivityList>).
+// A lightweight pill switcher (not <UTabs>) is used here because the chat body
+// has a pinned footer input; UTabs' <TabsContent> wrapping would break that
+// flex-col layout. The visual matches the pill design system.
+const activeTab = ref<'chat' | 'activity'>('chat');
 </script>
 
 <template>
@@ -278,8 +285,22 @@ const titleLine = computed(() => (aware.hasEntity.value
 						</div>
 					</div>
 
+					<!-- Chat ↔ Activity switch -->
+					<div class="flex gap-0.5 px-3 py-2 bg-muted/10 border-t border-border/20">
+						<button
+							v-for="t in ([{ key: 'chat', label: 'Chat', icon: 'lucide:message-circle' }, { key: 'activity', label: 'Activity', icon: 'lucide:sparkles' }] as const)"
+							:key="t.key"
+							@click="activeTab = t.key"
+							class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-all flex-1 justify-center"
+							:class="activeTab === t.key ? 'bg-card shadow-sm border border-border/50 text-foreground' : 'text-muted-foreground hover:bg-muted/40'"
+						>
+							<Icon :name="t.icon" class="w-3 h-3" />
+							{{ t.label }}
+						</button>
+					</div>
+
 					<!-- Persona picker -->
-					<div class="flex gap-1 px-3 py-2 bg-muted/20">
+					<div v-if="activeTab === 'chat'" class="flex gap-1 px-3 py-2 bg-muted/20">
 						<button
 							v-for="p in personas"
 							:key="p.value"
@@ -294,7 +315,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 					</div>
 
 					<!-- Token strip -->
-					<div v-if="!tokensUnlimited && usageSummary" class="flex items-center gap-2 px-4 py-1.5 border-t border-border/20">
+					<div v-if="activeTab === 'chat' && !tokensUnlimited && usageSummary" class="flex items-center gap-2 px-4 py-1.5 border-t border-border/20">
 						<UIcon name="i-heroicons-bolt" class="w-3 h-3 text-muted-foreground shrink-0" />
 						<div class="flex-1 h-1 rounded-full bg-muted/40 overflow-hidden">
 							<div class="h-full rounded-full transition-all duration-500" :class="tokensBarClass" :style="{ width: `${tokensUsedPct}%` }" />
@@ -304,8 +325,13 @@ const titleLine = computed(() => (aware.hasEntity.value
 					</div>
 				</div>
 
+				<!-- Activity tab: org-wide AI actions audit log -->
+				<div v-if="activeTab === 'activity'" class="flex-1 overflow-y-auto px-4 py-3">
+					<AiActivityList />
+				</div>
+
 				<!-- Messages -->
-				<div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+				<div v-show="activeTab === 'chat'" ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
 					<div v-if="isLoadingHistory" class="flex items-center justify-center h-full text-xs text-muted-foreground/70 gap-2">
 						<Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Loading conversation…
 					</div>
@@ -415,7 +441,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 				</div>
 
 				<!-- Input -->
-				<div class="border-t border-border/30 p-3 shrink-0">
+				<div v-if="activeTab === 'chat'" class="border-t border-border/30 p-3 shrink-0">
 					<div class="flex items-end gap-2">
 						<textarea
 							v-model="newMessage"
