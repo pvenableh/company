@@ -87,6 +87,7 @@ const documentsTab = ref<'proposals' | 'contracts'>(
 const documentsFloorRef = ref<any>(null);
 const showProposalModal = ref(false);
 const showContractModal = ref(false);
+const showDraftAiModal = ref(false);
 
 watch(documentsTab, (next) => {
   if (floor.value !== 'documents') return;
@@ -520,6 +521,15 @@ const headerAction = computed(() => {
   <div class="apps-page">
     <AppHeader title="Money" app-id="money">
       <template #actions>
+        <Button
+          v-if="floor === 'documents'"
+          variant="outline"
+          size="sm"
+          @click="showDraftAiModal = true"
+        >
+          <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
+          Draft with AI
+        </Button>
         <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
           <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />
           {{ headerAction.label }}
@@ -1099,6 +1109,10 @@ const headerAction = computed(() => {
       />
       <ContractsFormModal
         v-model="showContractModal"
+        @created="onDocumentCreated"
+      />
+      <DraftWithAiSheet
+        v-model="showDraftAiModal"
         @created="onDocumentCreated"
       />
     </LayoutPageContainer>
