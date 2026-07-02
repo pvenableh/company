@@ -2,14 +2,12 @@
 const { params } = useRoute();
 const ticketItems = useDirectusItems('tickets');
 
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is chosen by the global `apps-layout.global.ts` middleware (apps shell
+// vs classic sidebar). We no longer opt out with `layout: false` + our own
+// <NuxtLayout>: that remounted the shell on every detail↔board navigation and
+// blanked the board until refresh. Nuxt now owns the persistent layout.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Ticket Details | Earnest' });
-
-// Apps-mode users get the apps shell so the detail page isn't orphaned.
-// The board now opens a slide-over for quick look — this full page is the
-// escape hatch (and what cold deep-links land on).
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 // Archive any unread notifications for this ticket as soon as the user
 // lands here — click-through is implicit acknowledgement.
@@ -72,7 +70,6 @@ const columns = [
 ];
 </script>
 <template>
-	<NuxtLayout :name="layout">
 	<LayoutPageContainer>
 		<NuxtLink
 			to="/tickets"
@@ -93,6 +90,5 @@ const columns = [
 			<TicketsDetailsNew v-else :element="ticket" :columns="columns" />
 		</div>
 	</LayoutPageContainer>
-	</NuxtLayout>
 </template>
 <style></style>

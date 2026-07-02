@@ -1,5 +1,4 @@
 <template>
-	<NuxtLayout :name="layout">
 	<LayoutPageContainer>
 		<LayoutPageHeader title="Tickets" subtitle="Board">
 			<template #actions>
@@ -11,15 +10,15 @@
 			<TicketsBoard />
 		</div>
 	</LayoutPageContainer>
-	</NuxtLayout>
 </template>
 
 <script setup>
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is chosen by the global `apps-layout.global.ts` middleware — the apps
+// shell for apps-mode users, the classic sidebar otherwise. We used to opt out
+// with `layout: false` and render our own <NuxtLayout :name>, but that remounted
+// the whole shell on every dashboard↔detail navigation, stalling the `out-in`
+// page transition and leaving the board blank until a refresh. Letting Nuxt own
+// the (persistent) layout fixes the blank-screen bug.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Tickets | Earnest' });
-
-// Apps-mode users get the apps shell so the board isn't orphaned from
-// the AppRail. Classic mode keeps the original sidebar.
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 </script>
