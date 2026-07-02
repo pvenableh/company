@@ -28,6 +28,8 @@ import { ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCHEDULE_PROJECT_T
 import { proposeDirectorStep } from '~~/server/utils/llm/tool-proposals';
 import { collectDirectorAgenda, type AINotice, type DirectorSubjectKey } from '~~/server/utils/ai-notices';
 import { buildFinancialSnapshot, type FinancialSnapshot } from '~~/server/utils/financial-snapshot';
+import { buildOpportunityIntel, buildColdEffortIntel, type OpportunityIntel, type ColdEffortIntel } from '~~/server/utils/revenue-intel';
+import { buildClientScorecard, type ClientScorecard } from '~~/server/utils/client-scorecard';
 import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
@@ -99,11 +101,25 @@ export default defineEventHandler(async (event) => {
       ? `the "${subject}" area of the business`
       : 'the organization';
 
-  // Money mode — pull an org financial snapshot to ground a critical analysis.
+  // Money mode — financial snapshot + revenue-opportunity + effort-vs-return intel.
   const isMoney = subject === 'money' || entityType === 'invoices';
+  // Client review — a focused meeting on one client gets a rating scorecard.
+  const isClientReview = entityType === 'clients' && !!entityId;
+
+  const nowD = new Date();
   let finance: FinancialSnapshot | null = null;
+  let opportunity: OpportunityIntel | null = null;
+  let cold: ColdEffortIntel | null = null;
+  let scorecard: ClientScorecard | null = null;
   if (isMoney) {
-    finance = await buildFinancialSnapshot(directus, organizationId, new Date()).catch(() => null);
+    [finance, opportunity, cold] = await Promise.all([
+      buildFinancialSnapshot(directus, organizationId, nowD).catch(() => null),
+      buildOpportunityIntel(directus, organizationId, nowD).catch(() => null),
+      buildColdEffortIntel(directus, organizationId, nowD).catch(() => null),
+    ]);
+  }
+  if (isClientReview) {
+    scorecard = await buildClientScorecard(directus, entityId, organizationId, nowD).catch(() => null);
   }
 
   const systemPrompt = [
@@ -119,7 +135,14 @@ export default defineEventHandler(async (event) => {
       '  TARGETS & MISSING DATA — if the user asks whether they are "on track" (to a quarter, a goal, a number) and the snapshot shows NO revenue target on record, do NOT invent one or give a confident yes/no. State plainly that no target is set, give the run-rate as the factual baseline, and tell them to set a revenue goal so you can measure against it. Likewise, when the snapshot flags data gaps (no expenses logged, no income, no pipeline), name exactly what is missing and what to add (set a goal, log expenses, invoice + collect) — a good analysis of missing data beats a fabricated conclusion.',
       '  Cite real figures from the snapshot below. Never invent numbers. Round to whole dollars. Keep it tight — a few sharp sentences per point, not an essay.',
       '  Write in PLAIN PROSE — no markdown headers, no "#", no "**bold**", no bullet characters. Label the points as "Income:", "Expenses:", "Prediction:", "Verdict:" on their own lines.',
-      '  After the briefing, propose 2-4 concrete steps grounded in the numbers (chase specific overdue AR, cut/renegotiate a named cost, collect or raise revenue).',
+      ...(opportunity ? ['  Opportunity: on its own line, point to where the best money is — name the top revenue clients/service lines and the hottest pipeline from the data, and say plainly where to focus to grow revenue.'] : []),
+      ...(cold && cold.coldLeads.length ? ['  Wasted effort: on its own line, call out that some leads are getting heavy follow-up with no close (name them + the activity counts). Say bluntly whether that effort is worth continuing or is better spent on the opportunities above.'] : []),
+      '  After the briefing, propose 2-4 concrete steps grounded in the numbers (chase specific overdue AR, cut/renegotiate a named cost, collect or raise revenue, or redirect effort off a cold lead).',
+    ] : isClientReview && scorecard ? [
+      `CLIENT RATING REVIEW — you are reviewing "${scorecard.clientName}", which has a computed rating of ${scorecard.rating} (A best, F worst). Explain that rating in plain prose:`,
+      '  Value: their realized revenue + active project value. Effort: how much you are spending on them (tasks + logged activities). Health: are they paying (overdue AR?), active, or gone quiet?',
+      '  Verdict: a candid call. If they are an A/B account, say protect/grow it. If effort is high and return is low (the scorecard FLAG), say plainly you are over-investing and recommend dialing back or converting the effort into paid work.',
+      '  Cite the scorecard figures. Plain prose, no markdown. Then propose 2-4 concrete steps for THIS client (collect AR, book a check-in, convert activity into a proposal, or de-prioritize).',
     ] : [
       'Produce a SHORT, coherent plan of concrete next actions for the scope in question — ideally 2 to 4 steps, never more than 5.',
     ]),
@@ -137,10 +160,17 @@ export default defineEventHandler(async (event) => {
     topic ? `The user specifically wants to focus on: ${topic}` : '',
     '',
     finance ? `${finance.text}\n` : '',
+    opportunity ? `${opportunity.text}\n` : '',
+    cold && cold.text ? `${cold.text}\n` : '',
+    scorecard ? `${scorecard.text}\n` : '',
     'Current items needing attention:',
     contextBlock,
     '',
-    isMoney ? 'Give the critical financial briefing, then draft the steps as tool calls.' : 'Draft the plan now as tool calls.',
+    isMoney
+      ? 'Give the critical financial briefing (including opportunity + wasted-effort lines), then draft the steps as tool calls.'
+      : isClientReview && scorecard
+        ? 'Give the client rating review, then draft the steps as tool calls.'
+        : 'Draft the plan now as tool calls.',
   ].filter(Boolean).join('\n');
 
   // 2. Ask Claude for the plan (multiple tool_use blocks in one turn).
@@ -154,7 +184,7 @@ export default defineEventHandler(async (event) => {
   try {
     round = await provider.chatWithTools(
       [{ role: 'user', content: userMessage }],
-      { systemPrompt, maxTokens: isMoney ? 3500 : 2048, tools: DIRECTOR_TOOLS },
+      { systemPrompt, maxTokens: (isMoney || isClientReview) ? 3500 : 2048, tools: DIRECTOR_TOOLS },
     );
   } catch (err: any) {
     console.error('[ai/director/plan] LLM error:', err?.message);
@@ -211,6 +241,22 @@ export default defineEventHandler(async (event) => {
       outstanding: finance.outstanding,
       recurring: finance.recurring,
       expensesByCategory: finance.expensesByCategory.slice(0, 6),
+      revenueGoals: finance.revenueGoals,
+      coverage: finance.coverage,
+    } : null,
+    opportunity: opportunity ? {
+      topClients: opportunity.topClients,
+      topServiceLines: opportunity.topServiceLines,
+      pipeline: opportunity.pipeline,
+    } : null,
+    cold: cold ? { coldLeads: cold.coldLeads } : null,
+    // Client review: the computed scorecard/rating for the UI.
+    clientRating: scorecard ? {
+      clientName: scorecard.clientName,
+      rating: scorecard.rating,
+      value: scorecard.value,
+      effort: scorecard.effort,
+      health: scorecard.health,
     } : null,
   };
 });

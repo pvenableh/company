@@ -33,11 +33,16 @@ const planIntro = ref('');
 const planId = ref<string | null>(null);
 const steps = ref<Step[]>([]);
 const finance = ref<any | null>(null); // money-mode snapshot metrics
+const opportunity = ref<any | null>(null); // money-mode opportunity intel
+const clientRating = ref<any | null>(null); // focused client-review scorecard
 const topicInput = ref(''); // free-text "raise a topic" steer for the plan
 const mutated = ref(false); // any step executed → refresh page behind on close
 
 const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
 const netClass = (n: number) => (Number(n) >= 0 ? 'text-green-600' : 'text-red-600');
+function ratingClass(r: string): string {
+  return { A: 'bg-green-500/15 text-green-600', B: 'bg-green-500/10 text-green-600', C: 'bg-amber-500/15 text-amber-600', D: 'bg-red-500/10 text-red-600', F: 'bg-red-500/20 text-red-600' }[r] || 'bg-muted text-muted-foreground';
+}
 
 const scopeLabel = computed(() => {
   if (scope.value?.mode === 'entity') return scope.value.label || 'this item';
@@ -45,7 +50,7 @@ const scopeLabel = computed(() => {
 });
 
 const meetingActive = computed(() =>
-  !!activeSubject.value || planning.value || !!planIntro.value || steps.value.length > 0 || !!finance.value,
+  !!activeSubject.value || planning.value || !!planIntro.value || steps.value.length > 0 || !!finance.value || !!clientRating.value,
 );
 
 function raiseTopic() {
@@ -81,6 +86,8 @@ async function loadAgenda() {
   planId.value = null;
   planIntro.value = '';
   finance.value = null;
+  opportunity.value = null;
+  clientRating.value = null;
   try {
     const q: Record<string, string> = { organizationId: selectedOrg.value };
     if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
@@ -107,6 +114,8 @@ async function draftPlan(subject: string) {
   planId.value = null;
   planIntro.value = '';
   finance.value = null;
+  opportunity.value = null;
+  clientRating.value = null;
   try {
     const body: Record<string, any> = { organizationId: selectedOrg.value, subject };
     if (topicInput.value.trim()) body.topic = topicInput.value.trim();
@@ -114,12 +123,14 @@ async function draftPlan(subject: string) {
       body.entityType = scope.value.entityType;
       body.entityId = scope.value.entityId;
     }
-    const res = await $fetch<{ planId: string; intro: string; stepCount: number; finance?: any }>(
+    const res = await $fetch<{ planId: string; intro: string; stepCount: number; finance?: any; opportunity?: any; clientRating?: any }>(
       '/api/ai/director/plan', { method: 'POST', body },
     );
     planId.value = res.planId;
     planIntro.value = res.intro || '';
     finance.value = res.finance || null;
+    opportunity.value = res.opportunity || null;
+    clientRating.value = res.clientRating || null;
     if (res.stepCount > 0) await loadSteps(res.planId);
     else toast.add({ title: 'Nothing to propose', description: 'Earnest had no concrete actions for this area right now.', icon: 'i-lucide-info', color: 'blue' });
   } catch (err: any) {
@@ -280,10 +291,38 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
               <div v-if="meetingActive" class="rounded-2xl border border-border bg-background p-4 space-y-3">
                 <div class="flex items-center gap-2">
                   <EarnestIcon class="w-4 h-4 text-primary" />
-                  <span class="text-sm font-medium">{{ finance ? 'Financial briefing' : 'Proposed plan' }}</span>
+                  <span class="text-sm font-medium">{{ clientRating ? 'Client rating review' : finance ? 'Financial briefing' : 'Proposed plan' }}</span>
                   <span v-if="planning" class="text-xs text-muted-foreground flex items-center gap-1">
-                    <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ finance ? 'analyzing…' : 'drafting…' }}
+                    <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ (finance || clientRating) ? 'analyzing…' : 'drafting…' }}
                   </span>
+                </div>
+
+                <!-- Client review: rating badge + value / effort / health -->
+                <div v-if="clientRating" class="rounded-xl border border-border p-3">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="w-9 h-9 rounded-full flex items-center justify-center text-base font-bold" :class="ratingClass(clientRating.rating)">{{ clientRating.rating }}</span>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium truncate">{{ clientRating.clientName }}</p>
+                      <p class="text-[11px] text-muted-foreground">Earnest's rating for this account</p>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="rounded-lg bg-muted/40 p-2">
+                      <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Value</p>
+                      <p class="text-sm font-semibold">{{ fmtMoney(clientRating.value.revenue) }}</p>
+                      <p class="text-[10px] text-muted-foreground">{{ clientRating.value.activeProjects }} active proj.</p>
+                    </div>
+                    <div class="rounded-lg bg-muted/40 p-2">
+                      <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Effort</p>
+                      <p class="text-sm font-semibold">{{ clientRating.effort.total }}</p>
+                      <p class="text-[10px] text-muted-foreground">touch-points</p>
+                    </div>
+                    <div class="rounded-lg bg-muted/40 p-2">
+                      <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Overdue AR</p>
+                      <p class="text-sm font-semibold" :class="clientRating.health.overdueAR > 0 ? 'text-red-600' : ''">{{ fmtMoney(clientRating.health.overdueAR) }}</p>
+                      <p class="text-[10px] text-muted-foreground">{{ clientRating.health.staleDays != null ? clientRating.health.staleDays + 'd since touch' : 'no activity' }}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Money mode: metrics strip -->
@@ -312,6 +351,23 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                       <span class="font-semibold" :class="netClass(finance.projection.net)">Net {{ fmtMoney(finance.projection.net) }}</span>
                     </p>
                   </div>
+                </div>
+
+                <!-- Money mode: opportunity strip (where the best money is) -->
+                <div v-if="opportunity && (opportunity.topClients.length || opportunity.pipeline.openCount)" class="rounded-xl border border-border p-2.5 space-y-1.5">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><UIcon name="i-lucide-trending-up" class="w-3 h-3" /> Where the money is</p>
+                  <p v-if="opportunity.topClients.length" class="text-xs">
+                    <span class="text-muted-foreground">Top clients:</span>
+                    {{ opportunity.topClients.slice(0, 3).map((c: any) => `${c.name} ${fmtMoney(c.revenue)}`).join(' · ') }}
+                  </p>
+                  <p v-if="opportunity.topServiceLines.length" class="text-xs">
+                    <span class="text-muted-foreground">Best lines:</span>
+                    {{ opportunity.topServiceLines.slice(0, 3).map((s: any) => `${s.name} ${fmtMoney(s.revenue)}`).join(' · ') }}
+                  </p>
+                  <p v-if="opportunity.pipeline.openCount" class="text-xs">
+                    <span class="text-muted-foreground">Pipeline:</span>
+                    {{ opportunity.pipeline.openCount }} open · ~{{ fmtMoney(opportunity.pipeline.weightedValue) }} weighted
+                  </p>
                 </div>
 
                 <p v-if="planIntro && !planning" class="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ planIntro }}</p>
