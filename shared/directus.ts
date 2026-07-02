@@ -4932,6 +4932,8 @@ export interface DirectusUser {
 	app_pref_carddesk_promo_dismissed_at?: string | null;
 	/** @description Content Studio first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
 	app_pref_studio_intro_dismissed_at?: string | null;
+	/** @description Earnest Score / arcade first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
+	app_pref_arcade_intro_dismissed_at?: string | null;
 	/** @description CardDesk: opt in to being found by name/email in the network directory search. */
 	discoverable?: boolean | null;
 	organizations?: OrganizationsDirectusUser[] | string[];

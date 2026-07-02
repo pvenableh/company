@@ -58,6 +58,7 @@ const USER_PREF_FIELDS = [
 	'networking_goal',
 	'app_pref_carddesk_promo_dismissed_at',
 	'app_pref_studio_intro_dismissed_at',
+	'app_pref_arcade_intro_dismissed_at',
 	// Profile tab (/account) — contact + social + preferences.
 	'phone',
 	'cell_phone',

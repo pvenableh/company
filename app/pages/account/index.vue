@@ -23,13 +23,25 @@
 
 				<section v-else-if="section === 'score'" class="max-w-xl space-y-8">
 					<div>
-						<h2 class="account-page__heading">Earnest Score</h2>
+						<div class="flex items-center gap-2 mb-4">
+							<h2 class="account-page__heading mb-0">Earnest Score</h2>
+							<button
+								type="button"
+								class="flex items-center justify-center size-5 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+								aria-label="How the Earnest Score works"
+								@click="arcadeIntro?.open()"
+							>
+								<Icon name="lucide:info" class="size-3.5" />
+							</button>
+						</div>
 						<EarnestProfilePanel />
 					</div>
 					<div>
 						<h2 class="account-page__heading">Quests</h2>
 						<ArcadeQuestBoard />
 					</div>
+
+					<ArcadeIntroModal ref="arcadeIntro" />
 				</section>
 
 				<section v-else-if="section === 'appearance'" class="w-full">
@@ -319,6 +331,10 @@ const initialSection: SectionKey = (() => {
 		: 'profile';
 })();
 const section = ref<SectionKey>(initialSection);
+
+// Arcade / Earnest Score explainer — auto-opens on first visit to the score
+// section (see ArcadeIntroModal), re-openable from the "i" badge in the heading.
+const arcadeIntro = ref<{ open: () => void } | null>(null);
 
 watch(section, (next) => {
 	router.replace({ query: { ...route.query, section: next === 'profile' ? undefined : next } });
