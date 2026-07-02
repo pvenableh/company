@@ -94,7 +94,9 @@ export async function awardUserEP(
 	orgId: string,
 	userId: string,
 	eventType: EPEventType,
+	opts: { createIfMissing?: boolean } = {},
 ): Promise<AwardResult> {
+	const { createIfMissing = true } = opts;
 	const award = EP_AWARDS[eventType];
 	if (!award) {
 		throw new Error(`Unknown EP event: ${eventType}`);
@@ -117,6 +119,22 @@ export async function awardUserEP(
 	)) as any[];
 
 	const existing = rows[0] ?? null;
+
+	// When we can't attribute a NEW row to the acting user (e.g. an admin-token
+	// caller awarding EP to a contract's owner), skip rather than create a row
+	// whose `user_created` would resolve to the admin. No-op award result.
+	if (!existing && !createIfMissing) {
+		return {
+			ep: 0,
+			dimension: award.dimension,
+			reason: award.reason,
+			totalEP: 0,
+			level: 1,
+			levelTitle: levelTitle(1),
+			leveledUp: false,
+			newBadges: [],
+		};
+	}
 
 	// ── Streak roll ──
 	const lastActive = existing?.last_activity_date ?? null;

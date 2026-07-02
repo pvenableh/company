@@ -61,6 +61,7 @@ function conveneMeeting() {
 
 const config = useRuntimeConfig();
 const { selectedOrg } = useOrganization();
+const { awardEvent } = useArcadeAwards();
 
 const projectItemsApi = useDirectusItems('projects');
 const taskItemsApi = useDirectusItems('tasks');
@@ -212,6 +213,10 @@ async function patchProject(fields: Record<string, any>) {
 		// (making the client name disappear). The optimistic scalar assign
 		// above is already the correct new state.
 		await projectItemsApi.update(project.value.id, fields);
+		// Arcade reward — only on a genuine transition into completed.
+		if (fields.status === 'completed' && prev.status !== 'completed') {
+			awardEvent('project_completed');
+		}
 	} catch (e: any) {
 		Object.assign(project.value, prev);
 		emit('loaded', project.value);

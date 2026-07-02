@@ -21,9 +21,15 @@
 					<AccountPasswordRequest />
 				</section>
 
-				<section v-else-if="section === 'score'" class="max-w-xl">
-					<h2 class="account-page__heading">Earnest Score</h2>
-					<EarnestProfilePanel />
+				<section v-else-if="section === 'score'" class="max-w-xl space-y-8">
+					<div>
+						<h2 class="account-page__heading">Earnest Score</h2>
+						<EarnestProfilePanel />
+					</div>
+					<div>
+						<h2 class="account-page__heading">Quests</h2>
+						<ArcadeQuestBoard />
+					</div>
 				</section>
 
 				<section v-else-if="section === 'appearance'" class="w-full">

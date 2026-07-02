@@ -33,7 +33,9 @@ export type ArcadeEvent =
 	| 'invoice_sent'
 	| 'invoice_paid_on_time'
 	| 'meeting_held'
-	| 'social_post';
+	| 'social_post'
+	| 'daily_quest'
+	| 'weekly_quest';
 
 const EVENT_META: Record<ArcadeEvent, EventMeta> = {
 	task_completed: { ep: 3, label: 'Task done', icon: '✅', dimension: 'consistency' },
@@ -49,6 +51,8 @@ const EVENT_META: Record<ArcadeEvent, EventMeta> = {
 	invoice_paid_on_time: { ep: 15, label: 'Paid!', icon: '💰', dimension: 'finance' },
 	meeting_held: { ep: 5, label: 'Meeting held', icon: '🎥', dimension: 'communication' },
 	social_post: { ep: 3, label: 'Post published', icon: '📣', dimension: 'growth' },
+	daily_quest: { ep: 15, label: 'Daily quest!', icon: '🎯', dimension: 'consistency' },
+	weekly_quest: { ep: 40, label: 'Weekly quest!', icon: '🏅', dimension: 'consistency' },
 };
 
 export function useArcadeAwards() {

@@ -34,18 +34,24 @@
 			No earnest scores yet. Scores are calculated when team members visit their dashboard.
 		</div>
 
-		<div v-else class="space-y-2">
+		<template v-else>
+			<!-- Podium — top 3 -->
+			<ArcadePodium
+				:scores="scores"
+				:metric-key="activePeriod === 'all' ? 'currentScore' : 'totalEP'"
+				class="mb-2"
+			/>
+
+			<!-- The rest, ranked 4+ -->
+			<div v-if="rest.length" class="space-y-2 mt-4">
 			<div
-				v-for="(member, index) in scores"
+				v-for="(member, i) in rest"
 				:key="member.userId"
-				class="flex items-center gap-3 p-3 rounded-xl border transition-colors"
-				:class="index < 3 ? 'border-primary/20 bg-primary/5' : 'border-border'"
+				class="flex items-center gap-3 p-3 rounded-xl border border-border transition-colors"
 			>
 				<!-- Rank -->
-				<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-					:class="index === 0 ? 'bg-warning/20 text-warning' : index === 1 ? 'bg-gray-400/20 text-gray-500' : index === 2 ? 'bg-warning/20 text-warning' : 'bg-muted/50 text-muted-foreground'"
-				>
-					<span class="text-xs font-bold">{{ index + 1 }}</span>
+				<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-muted/50 text-muted-foreground">
+					<span class="text-xs font-bold">{{ i + 4 }}</span>
 				</div>
 
 				<!-- Avatar + Name -->
@@ -75,6 +81,7 @@
 				</div>
 			</div>
 		</div>
+		</template>
 	</div>
 </template>
 
@@ -84,6 +91,9 @@ const config = useRuntimeConfig();
 
 const loading = ref(false);
 const activePeriod = ref<'all' | 'month' | 'week'>('all');
+
+// Top 3 render on the podium; everyone else falls into the ranked list below.
+const rest = computed(() => scores.value.slice(3));
 
 const periods = [
 	{ label: 'All Time', value: 'all' as const },

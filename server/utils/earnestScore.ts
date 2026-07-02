@@ -41,6 +41,7 @@ export const EP_AWARDS: Record<string, EPAward> = {
 	card_scan:            { dimension: 'growth',        ep: 5,  reason: 'CardDesk scan' },
 	contact_added:        { dimension: 'growth',        ep: 10, reason: 'Contact added to CRM' },
 	deal_won:             { dimension: 'growth',        ep: 20, reason: 'Deal won' },
+	contract_signed:      { dimension: 'growth',        ep: 25, reason: 'Contract signed' },
 	social_post:          { dimension: 'growth',        ep: 3,  reason: 'Social post published' },
 	lead_stage_advanced:  { dimension: 'growth',        ep: 5,  reason: 'Lead advanced in pipeline' },
 	follow_up_completed:  { dimension: 'growth',        ep: 5,  reason: 'Follow-up completed' },
@@ -49,6 +50,11 @@ export const EP_AWARDS: Record<string, EPAward> = {
 	// Consistency — showing up
 	daily_login:          { dimension: 'consistency',   ep: 3,  reason: 'Daily login' },
 	task_completed:       { dimension: 'consistency',   ep: 3,  reason: 'Task completed' },
+
+	// Quest bonuses — claimed once per period from the arcade quest board.
+	// The underlying actions already awarded EP; this is the completion bonus.
+	daily_quest:          { dimension: 'consistency',   ep: 15, reason: 'Daily quest complete' },
+	weekly_quest:         { dimension: 'consistency',   ep: 40, reason: 'Weekly quest complete' },
 };
 
 export type EPEventType = keyof typeof EP_AWARDS;
