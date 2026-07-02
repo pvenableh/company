@@ -415,8 +415,10 @@ onMounted(async () => {
 			</div>
 		</div>
 
-		<!-- Picture Jam — blast blocks to uncover a quiet contact, then reconnect -->
+		<!-- Picture Jam — blast blocks to uncover a quiet contact, then reconnect.
+		     Temporarily hidden (v-if="false") per request until it's ready to ship. -->
 		<button
+			v-if="false"
 			type="button"
 			class="w-full flex items-center gap-3 mb-6 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left"
 			@click="jamOpen = true"
