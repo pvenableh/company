@@ -73,6 +73,35 @@
 						<Switch :model-value="isDark" @click.stop="toggleDark()" />
 					</div>
 
+					<!-- Earnest mascot — the reactive logo. Disabled here when the
+					     global flag is off or the OS asks for reduced motion. -->
+					<div
+						class="ios-card flex items-center justify-between gap-4 p-4 mb-6"
+						:class="mascotForcedOff ? 'opacity-60' : 'cursor-pointer'"
+						@click="toggleMascot()"
+					>
+						<div class="flex items-center gap-3 min-w-0">
+							<span class="flex items-center justify-center size-9 rounded-lg bg-primary/10 text-foreground shrink-0">
+								<EarnestMascot v-if="mascot.enabled.value" :size="24" />
+								<EarnestIcon v-else class="size-4 text-primary" />
+							</span>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold">Earnest reactions</p>
+								<p class="text-xs text-muted-foreground">
+									Let the Earnest logo react with a small animation when you finish
+									work or the assistant is thinking.
+									<template v-if="mascot.reducedMotion.value"> Off because your system prefers reduced motion.</template>
+									<template v-else-if="!mascot.flagEnabled.value"> Currently turned off across the app.</template>
+								</p>
+							</div>
+						</div>
+						<Switch
+							:model-value="mascot.enabled.value"
+							:disabled="mascotForcedOff"
+							@click.stop="toggleMascot()"
+						/>
+					</div>
+
 					<!-- Theme + Typography (full width, modernized grid) -->
 					<ThemeSwitcher />
 
@@ -434,6 +463,15 @@ watch(section, (s) => {
 // ── Appearance / dark mode ──────────────────────────────────────────────────
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
+
+// Earnest mascot per-user preference. Forced off (and the switch disabled) when
+// the global flag is off or the system prefers reduced motion.
+const mascot = useEarnestMascot();
+const mascotForcedOff = computed(() => !mascot.flagEnabled.value || mascot.reducedMotion.value);
+function toggleMascot() {
+	if (mascotForcedOff.value) return;
+	mascot.userEnabled.value = !mascot.userEnabled.value;
+}
 function toggleDark() {
 	// Read the live value at click-time and flip it, so the toggle works
 	// even when reka-ui's Switch emits the wrong boolean on its first

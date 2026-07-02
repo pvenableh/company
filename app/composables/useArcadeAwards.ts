@@ -12,6 +12,7 @@
  * EVENT_META roughly in sync with EP_AWARDS for the optimistic pop.
  */
 import type { ArcadeDimension } from '~/composables/useArcade';
+import type { MarkGesture } from '~/components/Earnest/Mark.vue';
 
 interface EventMeta {
 	ep: number;
@@ -19,6 +20,26 @@ interface EventMeta {
 	icon: string;
 	dimension: ArcadeDimension;
 }
+
+// Which mascot gesture each completion plays. Big deliverables clap; the rest
+// get a thumbs-up. Level-ups (detected from the server award) always celebrate.
+const EVENT_GESTURE: Record<ArcadeEvent, MarkGesture> = {
+	task_completed: 'thumbsup',
+	ticket_closed: 'clap',
+	project_completed: 'clap',
+	project_on_time: 'clap',
+	deal_won: 'clap',
+	lead_qualified: 'thumbsup',
+	lead_stage_advanced: 'thumbsup',
+	follow_up_completed: 'thumbsup',
+	contact_added: 'thumbsup',
+	invoice_sent: 'thumbsup',
+	invoice_paid_on_time: 'clap',
+	meeting_held: 'thumbsup',
+	social_post: 'thumbsup',
+	daily_quest: 'celebrate',
+	weekly_quest: 'celebrate',
+};
 
 export type ArcadeEvent =
 	| 'task_completed'
@@ -57,6 +78,7 @@ const EVENT_META: Record<ArcadeEvent, EventMeta> = {
 
 export function useArcadeAwards() {
 	const arcade = useArcade();
+	const mascot = useEarnestMascot();
 	const { selectedOrg } = useOrganization();
 
 	/**
@@ -85,6 +107,9 @@ export function useArcadeAwards() {
 			});
 		}
 
+		// Earnest reacts to the win (no-op unless the mascot is enabled + mounted).
+		mascot.react(EVENT_GESTURE[eventType]);
+
 		const orgId = selectedOrg.value;
 		if (!orgId) return;
 
@@ -100,6 +125,8 @@ export function useArcadeAwards() {
 			}
 			if (data.leveledUp && data.level && data.levelTitle) {
 				window.setTimeout(() => arcade.celebrateLevelUp(data.level, data.levelTitle), 650);
+				// a level-up trumps the per-event gesture — Earnest celebrates.
+				mascot.react('celebrate');
 			}
 		} catch (e) {
 			// Scoring is best-effort — the pop already fired, so a failed award

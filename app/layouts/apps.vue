@@ -129,6 +129,12 @@
 			<ArcadeRewardLayer />
 		</ClientOnly>
 
+		<!-- Earnest reacts globally: the logo mark pops in near the +EP coin on a
+		     completion, plays the gesture, and fades. Self-gated + client-only. -->
+		<ClientOnly>
+			<EarnestMascotReactionLayer />
+		</ClientOnly>
+
 		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
 	</div>
 </template>

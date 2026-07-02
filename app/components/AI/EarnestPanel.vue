@@ -45,6 +45,10 @@ const { usageSummary, refresh: refreshTokenUsage } = useAITokens();
 const { canAccess } = useOrgRole();
 const { pendingCount: aiPendingCount, refresh: refreshPendingActions } = useAiPendingActions();
 
+// Earnest's own face reacts: the "…" typing state while he streams a reply.
+const mascot = useEarnestMascot();
+watch(isStreaming, (streaming) => mascot.react(streaming ? 'think' : 'idle'));
+
 // ── Compositor-driven enter/leave (no Vue <Transition>) ──────────────────────
 const SPRING = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
 const ANIM_MS = 360;
@@ -261,8 +265,11 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 				<div class="border-b border-border/30 shrink-0">
 					<div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-violet-500/5">
 						<div class="flex items-center gap-2.5 min-w-0">
-							<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-								<EarnestIcon class="w-4 h-4 text-primary" />
+							<!-- No background circle — the mark sits on its own. text-foreground
+							     keeps the Earnest brand ink instead of the theme accent. -->
+							<div class="w-8 h-8 flex items-center justify-center shrink-0 text-foreground">
+								<EarnestMascot v-if="mascot.enabled.value" :size="30" />
+								<EarnestIcon v-else class="w-5 h-5 text-primary" />
 							</div>
 							<div class="min-w-0">
 								<h2 class="text-sm font-bold text-foreground truncate">{{ titleLine }}</h2>
@@ -348,8 +355,8 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 					<div v-else-if="!messages.length && !isStreaming" class="flex flex-col h-full">
 						<AIAwarenessChip :items="aware.knowledge.value" @toggle="aware.toggle" />
 						<div class="flex-1 flex flex-col items-center justify-center text-center px-2 py-6">
-							<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-								<EarnestIcon class="w-6 h-6 text-primary" />
+							<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-foreground">
+								<EarnestIcon class="w-6 h-6" />
 							</div>
 							<p class="text-sm font-medium text-foreground mb-1">{{ activePersona.label }}</p>
 							<p class="text-xs text-muted-foreground mb-4 max-w-[260px]">{{ activePersona.description }}</p>
