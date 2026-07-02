@@ -121,7 +121,7 @@ function fmtDue(d: string | null | undefined) {
 		</div>
 
 		<!-- Carousel -->
-		<div v-else class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-thin">
+		<div v-else class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
 			<button
 				v-for="project in projects"
 				:key="project.id"
@@ -156,8 +156,3 @@ function fmtDue(d: string | null | undefined) {
 		</div>
 	</div>
 </template>
-
-<style scoped>
-.scrollbar-thin::-webkit-scrollbar { height: 4px; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-</style>
