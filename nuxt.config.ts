@@ -15,26 +15,68 @@ const isProduction = process.env.NODE_ENV === 'production';
 // itself on every push. `git describe --long` gives us "v2.0-686-g12b6e2e7"
 // → "2.0.686".
 //
-// Falls back to package.json when git/tags aren't reachable (e.g. a shallow
-// clone with no tags). On Vercel the `prebuild` script unshallows + fetches
-// tags so the count is correct; package.json is just the safety net.
-function resolveAppVersion(): string {
+// IMPORTANT (why this is self-sufficient): Vercel ships a *shallow* clone
+// without tags, so a bare `git describe` fails there and we'd fall back to the
+// static package.json version on every deploy — the number would never move.
+// The tag-fetch/unshallow used to live only in the `prebuild` npm hook, but
+// that hook does NOT run when Vercel's framework preset invokes `nuxt build`
+// directly (only when the build command is literally `npm/pnpm run build`).
+// So we deepen the clone + fetch tags *here*, inside config eval, which always
+// runs during the build. Everything is best-effort and wrapped — a broken git
+// env can never fail the build, it just falls through to package.json.
+function tryGit(cmd: string): string | null {
 	try {
-		const desc = execSync("git describe --tags --long --match 'v[0-9]*' --exclude '*archive*'", {
-			stdio: ['ignore', 'pipe', 'ignore'],
-		})
+		return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000 })
 			.toString()
 			.trim();
-		// "v2.0-686-g12b6e2e7" or "v2.1.0-3-gabc1234" → major.minor.count
-		const m = desc.match(/^v?(\d+)\.(\d+)(?:\.\d+)?-(\d+)-g[0-9a-f]+$/);
-		if (m) return `${m[1]}.${m[2]}.${m[3]}`;
 	} catch {
-		// no git, or shallow clone without the tag in history — fall back below
+		return null;
 	}
+}
+
+const DESCRIBE = "git describe --tags --long --match 'v[0-9]*' --exclude '*archive*'";
+
+function parseDescribe(desc: string | null): string | null {
+	if (!desc) return null;
+	// "v2.0-686-g12b6e2e7" or "v2.1.0-3-gabc1234" → major.minor.count
+	const m = desc.match(/^v?(\d+)\.(\d+)(?:\.\d+)?-(\d+)-g[0-9a-f]+$/);
+	return m ? `${m[1]}.${m[2]}.${m[3]}` : null;
+}
+
+function resolveAppVersion(): string {
+	// 1. Explicit override always wins (CI / manual lever / Vercel env var).
+	const envVer = process.env.NUXT_PUBLIC_APP_VERSION?.trim();
+	if (envVer) return envVer;
+
+	// 2. Fast path: local dev or an already-deep clone — describe as-is.
+	let v = parseDescribe(tryGit(DESCRIBE));
+	if (v) return v;
+
+	// 3. Deepen the clone + fetch tags, then retry. `--unshallow` errors on a
+	//    complete repo (ignored); the depth fetch covers partial clones.
+	tryGit('git fetch --tags --unshallow --quiet');
+	tryGit('git fetch --tags --depth=2147483647 --quiet');
+	v = parseDescribe(tryGit(DESCRIBE));
+	if (v) return v;
+
+	// 4. Nearest tag + counted commits, in case `--long` output was unusual.
+	const tag = tryGit("git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude '*archive*'");
+	if (tag) {
+		const tm = tag.match(/^v?(\d+)\.(\d+)/);
+		const count = tryGit(`git rev-list --count ${tag}..HEAD`);
+		if (tm && count && /^\d+$/.test(count)) return `${tm[1]}.${tm[2]}.${count}`;
+	}
+
+	// 5. Static fallback — the number won't climb, but the buildId (commit SHA)
+	//    still drives the update toast. Warn loudly so a broken build env is
+	//    obvious in the deploy logs.
+	console.warn(`[version] git describe unavailable — falling back to package.json (${pkgVersion})`);
 	return pkgVersion;
 }
 
 const appVersion = resolveAppVersion();
+// Surface the resolved version in build/deploy logs for at-a-glance sanity.
+console.log(`[version] app version resolved to ${appVersion}`);
 
 export default defineNuxtConfig({
 	ssr: true,
