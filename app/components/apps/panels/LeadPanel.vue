@@ -14,9 +14,25 @@ defineEmits<{ (e: 'close'): void }>();
 
 const lead = ref<any | null>(null);
 
+// The wrapped LeadWorkspace runs in `compact` mode and deliberately skips
+// registering AI entity context (it assumes the panel parent owns it) — so the
+// panel does it here, otherwise Earnest has no awareness of the open lead.
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
+
 function onLoaded(l: any) {
   lead.value = l;
+  if (l?.id) {
+    const c = l.related_contact;
+    const name = c && typeof c === 'object'
+      ? [c.first_name, c.last_name].filter(Boolean).join(' ') || c.company
+      : '';
+    setEntity('lead', String(l.id), name || 'Lead');
+  }
 }
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
+});
 
 const title = computed(() => {
   const c = lead.value?.related_contact;

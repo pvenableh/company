@@ -16,6 +16,10 @@ const emit = defineEmits<{ (e: 'close'): void }>();
 
 const contactItemsApi = useDirectusItems('contacts');
 const { selectedOrg } = useOrganization();
+// Register this contact as the AI panel's current entity so Earnest is aware of
+// who you're viewing. The server has a `contact` context builder; we just have
+// to tell the panel which contact is open (and drop it when the slide-over closes).
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 const contact = ref<any | null>(null);
 const loading = ref(false);
@@ -95,6 +99,7 @@ watch(
 				contact.value = null;
 			} else {
 				contact.value = fetched;
+				setEntity('contact', String(id), title.value);
 			}
 		} catch (err: any) {
 			error.value = err?.message || 'Failed to load contact';
@@ -104,6 +109,12 @@ watch(
 	},
 	{ immediate: true },
 );
+
+// Drop the entity context when this slide-over closes — but only if it's still
+// pointing at us (a panel pushed on top may have taken over the context).
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

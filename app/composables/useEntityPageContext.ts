@@ -59,6 +59,18 @@ export function useEntityPageContext() {
     _sidebarOpen.value = false;
   };
 
+  // Like clearEntity but leaves the panel-open state alone. Used by slide-over
+  // panels (contact/lead/etc.) that register entity context while open: closing
+  // the slide-over should drop the entity context WITHOUT also closing the
+  // Earnest AI panel the user may have deliberately opened.
+  const resetEntityContext = () => {
+    _entityType.value = null;
+    _entityId.value = null;
+    _entityLabel.value = '';
+    _entityPrompts.value = [];
+    _entitySurface.value = null;
+  };
+
   const toggleSidebar = () => {
     _sidebarOpen.value = !_sidebarOpen.value;
   };
@@ -83,6 +95,7 @@ export function useEntityPageContext() {
     isOnEntityPage,
     setEntity,
     clearEntity,
+    resetEntityContext,
     toggleSidebar,
     openSidebar,
     closeSidebar,
