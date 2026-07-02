@@ -128,9 +128,12 @@ async function onEditFormSave(payload: any) {
   try {
     const updated = await updateInvoice(invoice.value.id, { ...payload, status: editStatus.value });
     toast.add({ title: 'Invoice updated', color: 'green' });
-    // Arcade reward — getting paid is a money moment.
+    // Arcade reward — getting paid is a money moment. Also reward sending an
+    // invoice (billing discipline), each only on a genuine status transition.
     if (editStatus.value === 'paid' && prevStatus !== 'paid') {
       awardEvent('invoice_paid_on_time', { amount: Number(updated?.total_amount || invoice.value?.total_amount || 0) || undefined });
+    } else if (editStatus.value === 'sent' && prevStatus !== 'sent') {
+      awardEvent('invoice_sent');
     }
     onInvoiceUpdated(updated);
     editMode.value = false;

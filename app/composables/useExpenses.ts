@@ -35,6 +35,7 @@ export const useExpenses = () => {
 	const { user } = useDirectusAuth();
 	const { selectedOrg } = useOrganization();
 	const expenseItems = useDirectusItems('expenses');
+	const { awardEvent } = useArcadeAwards();
 
 	/** Load expenses from Directus for the current org. */
 	const load = async (params?: {
@@ -118,6 +119,8 @@ export const useExpenses = () => {
 
 		const expense = { ...record, date_created: record?.date_created || new Date().toISOString() } as Expense;
 		expenses.value.unshift(expense);
+		// Arcade reward — logging an expense is finance discipline.
+		if (record?.id) awardEvent('expense_logged');
 		return expense;
 	};
 

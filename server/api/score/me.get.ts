@@ -31,11 +31,29 @@ export default defineEventHandler(async (event) => {
 			})
 		) as any[];
 
+		// Today's EP — summed from earnest_history rows dated today so the header
+		// counter can lead with "earned today" and show the running total below.
+		const today = new Date().toISOString().split('T')[0];
+		let todayEp = 0;
+		try {
+			const todays = await directus.request(
+				readItems('earnest_history', {
+					filter: { organization: { _eq: orgId }, date: { _eq: today } },
+					fields: ['ep_earned'],
+					limit: -1,
+				})
+			) as any[];
+			todayEp = todays.reduce((sum, r) => sum + (Number(r?.ep_earned) || 0), 0);
+		} catch {
+			/* history is best-effort — fall back to 0 today */
+		}
+
 		if (scores.length === 0) {
 			// No score yet — return defaults
 			return {
 				data: {
 					total_ep: 0,
+					today_ep: 0,
 					level: 1,
 					current_score: 0,
 					streak: 0,
@@ -48,7 +66,7 @@ export default defineEventHandler(async (event) => {
 			};
 		}
 
-		return { data: scores[0] };
+		return { data: { ...scores[0], today_ep: todayEp } };
 	} catch (error: any) {
 		console.error('[score/me] Error:', error);
 		throw createError({

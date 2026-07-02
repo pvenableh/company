@@ -10,6 +10,7 @@
  * the caller belongs to before delegating the insert to the admin client.
  */
 import { readItem, createItem } from '@directus/sdk';
+import { awardUserEP } from '~~/server/utils/earnestScoreUser';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 
 interface CreateMessageBody {
@@ -55,6 +56,12 @@ export default defineEventHandler(async (event) => {
       user_created: userId,
     }),
   );
+
+  // Arcade / Earnest Score — silent, fire-and-forget. Only UPDATE the acting
+  // user's existing score row (createIfMissing: false) since we're on the admin
+  // token here and a new row would mis-attribute user_created.
+  awardUserEP(directus, channel.organization, userId, 'message_sent', { createIfMissing: false })
+    .catch((e) => console.warn('[messages] Failed to award EP:', e));
 
   return created;
 });

@@ -11,6 +11,7 @@ const emit = defineEmits<{ (e: 'paid'): void }>();
 
 const saving = ref(false);
 const toast = useToast();
+const { awardEvent } = useArcadeAwards();
 
 async function markPaid() {
 	if (saving.value) return;
@@ -25,6 +26,8 @@ async function markPaid() {
 				note: 'Marked paid from Command Center',
 			},
 		});
+		// Arcade reward — getting paid is a money moment. Mirrors InvoiceWorkspace.
+		awardEvent('invoice_paid_on_time', { amount: Number(props.amount) || undefined });
 		emit('paid');
 	} catch (err: any) {
 		console.error('[PriorityActionInvoicePaid] mark paid failed:', err);

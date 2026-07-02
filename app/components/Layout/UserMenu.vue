@@ -15,17 +15,50 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getToursForRoute, walkthroughTours } from '~/utils/walkthrough-tours';
 
 const router = useRouter();
+const route = useRoute();
 const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
 const { isAppsMode, setMode } = useAppsMode();
 const { open: openMyCard } = useMyCard();
 const { socialPublishingEnabled } = useSocialPublishing();
+
+// ── Help & guides (relocated from the header WalkthroughHelpMenu) ──────────
+const { startTour, isTourCompleted } = useWalkthrough();
+const { currentLayout } = useWalkthroughLayout();
+const { openReportModal } = useReportIssue();
+
+const FALLBACK_TOUR_BY_LAYOUT: Record<'classic' | 'apps' | 'portal', string> = {
+	classic: 'navigation-intro',
+	apps: 'apps-shell-intro',
+	portal: 'portal-welcome',
+};
+
+// Tours relevant to the current page, plus the shell's fallback intro so
+// there's always at least one guide to start.
+const availableTours = computed(() => {
+	const layout = currentLayout.value;
+	const tours = getToursForRoute(route.path, layout);
+	const fallback = walkthroughTours.find((t) => t.id === FALLBACK_TOUR_BY_LAYOUT[layout]);
+	if (fallback && !tours.some((t) => t.id === fallback.id)) tours.push(fallback);
+	return tours;
+});
+
+function handleStartTour(tourId: string) {
+	setTimeout(() => startTour(tourId), 150);
+}
+function handleReport(type: 'bug' | 'feature' | 'question' | 'feedback') {
+	setTimeout(() => openReportModal(type), 120);
+}
 
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
@@ -141,10 +174,53 @@ function handleLogout() {
 				<Icon name="lucide:message-square" class="size-4 mr-2 shrink-0" />
 				<span>Social inbox</span>
 			</DropdownMenuItem>
-			<DropdownMenuItem @select="goTo('/support')">
-				<Icon name="lucide:inbox" class="size-4 mr-2 shrink-0" />
-				<span>My reports</span>
-			</DropdownMenuItem>
+			<DropdownMenuSub>
+				<DropdownMenuSubTrigger>
+					<Icon name="lucide:circle-help" class="size-4 mr-2 shrink-0" />
+					<span>Help &amp; guides</span>
+				</DropdownMenuSubTrigger>
+				<DropdownMenuSubContent class="w-56">
+					<DropdownMenuLabel class="text-[10px] uppercase tracking-wider text-muted-foreground">
+						Guided tours
+					</DropdownMenuLabel>
+					<DropdownMenuItem
+						v-for="tour in availableTours"
+						:key="tour.id"
+						@select="handleStartTour(tour.id)"
+					>
+						<Icon
+							:name="isTourCompleted(tour.id) ? 'lucide:check' : (tour.icon || 'lucide:book-open')"
+							class="size-4 mr-2 shrink-0"
+							:class="isTourCompleted(tour.id) ? 'text-success' : ''"
+						/>
+						<span class="truncate">{{ tour.title }}</span>
+					</DropdownMenuItem>
+					<DropdownMenuItem v-if="availableTours.length === 0" disabled>
+						<span class="text-xs text-muted-foreground">No guides for this page</span>
+					</DropdownMenuItem>
+
+					<DropdownMenuSeparator />
+					<DropdownMenuLabel class="text-[10px] uppercase tracking-wider text-muted-foreground">
+						Help &amp; feedback
+					</DropdownMenuLabel>
+					<DropdownMenuItem @select="handleReport('bug')">
+						<Icon name="lucide:bug" class="size-4 mr-2 shrink-0" />
+						<span>Report a bug</span>
+					</DropdownMenuItem>
+					<DropdownMenuItem @select="handleReport('feature')">
+						<Icon name="lucide:sparkles" class="size-4 mr-2 shrink-0" />
+						<span>Request a feature</span>
+					</DropdownMenuItem>
+					<DropdownMenuItem @select="handleReport('feedback')">
+						<Icon name="lucide:message-circle" class="size-4 mr-2 shrink-0" />
+						<span>Send feedback</span>
+					</DropdownMenuItem>
+					<DropdownMenuItem @select="goTo('/support')">
+						<Icon name="lucide:inbox" class="size-4 mr-2 shrink-0" />
+						<span>My reports</span>
+					</DropdownMenuItem>
+				</DropdownMenuSubContent>
+			</DropdownMenuSub>
 
 			<DropdownMenuSeparator />
 

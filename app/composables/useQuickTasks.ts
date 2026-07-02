@@ -5,7 +5,7 @@
 
 export type TaskSchedule = 'today' | 'this_week' | 'later' | 'unscheduled';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type TaskCategory = 'quick' | 'ticket' | 'project' | 'event' | 'channel' | 'team';
+export type TaskCategory = 'quick' | 'follow_up' | 'ticket' | 'project' | 'event' | 'channel' | 'team';
 
 export interface TaskAssignee {
 	id: string;
@@ -315,8 +315,9 @@ export const useQuickTasks = () => {
 
 		// Arcade reward — only on a genuine transition into completed (the
 		// try/catch above reverts task.completed on failure, so this is safe).
+		// Follow-up tasks earn the growth-flavoured follow_up_completed instead.
 		if (task.completed && !wasCompleted) {
-			awardEvent('task_completed');
+			awardEvent(task.category === 'follow_up' ? 'follow_up_completed' : 'task_completed');
 		}
 
 		// Generate motivational message on completion

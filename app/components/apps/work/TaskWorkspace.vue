@@ -30,6 +30,15 @@ const toast = useToast();
 const taskItems = useDirectusItems('tasks');
 const userItems = useDirectusItems('directus_users');
 const { getStatusBadgeClasses } = useStatusStyle();
+const { awardEvent } = useArcadeAwards();
+
+// Task type options a user can set. Linked categories (ticket/project/…) are
+// derived from associations and aren't offered here; this is for standalone
+// tasks — a plain task vs. a CRM follow-up (which earns growth EP on completion).
+const typeOptions = [
+  { value: 'quick', label: 'Task' },
+  { value: 'follow_up', label: 'Follow-up' },
+];
 
 const task = ref<any | null>(null);
 const loading = ref(true);
@@ -143,13 +152,19 @@ function saveField(field: string, value: any) {
   patchTask({ [field]: value });
 }
 
-function onStatusChange(newStatus: string) {
+async function onStatusChange(newStatus: string) {
   if (!task.value) return;
+  const wasCompleted = task.value.status === 'completed';
   task.value.status = newStatus;
-  patchTask({
+  await patchTask({
     status: newStatus,
     date_completed: newStatus === 'completed' ? new Date().toISOString() : null,
   });
+  // Arcade reward — only on a genuine, persisted transition into completed
+  // (patchTask reverts task.status on failure). Follow-ups earn growth EP.
+  if (task.value?.status === 'completed' && !wasCompleted) {
+    awardEvent(task.value.category === 'follow_up' ? 'follow_up_completed' : 'task_completed');
+  }
 }
 
 function onAssigneeChange(newId: string | null) {
@@ -256,6 +271,20 @@ function openProject() {
             <option value="new">To Do</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Done</option>
+          </select>
+        </div>
+
+        <!-- Type — only offered for standalone tasks (not ticket/project/etc.
+             which derive their category from an association). Marking a task as
+             a Follow-up makes completing it earn CRM/growth EP. -->
+        <div v-if="!task.category || task.category === 'quick' || task.category === 'follow_up'" class="flex items-center gap-3">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Type</span>
+          <select
+            :value="task.category || 'quick'"
+            class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
+            @change="saveField('category', ($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="t in typeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
           </select>
         </div>
 

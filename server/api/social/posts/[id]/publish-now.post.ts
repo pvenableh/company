@@ -8,9 +8,12 @@ import { publishSocialPost } from '~~/server/utils/social-publish'
 import { getSocialPostById } from '~~/server/utils/social-directus'
 import { requireSocialOrg } from '~~/server/utils/social-tenancy'
 import { isSocialPublishingEnabled } from '~~/server/utils/social-publishing'
+import { awardUserEP } from '~~/server/utils/earnestScoreUser'
 
 export default defineEventHandler(async (event) => {
   const { organizationId } = await requireSocialOrg(event)
+  const session = await requireUserSession(event)
+  const userId = (session as any).user?.id as string | undefined
 
   // Kill-switch: external publishing is disabled until the Meta/LinkedIn
   // app credentials are approved. Studio + manual planning stay available.
@@ -37,5 +40,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const outcome = await publishSocialPost(id)
+
+  // Arcade / Earnest Score — fire-and-forget growth EP for publishing. Admin
+  // token here, so only UPDATE the publisher's existing row (no mis-attribution).
+  if (userId) {
+    awardUserEP(getTypedDirectus(), organizationId, userId, 'social_post', { createIfMissing: false })
+      .catch((e) => console.warn('[social/publish-now] Failed to award EP:', e))
+  }
+
   return { data: outcome }
 })

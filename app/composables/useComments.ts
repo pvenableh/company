@@ -18,6 +18,7 @@ export function useComments() {
   const comments = useDirectusItems<TimelineComment>('comments');
   const commentReports = useDirectusItems('comment_reports');
   const { user } = useDirectusAuth();
+  const { awardEvent } = useArcadeAwards();
 
   const getComments = async (
     collection: string,
@@ -73,7 +74,7 @@ export function useComments() {
   };
 
   const createComment = async (data: CreateCommentPayload): Promise<TimelineComment> => {
-    return await comments.create({
+    const created = await comments.create({
       status: 'published',
       comment: data.comment,
       collection: data.collection,
@@ -83,6 +84,10 @@ export function useComments() {
       is_edited: false,
       is_resolved: false,
     } as Partial<TimelineComment>);
+    // Arcade reward — silent: comments are frequent, so EP accrues (and the
+    // Earnest mark flashes) without a floating pop on every comment.
+    awardEvent('comment_posted', { silent: true });
+    return created;
   };
 
   const updateComment = async (commentId: number, data: UpdateCommentPayload): Promise<TimelineComment> => {

@@ -214,9 +214,14 @@ async function patchProject(fields: Record<string, any>) {
 		// (making the client name disappear). The optimistic scalar assign
 		// above is already the correct new state.
 		await projectItemsApi.update(project.value.id, fields);
-		// Arcade reward — only on a genuine transition into completed.
+		// Arcade reward — only on a genuine transition into completed. A project
+		// finished on or before its due date earns an extra on-time bonus.
 		if (fields.status === 'completed' && prev.status !== 'completed') {
 			awardEvent('project_completed');
+			const due = prev.due_date ? new Date(prev.due_date) : null;
+			if (due && !Number.isNaN(due.getTime()) && due.getTime() >= Date.now()) {
+				awardEvent('project_on_time');
+			}
 		}
 	} catch (e: any) {
 		Object.assign(project.value, prev);

@@ -5,6 +5,7 @@ export function useContacts() {
   const memberItems = useDirectusItems('mailing_list_contacts');
   const junctionItems = useDirectusItems('contacts_organizations');
   const { selectedOrg, getOrganizationFilter } = useOrganization();
+  const { awardEvent } = useArcadeAwards();
 
   // ── Contact CRUD ──────────────────────────────────────────────────
   const getContacts = async (params?: {
@@ -121,6 +122,9 @@ export function useContacts() {
         console.warn('Failed to link contact to org (non-fatal):', err);
       }
     }
+
+    // Arcade reward — a new contact grows the CRM.
+    if (contact?.id) awardEvent('contact_added');
 
     return contact;
   };

@@ -20,7 +20,24 @@
 						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">
-						<LayoutEarnestBrand to="/" tagline="Do good work." />
+						<!-- The logo opens the Earnest assistant panel (home is the
+						     dock's Dashboard app). The HITL pending-actions badge that
+						     used to sit on the separate assistant button lives here now. -->
+						<button
+							type="button"
+							class="apps-shell__brand-btn"
+							aria-label="Open Earnest assistant"
+							@click="handleOpenAI"
+						>
+							<LayoutEarnestBrand tagline="Do good work." />
+							<span
+								v-if="aiPendingCount > 0"
+								class="apps-shell__brand-badge"
+								:aria-label="`${aiPendingCount} action${aiPendingCount === 1 ? '' : 's'} awaiting approval`"
+							>
+								{{ aiPendingCount > 9 ? '9+' : aiPendingCount }}
+							</span>
+						</button>
 					</div>
 					<div class="apps-shell__chrome-right">
 						<button
@@ -30,29 +47,12 @@
 						>
 							<Icon name="lucide:search" class="size-4" />
 						</button>
-						<div class="hidden sm:block">
-							<WalkthroughHelpMenu />
-						</div>
-						<ClientOnly>
-							<LayoutAppRailPositionPicker class="hidden sm:flex" />
-						</ClientOnly>
 						<ClientOnly>
 							<LayoutNotificationsMenu />
 						</ClientOnly>
-						<button
-							class="apps-shell__chrome-btn hidden sm:flex relative"
-							aria-label="Earnest assistant"
-							@click="handleOpenAI"
-						>
-							<EarnestIcon class="size-4 text-foreground" />
-							<span
-								v-if="aiPendingCount > 0"
-								class="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-[15px] px-1 rounded-full bg-warning text-[9px] font-semibold text-warning-foreground tabular-nums leading-none"
-								:aria-label="`${aiPendingCount} action${aiPendingCount === 1 ? '' : 's'} awaiting approval`"
-							>
-								{{ aiPendingCount > 9 ? '9+' : aiPendingCount }}
-							</span>
-						</button>
+						<ClientOnly>
+							<LayoutHeaderScore class="hidden sm:inline-flex" />
+						</ClientOnly>
 						<ClientOnly>
 							<LayoutUserMenu v-if="user" class="shrink-0" />
 						</ClientOnly>
@@ -259,6 +259,19 @@ if (import.meta.client) {
 
 .apps-shell__chrome-center {
 	@apply flex items-center justify-center;
+}
+
+/* The brand acts as the Earnest-assistant launcher. Keep it a bare, tappable
+ * wrapper around the logo so the mark itself reads as the affordance. */
+.apps-shell__brand-btn {
+	@apply relative inline-flex items-center justify-center rounded-xl px-1.5 py-0.5
+		transition-transform hover:bg-muted/30 active:scale-95;
+}
+
+.apps-shell__brand-badge {
+	@apply absolute top-0 right-0 inline-flex items-center justify-center
+		min-w-[15px] h-[15px] px-1 rounded-full bg-warning text-[9px]
+		font-semibold text-warning-foreground tabular-nums leading-none;
 }
 
 .apps-shell__chrome-right {

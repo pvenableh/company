@@ -35,8 +35,14 @@ const EVENT_GESTURE: Record<ArcadeEvent, MarkGesture> = {
 	contact_added: 'thumbsup',
 	invoice_sent: 'thumbsup',
 	invoice_paid_on_time: 'clap',
+	expense_logged: 'thumbsup',
 	meeting_held: 'thumbsup',
+	message_sent: 'thumbsup',
+	comment_posted: 'thumbsup',
 	social_post: 'thumbsup',
+	card_scan: 'thumbsup',
+	contract_signed: 'clap',
+	daily_login: 'thumbsup',
 	daily_quest: 'celebrate',
 	weekly_quest: 'celebrate',
 };
@@ -53,8 +59,14 @@ export type ArcadeEvent =
 	| 'contact_added'
 	| 'invoice_sent'
 	| 'invoice_paid_on_time'
+	| 'expense_logged'
 	| 'meeting_held'
+	| 'message_sent'
+	| 'comment_posted'
 	| 'social_post'
+	| 'card_scan'
+	| 'contract_signed'
+	| 'daily_login'
 	| 'daily_quest'
 	| 'weekly_quest';
 
@@ -70,8 +82,14 @@ const EVENT_META: Record<ArcadeEvent, EventMeta> = {
 	contact_added: { ep: 10, label: 'New contact', icon: '🤝', dimension: 'growth' },
 	invoice_sent: { ep: 5, label: 'Invoice sent', icon: '📤', dimension: 'finance' },
 	invoice_paid_on_time: { ep: 15, label: 'Paid!', icon: '💰', dimension: 'finance' },
+	expense_logged: { ep: 3, label: 'Expense tracked', icon: '🧾', dimension: 'finance' },
 	meeting_held: { ep: 5, label: 'Meeting held', icon: '🎥', dimension: 'communication' },
+	message_sent: { ep: 2, label: 'Message sent', icon: '💬', dimension: 'communication' },
+	comment_posted: { ep: 2, label: 'Comment added', icon: '💭', dimension: 'communication' },
 	social_post: { ep: 3, label: 'Post published', icon: '📣', dimension: 'growth' },
+	card_scan: { ep: 5, label: 'Card scanned', icon: '📇', dimension: 'growth' },
+	contract_signed: { ep: 25, label: 'Contract signed', icon: '✍️', dimension: 'growth' },
+	daily_login: { ep: 3, label: 'Checked in', icon: '☀️', dimension: 'consistency' },
 	daily_quest: { ep: 15, label: 'Daily quest!', icon: '🎯', dimension: 'consistency' },
 	weekly_quest: { ep: 40, label: 'Weekly quest!', icon: '🏅', dimension: 'consistency' },
 };
@@ -79,6 +97,7 @@ const EVENT_META: Record<ArcadeEvent, EventMeta> = {
 export function useArcadeAwards() {
 	const arcade = useArcade();
 	const mascot = useEarnestMascot();
+	const scoreBus = useEarnestScoreBus();
 	const { selectedOrg } = useOrganization();
 
 	/**
@@ -120,6 +139,9 @@ export function useArcadeAwards() {
 			});
 			const data = res?.data;
 			if (!data) return;
+			// Update the header EP counter (+ flash the mark) on every award —
+			// including silent ones that skip the visible pop above.
+			scoreBus.applyAward(data);
 			for (const b of data.newBadges ?? []) {
 				arcade.unlockBadge(b.name, b.icon, b.description);
 			}

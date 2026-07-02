@@ -15,8 +15,16 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 
-const { updateMe } = useDirectusUsers();
+const { updateMe, readMe } = useDirectusUsers();
 const { user, fetchSession } = useDirectusAuth();
+
+// The auth session only carries a handful of fields (id/email/name/avatar/role
+// — see server/api/auth/login.post.ts), so profile-only fields like title,
+// phone, cell_phone, description, nickname, linkedin, github, timezone are
+// absent from `user`. Load the complete record straight from Directus so the
+// form shows saved values — and, critically, doesn't blank them out on the
+// next save because it started empty.
+const fullUser = ref(null);
 const config = useRuntimeConfig();
 const toast = useToast();
 const saving = ref(false);
@@ -95,23 +103,37 @@ const form = ref({
 });
 
 const populateForm = () => {
-	if (!user.value) return;
+	// Prefer the full Directus record; fall back to the session user for the
+	// fields it does carry (name) so something renders before the fetch lands.
+	const src = fullUser.value || user.value;
+	if (!src) return;
 	form.value = {
-		first_name: user.value.first_name || '',
-		last_name: user.value.last_name || '',
-		title: user.value.title || '',
-		phone: user.value.phone || '',
-		cell_phone: user.value.cell_phone || '',
-		location: user.value.location || '',
-		description: user.value.description || '',
-		nickname: user.value.nickname || '',
-		linkedin: user.value.linkedin || '',
-		github: user.value.github || '',
-		timezone: user.value.timezone || '',
+		first_name: src.first_name || '',
+		last_name: src.last_name || '',
+		title: src.title || '',
+		phone: src.phone || '',
+		cell_phone: src.cell_phone || '',
+		location: src.location || '',
+		description: src.description || '',
+		nickname: src.nickname || '',
+		linkedin: src.linkedin || '',
+		github: src.github || '',
+		timezone: src.timezone || '',
 	};
 };
 
-watch(() => user.value?.id, () => populateForm(), { immediate: true });
+// Pull the complete user record (all fields) so profile-only fields populate.
+const loadProfile = async () => {
+	if (!user.value?.id) return;
+	try {
+		fullUser.value = await readMe({ fields: ['*'] });
+	} catch (error) {
+		console.error('Failed to load profile', error);
+	}
+	populateForm();
+};
+
+watch(() => user.value?.id, () => loadProfile(), { immediate: true });
 
 // Curated timezone list. Earnest is US-marketed, so the dropdown leads with
 // the US zones (Eastern at the top) and surfaces a short international list
@@ -169,6 +191,9 @@ async function updatePerson() {
 		}
 
 		await updateMe(payload);
+		// Re-read the full record so the form reflects what actually persisted,
+		// then refresh the session so name/avatar stay in sync app-wide.
+		await loadProfile();
 		await fetchSession();
 
 		toast.add({ icon: 'i-heroicons-check-circle-solid', title: 'Success!', description: 'Profile updated.' });

@@ -289,6 +289,7 @@ definePageMeta({ layout: 'blank' });
 
 const route = useRoute();
 const toast = useToast();
+const { awardEvent } = useArcadeAwards();
 const roomName = computed(() => route.params.roomName);
 
 const { user: sessionUser, loggedIn } = useUserSession();
@@ -894,6 +895,8 @@ const endMeeting = async () => {
 		try { dailyCallObject?.sendAppMessage({ type: 'meeting-ended' }, '*'); } catch {}
 		// Mark the meeting completed (status + actual_end).
 		await $fetch(`/api/video/meetings/${meeting.value.id}/end`, { method: 'POST' });
+		// Arcade reward — the meeting happened; the host who ends it earns the EP.
+		awardEvent('meeting_held');
 		// Leave the call — `left-meeting` fires finishMeeting() for the redirect.
 		try { await dailyCallObject?.leave(); } catch {}
 		finishMeeting();
