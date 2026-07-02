@@ -346,6 +346,51 @@ export function useTasksList({
 		}
 	};
 
+	// General status setter for the Kanban board (drag-and-drop between
+	// To Do / In Progress / Done). toggleTaskStatus only flips active↔completed;
+	// the board needs the intermediate 'in_progress' column too. Optimistic:
+	// mutate the local task, persist, revert on failure. Realtime on the parent
+	// tickets subscription keeps every other subscriber in sync.
+	const updateTaskStatus = async (taskId, newStatus) => {
+		const task = tasks.value.find((t) => t.id === taskId);
+		if (!task || task.status === newStatus) return;
+
+		const oldStatus = task.status;
+		updatingTasks.value.add(taskId);
+		task.status = newStatus;
+		task.date_updated = new Date().toISOString();
+		tasks.value = [...tasks.value];
+
+		try {
+			await taskItemsApi.update(taskId, { status: newStatus });
+
+			if (import.meta.client) {
+				try {
+					const { triggerRefresh } = useTicketsStore();
+					triggerRefresh();
+				} catch (e) {
+					console.warn('Could not trigger tickets refresh:', e);
+				}
+			}
+			return true;
+		} catch (err) {
+			console.error('Error updating task status:', err);
+			task.status = oldStatus;
+			tasks.value = [...tasks.value];
+			if (import.meta.client) {
+				const toast = useToast();
+				toast.add({
+					title: 'Error updating task',
+					description: 'Failed to move task. Please try again.',
+					color: 'red',
+				});
+			}
+			return false;
+		} finally {
+			updatingTasks.value.delete(taskId);
+		}
+	};
+
 	const navigateToTicket = (ticketId) => {
 		if (!ticketId) return;
 		console.log('Navigating to ticket:', ticketId);
@@ -403,6 +448,7 @@ export function useTasksList({
 		generateFilter,
 		refresh,
 		toggleTaskStatus,
+		updateTaskStatus,
 		navigateToTicket,
 		refreshTasks,
 		updateParams,

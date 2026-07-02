@@ -111,7 +111,13 @@ export async function loadMyCard(event: any, userId: string): Promise<MyCardPayl
     publicCardUrl: `${cardDeskUrl}/c/${userId}`,
     // Booking link only resolves when the user's org has a slug.
     bookingPath: orgSlug ? `/book/${orgSlug}/${userSlug}` : null,
-    assetsUrl: String((config.public as any)?.assetsUrl || (config.public as any)?.directusUrl || '').replace(/\/$/, ''),
+    // Always hand the client a base that ends in `/assets` — `assetsUrl` env
+    // already includes it, but the `directusUrl` fallback doesn't. The client
+    // appends `/<file-id>` directly, so normalize the suffix here.
+    assetsUrl: (() => {
+      const raw = String((config.public as any)?.assetsUrl || (config.public as any)?.directusUrl || '').replace(/\/+$/, '');
+      return /\/assets$/.test(raw) ? raw : `${raw}/assets`;
+    })(),
   };
 }
 

@@ -24,83 +24,102 @@
 		</ClientOnly>
 
 		<div v-if="!isLoading" class="space-y-2">
-			<div v-if="filteredTasks.length === 0" class="p-4 text-center text-muted-foreground">
+			<!-- Toolbar: view switch (River / Board / List) + task filter.
+			     All three views share the same realtime `filteredTasks`. -->
+			<div class="flex justify-between items-center mb-3 gap-3 flex-wrap">
+				<UTabs
+					v-model="viewMode"
+					:items="viewTabs"
+					class="w-fit"
+				/>
+				<div class="flex items-center gap-2">
+					<h3 class="text-xs font-bold uppercase tracking-wide whitespace-nowrap">
+						{{ filteredTasks.length }}{{ totalTaskCount > limit ? '+' : '' }} tasks
+					</h3>
+					<USelectMenu
+						v-model="activeFilter"
+						:options="[
+							{ label: 'All Tasks', value: 'all' },
+							{ label: 'Active Tasks', value: 'active' },
+							{ label: 'Completed Tasks', value: 'completed' },
+							{ label: 'Due Today', value: 'today' },
+							{ label: 'Overdue', value: 'overdue' },
+						]"
+						value-attribute="value"
+						option-attribute="label"
+						size="xs"
+						class="w-40"
+						@update:modelValue="applyFilter($event)"
+					/>
+				</div>
+			</div>
+
+			<div v-if="debug" class="bg-muted p-2 rounded-lg mb-3 text-xs">
+				<div>
+					<strong>Org ID:</strong>
+					{{ effectiveOrgId }}
+				</div>
+				<div>
+					<strong>Team ID:</strong>
+					{{ effectiveTeamId }}
+				</div>
+				<div>
+					<strong>Filter:</strong>
+					{{ activeFilter }}
+				</div>
+				<div>
+					<strong>Tasks:</strong>
+					{{ tasks.length }} (Filtered: {{ filteredTasks.length }})
+				</div>
+			</div>
+
+			<!-- ── River view — workload rhythm. Mirrors the active filter so
+			     e.g. "Overdue" shows only red leaves. Handles its own empty. -->
+			<div v-if="viewMode === 'river'" class="glass-surface p-3 sm:p-4">
+				<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+					<h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+						Workload river
+					</h4>
+					<div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground">
+						<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(0 78% 55%)" />overdue</span>
+						<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(40 75% 55%)" />in progress</span>
+						<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(210 60% 55%)" />new</span>
+						<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(145 60% 50%); opacity: 0.6" />done</span>
+					</div>
+				</div>
+				<RiverChart
+					:items="tasksRiverItems"
+					:days-back="7"
+					:days-forward="21"
+					:hour-height="14"
+					:hide-hours="true"
+					:accent-hue="210"
+					empty-title="No dated tasks in this window."
+					empty-subtitle="Add due dates to surface workload rhythm."
+					@select="onTaskLeafSelect"
+				/>
+			</div>
+
+			<!-- Empty state (board / list only — river shows its own) -->
+			<div v-else-if="filteredTasks.length === 0" class="p-8 text-center text-muted-foreground">
 				<UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
 				<p class="text-sm">No tasks found</p>
 				<p class="text-xs text-muted-foreground mt-2">Try changing your filters or create new tasks in your tickets</p>
 			</div>
 
+			<!-- ── Board view — kanban, same realtime task set ────────────── -->
+			<div v-else-if="viewMode === 'board'" class="ios-card overflow-hidden">
+				<TicketsTasksKanban
+					:tasks="filteredTasks"
+					:updating-tasks="updatingTasks"
+					@update-status="updateTaskStatus"
+					@toggle="toggleTaskStatus"
+					@open-ticket="navigateToTicket"
+				/>
+			</div>
+
+			<!-- ── List view — flat checklist ─────────────────────────────── -->
 			<div v-else>
-				<!-- Tasks river — workload rhythm at a glance. Mirrors the
-				     active filter so e.g. "Overdue" shows only red leaves. -->
-				<div v-if="tasksRiverItems.length > 0" class="glass-surface p-3 sm:p-4 mb-4">
-					<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-						<h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-							Workload river
-						</h4>
-						<div class="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground">
-							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(0 78% 55%)" />overdue</span>
-							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(40 75% 55%)" />in progress</span>
-							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(210 60% 55%)" />new</span>
-							<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: hsl(145 60% 50%); opacity: 0.6" />done</span>
-						</div>
-					</div>
-					<RiverChart
-						:items="tasksRiverItems"
-						:days-back="7"
-						:days-forward="21"
-						:hour-height="14"
-						:hide-hours="true"
-						:accent-hue="210"
-						empty-title="No dated tasks in this window."
-						empty-subtitle="Add due dates to surface workload rhythm."
-						@select="onTaskLeafSelect"
-					/>
-				</div>
-
-				<div class="flex justify-between items-center mb-3">
-					<h3 class="text-xs font-bold uppercase tracking-wide">
-						Tasks ({{ filteredTasks.length }}{{ totalTaskCount > limit ? '+' : '' }})
-					</h3>
-
-					<div class="flex space-x-2">
-						<USelectMenu
-							v-model="activeFilter"
-							:options="[
-								{ label: 'All Tasks', value: 'all' },
-								{ label: 'Active Tasks', value: 'active' },
-								{ label: 'Completed Tasks', value: 'completed' },
-								{ label: 'Due Today', value: 'today' },
-								{ label: 'Overdue', value: 'overdue' },
-							]"
-							value-attribute="value"
-							option-attribute="label"
-							size="xs"
-							class="w-40"
-							@update:modelValue="applyFilter($event)"
-						/>
-					</div>
-				</div>
-
-				<div v-if="debug" class="bg-muted p-2 rounded-lg mb-3 text-xs">
-					<div>
-						<strong>Org ID:</strong>
-						{{ effectiveOrgId }}
-					</div>
-					<div>
-						<strong>Team ID:</strong>
-						{{ effectiveTeamId }}
-					</div>
-					<div>
-						<strong>Filter:</strong>
-						{{ activeFilter }}
-					</div>
-					<div>
-						<strong>Tasks:</strong>
-						{{ tasks.length }} (Filtered: {{ filteredTasks.length }})
-					</div>
-				</div>
-
 				<div v-for="task in filteredTasks" :key="task.id" class="task-item">
 					<div class="flex items-center space-x-3 group bg-card p-2 rounded-lg shadow-sm">
 						<div
@@ -201,6 +220,16 @@ const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
 const activeFilter = ref('all');
 
+// View switch — River (workload rhythm), Board (kanban), or List (flat).
+// All three render from the same realtime `filteredTasks`, so switching is
+// instant and stays live. Persisted per-user so the choice sticks.
+const viewMode = useCookie('tasks-view-mode', { default: () => 'board' });
+const viewTabs = [
+	{ key: 'river', label: 'River' },
+	{ key: 'board', label: 'Board' },
+	{ key: 'list', label: 'List' },
+];
+
 // Get global context (these are now only used for reacting to changes)
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
@@ -217,6 +246,7 @@ const {
 	updatingTasks,
 	totalCount,
 	toggleTaskStatus,
+	updateTaskStatus,
 	navigateToTicket,
 	refresh: refreshTasks, // Use the consistent name
 	effectiveOrgId,

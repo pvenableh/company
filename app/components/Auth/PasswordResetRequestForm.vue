@@ -80,7 +80,7 @@ const onSubmit = handleSubmit(async (values) => {
                 type="email"
                 placeholder="you@example.com"
                 v-bind="field"
-                class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
+                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
                 :class="errors.length ? 'border-destructive/30' : 'border-border'"
               />
               <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
@@ -91,7 +91,7 @@ const onSubmit = handleSubmit(async (values) => {
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="w-full rounded-lg bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
+              class="w-full rounded-full bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
             >
               <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
               {{ isSubmitting ? "Sending..." : "Send reset link" }}

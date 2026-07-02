@@ -74,7 +74,7 @@
 					<!-- Due Date — universal Select (glass, dark-adaptive). The
 						 leading icon turns amber when a date filter is active. -->
 					<Select v-model="dueDateModel">
-						<SelectTrigger class="h-8 w-40 rounded-lg text-xs gap-1.5">
+						<SelectTrigger class="h-8 w-40 rounded-full text-xs gap-1.5">
 							<Icon
 								:name="activeDueDateFilter ? 'lucide:clock' : 'lucide:calendar'"
 								class="w-3.5 h-3.5 shrink-0"
@@ -91,7 +91,7 @@
 
 					<!-- Project — universal Select with per-project ticket counts -->
 					<Select v-model="projectModel">
-						<SelectTrigger class="h-8 w-56 rounded-lg text-xs gap-1.5">
+						<SelectTrigger class="h-8 w-56 rounded-full text-xs gap-1.5">
 							<Icon name="lucide:folder" class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
 							<SelectValue placeholder="All projects" />
 						</SelectTrigger>
@@ -110,7 +110,7 @@
 
 					<button
 						type="button"
-						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors"
+						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium transition-colors"
 						:class="showArchived
 							? 'border-primary/40 bg-primary/10 text-primary'
 							: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'"

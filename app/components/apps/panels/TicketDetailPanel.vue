@@ -1,10 +1,11 @@
 <!--
   TicketDetailPanel — slide-over body for a single ticket.
 
-  Quick-look surface for board card clicks: status pills, who's assigned,
-  due date, description, and chips for the linked project / client /
-  team. Editing the full ticket (tasks, activity, comments) stays at
-  /tickets/[id] — the "Full Page ↗" action chip is the escape hatch.
+  Full-detail surface for board card clicks: status pills, who's assigned,
+  due date, description, the ticket's task checklist, comments thread, and
+  chips for the linked project / client / team. The "Open Ticket ↗" action
+  chip remains an escape hatch to the full /tickets/[id] page (activity log,
+  delete, etc.), but day-to-day work happens here without leaving the board.
 
   Status changes use the same /api/items endpoint TicketsDetailsNew does,
   so realtime subscribers on the board pick it up.
@@ -69,6 +70,13 @@ const assignees = computed(() => {
 	return list
 		.map((row: any) => row?.directus_users_id)
 		.filter((u: any) => u && u.id);
+});
+
+// CommentsSystem scopes @-mentions / visibility to the client — accept
+// either an expanded object or a bare id.
+const clientId = computed(() => {
+	const c = ticket.value?.client;
+	return typeof c === 'object' ? c?.id : c;
 });
 
 function fmtDate(d: string | null | undefined) {
@@ -178,6 +186,16 @@ async function changeStatus(next: string) {
 				/>
 			</div>
 
+			<!-- Tasks checklist — same component the full page uses; fetches
+			     its own rows by ticket id, so no extra panel data needed. -->
+			<div class="pt-3 border-t border-border/30">
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+					<Icon name="lucide:check-circle" class="w-3 h-3" />
+					Tasks
+				</p>
+				<TicketsTasks :ticket-id="ticket.id" />
+			</div>
+
 			<!-- Linkages -->
 			<div
 				v-if="assignees.length || ticket.project?.id || ticket.client?.id || ticket.team?.id"
@@ -234,6 +252,20 @@ async function changeStatus(next: string) {
 					<dd>{{ fmtDate(ticket.date_updated) }}</dd>
 				</div>
 			</dl>
+
+			<!-- Comments — same thread as the full page, scoped by ticket id. -->
+			<div class="pt-4 border-t border-border/30">
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+					<Icon name="lucide:message-square" class="w-3 h-3" />
+					Comments
+				</p>
+				<CommentsSystem
+					:item-id="ticket.id"
+					collection="tickets"
+					class="w-full"
+					:client-id="clientId"
+				/>
+			</div>
 		</div>
 
 		<div v-else class="text-sm text-muted-foreground py-10 text-center">

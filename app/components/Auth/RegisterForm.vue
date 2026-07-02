@@ -132,7 +132,7 @@ const onSubmit = handleSubmit(async (values) => {
   });
 });
 
-const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow";
+const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow";
 </script>
 
 <template>
@@ -268,7 +268,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
           <button
             type="submit"
             :disabled="isSubmitting || isGoogleRegistering"
-            class="w-full rounded-lg bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
+            class="w-full rounded-full bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
           >
             <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
             {{ isSubmitting ? "Creating account..." : "Create account" }}
@@ -296,7 +296,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
             <button
               type="button"
               :disabled="isGoogleRegistering || isSubmitting"
-              class="w-full flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors disabled:opacity-40"
+              class="w-full flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors disabled:opacity-40"
               @click="registerWithGoogle"
             >
               <Loader2 v-if="isGoogleRegistering" class="h-4 w-4 animate-spin" />

@@ -105,7 +105,7 @@ function extractTokens(): Record<string, string> {
           </div>
           <p class="text-sm text-destructive text-center">{{ errorMessage }}</p>
           <button
-            class="mt-2 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            class="mt-2 inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             @click="navigateTo('/auth/signin')"
           >
             Back to Sign In

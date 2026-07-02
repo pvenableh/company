@@ -123,7 +123,7 @@ const onSubmit = handleSubmit(async (values) => {
               placeholder="you@example.com"
               v-bind="field"
               @input="clearFormError"
-              class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
+              class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
               :class="errors.length ? 'border-destructive/30' : 'border-border'"
             />
             <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
@@ -147,7 +147,7 @@ const onSubmit = handleSubmit(async (values) => {
               type="password"
               v-bind="field"
               @input="clearFormError"
-              class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
+              class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
               :class="errors.length ? 'border-destructive/30' : 'border-border'"
             />
             <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
@@ -158,7 +158,7 @@ const onSubmit = handleSubmit(async (values) => {
           <button
             type="submit"
             :disabled="isProcessing"
-            class="w-full rounded-lg bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
+            class="w-full rounded-full bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center"
           >
             <Loader2 v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
             {{ isProcessing ? "Signing in..." : "Sign in" }}
@@ -178,7 +178,7 @@ const onSubmit = handleSubmit(async (values) => {
             <div :class="ssoProviders.apple ? 'grid grid-cols-2 gap-2' : ''">
               <a
                 :href="ssoProviders.google"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
+                class="flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -191,7 +191,7 @@ const onSubmit = handleSubmit(async (values) => {
               <a
                 v-if="ssoProviders.apple"
                 :href="ssoProviders.apple"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
+                class="flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>

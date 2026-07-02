@@ -21,24 +21,26 @@
 					<AccountPasswordRequest />
 				</section>
 
-				<section v-else-if="section === 'score'" class="max-w-xl space-y-8">
-					<div>
-						<div class="flex items-center gap-2 mb-4">
-							<h2 class="account-page__heading mb-0">Earnest Score</h2>
-							<button
-								type="button"
-								class="flex items-center justify-center size-5 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-								aria-label="How the Earnest Score works"
-								@click="arcadeIntro?.open()"
-							>
-								<Icon name="lucide:info" class="size-3.5" />
-							</button>
+				<section v-else-if="section === 'score'" class="w-full">
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+						<div>
+							<div class="flex items-center gap-2 mb-4">
+								<h2 class="account-page__heading mb-0">Earnest Score</h2>
+								<button
+									type="button"
+									class="flex items-center justify-center size-5 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+									aria-label="How the Earnest Score works"
+									@click="arcadeIntro?.open()"
+								>
+									<Icon name="lucide:info" class="size-3.5" />
+								</button>
+							</div>
+							<EarnestProfilePanel />
 						</div>
-						<EarnestProfilePanel />
-					</div>
-					<div>
-						<h2 class="account-page__heading">Quests</h2>
-						<ArcadeQuestBoard />
+						<div>
+							<h2 class="account-page__heading">Quests</h2>
+							<ArcadeQuestBoard />
+						</div>
 					</div>
 
 					<ArcadeIntroModal ref="arcadeIntro" />

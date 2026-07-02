@@ -13,6 +13,12 @@ useHead({ title: 'Ticket Details | Earnest' });
 // lands here — click-through is implicit acknowledgement.
 useMarkItemRead('tickets', () => params.id);
 
+// Back target must stay inside the active shell. In the apps layout the
+// board lives at /apps/work?floor=tickets — sending users to the classic
+// /tickets route there drops them out of the apps shell entirely.
+const { isAppsMode } = useAppsMode();
+const backTo = computed(() => (isAppsMode.value ? '/apps/work?floor=tickets' : '/tickets'));
+
 const ticketFields = [
 	'id',
 	'title',
@@ -72,7 +78,7 @@ const columns = [
 <template>
 	<LayoutPageContainer>
 		<NuxtLink
-			to="/tickets"
+			:to="backTo"
 			class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mb-2"
 		>
 			<Icon name="lucide:chevron-left" class="w-3 h-3" />

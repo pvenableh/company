@@ -1,5 +1,5 @@
 <template>
-	<div class="space-y-6 max-w-xl">
+	<div class="space-y-6">
 		<!-- Header card -->
 		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-4">
 			<div class="flex items-center gap-4">

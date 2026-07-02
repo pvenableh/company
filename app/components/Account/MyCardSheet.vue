@@ -22,7 +22,9 @@ const card = computed(() => data.value?.card ?? {});
 function fileUrl(f: any, key = ''): string | null {
   const id = typeof f === 'object' ? f?.id : f;
   if (!id || !data.value?.assetsUrl) return null;
-  return `${data.value.assetsUrl}/assets/${id}${key ? `?key=${key}` : ''}`;
+  // `assetsUrl` already ends in `/assets` (see server/utils/my-card.ts) — don't
+  // append another `/assets/` or the URL becomes …/assets/assets/<id> and 404s.
+  return `${data.value.assetsUrl}/${id}${key ? `?key=${key}` : ''}`;
 }
 const imageUrl = computed(() => fileUrl(card.value.image, 'avatar'));
 const coverUrl = computed(() => fileUrl(card.value.cover_image));
