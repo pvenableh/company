@@ -24,6 +24,7 @@ const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
 const { isAppsMode, setMode } = useAppsMode();
+const { open: openMyCard } = useMyCard();
 
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
@@ -119,6 +120,10 @@ function handleLogout() {
 			<DropdownMenuItem @select="goTo('/account')">
 				<Icon name="lucide:user-round" class="size-4 mr-2 shrink-0" />
 				<span>Profile</span>
+			</DropdownMenuItem>
+			<DropdownMenuItem @select="openMyCard()">
+				<Icon name="lucide:contact" class="size-4 mr-2 shrink-0" />
+				<span>My Card</span>
 			</DropdownMenuItem>
 			<DropdownMenuItem @select="goTo('/account/subscription')">
 				<Icon name="lucide:credit-card" class="size-4 mr-2 shrink-0" />

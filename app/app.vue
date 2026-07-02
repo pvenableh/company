@@ -55,6 +55,7 @@ const { transition: pageTransition } = useDirectionalPageTransition();
 	</NuxtLayout>
 	<SupportReportModal v-if="user" />
 	<CommandCenterDirectorOffice v-if="user" />
+	<AccountMyCardSheet v-if="user" />
 	<NuxtLoadingIndicator
 		color="linear-gradient(to right, #000000 0%, hsl(191, 100%, 50%) 100%)"
 	/>
