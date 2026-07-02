@@ -28,6 +28,7 @@
 import {
 	APP_PALETTE_IDS,
 	APP_PALETTE_ALIASES,
+	DEFAULT_APP_PALETTE,
 	applyPaletteToDocument,
 	resolvePaletteId,
 	type AppPaletteId,
@@ -113,8 +114,8 @@ async function hydrateFromServer(
 				updateMe({ app_palette: resolved }).catch(() => undefined);
 			}
 		} catch {
-			localPalette.value = 'seaMist';
-			applyPaletteToDocument('seaMist');
+			localPalette.value = DEFAULT_APP_PALETTE;
+			applyPaletteToDocument(DEFAULT_APP_PALETTE);
 		}
 	})();
 	return hydrationPromise;

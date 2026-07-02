@@ -465,6 +465,9 @@ export type AppPaletteId = keyof typeof APP_PALETTES;
  */
 export const APP_PALETTE_IDS: readonly AppPaletteId[] = ['seaMist', 'aurora', 'neutral'];
 
+/** The out-of-the-box palette for users who haven't picked one. */
+export const DEFAULT_APP_PALETTE: AppPaletteId = 'neutral';
+
 /**
  * Legacy palette aliases. When a stored `directus_users.app_palette`
  * value points to a renamed (or now-hidden) palette, map it here. Read
@@ -479,9 +482,9 @@ export const APP_PALETTE_ALIASES: Record<string, AppPaletteId> = {
 };
 
 export function resolvePaletteId(raw: unknown): AppPaletteId {
-	if (typeof raw !== 'string') return 'seaMist';
+	if (typeof raw !== 'string') return DEFAULT_APP_PALETTE;
 	if (APP_PALETTE_ALIASES[raw]) return APP_PALETTE_ALIASES[raw]!;
-	return (APP_PALETTE_IDS as readonly string[]).includes(raw) ? (raw as AppPaletteId) : 'seaMist';
+	return (APP_PALETTE_IDS as readonly string[]).includes(raw) ? (raw as AppPaletteId) : DEFAULT_APP_PALETTE;
 }
 
 export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'money', 'marketing'];
@@ -787,7 +790,7 @@ export function formatIconColor(a: Pick<AppAccent, 'h' | 's' | 'l' | 'iconHsl'>)
  * as a static export for any direct importer that doesn't have access to
  * the user's palette preference — returns the default palette.
  */
-export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents('seaMist');
+export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents(DEFAULT_APP_PALETTE);
 
 /**
  * Path → owning-app mapping for routes that live outside `/apps/*` but still
