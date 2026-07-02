@@ -131,6 +131,7 @@ function relTime(iso: string | null | undefined) {
 						<UIcon v-else name="i-heroicons-building-office" class="w-4 h-4 text-muted-foreground" />
 					</div>
 					<p class="text-sm font-medium text-foreground truncate flex-1">{{ client.name }}</p>
+					<ClientsClientRatingBadge :client-id="client.id" size="xs" />
 				</div>
 				<div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
 					<span v-if="client.status" class="truncate">{{ client.status }}</span>

@@ -32,6 +32,14 @@ const companyLabel = computed(() => {
 	return c.client?.name || c.company || null;
 });
 
+// The connected client's id (when this contact is wired to a client) so we can
+// reference that account's Earnest rating right on the person.
+const linkedClientId = computed(() => {
+	const c = contact.value?.client as any;
+	if (!c) return null;
+	return typeof c === 'object' ? (c.id != null ? String(c.id) : null) : String(c);
+});
+
 const title = computed(() => {
 	const c = contact.value;
 	if (!c) return 'Contact';
@@ -155,6 +163,7 @@ watch(
 				<div v-if="companyLabel" class="flex items-center gap-2">
 					<Icon name="lucide:building-2" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 					<span class="text-xs">{{ companyLabel }}</span>
+					<ClientsClientRatingBadge v-if="linkedClientId" :client-id="linkedClientId" size="xs" />
 				</div>
 				<div v-if="contact.category" class="flex items-center gap-2">
 					<Icon name="lucide:tag" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />

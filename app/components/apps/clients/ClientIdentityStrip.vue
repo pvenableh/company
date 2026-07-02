@@ -52,6 +52,10 @@ const cleanWebsite = computed(() => props.client.website?.replace(/^https?:\/\//
 		<div class="min-w-0 flex-1">
 			<!-- Name + status live in the page hero (AppHeader); this strip is
 			     the metadata row so the name isn't repeated. -->
+			<div v-if="client.id" class="flex items-center gap-1.5 mb-0.5">
+				<ClientsClientRatingBadge :client-id="String(client.id)" size="sm" />
+				<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Earnest rating</span>
+			</div>
 			<p v-if="cleanWebsite" class="text-xs text-muted-foreground truncate inline-flex items-center gap-1">
 				<Icon name="lucide:globe" class="w-3 h-3 shrink-0" />
 				<a :href="client.website!" target="_blank" rel="noopener" class="hover:text-foreground truncate">

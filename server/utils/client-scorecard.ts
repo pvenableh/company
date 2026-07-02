@@ -23,6 +23,33 @@ function resolveId(v: any): string | null {
 
 export type ClientRating = 'A' | 'B' | 'C' | 'D' | 'F';
 
+export interface ClientRatingInputs {
+  revenue: number;
+  activeProjects: number;
+  activeContractValue: number;
+  overdueAR: number;
+  staleDays: number | null;
+  effortTotal: number;
+}
+
+/**
+ * The single source of truth for the A–F rating, so the deep-dive scorecard and
+ * the batch card scores agree. Rewards realized revenue + active work; penalizes
+ * overdue AR, staleness, and high effort with little return.
+ */
+export function computeClientRating(x: ClientRatingInputs): { rating: ClientRating; score: number } {
+  let score = 0;
+  score += Math.min(x.revenue / 5000, 3);              // revenue signal (0–3)
+  if (x.activeProjects > 0) score += 1;                // active engagement
+  if (x.activeContractValue > 0) score += 0.5;
+  if (x.overdueAR > 0) score -= 2;                     // not paying
+  if (x.staleDays != null && x.staleDays > 60) score -= 1; // gone quiet
+  if (x.effortTotal >= 5 && x.revenue === 0) score -= 2;   // chasing, no return
+  else if (x.effortTotal >= 8 && x.revenue < x.effortTotal * 200) score -= 1; // over-servicing
+  const rating: ClientRating = score >= 4 ? 'A' : score >= 2 ? 'B' : score >= 0 ? 'C' : score >= -2 ? 'D' : 'F';
+  return { rating, score };
+}
+
 export interface ClientScorecard {
   clientName: string;
   rating: ClientRating;
@@ -72,19 +99,9 @@ export async function buildClientScorecard(
   }
   const effortTotal = tasks.length + leadActivities;
 
-  // ── Deterministic rating ──
-  // Rewards realized revenue + active work; penalizes overdue AR, staleness, and
-  // high effort with little return.
-  let score = 0;
-  score += Math.min(revenue / 5000, 3);              // revenue signal (0–3)
-  if (activeProj.length > 0) score += 1;             // active engagement
-  if (activeContractValue > 0) score += 0.5;
-  if (overdueAR > 0) score -= 2;                      // not paying
-  if (staleDays != null && staleDays > 60) score -= 1; // gone quiet
-  if (effortTotal >= 5 && revenue === 0) score -= 2;  // chasing, no return
-  else if (effortTotal >= 8 && revenue < effortTotal * 200) score -= 1; // over-servicing
-
-  const rating: ClientRating = score >= 4 ? 'A' : score >= 2 ? 'B' : score >= 0 ? 'C' : score >= -2 ? 'D' : 'F';
+  const { rating, score } = computeClientRating({
+    revenue, activeProjects: activeProj.length, activeContractValue, overdueAR, staleDays, effortTotal,
+  });
 
   const lines: string[] = [`[Source: Client Scorecard] ${client.name}`];
   lines.push(`Computed rating: ${rating} (score ${score.toFixed(1)}).`);
@@ -101,4 +118,114 @@ export async function buildClientScorecard(
     health: { staleDays, overdueAR, outstandingAR },
     text: lines.join('\n'),
   };
+}
+
+// ── Batch: score every client in one org (for cards / lists) ─────────────────
+// Constant number of BULK queries regardless of client count — never per-client
+// fan-out. Used by GET /api/crm/client-scores.
+
+export interface ClientScore {
+  clientId: string;
+  name: string;
+  rating: ClientRating;
+  revenue: number;
+  activeProjects: number;
+  effort: number;
+  overdueAR: number;
+  outstandingAR: number;
+  staleDays: number | null;
+}
+
+export async function buildOrgClientScores(
+  directus: any, organizationId: string, now: Date,
+): Promise<Record<string, ClientScore>> {
+  const ri = readItems as any;
+  const [clients, invoices, projects, tasks, leads] = await Promise.all([
+    directus.request(ri('clients', {
+      filter: { organization: { _eq: organizationId } },
+      fields: ['id', 'name', 'date_updated'], limit: 1000,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('invoices', {
+      filter: { client: { organization: { _eq: organizationId } } },
+      fields: ['total_amount', 'status', 'due_date', 'client'], limit: 5000,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('projects', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _in: ACTIVE_PROJECT } }] },
+      fields: ['client', 'contract_value', 'status'], limit: 2000,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('tasks', {
+      filter: { organization_id: { _eq: organizationId } },
+      fields: ['client_id'], limit: 5000,
+    })).catch(() => []) as Promise<any[]>,
+    directus.request(ri('leads', {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { resulting_client: { _nnull: true } }] },
+      fields: ['id', 'resulting_client'], limit: 2000,
+    })).catch(() => []) as Promise<any[]>,
+  ]);
+
+  const nowIso = now.toISOString().split('T')[0]!;
+
+  // Per-client accumulators.
+  type Acc = { revenue: number; overdueAR: number; outstandingAR: number; activeProjects: number; activeContractValue: number; tasks: number; leadActivities: number };
+  const acc = new Map<string, Acc>();
+  const ensure = (id: string): Acc => {
+    let a = acc.get(id);
+    if (!a) { a = { revenue: 0, overdueAR: 0, outstandingAR: 0, activeProjects: 0, activeContractValue: 0, tasks: 0, leadActivities: 0 }; acc.set(id, a); }
+    return a;
+  };
+
+  for (const inv of invoices) {
+    const cid = resolveId(inv.client); if (!cid) continue;
+    const a = ensure(cid); const amt = Number(inv.total_amount) || 0;
+    if (inv.status === 'paid') a.revenue += amt;
+    else if (['pending', 'processing'].includes(inv.status)) {
+      a.outstandingAR += amt;
+      if (inv.due_date && inv.due_date < nowIso) a.overdueAR += amt;
+    }
+  }
+  for (const p of projects) {
+    const cid = resolveId(p.client); if (!cid) continue;
+    const a = ensure(cid); a.activeProjects += 1; a.activeContractValue += Number(p.contract_value) || 0;
+  }
+  for (const t of tasks) {
+    const cid = resolveId(t.client_id); if (!cid) continue;
+    ensure(cid).tasks += 1;
+  }
+
+  // Lead activities → per client (via lead.resulting_client).
+  const leadToClient = new Map<string, string>();
+  for (const l of leads) {
+    const cid = resolveId(l.resulting_client); if (cid) leadToClient.set(String(l.id), cid);
+  }
+  if (leadToClient.size) {
+    try {
+      const rows = (await directus.request((aggregate as any)('lead_activities', {
+        aggregate: { count: ['*'] },
+        groupBy: ['lead'],
+        query: { filter: { lead: { _in: [...leadToClient.keys()] } } },
+      }))) as any[];
+      for (const r of rows) {
+        const cid = leadToClient.get(String(r.lead));
+        if (cid) ensure(cid).leadActivities += Number(r.count ?? 0);
+      }
+    } catch { /* best-effort */ }
+  }
+
+  const out: Record<string, ClientScore> = {};
+  for (const c of clients) {
+    const id = String(c.id);
+    const a = acc.get(id) || ensure(id);
+    const staleDays = c.date_updated ? Math.floor((now.getTime() - new Date(c.date_updated).getTime()) / 86400000) : null;
+    const effortTotal = a.tasks + a.leadActivities;
+    const { rating } = computeClientRating({
+      revenue: a.revenue, activeProjects: a.activeProjects, activeContractValue: a.activeContractValue,
+      overdueAR: a.overdueAR, staleDays, effortTotal,
+    });
+    out[id] = {
+      clientId: id, name: c.name, rating,
+      revenue: a.revenue, activeProjects: a.activeProjects, effort: effortTotal,
+      overdueAR: a.overdueAR, outstandingAR: a.outstandingAR, staleDays,
+    };
+  }
+  return out;
 }

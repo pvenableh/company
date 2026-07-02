@@ -681,6 +681,7 @@ watch(view, (next) => {
                         </div>
                       </div>
                       <span class="font-medium truncate max-w-[200px]">{{ client.name }}</span>
+                      <ClientsClientRatingBadge :client-id="client.id" size="xs" />
                     </div>
                   </td>
                   <td class="py-3 px-4" @click.stop>
