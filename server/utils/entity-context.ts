@@ -19,6 +19,7 @@ export async function getEntityContext(
   entityType: string,
   entityId: string,
   organizationId: string,
+  userId?: string,
 ): Promise<string> {
   try {
     const directus = getTypedDirectus();
@@ -44,6 +45,8 @@ export async function getEntityContext(
       return await buildLeadContext(directus, entityId, now);
     } else if (entityType === 'contact') {
       return await buildContactContext(directus, entityId, now, organizationId);
+    } else if (entityType === 'cd_contact') {
+      return await buildCdContactContext(directus, entityId, now, userId);
     } else if (entityType === 'proposal') {
       return await buildProposalContext(directus, entityId, now);
     } else if (entityType === 'ticket') {
@@ -557,6 +560,144 @@ async function buildContactContext(directus: any, contactId: string, _now: Date,
   lines.push(summary);
   lines.push('');
   lines.push('Focus your reasoning on this contact. Reference engagement, list membership, and lead history when relevant. When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Card Desk Contact Context ──────────────────────────────────────────────
+
+/**
+ * Context for a CardDesk (cd_contacts) networking contact — the inline detail
+ * panel on the /apps/clients Networking dashboard. These are the CardDesk app's
+ * OWN collection, separate from Earnest `contacts`, so the regular `contact`
+ * builder can't resolve them.
+ *
+ * cd_contacts are personal, scoped by `user_created` (there is no organization
+ * FK). The service-account token bypasses Directus row perms, so — exactly like
+ * buildContactContext guards on org membership — we verify the contact belongs
+ * to the requesting user before exposing any data. Without a `userId` (older
+ * callers) we can't verify ownership, so we return nothing.
+ */
+async function buildCdContactContext(directus: any, cdContactId: string, now: Date, userId?: string): Promise<string> {
+  if (!userId) return '';
+
+  // Ownership-scoped fetch: the filter (not a bare PK read) enforces that this
+  // cd_contact belongs to the caller even though the admin token bypasses perms.
+  const owned = await directus.request(
+    readItems('cd_contacts', {
+      filter: { _and: [{ id: { _eq: cdContactId } }, { user_created: { _eq: userId } }] },
+      fields: [
+        'id', 'name', 'first_name', 'last_name', 'title', 'company', 'email',
+        'phone', 'industry', 'met_at', 'rating', 'hibernated', 'is_client',
+        'client_at', 'notes', 'promoted_contact', 'date_created',
+      ],
+      limit: 1,
+    }),
+  ).catch(() => []) as any[];
+
+  const contact = owned[0];
+  if (!contact) return '';
+
+  const [activities, plans, tasks] = await Promise.all([
+    directus.request(
+      readItems('cd_activities', {
+        filter: { _and: [{ contact: { _eq: cdContactId } }, { user_created: { _eq: userId } }] },
+        fields: ['id', 'type', 'label', 'note', 'date', 'is_response', 'response_note'],
+        sort: ['-date'],
+        limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('cd_plans', {
+        filter: { _and: [{ contact: { _eq: cdContactId } }, { user_created: { _eq: userId } }] },
+        fields: ['id', 'title', 'status', 'date_created'],
+        sort: ['-date_created'],
+        limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('cd_tasks', {
+        filter: { _and: [{ contact: { _eq: cdContactId } }, { user_created: { _eq: userId } }] },
+        fields: ['id', 'title', 'channel', 'note', 'due_at', 'status', 'plan.title'],
+        sort: ['due_at', 'sort'],
+        limit: 30,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+  ]);
+
+  const name = contact.name
+    || `${contact.first_name || ''} ${contact.last_name || ''}`.trim()
+    || contact.email
+    || 'Contact';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Networking contact "${name}"`);
+
+  lines.push('[Source: Card Desk Contact]');
+  if (contact.rating) lines.push(`Rating: ${contact.rating}`);
+  if (contact.company) lines.push(`Company: ${contact.company}`);
+  if (contact.title) lines.push(`Title: ${contact.title}`);
+  if (contact.email) lines.push(`Email: ${contact.email}`);
+  if (contact.phone) lines.push(`Phone: ${contact.phone}`);
+  if (contact.industry) lines.push(`Industry: ${contact.industry}`);
+  if (contact.met_at) lines.push(`Met at: ${contact.met_at}`);
+  if (contact.is_client) {
+    lines.push(`Status: Client${contact.client_at ? ` since ${String(contact.client_at).split('T')[0]}` : ''}`);
+  }
+  if (contact.hibernated) lines.push('Hibernated: yes (intentionally paused)');
+  if (contact.promoted_contact) lines.push('Promoted to Earnest CRM: yes');
+  if (contact.date_created) {
+    const daysAgo = Math.floor((now.getTime() - new Date(contact.date_created).getTime()) / (1000 * 60 * 60 * 24));
+    lines.push(`Added to Card Desk: ${daysAgo} days ago`);
+  }
+
+  // Follow-up plans [Source: Follow-up Plans]
+  if (plans.length > 0) {
+    lines.push('');
+    lines.push('[Source: Follow-up Plans]');
+    lines.push(`PLANS (${plans.length}):`);
+    plans.slice(0, 6).forEach((p: any) => {
+      lines.push(`  - ${p.title || 'Untitled plan'}${p.status ? ` [${p.status}]` : ''}`);
+    });
+  }
+
+  // Follow-up tasks [Source: Follow-up Tasks]
+  if (tasks.length > 0) {
+    const pending = tasks.filter((t: any) => t.status === 'pending');
+    const overdue = pending.filter((t: any) => t.due_at && new Date(t.due_at) < now);
+    lines.push('');
+    lines.push('[Source: Follow-up Tasks]');
+    lines.push(`TASKS (${tasks.length} total, ${pending.length} pending${overdue.length ? `, ${overdue.length} overdue` : ''}):`);
+    pending.slice(0, 8).forEach((t: any) => {
+      const isOverdue = t.due_at && new Date(t.due_at) < now;
+      const due = t.due_at ? `, due ${String(t.due_at).split('T')[0]}` : '';
+      const chan = t.channel ? ` [${t.channel}]` : '';
+      lines.push(`  - ${t.title || 'Untitled task'}${chan}${due}${isOverdue ? ' OVERDUE' : ''}`);
+    });
+  }
+
+  // Activity timeline [Source: Activity Timeline]
+  if (activities.length > 0) {
+    lines.push('');
+    lines.push('[Source: Activity Timeline]');
+    lines.push(`RECENT ACTIVITY (${activities.length} latest):`);
+    activities.slice(0, 8).forEach((a: any) => {
+      const when = a.date ? String(a.date).split('T')[0] : '';
+      const replied = a.is_response ? ' · replied' : '';
+      lines.push(`  - [${when}] ${a.type || 'touch'}${a.label ? ` — ${a.label}` : ''}${replied}`);
+    });
+  }
+
+  if (contact.notes) {
+    lines.push('');
+    lines.push('[Source: Card Desk Contact]');
+    lines.push(`NOTES: ${contact.notes}`);
+  }
+
+  lines.push('');
+  lines.push('Focus your reasoning on this networking contact. Recommend outreach and follow-up next steps based on rating, activity recency, and open tasks. When citing data, include the [Source: X] tag.');
 
   return truncate(lines.join('\n'));
 }

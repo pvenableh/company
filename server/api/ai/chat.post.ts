@@ -232,7 +232,7 @@ export default defineEventHandler(async (event) => {
 
       // Entity-scoped context (when chatting from an entity detail page). Gated on 'entity'.
       (entityType && entityId && organizationId && allowCtx('entity'))
-        ? getEntityContext(entityType, entityId, organizationId).catch(() => '')
+        ? getEntityContext(entityType, entityId, organizationId, userId).catch(() => '')
         : Promise.resolve(''),
 
       // User's pinned notes + entity-tagged notes (always fresh, user-scoped). Gated on 'user'.

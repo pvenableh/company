@@ -26,6 +26,21 @@ const {
 // contact route.
 const contactSlide = useAppSlideOver('contact');
 
+// AI entity context — registers the inline-selected cd_contact so the Earnest
+// panel's "what Earnest can see" chip names it and the server builds
+// cd_contact context (see server/utils/entity-context.ts). Uses
+// resetEntityContext (not clearEntity) so closing the detail drops the entity
+// WITHOUT closing an AI panel the user opened deliberately.
+const { setEntity, resetEntityContext, entityId } = useEntityPageContext();
+
+// Only drop AI context if WE'RE the one who set it (the currently-selected
+// contact) — never clobber another surface's entity context.
+const clearOwnEntityContext = () => {
+	if (selectedContact.value && entityId.value === String(selectedContact.value.id)) {
+		resetEntityContext();
+	}
+};
+
 // Deep-link the selected cd_contact to its detail page in the CardDesk app.
 const config = useRuntimeConfig();
 const cardDeskContactUrl = computed(() =>
@@ -144,6 +159,8 @@ const loadContacts = async () => {
 
 const openContact = async (contact: any) => {
 	selectedContact.value = contact;
+	// Register AI context for this networking contact.
+	setEntity('cd_contact', String(contact.id), contactDisplayName(contact));
 	activitiesLoading.value = true;
 	plansLoading.value = true;
 	contactPlans.value = [];
@@ -171,11 +188,17 @@ const openContact = async (contact: any) => {
 };
 
 const closeDetail = () => {
+	clearOwnEntityContext();
 	selectedContact.value = null;
 	contactActivities.value = [];
 	contactPlans.value = [];
 	contactTasks.value = [];
 };
+
+// Leaving the dashboard (e.g. switching apps / closing the workspace) must
+// drop the cd_contact context so a stale networking contact doesn't linger in
+// the Earnest panel on the next surface.
+onBeforeUnmount(clearOwnEntityContext);
 
 // ── Mutations on the selected contact ─────────────────────────────────────
 const savingPatch = ref(false);

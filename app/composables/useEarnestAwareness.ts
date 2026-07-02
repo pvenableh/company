@@ -42,6 +42,7 @@ const ENTITY_READABLE: Record<string, string> = {
 	financials: 'dashboard',
 	marketing: 'dashboard',
 	video_meeting: 'meeting',
+	cd_contact: 'networking contact',
 };
 
 const ENTITY_ICON: Record<string, string> = {
@@ -61,6 +62,7 @@ const ENTITY_ICON: Record<string, string> = {
 	project_event: 'lucide:calendar',
 	financials: 'lucide:bar-chart-3',
 	marketing: 'lucide:bar-chart-3',
+	cd_contact: 'lucide:contact-round',
 };
 
 /** What the entity item says Earnest can see, per entity type. */
@@ -81,6 +83,7 @@ const ENTITY_KNOWLEDGE: Record<string, string> = {
 	project_event: 'This event — status & remaining work',
 	financials: 'Your financials — cashflow, invoices & revenue',
 	marketing: 'Your marketing — campaigns & engagement',
+	cd_contact: 'This networking contact — activity, plans & follow-up tasks',
 };
 
 /** Route-aware prompt suggestions for general (non-entity) scopes. */
@@ -143,6 +146,7 @@ const ENTITY_PROMPTS: Record<string, string[]> = {
 	project: ['What\'s blocking progress on this project?', 'Summarize the task status', 'Push the start date back 2 weeks'],
 	invoice: ['Why is this invoice overdue?', 'Draft a payment reminder email', 'Summarize payment history'],
 	contact: ['Summarize this contact\'s recent engagement', 'Draft a personalized outreach email', 'What lists and leads are linked here?'],
+	cd_contact: ['Summarize where things stand with this contact', 'Draft a follow-up message to reconnect', 'What\'s the next best action here?'],
 	proposal: ['Summarize this proposal and its status', 'Draft a follow-up to the recipient', 'What should I revise before sending?'],
 	ticket: ['Summarize what this ticket is about', 'What\'s blocking progress here?', 'Change priority to urgent'],
 	lead: ['Summarize this lead and where it stands', 'Draft a follow-up message', 'What\'s the next best action?'],
