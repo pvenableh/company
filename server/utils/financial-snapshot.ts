@@ -21,6 +21,14 @@ export interface FinancialMonth {
   net: number;
 }
 
+export interface RevenueGoal {
+  title: string;
+  target: number;
+  current: number;
+  timeframe: string | null;
+  endDate: string | null;
+}
+
 export interface FinancialSnapshot {
   months: FinancialMonth[];        // trailing window, chronological
   windowMonths: number;
@@ -30,6 +38,10 @@ export interface FinancialSnapshot {
   outstanding: { total: number; count: number; overdueTotal: number; overdueCount: number };
   recurring: { retainerProjects: number; estMonthlyFloor: number };
   expensesByCategory: { category: string; amount: number }[];
+  /** Active revenue goals/targets — empty when the org has set none. */
+  revenueGoals: RevenueGoal[];
+  /** What data actually exists, so the model can flag gaps instead of guessing. */
+  coverage: { hasIncome: boolean; hasExpenses: boolean; hasOutstanding: boolean; hasRevenueGoal: boolean };
   /** Preformatted, LLM-ready summary of everything above. */
   text: string;
 }
@@ -61,7 +73,7 @@ export async function buildFinancialSnapshot(
     .toISOString().split('T')[0]!;
   const ri = readItems as any;
 
-  const [paidInvoices, outstandingInvoices, expenses, retainers] = await Promise.all([
+  const [paidInvoices, outstandingInvoices, expenses, retainers, goalRows] = await Promise.all([
     // Realized income — paid invoices in the window, by invoice_date.
     directus.request(ri('invoices', {
       filter: {
@@ -105,6 +117,22 @@ export async function buildFinancialSnapshot(
       },
       fields: ['id', 'billing_type', 'contract_value', 'retainer_period', 'retainer_hours_per_period', 'retainer_hourly_rate'],
       limit: 200,
+    })).catch(() => []) as Promise<any[]>,
+
+    // Active org revenue goals/targets — so the model can measure "on track"
+    // against a real target, or tell the user none exists.
+    directus.request(ri('goals', {
+      filter: {
+        _and: [
+          { organization: { _eq: organizationId } },
+          { scope: { _eq: 'organization' } },
+          { category: { _eq: 'revenue' } },
+          { _or: [{ end_date: { _gte: windowStartIso } }, { end_date: { _null: true } }] },
+        ],
+      },
+      fields: ['id', 'title', 'target_value', 'current_value', 'timeframe', 'end_date'],
+      sort: ['end_date'],
+      limit: 12,
     })).catch(() => []) as Promise<any[]>,
   ]);
 
@@ -170,6 +198,25 @@ export async function buildFinancialSnapshot(
     net: sum(buckets.map((b) => b.net)),
   };
 
+  const revenueGoals: RevenueGoal[] = (goalRows || [])
+    .filter((g: any) => Number(g.target_value) > 0)
+    .map((g: any) => ({
+      title: (g.title || 'Revenue goal').toString(),
+      target: Number(g.target_value) || 0,
+      current: Number(g.current_value) || 0,
+      timeframe: g.timeframe ?? null,
+      endDate: g.end_date ?? null,
+    }));
+
+  // Data-coverage flags drive the "what's missing" guidance — so the model
+  // names the gap instead of fabricating a target or a confident yes/no.
+  const coverage = {
+    hasIncome: totals.income > 0,
+    hasExpenses: totals.expenses > 0 || expenses.length > 0,
+    hasOutstanding: outstanding.count > 0,
+    hasRevenueGoal: revenueGoals.length > 0,
+  };
+
   // ── Formatted LLM text ──
   const lines: string[] = [];
   lines.push('[Source: Financial Snapshot]');
@@ -192,6 +239,26 @@ export async function buildFinancialSnapshot(
     lines.push(`Top expense categories (window): ${top}.`);
   }
 
+  // Revenue goals + explicit data-coverage so the model measures against a real
+  // target (or says none exists) and names any missing inputs.
+  lines.push('');
+  if (revenueGoals.length) {
+    lines.push('REVENUE TARGETS on record:');
+    for (const g of revenueGoals) {
+      const pct = g.target ? Math.round((g.current / g.target) * 100) : 0;
+      lines.push(`  - ${g.title}: target ${money(g.target)}, current ${money(g.current)} (${pct}%)${g.timeframe ? `, ${g.timeframe}` : ''}${g.endDate ? `, ends ${g.endDate}` : ''}.`);
+    }
+  } else {
+    lines.push('REVENUE TARGETS: NONE set. There is no revenue goal/target in the system to measure "on track" against.');
+  }
+  const gaps: string[] = [];
+  if (!coverage.hasIncome) gaps.push('no realized income recorded in the window (no paid invoices)');
+  if (!coverage.hasExpenses) gaps.push('no expenses recorded — expense tracking appears absent');
+  if (!coverage.hasRevenueGoal) gaps.push('no revenue target/goal set');
+  if (gaps.length) {
+    lines.push(`DATA GAPS: ${gaps.join('; ')}. Do NOT fabricate a target or a confident yes/no — name what's missing and tell the user exactly what to add (set a revenue goal, log expenses, invoice + collect) to get a real answer.`);
+  }
+
   return {
     months: buckets,
     windowMonths,
@@ -201,6 +268,8 @@ export async function buildFinancialSnapshot(
     outstanding,
     recurring,
     expensesByCategory,
+    revenueGoals,
+    coverage,
     text: lines.join('\n'),
   };
 }
