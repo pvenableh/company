@@ -152,7 +152,10 @@ function onChange(columnId: ColumnKey, event: { added?: { element: Client } }) {
 								</div>
 							</div>
 							<div class="min-w-0 flex-1">
-								<p class="text-xs font-medium truncate">{{ element.name }}</p>
+								<div class="flex items-center gap-1.5">
+									<p class="text-xs font-medium truncate">{{ element.name }}</p>
+									<ClientsClientRatingBadge :client-id="element.id" size="xs" />
+								</div>
 								<p v-if="element.website" class="text-[10px] text-muted-foreground truncate">
 									{{ element.website.replace(/^https?:\/\//, '') }}
 								</p>

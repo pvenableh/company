@@ -115,10 +115,35 @@ const { selectedOrg } = useOrganization();
 // only — power users tend to lock in one or the other and switch is rare.
 const clientsViewMode = useCookie<'table' | 'board'>('clients-view-mode', { default: () => 'table' });
 
-// Drag-and-drop is only active in manual sort mode + table view; in activity
-// mode the rows are ordered by `-date_updated` and reordering would be a lie.
+// Sort-by-rating is a client-side overlay on top of the server sort — ratings
+// come from useClientScores (not a Directus column), so we reorder the fetched
+// list in place (VueDraggable-safe) and disable drag while it's on.
+const sortByRating = ref(false);
+const { getScore, load: loadClientScores, scores: clientScores } = useClientScores();
+const RATING_RANK: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, F: 4 };
+
+function applyRatingSort() {
+  if (!sortByRating.value) return;
+  allClients.value = [...allClients.value].sort((a, b) => {
+    const sa = getScore(a.id as string);
+    const sb = getScore(b.id as string);
+    const ra = sa ? RATING_RANK[sa.rating] ?? 9 : 9;
+    const rb = sb ? RATING_RANK[sb.rating] ?? 9 : 9;
+    if (ra !== rb) return ra - rb;                    // A → F
+    return (sb?.revenue || 0) - (sa?.revenue || 0);   // tie-break: revenue desc
+  });
+}
+function enableRatingSort() {
+  sortByRating.value = true;
+  loadClientScores(selectedOrg.value).then(applyRatingSort);
+}
+// Re-apply when the scores arrive (async) or the list refetches.
+watch(clientScores, () => applyRatingSort(), { deep: true });
+
+// Drag-and-drop is only active in manual sort mode + table view; in activity or
+// rating mode the rows are ordered for us and reordering would be a lie.
 const canDragSort = computed(
-  () => clientsSortMode.value === 'manual' && clientsViewMode.value === 'table',
+  () => clientsSortMode.value === 'manual' && clientsViewMode.value === 'table' && !sortByRating.value,
 );
 
 const STATUS_QUICK_OPTIONS: Array<{ value: 'active' | 'prospect' | 'inactive' | 'archived'; label: string }> = [
@@ -201,6 +226,7 @@ async function fetchClients() {
     });
     allClients.value = result.data;
     clientsTotal.value = result.total;
+    applyRatingSort();
   } finally {
     clientsLoading.value = false;
   }
@@ -547,8 +573,8 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="clientsSortMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-                @click="setClientsSortMode('activity')"
+                :class="!sortByRating && clientsSortMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="sortByRating = false; setClientsSortMode('activity')"
               >
                 <Icon name="lucide:activity" class="w-3.5 h-3.5" />
                 Recent
@@ -556,11 +582,21 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="clientsSortMode === 'manual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-                @click="setClientsSortMode('manual')"
+                :class="!sortByRating && clientsSortMode === 'manual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="sortByRating = false; setClientsSortMode('manual')"
               >
                 <Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
                 Manual
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                :class="sortByRating ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                title="Sort by Earnest client rating (A → F)"
+                @click="enableRatingSort()"
+              >
+                <EarnestIcon class="w-3.5 h-3.5" />
+                Rating
               </button>
             </div>
 

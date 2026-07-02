@@ -8,9 +8,13 @@
 					size="xs"
 				/>
 				<div>
-					<p class="text-sm font-medium t-text">
-						{{ lead.related_contact?.first_name }} {{ lead.related_contact?.last_name }}
-					</p>
+					<div class="flex items-center gap-1.5">
+						<p class="text-sm font-medium t-text">
+							{{ lead.related_contact?.first_name }} {{ lead.related_contact?.last_name }}
+						</p>
+						<!-- Once a lead converts to a client, reference that account's rating. -->
+						<ClientsClientRatingBadge v-if="linkedClientId" :client-id="linkedClientId" size="xs" />
+					</div>
 					<p class="text-xs t-text-secondary">
 						{{ lead.related_contact?.company || lead.related_contact?.email }}
 					</p>
@@ -59,6 +63,14 @@ import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 const props = defineProps<{ lead: any }>();
 defineEmits<{ click: [lead: any, ev?: MouseEvent] }>();
+
+// The client this lead converted into (resulting_client), so we can show that
+// account's Earnest rating on the lead card. Null for un-converted leads.
+const linkedClientId = computed(() => {
+	const c = props.lead?.resulting_client;
+	if (!c) return null;
+	return typeof c === 'object' ? (c.id != null ? String(c.id) : null) : String(c);
+});
 
 const stageLabel = computed(() => LEAD_STAGE_LABELS[props.lead.stage as keyof typeof LEAD_STAGE_LABELS] || props.lead.stage);
 const stageColor = computed(() => LEAD_STAGE_COLORS[props.lead.stage as keyof typeof LEAD_STAGE_COLORS] || '#6B7280');
