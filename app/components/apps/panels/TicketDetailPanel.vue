@@ -36,6 +36,7 @@ const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
 const TICKET_FIELDS = [
 	'id', 'title', 'description', 'status', 'priority',
 	'date_created', 'date_updated', 'due_date',
+	'csat_rating', 'csat_comment', 'csat_submitted_at',
 	'organization.id', 'organization.name',
 	'project.id', 'project.title',
 	'client.id', 'client.name',
@@ -166,6 +167,15 @@ async function changeStatus(next: string) {
 			<div v-if="ticket.description" class="pt-3 border-t border-border/30">
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Description</p>
 				<div class="text-sm whitespace-pre-wrap text-foreground/90" v-html="ticket.description" />
+			</div>
+
+			<!-- Client satisfaction (set from the portal when resolved) -->
+			<div v-if="ticket.csat_rating" class="pt-3 border-t border-border/30">
+				<CsatBadge
+					:rating="ticket.csat_rating"
+					:comment="ticket.csat_comment"
+					:submitted-at="ticket.csat_submitted_at"
+				/>
 			</div>
 
 			<!-- Linkages -->

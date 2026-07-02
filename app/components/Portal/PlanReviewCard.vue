@@ -43,6 +43,19 @@ const postBusy = ref<Record<string, boolean>>({})
 const expanded = ref(!props.collapsed)
 const selectedPostId = ref<string | null>(null)
 
+// Which post has its "request changes" feedback box open, and the draft note.
+const feedbackFor = ref<string | null>(null)
+const feedbackText = ref('')
+
+function openFeedback(postId: string) {
+  feedbackFor.value = postId
+  feedbackText.value = ''
+}
+function cancelFeedback() {
+  feedbackFor.value = null
+  feedbackText.value = ''
+}
+
 const token = computed(() => props.plan.approval_token || '')
 
 const planTitle = computed(() => {
@@ -102,19 +115,20 @@ async function approvePlan() {
   }
 }
 
-async function actOnPost(postId: string, action: 'approve' | 'request_changes') {
+async function actOnPost(postId: string, action: 'approve' | 'request_changes', note?: string) {
   if (!token.value) return
   postBusy.value[postId] = true
   try {
     await $fetch(`/api/social/plans/${props.plan.id}/portal-post-action`, {
       method: 'POST',
-      body: { token: token.value, postId, action },
+      body: { token: token.value, postId, action, note: note?.trim() || undefined },
     })
     toast.add({
       title: action === 'approve' ? 'Post approved' : 'Feedback sent',
       icon: action === 'approve' ? 'i-lucide-check' : 'i-lucide-message-square',
       color: 'green',
     })
+    if (action === 'request_changes') cancelFeedback()
     emit('refresh')
   } catch (err: any) {
     toast.add({
@@ -291,26 +305,58 @@ function postStateLabel(p: SocialPost): string {
                   </div>
                   <p class="plan-review__post-caption">{{ p.caption || '(empty)' }}</p>
 
-                  <div
-                    v-if="(p.approval_state === 'in_review' || p.approval_state === 'requested_changes') && token"
-                    class="plan-review__post-actions"
+                  <!-- Feedback the client already left on this post -->
+                  <p
+                    v-if="p.client_feedback && feedbackFor !== p.id"
+                    class="plan-review__post-feedback"
                   >
-                    <UiActionButton
-                      icon="lucide:check"
-                      variant="primary"
-                      :loading="postBusy[p.id]"
-                      @click="actOnPost(p.id, 'approve')"
-                    >
-                      Approve
-                    </UiActionButton>
-                    <UiActionButton
-                      icon="lucide:rotate-ccw"
-                      :loading="postBusy[p.id]"
-                      @click="actOnPost(p.id, 'request_changes')"
-                    >
-                      Request Changes
-                    </UiActionButton>
-                  </div>
+                    <Icon name="lucide:message-square" class="w-3.5 h-3.5 shrink-0" />
+                    <span>You asked: “{{ p.client_feedback }}”</span>
+                  </p>
+
+                  <template v-if="(p.approval_state === 'in_review' || p.approval_state === 'requested_changes') && token">
+                    <!-- Inline "what to change" box -->
+                    <div v-if="feedbackFor === p.id" class="plan-review__feedback">
+                      <textarea
+                        v-model="feedbackText"
+                        rows="2"
+                        maxlength="2000"
+                        placeholder="What would you like changed? (optional)"
+                        class="plan-review__feedback-note"
+                      />
+                      <div class="plan-review__post-actions">
+                        <UiActionButton
+                          icon="lucide:send"
+                          variant="primary"
+                          :loading="postBusy[p.id]"
+                          @click="actOnPost(p.id, 'request_changes', feedbackText)"
+                        >
+                          Send Feedback
+                        </UiActionButton>
+                        <button type="button" class="plan-review__feedback-cancel" @click="cancelFeedback">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+
+                    <div v-else class="plan-review__post-actions">
+                      <UiActionButton
+                        icon="lucide:check"
+                        variant="primary"
+                        :loading="postBusy[p.id]"
+                        @click="actOnPost(p.id, 'approve')"
+                      >
+                        Approve
+                      </UiActionButton>
+                      <UiActionButton
+                        icon="lucide:rotate-ccw"
+                        :loading="postBusy[p.id]"
+                        @click="openFeedback(p.id)"
+                      >
+                        Request Changes
+                      </UiActionButton>
+                    </div>
+                  </template>
                 </div>
               </article>
             </div>
@@ -479,5 +525,22 @@ function postStateLabel(p: SocialPost): string {
 
 .plan-review__post-actions {
   @apply flex items-center gap-2 pt-1;
+}
+
+.plan-review__post-feedback {
+  @apply flex items-start gap-1.5 text-xs text-rose-700 dark:text-rose-300 italic pt-1;
+}
+
+.plan-review__feedback {
+  @apply space-y-2 pt-1;
+}
+
+.plan-review__feedback-note {
+  @apply w-full rounded-xl border border-border bg-background px-3 py-2 text-sm
+    resize-none focus:outline-none focus:ring-2 focus:ring-primary/40;
+}
+
+.plan-review__feedback-cancel {
+  @apply text-xs text-muted-foreground hover:text-foreground px-2;
 }
 </style>

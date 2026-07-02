@@ -185,6 +185,61 @@ function exitPreview() {
 
 .portal-shell__page {
 	@apply flex-1 overflow-auto min-h-0;
+	position: relative;
+	z-index: 1;
+}
+
+/* Page ambient gradient — mirror of `.apps-shell__main::before`. An
+ * accent-tinted radial fade below the chrome that bridges the glass header
+ * into the page body so the portal reads as one continuous material, not
+ * two floating slabs. The `--app-accent-*` vars are bound on the shell
+ * wrapper via :style="accentStyle" (usePortalAccent), so re-tinting is
+ * automatic when the active app/section accent changes. Behind content
+ * (z-0) and pointer-events:none. */
+.portal-shell__main::before {
+	content: '';
+	position: fixed;
+	top: 56px;
+	left: 0;
+	right: 0;
+	height: 360px;
+	pointer-events: none;
+	z-index: 0;
+	background:
+		radial-gradient(
+			ellipse 70% 100% at 50% -10%,
+			hsl(var(--app-accent-h, 220) 65% 60% / 0.08) 0%,
+			hsl(var(--app-accent-h, 220) 55% 55% / 0.04) 35%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 50% 80% at 90% 0%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 60% 55% / 0.05) 0%,
+			transparent 60%
+		);
+	mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+	-webkit-mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+}
+.dark .portal-shell__main::before {
+	background:
+		radial-gradient(
+			ellipse 70% 100% at 50% -10%,
+			hsl(var(--app-accent-h, 220) 65% 50% / 0.10) 0%,
+			hsl(var(--app-accent-h, 220) 55% 45% / 0.05) 35%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 50% 80% at 90% 0%,
+			hsl(calc(var(--app-accent-h, 220) + 30) 60% 50% / 0.07) 0%,
+			transparent 60%
+		);
+}
+/* When the preview banner nudges the shell down, drop the wash to match. */
+.portal-shell--with-preview .portal-shell__main::before {
+	top: 86px;
+}
+@media (prefers-reduced-transparency: reduce) {
+	.portal-shell__main::before { display: none; }
 }
 
 /* The rail floats as a glass pill over the page regardless of side. Pad

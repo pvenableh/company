@@ -3,8 +3,10 @@
  * PortalCommentThread
  * Lightweight comment + reply panel for the client portal.
  * Uses the existing `comments` collection (polymorphic collection + item).
- * Reactions (single-emoji comments prefixed with `::reaction::`) are filtered
- * out of the thread and handled separately by PortalReactions.
+ * Reactions live in the real `reactions` collection via <ReactionsBar>. Any
+ * legacy single-emoji comments prefixed with `::reaction::` (from the old
+ * fake-reaction scheme) are still filtered out of the thread for backward
+ * compat with historical data.
  */
 
 const props = defineProps<{

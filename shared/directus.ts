@@ -1131,6 +1131,10 @@ export interface CdCard {
 	cover_image?: string | null;
 	/** @description Optional company logo, shown opposite the profile photo. */
 	logo_image?: string | null;
+	/** @description When off, the office address is hidden on the public shared card. */
+	show_address?: boolean;
+	/** @description When on, hides the boxed row backgrounds/borders on the glass & tech designs for a cleaner, minimal look. */
+	flat_layout?: boolean;
 }
 
 export interface CdConnection {
@@ -3558,6 +3562,12 @@ export interface Project {
 	retainer_started_at?: string | null;
 	/** @description Display monthly hours used to the client in the portal. Per-entry detail is never shown. */
 	show_hours_to_client?: boolean;
+	/** @description Client satisfaction rating (1–5) submitted from the portal when the work was delivered. Written by /api/portal/csat. */
+	csat_rating?: 1 | 2 | 3 | 4 | 5 | null;
+	/** @description Optional free-text the client left with their CSAT rating. */
+	csat_comment?: string | null;
+	/** @description When the client submitted their CSAT rating. Null = not yet rated. */
+	csat_submitted_at?: string | null;
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
@@ -4202,6 +4212,8 @@ export interface SocialPost {
 	content_plan?: ContentPlan | string | null;
 	/** @description Per-platform caption forks. null = all channels publish the master caption. Shape: { instagram?: string, linkedin?: string, facebook?: string, threads?: string, tiktok?: string }. */
 	caption_variants?: Record<string, any> | null;
+	/** @description Feedback the client left when requesting changes on this post from the portal review. */
+	client_feedback?: string | null;
 }
 
 export interface SocialThread {
@@ -4340,6 +4352,12 @@ export interface Ticket {
 	team?: Team | string | null;
 	/** @description The client this ticket is for */
 	client?: Client | string | null;
+	/** @description Client satisfaction rating (1–5) submitted from the portal when the work was delivered. Written by /api/portal/csat. */
+	csat_rating?: 1 | 2 | 3 | 4 | 5 | null;
+	/** @description Optional free-text the client left with their CSAT rating. */
+	csat_comment?: string | null;
+	/** @description When the client submitted their CSAT rating. Null = not yet rated. */
+	csat_submitted_at?: string | null;
 	files?: TicketsFile[] | string[];
 	services?: TicketsService[] | string[];
 	assigned_to?: TicketsDirectusUser[] | string[];

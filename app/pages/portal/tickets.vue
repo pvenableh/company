@@ -17,6 +17,14 @@ function openTicket(ticket: any) {
 	showDetail.value = true;
 }
 
+function onTicketRated(p: { rating: number; comment: string | null; submitted_at: string }) {
+	if (!selectedTicket.value) return;
+	// Reflect the new rating on the in-memory row so a reopen shows the rated state.
+	selectedTicket.value.csat_rating = p.rating;
+	selectedTicket.value.csat_comment = p.comment;
+	selectedTicket.value.csat_submitted_at = p.submitted_at;
+}
+
 const showCreateForm = ref(false);
 
 function onTicketCreated() {
@@ -130,6 +138,17 @@ const priorityBadge: Record<string, string> = {
 								<p class="text-xs text-muted-foreground mb-1">Opened</p>
 								<p class="text-sm">{{ selectedTicket.date_created ? new Date(selectedTicket.date_created).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—' }}</p>
 							</div>
+
+							<!-- Satisfaction rating — only renders once the ticket is completed -->
+							<PortalCsatRating
+								collection="tickets"
+								:item-id="selectedTicket.id"
+								:status="selectedTicket.status"
+								:rating="selectedTicket.csat_rating"
+								:comment="selectedTicket.csat_comment"
+								:submitted-at="selectedTicket.csat_submitted_at"
+								@submitted="onTicketRated"
+							/>
 
 							<!-- Reactions -->
 							<div>
