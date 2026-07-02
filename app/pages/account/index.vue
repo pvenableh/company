@@ -213,7 +213,7 @@
 						<div class="flex items-center justify-between gap-4">
 							<div class="flex items-center gap-3 min-w-0">
 								<span
-									class="flex items-center justify-center size-9 rounded-lg shrink-0"
+									class="flex items-center justify-center size-9 rounded-full shrink-0"
 									:class="{
 										'bg-success/15 text-success': versionStatus === 'current',
 										'bg-amber-500/15 text-amber-600 dark:text-amber-500': versionStatus === 'outdated',

@@ -7,23 +7,20 @@ import { version as pkgVersion } from './package.json';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Build-time app version, auto-counted from git.
+// Build-time app version. The number is MAJOR.MINOR.<total-commit-count>:
+//   - MAJOR.MINOR is the manual lever, read from package.json's "version"
+//     (bump it with `pnpm release:minor` / `pnpm release:major`).
+//   - PATCH is `git rev-list --count HEAD` — the total number of commits on
+//     HEAD, which climbs by itself on every push.
 //
-// The version is MAJOR.MINOR.<commits-since-tag>. The MAJOR.MINOR base is the
-// most recent `vX.Y` tag (the only manual lever — tag `v2.1` / `v3.0` to bump
-// it); the PATCH is the number of commits since that tag, so it climbs by
-// itself on every push. `git describe --long` gives us "v2.0-686-g12b6e2e7"
-// → "2.0.686".
-//
-// IMPORTANT (why this is self-sufficient): Vercel ships a *shallow* clone
-// without tags, so a bare `git describe` fails there and we'd fall back to the
-// static package.json version on every deploy — the number would never move.
-// The tag-fetch/unshallow used to live only in the `prebuild` npm hook, but
-// that hook does NOT run when Vercel's framework preset invokes `nuxt build`
-// directly (only when the build command is literally `npm/pnpm run build`).
-// So we deepen the clone + fetch tags *here*, inside config eval, which always
-// runs during the build. Everything is best-effort and wrapped — a broken git
-// env can never fail the build, it just falls through to package.json.
+// Why commit-count and NOT `git describe` against a `vX.Y` tag: Vercel's build
+// container clones the repo WITHOUT tags and can't fetch them (no credentials
+// for the private remote at build time), so a tag-based `git describe` always
+// failed there and fell back to the static package.json number — the version
+// was frozen at 2.0.0 on every deploy. `git rev-list --count HEAD` needs only
+// the local commit history (no tags, no network), so it resolves the same way
+// locally and on Vercel. Everything is best-effort and wrapped — a broken git
+// env can never fail the build; it just falls through to the static version.
 function tryGit(cmd: string): string | null {
 	try {
 		return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000 })
@@ -34,43 +31,32 @@ function tryGit(cmd: string): string | null {
 	}
 }
 
-const DESCRIBE = "git describe --tags --long --match 'v[0-9]*' --exclude '*archive*'";
-
-function parseDescribe(desc: string | null): string | null {
-	if (!desc) return null;
-	// "v2.0-686-g12b6e2e7" or "v2.1.0-3-gabc1234" → major.minor.count
-	const m = desc.match(/^v?(\d+)\.(\d+)(?:\.\d+)?-(\d+)-g[0-9a-f]+$/);
-	return m ? `${m[1]}.${m[2]}.${m[3]}` : null;
-}
-
 function resolveAppVersion(): string {
 	// 1. Explicit override always wins (CI / manual lever / Vercel env var).
 	const envVer = process.env.NUXT_PUBLIC_APP_VERSION?.trim();
 	if (envVer) return envVer;
 
-	// 2. Fast path: local dev or an already-deep clone — describe as-is.
-	let v = parseDescribe(tryGit(DESCRIBE));
-	if (v) return v;
+	// MAJOR.MINOR base from package.json ("2.0.0" → major "2", minor "0").
+	const [major = '0', minor = '0'] = pkgVersion.split('.');
 
-	// 3. Deepen the clone + fetch tags, then retry. `--unshallow` errors on a
-	//    complete repo (ignored); the depth fetch covers partial clones.
-	tryGit('git fetch --tags --unshallow --quiet');
-	tryGit('git fetch --tags --depth=2147483647 --quiet');
-	v = parseDescribe(tryGit(DESCRIBE));
-	if (v) return v;
+	// 2. Deepen a shallow CI checkout so the commit count is complete. Both are
+	//    best-effort: `--unshallow` errors on an already-complete clone (ignored)
+	//    and a private-remote fetch may no-op — `rev-list` still counts whatever
+	//    history is present.
+	tryGit('git fetch --unshallow --quiet');
+	tryGit('git fetch --depth=2147483647 --quiet');
 
-	// 4. Nearest tag + counted commits, in case `--long` output was unusual.
-	const tag = tryGit("git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude '*archive*'");
-	if (tag) {
-		const tm = tag.match(/^v?(\d+)\.(\d+)/);
-		const count = tryGit(`git rev-list --count ${tag}..HEAD`);
-		if (tm && count && /^\d+$/.test(count)) return `${tm[1]}.${tm[2]}.${count}`;
+	// 3. PATCH = total commit count on HEAD. No tags, no network required, so it
+	//    works identically in local dev and in the Vercel build container.
+	const count = tryGit('git rev-list --count HEAD');
+	if (count && /^\d+$/.test(count) && Number(count) > 0) {
+		return `${major}.${minor}.${count}`;
 	}
 
-	// 5. Static fallback — the number won't climb, but the buildId (commit SHA)
+	// 4. Static fallback — the number won't climb, but the buildId (commit SHA)
 	//    still drives the update toast. Warn loudly so a broken build env is
 	//    obvious in the deploy logs.
-	console.warn(`[version] git describe unavailable — falling back to package.json (${pkgVersion})`);
+	console.warn(`[version] git rev-list unavailable — falling back to package.json (${pkgVersion})`);
 	return pkgVersion;
 }
 

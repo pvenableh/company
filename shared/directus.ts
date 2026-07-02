@@ -4897,6 +4897,10 @@ export interface DirectusUser {
 	theme_dark_overrides?: 'json' | null;
 	phone?: string | null;
 	cell_phone?: string | null;
+	nickname?: string | null;
+	linkedin?: string | null;
+	github?: string | null;
+	timezone?: string | null;
 	text_direction?: 'auto' | 'ltr' | 'rtl';
 	industry?: string | null;
 	networking_goal?: string | null;

@@ -20,6 +20,10 @@
  *   - nav_preferences (sidebar/nav reordering)
  *   - theme_light / theme_dark + override JSONs (Nuxt UI theme picker)
  *   - industry / networking_goal (onboarding profile, editable from /account)
+ *   - phone / cell_phone (contact info, editable from /account Profile tab)
+ *   - nickname / linkedin / github / timezone (profile fields — these had been
+ *     silently dropped: phone/cell_phone lacked the update perm, and the other
+ *     four didn't exist as columns until the profile-save fix added them)
  *
  * All of these are still scoped by the existing `id._eq: $CURRENT_USER`
  * row filter, so users can only update their own row — the field-list
@@ -54,6 +58,13 @@ const USER_PREF_FIELDS = [
 	'networking_goal',
 	'app_pref_carddesk_promo_dismissed_at',
 	'app_pref_studio_intro_dismissed_at',
+	// Profile tab (/account) — contact + social + preferences.
+	'phone',
+	'cell_phone',
+	'nickname',
+	'linkedin',
+	'github',
+	'timezone',
 ];
 
 async function main() {
