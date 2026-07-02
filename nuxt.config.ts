@@ -309,6 +309,13 @@ export default defineNuxtConfig({
 			// NUXT_PUBLIC_SOCIAL_PUBLISHING_ENABLED=true — to restore everything.
 			socialPublishingEnabled: process.env.NUXT_PUBLIC_SOCIAL_PUBLISHING_ENABLED === 'true',
 
+			// Earnest mascot kill-switch. ON by default; the reactive logo "E" that
+			// morphs on real events (see <EarnestMascot> / useEarnestMascot). Set
+			// NUXT_PUBLIC_EARNEST_MASCOT_ENABLED=false to hide it everywhere with no
+			// code change. A per-user toggle (Account → Appearance) and
+			// prefers-reduced-motion further gate it; this flag overrides both.
+			earnestMascotEnabled: process.env.NUXT_PUBLIC_EARNEST_MASCOT_ENABLED !== 'false',
+
 			// Stripe public key
 			stripePublic: isProduction ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 
