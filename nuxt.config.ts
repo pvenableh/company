@@ -590,6 +590,12 @@ export default defineNuxtConfig({
 		},
 	},
 
+	// Disable build sourcemaps to shave peak memory (and time) off the Nitro/
+	// rollup build — server sourcemaps default on and are a big contributor to
+	// the Vercel build-container OOM. Prod stack traces stay readable enough
+	// via Nitro's own error handling; flip back on locally if deep-debugging.
+	sourcemap: false,
+
 	build: {
 		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'mjml', 'handlebars'],
 	},
