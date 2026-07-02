@@ -133,6 +133,7 @@ export const useQuickTasks = () => {
 	const { selectedClient } = useClients();
 	const { isMine } = useDataScope();
 	const taskItems = useDirectusItems('tasks');
+	const { awardEvent } = useArcadeAwards();
 
 	const TASK_FIELDS = [
 		'id', 'title', 'description', 'status', 'sort', 'priority', 'schedule',
@@ -310,6 +311,12 @@ export const useQuickTasks = () => {
 			// Revert on error
 			task.completed = wasCompleted;
 			task.completedAt = wasCompleted ? task.completedAt : undefined;
+		}
+
+		// Arcade reward — only on a genuine transition into completed (the
+		// try/catch above reverts task.completed on failure, so this is safe).
+		if (task.completed && !wasCompleted) {
+			awardEvent('task_completed');
 		}
 
 		// Generate motivational message on completion

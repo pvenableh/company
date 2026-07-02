@@ -67,6 +67,7 @@ const paymentMethodKey = ref<'check' | 'zelle' | 'venmo' | 'cash' | 'other' | 'e
 const editingPayment = ref<PaymentsReceived | null>(null);
 const toast = useToast();
 const { updateInvoice, deleteInvoice } = useInvoices();
+const { awardEvent } = useArcadeAwards();
 
 const { getStatusBadgeClasses } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
@@ -123,9 +124,14 @@ function triggerEditSubmit() {
 async function onEditFormSave(payload: any) {
   if (!invoice.value?.id) return;
   editSaving.value = true;
+  const prevStatus = invoice.value.status;
   try {
     const updated = await updateInvoice(invoice.value.id, { ...payload, status: editStatus.value });
     toast.add({ title: 'Invoice updated', color: 'green' });
+    // Arcade reward — getting paid is a money moment.
+    if (editStatus.value === 'paid' && prevStatus !== 'paid') {
+      awardEvent('invoice_paid_on_time', { amount: Number(updated?.total_amount || invoice.value?.total_amount || 0) || undefined });
+    }
     onInvoiceUpdated(updated);
     editMode.value = false;
   } catch (err: any) {

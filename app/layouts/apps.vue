@@ -122,6 +122,13 @@
 			<WalkthroughManager />
 		</ClientOnly>
 
+		<!-- Arcade reward overlay — floating +EP pops, combo meter, badge
+		     toasts, and the level-up takeover. One mount-point; any part of
+		     the app fires rewards via useArcade().reward(). -->
+		<ClientOnly>
+			<ArcadeRewardLayer />
+		</ClientOnly>
+
 		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
 	</div>
 </template>

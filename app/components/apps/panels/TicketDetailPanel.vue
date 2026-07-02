@@ -23,6 +23,7 @@ const ticketItems = useDirectusItems('tickets');
 const { push } = useAppSlideOverStack();
 const { getStatusPillClass, getPriorityBadgeClass } = useStatusStyle();
 const toast = useToast();
+const { awardEvent } = useArcadeAwards();
 
 const ticket = ref<any | null>(null);
 const loading = ref(false);
@@ -82,6 +83,10 @@ async function changeStatus(next: string) {
 	updatingStatus.value = true;
 	try {
 		await ticketItems.update(ticket.value.id, { status: next });
+		// Arcade reward — only when a ticket transitions into Completed.
+		if (next === 'Completed' && prev !== 'Completed') {
+			awardEvent('ticket_closed');
+		}
 	} catch (err: any) {
 		ticket.value = { ...ticket.value, status: prev };
 		toast.add({ title: 'Failed to update status', description: err?.message, color: 'red' });

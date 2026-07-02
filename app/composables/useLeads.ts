@@ -11,6 +11,7 @@ import { LEAD_PIPELINE_STAGES, FOLLOW_UP_INTERVALS } from '~~/shared/leads';
 export function useLeads() {
   const leads = useDirectusItems('leads');
   const { selectedOrg } = useOrganization();
+  const { awardEvent } = useArcadeAwards();
 
   const getLeads = async (filters?: LeadFilters) => {
     // Tenant-data safety: never query leads without an org. Null-org leads
@@ -93,7 +94,13 @@ export function useLeads() {
   };
 
   const updateLeadStage = async (id: number | string, stage: LeadStage) => {
-    return await leads.update(id, { stage } as any);
+    const res = await leads.update(id, { stage } as any);
+    // Arcade reward — a won deal is the big one; qualifying and any other
+    // forward move earn smaller pops.
+    if (stage === 'won') awardEvent('deal_won');
+    else if (stage === 'qualified') awardEvent('lead_qualified');
+    else if (stage !== 'lost') awardEvent('lead_stage_advanced');
+    return res;
   };
 
   const assignLead = async (id: number | string, userId: string) => {
