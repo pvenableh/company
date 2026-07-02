@@ -663,13 +663,15 @@ function snapToNearestCorner() {
 	opacity: 0.7;
 }
 
+/* Earnest brand ink for the mark (the E); its own #00BFFF dot carries the
+   accent. Don't tint it with the theme primary. */
 .dock-btn-ai {
-	color: hsl(var(--primary));
+	color: hsl(var(--foreground));
 }
 
 .dock-btn-ai:hover {
 	background: hsl(var(--primary) / 0.2);
-	color: hsl(var(--primary));
+	color: hsl(var(--foreground));
 }
 
 /* Token-usage ring around the Earnest AI button */

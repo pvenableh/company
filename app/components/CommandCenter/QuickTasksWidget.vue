@@ -85,7 +85,7 @@
 				v-model="newTaskTitle"
 				type="text"
 				placeholder="Add a quick task..."
-				class="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+				class="flex-1 h-9 rounded-full border border-border bg-background px-4 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
 				@keydown.enter="handleAddTask"
 			/>
 			<USelectMenu
@@ -97,7 +97,7 @@
 				class="w-24"
 			/>
 			<button
-				class="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+				class="h-9 px-4 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
 				:disabled="!newTaskTitle.trim()"
 				@click="handleAddTask"
 			>

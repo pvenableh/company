@@ -25,6 +25,7 @@ const { user } = useDirectusAuth();
 const { logout } = useLogout();
 const { isAppsMode, setMode } = useAppsMode();
 const { open: openMyCard } = useMyCard();
+const { socialPublishingEnabled } = useSocialPublishing();
 
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
@@ -136,7 +137,7 @@ function handleLogout() {
 
 			<DropdownMenuSeparator />
 
-			<DropdownMenuItem @select="goTo('/inbox')">
+			<DropdownMenuItem v-if="socialPublishingEnabled" @select="goTo('/inbox')">
 				<Icon name="lucide:message-square" class="size-4 mr-2 shrink-0" />
 				<span>Social inbox</span>
 			</DropdownMenuItem>
