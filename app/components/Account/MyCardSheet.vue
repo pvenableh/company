@@ -111,14 +111,14 @@ function downloadVcard() {
         <div class="h-16 bg-gradient-to-br relative" :class="accent">
           <img v-if="coverUrl" :src="coverUrl" alt="" class="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-80" />
         </div>
-        <div class="px-5 pb-5 -mt-9">
-          <div class="flex items-end gap-3">
-            <img v-if="imageUrl" :src="imageUrl" :alt="card.display_name || 'You'" class="w-[68px] h-[68px] rounded-2xl object-cover ring-4 ring-card shrink-0" />
-            <div v-else class="w-[68px] h-[68px] rounded-2xl bg-card text-primary flex items-center justify-center text-xl font-semibold ring-4 ring-card shrink-0">{{ initials }}</div>
-            <div class="min-w-0 pb-1">
-              <p class="text-lg font-semibold leading-tight truncate">{{ card.display_name || 'Your name' }}</p>
-              <p class="text-xs text-muted-foreground truncate">{{ [card.title, card.company].filter(Boolean).join(' · ') || 'Title · Company' }}</p>
-            </div>
+        <div class="px-5 pb-5">
+          <div class="-mt-9 relative z-10 w-fit">
+            <img v-if="imageUrl" :src="imageUrl" :alt="card.display_name || 'You'" class="w-[68px] h-[68px] rounded-2xl object-cover ring-4 ring-card shadow-md shrink-0" />
+            <div v-else class="w-[68px] h-[68px] rounded-2xl bg-card text-primary flex items-center justify-center text-xl font-semibold ring-4 ring-card shadow-md shrink-0">{{ initials }}</div>
+          </div>
+          <div class="mt-2.5 min-w-0">
+            <p class="text-lg font-semibold leading-tight truncate">{{ card.display_name || 'Your name' }}</p>
+            <p class="text-xs text-muted-foreground truncate mt-0.5">{{ [card.title, card.company].filter(Boolean).join(' · ') || 'Title · Company' }}</p>
           </div>
 
           <p v-if="card.headline" class="text-sm text-foreground/75 mt-3 leading-relaxed">{{ card.headline }}</p>
