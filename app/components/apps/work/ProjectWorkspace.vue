@@ -174,6 +174,7 @@ async function loadProject() {
 				'id', 'title', 'status', 'description', 'contract_value',
 				'start_date', 'due_date', 'projected_date', 'completion_date',
 				'url', 'template',
+				'csat_rating', 'csat_comment', 'csat_submitted_at',
 				'service.id', 'service.name', 'service.color',
 				'organization.id', 'organization.name', 'organization.logo',
 				'client.id', 'client.name',
@@ -673,6 +674,15 @@ watch(() => props.projectId, () => {
 				:counts="tabCounts"
 				class="mb-5"
 				@prefetch="loadForTab"
+			/>
+
+			<!-- Client satisfaction (set from the portal when the project completes) -->
+			<CsatBadge
+				v-if="project.csat_rating"
+				:rating="project.csat_rating"
+				:comment="project.csat_comment"
+				:submitted-at="project.csat_submitted_at"
+				class="mb-4"
 			/>
 
 			<div class="ios-card p-4 sm:p-6">

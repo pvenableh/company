@@ -45,6 +45,9 @@ async function loadProjects() {
 				'color',
 				'date_created',
 				'date_updated',
+				'csat_rating',
+				'csat_comment',
+				'csat_submitted_at',
 				'service.name',
 				'assigned_to.id',
 				'assigned_to.directus_users_id.id',
@@ -71,6 +74,13 @@ async function loadProjects() {
 	} finally {
 		loading.value = false;
 	}
+}
+
+function onProjectRated(p: { rating: number; comment: string | null; submitted_at: string }) {
+	if (!selectedProject.value) return;
+	selectedProject.value.csat_rating = p.rating;
+	selectedProject.value.csat_comment = p.comment;
+	selectedProject.value.csat_submitted_at = p.submitted_at;
 }
 
 async function openProject(project: any) {
@@ -396,6 +406,17 @@ watch(() => selectedOrg.value, () => loadProjects());
 									<p class="text-sm">{{ selectedProject.date_updated ? getFriendlyDate(selectedProject.date_updated) : '—' }}</p>
 								</div>
 							</div>
+
+							<!-- Satisfaction rating — only renders once the project is completed -->
+							<PortalCsatRating
+								collection="projects"
+								:item-id="selectedProject.id"
+								:status="selectedProject.status"
+								:rating="selectedProject.csat_rating"
+								:comment="selectedProject.csat_comment"
+								:submitted-at="selectedProject.csat_submitted_at"
+								@submitted="onProjectRated"
+							/>
 
 							<!-- Reactions -->
 							<div>

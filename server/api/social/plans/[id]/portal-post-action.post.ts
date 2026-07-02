@@ -64,6 +64,10 @@ export default defineEventHandler(async (event) => {
         }
       : {
           approval_state: 'requested_changes' as const,
+          // Persist the client's "what to change" note so staff see the
+          // specific feedback on the post (was accepted by the schema but
+          // previously dropped — no field existed to hold it).
+          client_feedback: parsed.data.note?.trim() || null,
         }
 
   const updated = await updateSocialPost(parsed.data.postId, patch as any)
