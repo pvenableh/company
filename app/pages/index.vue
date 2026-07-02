@@ -247,7 +247,7 @@ const appTagByCategory = computed(() => {
 });
 
 function onActionStatusUpdated(action: any, newStatus: string) {
-	const closing = ['completed', 'archived'].includes((newStatus || '').toLowerCase());
+	const closing = ['completed', 'archived', 'paid'].includes((newStatus || '').toLowerCase());
 	if (closing) {
 		// Item is resolved — drop the card and reconcile against server truth.
 		handledActionIds.value = new Set([...handledActionIds.value, action.id]);
@@ -591,8 +591,14 @@ watch(activeTab, (t) => {
 											<!-- Inline quick-status: change an item's status (or mark it
 											     done) without leaving the dashboard. Only rendered for
 											     cards backed by a concrete ticket/project/task record. -->
+											<CommandCenterPriorityActionInvoicePaid
+												v-if="action.entity && action.entity.collection === 'invoices'"
+												:id="action.entity.id"
+												:amount="action.entity.amount"
+												@paid="() => onActionStatusUpdated(action, 'paid')"
+											/>
 											<CommandCenterPriorityActionQuickStatus
-												v-if="action.entity"
+												v-else-if="action.entity"
 												:entity="action.entity"
 												@updated="(s) => onActionStatusUpdated(action, s)"
 											/>

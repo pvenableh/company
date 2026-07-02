@@ -18,9 +18,11 @@ export interface TaskSuggestion {
 	// Optional link to the underlying record so the dashboard can offer quick
 	// status changes (mark done / advance status) without navigating away.
 	entity?: {
-		collection: 'tickets' | 'projects' | 'tasks';
+		collection: 'tickets' | 'projects' | 'tasks' | 'invoices';
 		id: string;
 		status?: string;
+		/** Invoice balance — drives the one-click "Mark paid" payment amount. */
+		amount?: number;
 	};
 	category:
 		| 'tasks'
@@ -593,6 +595,9 @@ export const useAIProductivityEngine = () => {
 						category: 'invoices',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue, amount }),
+						// Backs the inline "Mark paid" quick-action on the card. `amount`
+						// is the full balance (these are `pending` → no prior payments).
+						entity: { collection: 'invoices', id: String(invoice.id), status: invoice.status, amount },
 					});
 				}
 			}
