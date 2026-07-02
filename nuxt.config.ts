@@ -446,6 +446,7 @@ export default defineNuxtConfig({
 			'material-symbols',
 			'material-symbols-light',
 			'logos',
+			'simple-icons',
 			'fluent-emoji-flat',
 		],
 	},

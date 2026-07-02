@@ -19,10 +19,6 @@ onMounted(() => { if (isOpen.value) load(); });
 
 // ── Derived preview bits ─────────────────────────────────────────────────────
 const card = computed(() => data.value?.card ?? {});
-const initials = computed(() => {
-  const n = (card.value.display_name || '').trim();
-  return n ? n.split(/\s+/).map((p: string) => p[0]).slice(0, 2).join('').toUpperCase() : '?';
-});
 function fileUrl(f: any, key = ''): string | null {
   const id = typeof f === 'object' ? f?.id : f;
   if (!id || !data.value?.assetsUrl) return null;
@@ -30,19 +26,11 @@ function fileUrl(f: any, key = ''): string | null {
 }
 const imageUrl = computed(() => fileUrl(card.value.image, 'avatar'));
 const coverUrl = computed(() => fileUrl(card.value.cover_image));
-const THEME_ACCENT: Record<string, string> = {
-  carddesk: 'from-primary/70 to-primary',
-  editorial: 'from-amber-400 to-orange-500',
-  glass: 'from-sky-400 to-blue-500',
-  tech: 'from-emerald-400 to-teal-500',
-};
-const accent = computed(() => THEME_ACCENT[card.value.card_theme || 'carddesk'] || THEME_ACCENT.carddesk);
-const THEMES = [
-  { key: 'carddesk', label: 'CardDesk' },
-  { key: 'editorial', label: 'Editorial' },
-  { key: 'glass', label: 'Glass' },
-  { key: 'tech', label: 'Tech' },
-];
+const logoUrl = computed(() => fileUrl(card.value.logo_image));
+
+// Social inputs in the edit form (brand logos). The live preview's own social
+// rows come from <CardView> (the ported CardDesk SOCIALS), so this list only
+// drives the handle/URL text fields below.
 const SOCIALS: Array<{ key: string; icon: string; label: string }> = [
   { key: 'linkedin', icon: 'i-logos-linkedin-icon', label: 'LinkedIn' },
   { key: 'instagram', icon: 'i-logos-instagram-icon', label: 'Instagram' },
@@ -50,7 +38,52 @@ const SOCIALS: Array<{ key: string; icon: string; label: string }> = [
   { key: 'youtube', icon: 'i-logos-youtube-icon', label: 'YouTube' },
   { key: 'behance', icon: 'i-logos-behance', label: 'Behance' },
 ];
-const activeSocials = computed(() => SOCIALS.filter((s) => (card.value as any)[s.key]));
+
+// ── Live CardView preview ────────────────────────────────────────────────────
+// Feed the real ported CardDesk <CardView> the current (unsaved) edits, mapped
+// to its CardViewData shape, so the preview IS the CardDesk card in the selected
+// theme. Rendered read-only (interactive=false), exactly as CardDesk's own
+// account editor previews it — so the booking button is hidden in the preview.
+const previewCard = computed(() => {
+  const c: any = card.value;
+  return {
+    ...c,
+    name: c.display_name || 'Your name',
+    imageUrl: imageUrl.value,
+    coverUrl: coverUrl.value,
+    logoUrl: logoUrl.value,
+    card_theme: c.card_theme || 'carddesk',
+    flat_layout: !!c.flat_layout,
+    booking: null,
+  };
+});
+
+// The sheet column is narrower than a phone, so render CardView at a true device
+// width and uniformly scale it down to fit — a faithful miniature rather than a
+// squeezed narrow card (mirrors CardDesk website/app/pages/account.vue).
+const PREVIEW_DEVICE_W = 390;
+const previewWrapEl = ref<HTMLElement | null>(null);
+const previewDeviceEl = ref<HTMLElement | null>(null);
+const previewScale = ref(1);
+const previewHeight = ref(0);
+function measurePreview() {
+  const wrap = previewWrapEl.value;
+  const device = previewDeviceEl.value;
+  if (!wrap || !device) return;
+  previewScale.value = wrap.clientWidth / PREVIEW_DEVICE_W;
+  previewHeight.value = device.offsetHeight * previewScale.value;
+}
+let previewRO: ResizeObserver | null = null;
+onMounted(() => { previewRO = new ResizeObserver(() => measurePreview()); });
+// The preview elements live inside a `v-if="data"` branch, so (re)attach the
+// observer whenever they mount, and re-measure as the card content grows.
+watch([previewWrapEl, previewDeviceEl], () => {
+  if (!previewRO) return;
+  if (previewWrapEl.value) previewRO.observe(previewWrapEl.value);
+  if (previewDeviceEl.value) previewRO.observe(previewDeviceEl.value);
+  measurePreview();
+});
+onBeforeUnmount(() => previewRO?.disconnect());
 
 const bookingUrl = computed(() => {
   const p = data.value?.bookingPath;
@@ -106,45 +139,19 @@ function downloadVcard() {
     </div>
 
     <div v-else-if="data" class="space-y-5 pb-2">
-      <!-- Live preview — a real business card -->
-      <div class="my-card-preview rounded-3xl overflow-hidden ring-1 ring-border/60 shadow-[0_10px_30px_-12px_rgb(0_0_0_/_0.25)] bg-card">
-        <div class="h-16 bg-gradient-to-br relative" :class="accent">
-          <img v-if="coverUrl" :src="coverUrl" alt="" class="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-80" />
-        </div>
-        <div class="px-5 pb-5">
-          <div class="-mt-9 relative z-10 w-fit">
-            <img v-if="imageUrl" :src="imageUrl" :alt="card.display_name || 'You'" class="w-[68px] h-[68px] rounded-2xl object-cover ring-4 ring-card shadow-md shrink-0" />
-            <div v-else class="w-[68px] h-[68px] rounded-2xl bg-card text-primary flex items-center justify-center text-xl font-semibold ring-4 ring-card shadow-md shrink-0">{{ initials }}</div>
-          </div>
-          <div class="mt-2.5 min-w-0">
-            <p class="text-lg font-semibold leading-tight truncate">{{ card.display_name || 'Your name' }}</p>
-            <p class="text-xs text-muted-foreground truncate mt-0.5">{{ [card.title, card.company].filter(Boolean).join(' · ') || 'Title · Company' }}</p>
-          </div>
-
-          <p v-if="card.headline" class="text-sm text-foreground/75 mt-3 leading-relaxed">{{ card.headline }}</p>
-
-          <div v-if="card.email || card.phone || card.website" class="mt-3.5 space-y-1.5">
-            <div v-if="card.email" class="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-              <UIcon name="i-lucide-mail" class="w-3.5 h-3.5 shrink-0 opacity-70" /><span class="truncate">{{ card.email }}</span>
-            </div>
-            <div v-if="card.phone" class="flex items-center gap-2 text-xs text-muted-foreground">
-              <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 shrink-0 opacity-70" />{{ card.phone }}
-            </div>
-            <div v-if="card.website" class="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-              <UIcon name="i-lucide-globe" class="w-3.5 h-3.5 shrink-0 opacity-70" /><span class="truncate">{{ card.website.replace(/^https?:\/\//, '') }}</span>
-            </div>
-          </div>
-
-          <div v-if="activeSocials.length || (data.booking.public_booking_enabled && bookingUrl)" class="flex items-center gap-3 mt-4">
-            <UIcon v-for="s in activeSocials" :key="s.key" :name="s.icon" class="w-[18px] h-[18px]" :title="s.label" />
-            <span
-              v-if="data.booking.public_booking_enabled && bookingUrl"
-              class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full text-white bg-gradient-to-br shadow-sm"
-              :class="accent"
-            >
-              <UIcon name="i-lucide-calendar" class="w-3.5 h-3.5" /> Book a call
-            </span>
-          </div>
+      <!-- Live preview — the real CardDesk card in the selected theme, rendered
+           at true device width and scaled down to fit the sheet column. -->
+      <div
+        ref="previewWrapEl"
+        class="my-card-preview rounded-3xl overflow-hidden ring-1 ring-border/60 shadow-[0_10px_30px_-12px_rgb(0_0_0_/_0.25)]"
+        :style="{ height: previewHeight ? previewHeight + 'px' : undefined }"
+      >
+        <div
+          ref="previewDeviceEl"
+          class="my-card-preview-device"
+          :style="{ width: PREVIEW_DEVICE_W + 'px', transform: `scale(${previewScale})` }"
+        >
+          <CardView :card="previewCard" :interactive="false" />
         </div>
       </div>
 
@@ -196,20 +203,35 @@ function downloadVcard() {
         </div>
       </section>
 
-      <!-- Theme -->
-      <section class="rounded-2xl border border-border/60 bg-background/40 p-4 space-y-2">
-        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Card theme</p>
-        <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-xs font-medium flex-wrap">
+      <!-- Design — CardDesk swatch picker; the preview above updates to match. -->
+      <section class="rounded-2xl border border-border/60 bg-background/40 p-4 space-y-3">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Design</p>
+        <div class="grid grid-cols-4 gap-2">
           <button
-            v-for="t in THEMES"
-            :key="t.key"
+            v-for="t in CARD_THEMES"
+            :key="t.id"
             type="button"
-            class="px-3 py-1 rounded-full transition-colors"
-            :class="(card.card_theme || 'carddesk') === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-            @click="card.card_theme = t.key; touch()"
+            class="relative flex flex-col items-center gap-1.5 p-2 rounded-xl border bg-muted/40 transition-transform hover:-translate-y-0.5"
+            :class="(card.card_theme || 'carddesk') === t.id ? 'border-primary ring-1 ring-primary' : 'border-border/60'"
+            @click="card.card_theme = t.id; touch()"
           >
-            {{ t.label }}
+            <span class="w-full aspect-[1/1.15] rounded-lg flex items-center justify-center bg-cover ring-1 ring-white/10" :style="{ background: t.swatch }">
+              <span class="text-[15px] font-extrabold opacity-95" :style="{ fontFamily: `'Bauer Bodoni', Georgia, serif`, color: t.swatchInk }">Aa</span>
+            </span>
+            <span class="text-[11px] font-bold" :class="(card.card_theme || 'carddesk') === t.id ? 'text-foreground' : 'text-muted-foreground'">{{ t.label }}</span>
+            <UIcon v-if="(card.card_theme || 'carddesk') === t.id" name="i-lucide-check" class="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-primary" />
           </button>
+        </div>
+        <p class="text-[11px] text-muted-foreground leading-relaxed">
+          {{ CARD_THEMES.find((t) => t.id === (card.card_theme || 'carddesk'))?.hint }}
+        </p>
+        <!-- Minimal-layout toggle — only affects the Glass & Tech designs. -->
+        <div v-if="card.card_theme === 'glass' || card.card_theme === 'tech'" class="flex items-center justify-between gap-3 pt-1">
+          <div>
+            <p class="text-xs font-medium">Minimal rows</p>
+            <p class="text-[11px] text-muted-foreground">Hide the boxed row backgrounds &amp; borders for a cleaner look.</p>
+          </div>
+          <UToggle v-model="card.flat_layout" @update:model-value="touch" />
         </div>
       </section>
 
@@ -249,5 +271,12 @@ function downloadVcard() {
 .pill-action {
   @apply inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted/50
     text-foreground hover:bg-muted transition-colors;
+}
+/* Scaled CardView miniature: render at device width, scale down from top-left. */
+.my-card-preview-device {
+  transform-origin: top left;
+}
+.my-card-preview :deep(.cv) {
+  min-height: 0;
 }
 </style>
