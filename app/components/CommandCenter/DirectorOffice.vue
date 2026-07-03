@@ -38,6 +38,136 @@ const clientRating = ref<any | null>(null); // focused client-review scorecard
 const topicInput = ref(''); // free-text "raise a topic" steer for the plan
 const mutated = ref(false); // any step executed → refresh page behind on close
 
+// ── Board-packet cache ────────────────────────────────────────────────────
+// The overlay is mounted once (app.vue) and only toggles `isOpen`, so this
+// state survives close/reopen. We reuse a recent agenda so reopening is
+// instant, and cache each subject's drafted plan so flipping back to a section
+// restores it verbatim (steps + statuses) instead of re-drafting from scratch.
+interface QaTurn { role: 'user' | 'assistant'; text: string }
+interface CachedPlan {
+  planId: string | null; intro: string; steps: Step[];
+  finance: any; opportunity: any; clientRating: any; at: number; savedAt: string | null; qa: QaTurn[];
+}
+const AGENDA_FRESH_MS = 5 * 60 * 1000; // reuse a board packet for 5 min on reopen
+const agendaCache = ref<{ key: string; agenda: Agenda; at: number } | null>(null);
+const planCache = ref<Record<string, CachedPlan>>({}); // keyed by subject + topic
+const briefingSavedAt = ref<string | null>(null); // when the shown plan was first drafted (persisted)
+
+// Outline (stacked panel) vs Slides (designed presentation deck) view of a plan.
+const viewMode = ref<'outline' | 'slides'>('outline');
+const hasBriefing = computed(() =>
+  !!planIntro.value || steps.value.length > 0 || !!finance.value || !!clientRating.value || !!opportunity.value,
+);
+const showSlides = computed(() => viewMode.value === 'slides' && !planning.value && hasBriefing.value);
+
+// Ask Earnest — advisory Q&A grounded in the current briefing (per-subject,
+// cached alongside the plan so flipping back keeps the conversation).
+const qaThread = ref<QaTurn[]>([]);
+const qaInput = ref('');
+const qaLoading = ref(false);
+const qaSuggestions = computed<string[]>(() => {
+  if (activeSubject.value === 'money' || finance.value) return ['Why this plan?', "What's the biggest risk?", 'Where should we focus to grow?'];
+  if (clientRating.value) return ['Why this rating?', 'Should we keep investing here?', 'How do we improve it?'];
+  return ['Why this order?', "What's the biggest risk?", 'Suggest an alternative'];
+});
+
+// The model appends a "TL;DR:" line: verbose prose above (outline), crisp
+// takeaways below (slides). Rides in the persisted `intro`, split per view.
+const TLDR_RE = /TL;?DR\s*:/i;
+const outlineIntro = computed(() => {
+  const t = planIntro.value || '';
+  const i = t.search(TLDR_RE);
+  return (i >= 0 ? t.slice(0, i) : t).trim();
+});
+const slidePoints = computed<string[]>(() => {
+  const parts = (planIntro.value || '').split(TLDR_RE);
+  if (parts.length < 2) return [];
+  return parts[parts.length - 1]!.split('|').map((s) => s.trim().replace(/^[-•*]\s*/, '')).filter(Boolean).slice(0, 4);
+});
+
+// Which slide the Director is viewing — lets Ask Earnest resolve "this slide".
+const slideContext = ref('');
+
+const nowMs = () => Date.now();
+
+// Distinguishes an org-wide meeting from a focused one for cache keys.
+function scopeKey(): string {
+  const s = scope.value;
+  if (s?.mode === 'entity' && s.entityType && s.entityId) return `entity:${s.entityType}:${s.entityId}`;
+  return 'org';
+}
+
+// Relative age helper ("3h ago"), reused by the saved-briefing tag + recents.
+function relTime(iso: string | null): string {
+  if (!iso) return '';
+  const diff = nowMs() - new Date(iso).getTime();
+  if (!isFinite(diff) || diff < 60_000) return 'just now';
+  const min = Math.floor(diff / 60_000);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  return `${Math.floor(hr / 24)}d ago`;
+}
+const savedAgo = computed(() => relTime(briefingSavedAt.value));
+
+// Recent meetings — lets the Director pick up prior work without leaving the
+// overlay. Loaded from the saved-briefing history, scoped to the current
+// meeting scope (org-wide or this focused entity), deduped to the latest per
+// subject/topic.
+interface RecentMeeting {
+  id: string | number; subject: string | null; topic: string | null;
+  scope_type: string; entity_type: string | null; entity_id: string | null;
+  step_count: number; intro: string | null; date_created: string;
+}
+const recentMeetings = ref<RecentMeeting[]>([]);
+
+async function loadRecent() {
+  if (!selectedOrg.value) { recentMeetings.value = []; return; }
+  try {
+    const res = await $fetch<{ meetings: RecentMeeting[] }>('/api/ai/director/history', {
+      query: { organizationId: selectedOrg.value, limit: 40 },
+    });
+    const s = scope.value;
+    const isEntity = s?.mode === 'entity' && !!s.entityType && !!s.entityId;
+    const inScope = (res.meetings || []).filter((m) => isEntity
+      ? (m.scope_type === 'entity' && m.entity_type === s!.entityType && String(m.entity_id) === String(s!.entityId))
+      : m.scope_type === 'org');
+    const seen = new Set<string>();
+    const out: RecentMeeting[] = [];
+    for (const m of inScope) {
+      const k = `${m.subject || ''}|${(m.topic || '').toLowerCase().trim()}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(m);
+      if (out.length >= 5) break;
+    }
+    recentMeetings.value = out;
+  } catch {
+    recentMeetings.value = [];
+  }
+}
+
+function recentLabel(m: RecentMeeting): string {
+  if (m.topic) return m.topic;
+  const s = (m.subject || '').toLowerCase();
+  return ({ money: 'The Money', clients: 'Clients', projects: 'Projects', leads: 'Pipeline', proposals: 'Proposals', tickets: 'Support' } as Record<string, string>)[s]
+    || (m.subject ? m.subject.charAt(0).toUpperCase() + m.subject.slice(1) : 'Working session');
+}
+function recentIcon(m: RecentMeeting): string {
+  const s = (m.subject || '').toLowerCase();
+  if (s === 'money') return 'i-lucide-banknote';
+  if (s === 'clients') return 'i-lucide-user-round';
+  if (s === 'projects') return 'i-lucide-folder-kanban';
+  if (s === 'leads') return 'i-lucide-trending-up';
+  if (s === 'proposals') return 'i-lucide-file-text';
+  if (s === 'tickets') return 'i-lucide-ticket';
+  return 'i-lucide-sparkles';
+}
+function openRecent(m: RecentMeeting) {
+  topicInput.value = m.topic || '';
+  draftPlan(m.subject || '');
+}
+
 const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
 const netClass = (n: number) => (Number(n) >= 0 ? 'text-green-600' : 'text-red-600');
 function ratingClass(r: string): string {
@@ -76,8 +206,15 @@ function priorityClass(p: Priority): string {
   }[p];
 }
 
-async function loadAgenda() {
+async function loadAgenda(force = false) {
   if (!selectedOrg.value) return;
+  const key = `${selectedOrg.value}::${scopeKey()}`;
+  // Reuse a recent board packet on reopen — instant, and resume the meeting
+  // exactly where it was left (active subject + drafted plans stay cached).
+  if (!force && agendaCache.value?.key === key && nowMs() - agendaCache.value.at < AGENDA_FRESH_MS) {
+    agenda.value = agendaCache.value.agenda;
+    return;
+  }
   loadingAgenda.value = true;
   agendaError.value = null;
   agenda.value = null;
@@ -88,6 +225,7 @@ async function loadAgenda() {
   finance.value = null;
   opportunity.value = null;
   clientRating.value = null;
+  planCache.value = {}; // new packet → drop stale per-subject plans
   try {
     const q: Record<string, string> = { organizationId: selectedOrg.value };
     if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
@@ -95,6 +233,7 @@ async function loadAgenda() {
       q.entityId = scope.value.entityId;
     }
     agenda.value = await $fetch<Agenda>('/api/ai/director/agenda', { query: q });
+    agendaCache.value = { key, agenda: agenda.value, at: nowMs() };
     // Focused meetings have a single subject — open its plan straight away.
     if (agenda.value?.mode === 'entity' && agenda.value.groups.length === 1) {
       draftPlan(agenda.value.groups[0]!.subject);
@@ -106,9 +245,25 @@ async function loadAgenda() {
   }
 }
 
-async function draftPlan(subject: string) {
+async function draftPlan(subject: string, force = false) {
   if (planning.value) return;
+  const topic = topicInput.value.trim();
+  const key = `${subject} ${topic}`;
   activeSubject.value = subject;
+  // Cache hit → restore the drafted plan verbatim (steps + approve/skip
+  // statuses persist because it's the same reactive array) — no re-draft.
+  const cached = planCache.value[key];
+  if (!force && cached) {
+    planId.value = cached.planId;
+    planIntro.value = cached.intro;
+    steps.value = cached.steps;
+    finance.value = cached.finance;
+    opportunity.value = cached.opportunity;
+    clientRating.value = cached.clientRating;
+    briefingSavedAt.value = cached.savedAt;
+    qaThread.value = cached.qa || [];
+    return;
+  }
   planning.value = true;
   steps.value = [];
   planId.value = null;
@@ -116,23 +271,57 @@ async function draftPlan(subject: string) {
   finance.value = null;
   opportunity.value = null;
   clientRating.value = null;
+  briefingSavedAt.value = null;
+  qaThread.value = [];
+  qaInput.value = '';
+  const q: Record<string, string> = { organizationId: selectedOrg.value! };
+  if (subject) q.subject = subject;
+  if (topic) q.topic = topic;
+  if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
+    q.entityType = scope.value.entityType;
+    q.entityId = scope.value.entityId;
+  }
   try {
-    const body: Record<string, any> = { organizationId: selectedOrg.value, subject };
-    if (topicInput.value.trim()) body.topic = topicInput.value.trim();
-    if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
-      body.entityType = scope.value.entityType;
-      body.entityId = scope.value.entityId;
+    // Unless forced, try Earnest's saved thinking first — zero tokens.
+    if (!force) {
+      const saved = await $fetch<{ found: boolean; planId?: string; intro?: string; stepCount?: number; finance?: any; opportunity?: any; clientRating?: any; savedAt?: string }>(
+        '/api/ai/director/briefing', { query: q },
+      ).catch(() => ({ found: false }) as any);
+      if (saved?.found && saved.planId) {
+        planId.value = saved.planId;
+        planIntro.value = saved.intro || '';
+        finance.value = saved.finance || null;
+        opportunity.value = saved.opportunity || null;
+        clientRating.value = saved.clientRating || null;
+        briefingSavedAt.value = saved.savedAt || null;
+        if ((saved.stepCount || 0) > 0) await loadSteps(saved.planId);
+        planCache.value[key] = {
+          planId: planId.value, intro: planIntro.value, steps: steps.value,
+          finance: finance.value, opportunity: opportunity.value, clientRating: clientRating.value,
+          at: nowMs(), savedAt: briefingSavedAt.value, qa: qaThread.value,
+        };
+        return;
+      }
     }
+    // Nothing saved (or a forced re-draft) → call Claude. The server persists
+    // this draft so next time the branch above restores it for free.
     const res = await $fetch<{ planId: string; intro: string; stepCount: number; finance?: any; opportunity?: any; clientRating?: any }>(
-      '/api/ai/director/plan', { method: 'POST', body },
+      '/api/ai/director/plan', { method: 'POST', body: { ...q } },
     );
     planId.value = res.planId;
     planIntro.value = res.intro || '';
     finance.value = res.finance || null;
     opportunity.value = res.opportunity || null;
     clientRating.value = res.clientRating || null;
+    briefingSavedAt.value = null; // freshly drafted just now
     if (res.stepCount > 0) await loadSteps(res.planId);
     else toast.add({ title: 'Nothing to propose', description: 'Earnest had no concrete actions for this area right now.', icon: 'i-lucide-info', color: 'blue' });
+    planCache.value[key] = {
+      planId: planId.value, intro: planIntro.value, steps: steps.value,
+      finance: finance.value, opportunity: opportunity.value, clientRating: clientRating.value,
+      at: nowMs(), savedAt: null, qa: qaThread.value,
+    };
+    loadRecent(); // a fresh draft is persisted — refresh the recents list
   } catch (err: any) {
     toast.add({ title: 'Could not draft a plan', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
   } finally {
@@ -178,6 +367,39 @@ async function skipStep(step: Step) {
   }
 }
 
+async function askEarnest(seed?: string) {
+  const question = (seed ?? qaInput.value).trim();
+  if (!question || qaLoading.value) return;
+  const priorHistory = qaThread.value.map((m) => ({ role: m.role, text: m.text }));
+  qaThread.value.push({ role: 'user', text: question });
+  qaInput.value = '';
+  qaLoading.value = true;
+  try {
+    const body: Record<string, any> = {
+      organizationId: selectedOrg.value,
+      question,
+      history: priorHistory,
+      // Drift-proof grounding: send what's on screen alongside the lookup keys.
+      context: { intro: outlineIntro.value, finance: finance.value, opportunity: opportunity.value, clientRating: clientRating.value },
+    };
+    if (activeSubject.value) body.subject = activeSubject.value;
+    if (topicInput.value.trim()) body.topic = topicInput.value.trim();
+    if (planId.value) body.planId = planId.value;
+    // Slide-aware: tell Earnest which slide the user is on so "this" resolves.
+    if (showSlides.value && slideContext.value) body.viewing = slideContext.value;
+    if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
+      body.entityType = scope.value.entityType;
+      body.entityId = scope.value.entityId;
+    }
+    const res = await $fetch<{ answer: string }>('/api/ai/director/ask', { method: 'POST', body });
+    qaThread.value.push({ role: 'assistant', text: res.answer || 'I don’t have a clear answer for that right now.' });
+  } catch (err: any) {
+    toast.add({ title: 'Could not get an answer', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
+  } finally {
+    qaLoading.value = false;
+  }
+}
+
 function labelForType(t: string): string {
   return { create_tasks: 'Tasks', update_field: 'Update', send_email: 'Email', reschedule_project: 'Reschedule' }[t] || t;
 }
@@ -201,8 +423,9 @@ function iconForSubject(g: AgendaGroup): string {
   if (/task|to-?do/.test(hay)) return 'i-lucide-list-checks';
   if (/meeting|event|calendar|schedul/.test(hay)) return 'i-lucide-calendar-clock';
   if (/lead|pipeline|deal|opportun/.test(hay)) return 'i-lucide-trending-up';
+  if (/proposal|quote|estimate|contract|document/.test(hay)) return 'i-lucide-file-text';
   if (/email|message|inbox/.test(hay)) return 'i-lucide-mail';
-  if (/ticket|support|issue/.test(hay)) return 'i-lucide-life-buoy';
+  if (/ticket|support|issue/.test(hay)) return 'i-lucide-ticket';
   if (/content|social|post|campaign/.test(hay)) return 'i-lucide-megaphone';
   return 'i-lucide-sparkles';
 }
@@ -219,8 +442,8 @@ function onClose() {
   close();
 }
 
-// Load the agenda each time the office opens (fresh board packet).
-watch(isOpen, (open) => { if (open) loadAgenda(); });
+// Load the agenda + recent meetings each time the office opens.
+watch(isOpen, (open) => { if (open) { loadAgenda(); loadRecent(); } });
 onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 </script>
 
@@ -238,7 +461,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="relative w-10 h-10 rounded-full bg-primary/15 ring-2 ring-primary/20 flex items-center justify-center shrink-0">
                 <span class="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-60" />
-                <EarnestIcon class="relative w-5 h-5 text-primary" />
+                <DirectorChairIcon class="relative w-5 h-5 text-primary" />
               </div>
               <div class="min-w-0">
                 <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
@@ -246,13 +469,25 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   <UIcon name="i-lucide-sparkles" class="w-3.5 h-3.5 text-primary/70" />
                 </h2>
                 <p class="text-xs text-muted-foreground truncate">
-                  Reviewing {{ scopeLabel }} — approve each step, nothing runs on its own.
+                  Earnest AI reviewed {{ scopeLabel }} and drafted the work — approve each step, nothing runs on its own.
                 </p>
               </div>
             </div>
-            <button type="button" class="relative text-muted-foreground hover:text-foreground p-1 shrink-0" aria-label="Close" @click="onClose">
-              <UIcon name="i-lucide-x" class="w-5 h-5" />
-            </button>
+            <div class="relative flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                class="text-muted-foreground hover:text-foreground p-1 disabled:opacity-40"
+                aria-label="Refresh the agenda"
+                title="Refresh — re-review the business"
+                :disabled="loadingAgenda"
+                @click="loadAgenda(true)"
+              >
+                <UIcon name="i-lucide-refresh-cw" class="w-4 h-4" :class="loadingAgenda ? 'animate-spin' : ''" />
+              </button>
+              <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="onClose">
+                <UIcon name="i-lucide-x" class="w-5 h-5" />
+              </button>
+            </div>
           </header>
 
           <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
@@ -347,6 +582,37 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 </div>
               </div>
 
+              <!-- Recent meetings — pick up prior work without leaving the office -->
+              <div v-if="!meetingActive && recentMeetings.length">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
+                  <UIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Recent meetings
+                </p>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <button
+                    v-for="m in recentMeetings"
+                    :key="m.id"
+                    type="button"
+                    class="group text-left rounded-2xl border border-border bg-background p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
+                    @click="openRecent(m)"
+                  >
+                    <div class="flex items-start gap-2.5">
+                      <span class="mt-0.5 w-8 h-8 rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center shrink-0 transition-colors">
+                        <UIcon :name="recentIcon(m)" class="w-4 h-4" />
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="text-sm font-medium truncate">{{ recentLabel(m) }}</span>
+                          <span class="text-[10px] text-muted-foreground shrink-0">{{ relTime(m.date_created) }}</span>
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-0.5">
+                          <span v-if="m.step_count">{{ m.step_count }} step{{ m.step_count === 1 ? '' : 's' }} · </span>Reopen to continue
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <!-- Active meeting: plan / analysis for the chosen subject or topic -->
               <div v-if="meetingActive" class="rounded-2xl border border-border bg-background p-4 space-y-3">
                 <div class="flex items-center gap-2">
@@ -355,8 +621,61 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   <span v-if="planning" class="text-xs text-muted-foreground flex items-center gap-1">
                     <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ (finance || clientRating) ? 'analyzing…' : 'drafting…' }}
                   </span>
+                  <div v-else-if="activeSubject !== null" class="ml-auto flex items-center gap-2 shrink-0">
+                    <span v-if="briefingSavedAt" class="text-[11px] text-muted-foreground inline-flex items-center gap-1" :title="`Earnest saved this briefing ${savedAgo}`">
+                      <UIcon name="i-lucide-bookmark-check" class="w-3 h-3" /> Saved {{ savedAgo }}
+                    </span>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                      title="Draft a fresh plan for this section"
+                      @click="draftPlan(activeSubject || '', true)"
+                    >
+                      <UIcon name="i-lucide-refresh-cw" class="w-3 h-3" /> Re-draft
+                    </button>
+                  </div>
                 </div>
 
+                <!-- Outline / Slides view toggle -->
+                <div v-if="!planning && hasBriefing" class="flex justify-center">
+                  <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                      :class="viewMode === 'outline' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      @click="viewMode = 'outline'"
+                    >
+                      <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                      :class="viewMode === 'slides' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      @click="viewMode = 'slides'"
+                    >
+                      <UIcon name="i-lucide-gallery-horizontal-end" class="w-3.5 h-3.5" /> Slides
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Presentation (slide) view -->
+                <CommandCenterDirectorSlides
+                  v-if="showSlides"
+                  :subject="activeSubject"
+                  :scope-label="scopeLabel"
+                  :intro="outlineIntro"
+                  :points="slidePoints"
+                  :finance="finance"
+                  :opportunity="opportunity"
+                  :client-rating="clientRating"
+                  :steps="steps"
+                  @approve="approveStep"
+                  @skip="skipStep"
+                  @slide="slideContext = $event"
+                />
+
+                <!-- Outline (stacked panel) view -->
+                <template v-else>
                 <!-- Client review: rating badge + value / effort / health -->
                 <div v-if="clientRating" class="rounded-xl border border-border p-3">
                   <div class="flex items-center gap-3 mb-2">
@@ -430,7 +749,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   </p>
                 </div>
 
-                <p v-if="planIntro && !planning" class="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ planIntro }}</p>
+                <p v-if="outlineIntro && !planning" class="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ outlineIntro }}</p>
 
                 <!-- Step cards -->
                 <div v-if="steps.length" class="space-y-2">
@@ -500,6 +819,59 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 <!-- Minutes rollup -->
                 <div v-if="rollup.total && rollup.open === 0" class="pt-2 border-t border-border text-xs text-muted-foreground">
                   Meeting minutes — {{ rollup.done }} done, {{ rollup.skipped }} skipped<span v-if="rollup.failed">, {{ rollup.failed }} failed</span>.
+                </div>
+                </template>
+
+                <!-- Ask Earnest — advisory Q&A about this briefing (both views) -->
+                <div v-if="hasBriefing && !planning" class="pt-3 border-t border-border space-y-2.5">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
+                    <EarnestIcon class="w-3 h-3 text-primary" /> Ask Earnest
+                  </p>
+
+                  <div v-if="qaThread.length" class="space-y-2">
+                    <div v-for="(m, i) in qaThread" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
+                      <div
+                        class="max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line"
+                        :class="m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'"
+                      >{{ m.text }}</div>
+                    </div>
+                    <div v-if="qaLoading" class="flex justify-start">
+                      <div class="rounded-2xl px-3 py-2 bg-muted text-muted-foreground text-sm inline-flex items-center gap-1.5">
+                        <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> thinking…
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Starter prompts before the first question -->
+                  <div v-if="!qaThread.length" class="flex flex-wrap gap-1.5">
+                    <button
+                      v-for="s in qaSuggestions"
+                      :key="s"
+                      type="button"
+                      class="text-[11px] px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50"
+                      :disabled="qaLoading"
+                      @click="askEarnest(s)"
+                    >{{ s }}</button>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <input
+                      v-model="qaInput"
+                      type="text"
+                      placeholder="Ask a question or push back…"
+                      class="flex-1 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      :disabled="qaLoading"
+                      @keydown.enter="askEarnest()"
+                    />
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-foreground text-background disabled:opacity-50"
+                      :disabled="!qaInput.trim() || qaLoading"
+                      @click="askEarnest()"
+                    >
+                      <UIcon name="i-lucide-send" class="w-3.5 h-3.5" /> Ask
+                    </button>
+                  </div>
                 </div>
               </div>
             </template>

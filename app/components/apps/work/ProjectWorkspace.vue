@@ -667,7 +667,7 @@ watch(() => props.projectId, () => {
 						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-[12px] font-medium ios-press shrink-0"
 						@click="conveneMeeting"
 					>
-						<UIcon name="i-lucide-presentation" class="w-3.5 h-3.5" />
+						<DirectorChairIcon class="w-3.5 h-3.5" />
 						<span class="hidden sm:inline">Convene a meeting</span>
 					</button>
 					<slot name="actions" />

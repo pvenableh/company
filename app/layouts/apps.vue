@@ -60,7 +60,7 @@
 							<LayoutNotificationsMenu />
 						</ClientOnly>
 						<ClientOnly>
-							<div class="hidden sm:flex">
+							<div class="hidden sm:flex ml-2">
 								<LayoutHeaderScore />
 							</div>
 						</ClientOnly>

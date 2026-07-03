@@ -39,6 +39,7 @@ export type AppId =
 	| 'work'
 	| 'money'
 	| 'marketing'
+	| 'director'
 	| 'organization'
 	| 'account';
 
@@ -96,6 +97,10 @@ const APP_META: Record<AppId, AppMeta> = {
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
 	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'lucide:megaphone',           to: '/apps/marketing' },
+	// The Director's Office isn't rendered by the rail's app/footer loops (it has
+	// a bespoke tile with a custom chair glyph), but it takes a slot in CHIP_IDS
+	// so it earns its own in-order colour from the palette spread.
+	director:     { id: 'director',     name: "Director's Office", shortName: 'Director', icon: 'lucide:presentation',   to: '/director' },
 	organization: { id: 'organization', name: 'Organization', shortName: 'Org',     icon: 'lucide:building-2',          to: '/apps/organization' },
 	account:      { id: 'account',      name: 'Account',      shortName: 'Me',      icon: 'lucide:circle-user',         to: '/account' },
 };
@@ -495,7 +500,7 @@ export const APP_FOOTER_ORDER: AppId[] = ['organization', 'account'];
  * `APP_ORDER` first so the brightest end of `sourceColors` lands on the
  * dashboard chip.
  */
-const CHIP_IDS: readonly AppId[] = [...APP_ORDER, ...APP_FOOTER_ORDER];
+const CHIP_IDS: readonly AppId[] = [...APP_ORDER, 'director', ...APP_FOOTER_ORDER];
 
 /**
  * Icon-strategy axis — each palette declares the strategy that produces
@@ -804,6 +809,7 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents(DEFAULT_APP_P
  */
 export function appIdForPath(path: string): AppId | null {
 	if (path.startsWith('/account')) return 'account';
+	if (path.startsWith('/director')) return 'director';
 	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
 
 	const seg = path.split('/').filter(Boolean);

@@ -418,15 +418,15 @@ watch(activeTab, (t) => {
 								aria-label="Director's office"
 								class="flex items-center justify-center size-9 bg-foreground text-background rounded-full shadow-sm transition-all duration-200 ios-press"
 							>
-								<UIcon name="i-lucide-presentation" class="w-4 h-4" />
+								<DirectorChairIcon class="w-4 h-4" />
 							</button>
 						</UTooltip>
 						<button
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
-							class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
+							aria-label="Earnest"
+							class="flex items-center justify-center size-9 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 ios-press"
 						>
 							<EarnestIcon class="w-4 h-4" />
-							<span class="hidden sm:inline">Earnest</span>
 						</button>
 					</div>
 				</div>

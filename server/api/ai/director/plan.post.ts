@@ -27,6 +27,7 @@ import type { ClaudeProvider } from '~~/server/utils/llm/claude';
 import { ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCHEDULE_PROJECT_TOOL } from '~~/server/utils/llm/tools';
 import { proposeDirectorStep } from '~~/server/utils/llm/tool-proposals';
 import { collectDirectorAgenda, type AINotice, type DirectorSubjectKey } from '~~/server/utils/ai-notices';
+import { saveDirectorBriefing } from '~~/server/utils/director-briefings';
 import { buildFinancialSnapshot, type FinancialSnapshot } from '~~/server/utils/financial-snapshot';
 import { buildOpportunityIntel, buildColdEffortIntel, type OpportunityIntel, type ColdEffortIntel } from '~~/server/utils/revenue-intel';
 import { buildClientScorecard, type ClientScorecard } from '~~/server/utils/client-scorecard';
@@ -153,6 +154,8 @@ export default defineEventHandler(async (event) => {
     'reschedule_project shifts a project timeline — use it only with a real project id and a delta_days (or new_start_date).',
     'Each step MUST be distinct — never propose the same action, task, or field change twice. If several records share one issue, address them in a SINGLE task, not one per record.',
     'Keep the plan tight and genuinely useful. Do not pad it to hit a number.',
+    '',
+    'SLIDE SUMMARY — after your full briefing prose, add ONE final line that begins EXACTLY with "TL;DR:" then 2 to 4 punchy takeaways separated by " | " (a space, pipe, space). Each takeaway ≤ 10 words, plain text, no markdown, self-contained. These are shown verbatim as presentation slide bullets, so make them crisp — the prose above stays as the detailed read.',
   ].join('\n');
 
   const userMessage = [
@@ -224,6 +227,50 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Compact metric snapshots for the UI — computed once so the SAME objects are
+  // both returned now and saved to the briefing store for next time.
+  const financeOut = finance ? {
+    months: finance.months,
+    totals: finance.totals,
+    trailing: finance.trailing,
+    projection: finance.projection,
+    outstanding: finance.outstanding,
+    recurring: finance.recurring,
+    expensesByCategory: finance.expensesByCategory.slice(0, 6),
+    revenueGoals: finance.revenueGoals,
+    coverage: finance.coverage,
+  } : null;
+  const opportunityOut = opportunity ? {
+    topClients: opportunity.topClients,
+    topServiceLines: opportunity.topServiceLines,
+    pipeline: opportunity.pipeline,
+  } : null;
+  const clientRatingOut = scorecard ? {
+    clientName: scorecard.clientName,
+    rating: scorecard.rating,
+    value: scorecard.value,
+    effort: scorecard.effort,
+    health: scorecard.health,
+  } : null;
+
+  // Persist the briefing so reopening this section restores it without another
+  // model call. Fire-and-forget — a save failure must not affect this response.
+  saveDirectorBriefing({
+    organizationId,
+    userId,
+    scopeType: entityType && entityId ? 'entity' : 'org',
+    entityType: entityType || null,
+    entityId: entityId || null,
+    subject: subject || null,
+    topic: topic || null,
+    planId,
+    intro: round.text || '',
+    finance: financeOut,
+    opportunity: opportunityOut,
+    clientRating: clientRatingOut,
+    stepCount: steps.length,
+  }).catch(() => {});
+
   return {
     planId,
     subject: subject || null,
@@ -233,30 +280,10 @@ export default defineEventHandler(async (event) => {
     steps,
     stepCount: steps.length,
     // Money mode: compact metrics for the UI to render alongside the briefing.
-    finance: finance ? {
-      months: finance.months,
-      totals: finance.totals,
-      trailing: finance.trailing,
-      projection: finance.projection,
-      outstanding: finance.outstanding,
-      recurring: finance.recurring,
-      expensesByCategory: finance.expensesByCategory.slice(0, 6),
-      revenueGoals: finance.revenueGoals,
-      coverage: finance.coverage,
-    } : null,
-    opportunity: opportunity ? {
-      topClients: opportunity.topClients,
-      topServiceLines: opportunity.topServiceLines,
-      pipeline: opportunity.pipeline,
-    } : null,
+    finance: financeOut,
+    opportunity: opportunityOut,
     cold: cold ? { coldLeads: cold.coldLeads } : null,
     // Client review: the computed scorecard/rating for the UI.
-    clientRating: scorecard ? {
-      clientName: scorecard.clientName,
-      rating: scorecard.rating,
-      value: scorecard.value,
-      effort: scorecard.effort,
-      health: scorecard.health,
-    } : null,
+    clientRating: clientRatingOut,
   };
 });

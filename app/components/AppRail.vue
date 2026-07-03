@@ -294,6 +294,36 @@ function chipMagnifyStyle(appId: string) {
 			</ul>
 
 			<ul class="app-rail__group app-rail__group--footer">
+				<li>
+					<Tooltip>
+						<TooltipTrigger as-child>
+							<NuxtLink
+								to="/director"
+								class="app-rail__item"
+								:class="{ 'app-rail__item--active': route.path.startsWith('/director') }"
+								:style="{
+									'--rail-h': 'var(--app-director-h, 222)',
+									'--rail-s': 'var(--app-director-s, 12%)',
+									'--rail-l': 'var(--app-director-l, 24%)',
+									'--rail-icon': 'var(--app-director-icon, hsl(0 0% 60%))',
+									'--rail-icon-bright': 'var(--app-director-icon, hsl(0 0% 92%))',
+								}"
+								aria-label="Director's Office"
+								@click="hapticTap()"
+							>
+								<span class="app-rail__chip">
+									<span class="app-rail__icon">
+										<DirectorChairIcon class="app-rail__icon-layer app-rail__icon-base" />
+									</span>
+								</span>
+								<span class="app-rail__label">Director</span>
+							</NuxtLink>
+						</TooltipTrigger>
+						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="tooltipOffset" class="z-[70]">
+							Director's Office
+						</TooltipContent>
+					</Tooltip>
+				</li>
 				<li v-for="app in footer" :key="app.id">
 					<Tooltip>
 						<TooltipTrigger as-child>

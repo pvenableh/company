@@ -1830,6 +1830,43 @@ export interface CurrentWork {
 	date_updated?: string | null;
 }
 
+export interface DirectorBriefing {
+	/** @primaryKey */
+	id: number;
+	/** @description Owning organization. */
+	organization?: Organization | string | null;
+	/** @description User who convened this briefing. */
+	user?: DirectusUser | string | null;
+	/** @description Org-wide meeting or a focused one-entity meeting. */
+	scope_type?: 'org' | 'entity';
+	/** @description Focused meeting: the collection (e.g. "projects", "clients"). */
+	entity_type?: string | null;
+	/** @description Focused meeting: the record id. */
+	entity_id?: string | null;
+	/** @description Agenda subject key (money, clients, projects, leads, proposals, tickets) or blank for a free topic. */
+	subject?: string | null;
+	/** @description Optional free-text steer the user raised. */
+	topic?: string | null;
+	/** @description Deterministic lookup key: scope + subject + topic. The office finds the latest briefing for a section by this. */
+	cache_key?: string;
+	/** @description Ties this briefing to its proposed steps (ai_actions rows with session_id == this). */
+	plan_id?: string | null;
+	/** @description Earnest's narrative rationale/briefing prose. */
+	intro?: string | null;
+	/** @description Money-mode metric snapshot. */
+	finance?: Record<string, any> | null;
+	/** @description Money-mode opportunity intel snapshot. */
+	opportunity?: Record<string, any> | null;
+	/** @description Focused client-review scorecard snapshot. */
+	client_rating?: Record<string, any> | null;
+	/** @description Optional board-packet (agenda) snapshot at draft time. */
+	agenda?: Record<string, any> | null;
+	/** @description Number of proposed steps at draft time. */
+	step_count?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
 export interface DocumentBlock {
 	/** @primaryKey */
 	id: number;
@@ -4897,10 +4934,6 @@ export interface DirectusUser {
 	theme_dark_overrides?: 'json' | null;
 	phone?: string | null;
 	cell_phone?: string | null;
-	nickname?: string | null;
-	linkedin?: string | null;
-	github?: string | null;
-	timezone?: string | null;
 	text_direction?: 'auto' | 'ltr' | 'rtl';
 	industry?: string | null;
 	networking_goal?: string | null;
@@ -4932,10 +4965,18 @@ export interface DirectusUser {
 	app_pref_carddesk_promo_dismissed_at?: string | null;
 	/** @description Content Studio first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
 	app_pref_studio_intro_dismissed_at?: string | null;
-	/** @description Earnest Score / arcade first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
-	app_pref_arcade_intro_dismissed_at?: string | null;
 	/** @description CardDesk: opt in to being found by name/email in the network directory search. */
 	discoverable?: boolean | null;
+	/** @description Preferred name / nickname (editable from /account). */
+	nickname?: string | null;
+	/** @description LinkedIn profile URL (editable from /account). */
+	linkedin?: string | null;
+	/** @description GitHub profile URL (editable from /account). */
+	github?: string | null;
+	/** @description IANA timezone (e.g. America/New_York). Set from /account profile. */
+	timezone?: string | null;
+	/** @description Earnest Score / arcade first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
+	app_pref_arcade_intro_dismissed_at?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
@@ -5200,6 +5241,7 @@ export interface Schema {
 	contracts: Contract[];
 	courses: Course[];
 	current_work: CurrentWork[];
+	director_briefings: DirectorBriefing[];
 	document_blocks: DocumentBlock[];
 	early_access: EarlyAccess[];
 	earnest_history: EarnestHistory[];
@@ -5450,6 +5492,7 @@ export enum CollectionNames {
 	contracts = 'contracts',
 	courses = 'courses',
 	current_work = 'current_work',
+	director_briefings = 'director_briefings',
 	document_blocks = 'document_blocks',
 	early_access = 'early_access',
 	earnest_history = 'earnest_history',
