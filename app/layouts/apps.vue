@@ -16,7 +16,11 @@
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 						</ClientOnly>
 						<ClientOnly>
-							<LayoutDataScopeSelect v-if="user" />
+							<!-- Mine/All lens is a desktop-chrome affordance; on phones
+							     it crowds the row, so hide it below sm. -->
+							<div v-if="user" class="hidden sm:flex items-center">
+								<LayoutDataScopeSelect />
+							</div>
 						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">
@@ -40,18 +44,25 @@
 						</button>
 					</div>
 					<div class="apps-shell__chrome-right">
-						<button
-							class="apps-shell__chrome-btn hidden sm:flex"
-							aria-label="Search"
-							@click="spotlightOpen = true"
-						>
-							<Icon name="lucide:search" class="size-4" />
-						</button>
+						<!-- Search is desktop-chrome only; below sm it moves into the
+						     user-menu dropdown. Wrapper carries the responsive hide so
+						     the utility isn't out-specified by the scoped button rule. -->
+						<div class="hidden sm:flex">
+							<button
+								class="apps-shell__chrome-btn"
+								aria-label="Search"
+								@click="spotlightOpen = true"
+							>
+								<Icon name="lucide:search" class="size-4" />
+							</button>
+						</div>
 						<ClientOnly>
 							<LayoutNotificationsMenu />
 						</ClientOnly>
 						<ClientOnly>
-							<LayoutHeaderScore class="hidden sm:inline-flex" />
+							<div class="hidden sm:flex">
+								<LayoutHeaderScore />
+							</div>
 						</ClientOnly>
 						<ClientOnly>
 							<LayoutUserMenu v-if="user" class="shrink-0" />
@@ -143,6 +154,7 @@
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 import { tokenModalOpen } from '~/composables/useTokenModal';
 import { openEarnestPanel } from '~/composables/useEarnestPanel';
+import { spotlightOpen, toggleSpotlight } from '~/composables/useSpotlight';
 
 const { user } = useDirectusAuth();
 const { railPosition } = useAppsMode();
@@ -160,7 +172,6 @@ const handleOpenAI = () => openEarnestPanel();
 const { pendingCount: aiPendingCount, refresh: refreshAiPending } = useAiPendingActions();
 onMounted(() => { refreshAiPending(); });
 
-const spotlightOpen = ref(false);
 const showOrgSwitcher = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 const tokenModalVisible = tokenModalOpen;
@@ -170,7 +181,7 @@ if (import.meta.client) {
 		const handler = (e: KeyboardEvent) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
 				e.preventDefault();
-				spotlightOpen.value = !spotlightOpen.value;
+				toggleSpotlight();
 			}
 		};
 		window.addEventListener('keydown', handler);

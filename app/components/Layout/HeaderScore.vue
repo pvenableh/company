@@ -8,6 +8,8 @@
  * the big +EP pop, so those still get a subtle acknowledgement here. Clicking
  * opens the full Earnest Score view.
  */
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
+
 const router = useRouter();
 const { selectedOrg, initializeOrganizations } = useOrganization();
 const { totalEP, todayEP, level, pulseId, set } = useEarnestScoreBus();
@@ -59,31 +61,57 @@ function compact(n: number | null): string {
 const loaded = computed(() => todayEP.value != null);
 const todayDisplay = computed(() => (loaded.value ? compact(todayEP.value) : ''));
 const totalDisplay = computed(() => (totalEP.value != null ? compact(totalEP.value) : ''));
+
+// Full, comma-grouped numbers for the hover tooltip (the circle shows the
+// compact form; the tooltip spells it out and separates today vs overall).
+const todayFull = computed(() => (todayEP.value ?? 0).toLocaleString());
+const totalFull = computed(() => (totalEP.value ?? 0).toLocaleString());
 </script>
 
 <template>
-	<button
-		type="button"
-		class="header-score"
-		:class="{ 'header-score--flash': flashing }"
-		:aria-label="`Earnest Points — ${todayDisplay || 0} today, ${totalDisplay || 0} total, level ${level}. Open Earnest Score`"
-		:title="`${todayDisplay || 0} EP today · ${totalDisplay || 0} total · Level ${level}`"
-		@click="router.push('/account?section=score')"
-	>
-		<span class="header-score__today tabular-nums">{{ todayDisplay || '0' }}</span>
-		<span v-if="totalDisplay" class="header-score__total tabular-nums">{{ totalDisplay }}</span>
-	</button>
+	<TooltipProvider :delay-duration="150">
+		<Tooltip>
+			<TooltipTrigger as-child>
+				<button
+					type="button"
+					class="header-score"
+					:class="{ 'header-score--flash': flashing }"
+					:aria-label="`Earnest Points — ${todayDisplay || 0} today, ${totalDisplay || 0} total, level ${level}. Open Earnest Score`"
+					@click="router.push('/account?section=score')"
+				>
+					<span class="header-score__today tabular-nums">{{ todayDisplay || '0' }}</span>
+					<span v-if="totalDisplay" class="header-score__total tabular-nums">{{ totalDisplay }}</span>
+				</button>
+			</TooltipTrigger>
+			<TooltipContent side="bottom" :side-offset="8" class="min-w-[9rem]">
+				<div class="space-y-1 py-0.5">
+					<div class="flex items-center justify-between gap-4">
+						<span class="text-muted-foreground">Today</span>
+						<span class="font-semibold tabular-nums">+{{ todayFull }} EP</span>
+					</div>
+					<div class="flex items-center justify-between gap-4">
+						<span class="text-muted-foreground">Overall</span>
+						<span class="font-semibold tabular-nums">{{ totalFull }} EP</span>
+					</div>
+					<div class="mt-1 pt-1 border-t border-border/40 text-center text-[10px] text-muted-foreground">
+						Level {{ level }} · tap for details
+					</div>
+				</div>
+			</TooltipContent>
+		</Tooltip>
+	</TooltipProvider>
 </template>
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
-/* Perfect circle. Fixed square + rounded-full so it never distorts. */
+/* Perfect circle. Fixed square + rounded-full so it never distorts. Sized to
+ * match the header avatars (size-7 = 28px) so the chrome cluster reads even. */
 .header-score {
 	@apply relative inline-flex flex-col items-center justify-center shrink-0
 		text-foreground/80 hover:text-foreground transition-colors;
-	width: 40px;
-	height: 40px;
+	width: 28px;
+	height: 28px;
 	border-radius: 9999px;
 	background: hsl(var(--app-accent-h, 38) var(--app-accent-s, 92%) 50% / 0.1);
 	border: 1px solid hsl(var(--app-accent-h, 38) var(--app-accent-s, 92%) 50% / 0.25);
@@ -95,14 +123,14 @@ const totalDisplay = computed(() => (totalEP.value != null ? compact(totalEP.val
 
 .header-score__today {
 	@apply font-bold;
-	font-size: 13px;
+	font-size: 11px;
 	letter-spacing: -0.02em;
 }
 
 .header-score__total {
 	@apply font-medium text-muted-foreground;
-	font-size: 8px;
-	margin-top: 1px;
+	font-size: 7px;
+	margin-top: 0;
 }
 
 /* Award flash: scale + accent-glow pulse on the circle, colour flash on today. */

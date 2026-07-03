@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getToursForRoute, walkthroughTours } from '~/utils/walkthrough-tours';
+import { openSpotlight } from '~/composables/useSpotlight';
 
 const router = useRouter();
 const route = useRoute();
@@ -58,6 +59,12 @@ function handleStartTour(tourId: string) {
 }
 function handleReport(type: 'bug' | 'feature' | 'question' | 'feedback') {
 	setTimeout(() => openReportModal(type), 120);
+}
+
+// Search lives in the chrome only on sm+; on phones it moves here. Defer past
+// the dropdown's close so the spotlight dialog can claim focus cleanly.
+function handleSearch() {
+	setTimeout(() => openSpotlight(), 120);
 }
 
 const colorMode = useColorMode();
@@ -150,6 +157,14 @@ function handleLogout() {
 			</DropdownMenuLabel>
 
 			<DropdownMenuSeparator />
+
+			<!-- Mobile-only: the chrome search button is hidden below sm, so
+			     surface Search here instead. -->
+			<DropdownMenuItem class="sm:hidden" @select="handleSearch">
+				<Icon name="lucide:search" class="size-4 mr-2 shrink-0" />
+				<span>Search</span>
+			</DropdownMenuItem>
+			<DropdownMenuSeparator class="sm:hidden" />
 
 			<DropdownMenuItem @select="goTo('/account')">
 				<Icon name="lucide:user-round" class="size-4 mr-2 shrink-0" />
