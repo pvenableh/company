@@ -290,10 +290,10 @@ if (import.meta.client) {
 }
 
 .apps-shell__chrome-btn {
-	/* Bumped from 32pt → 36pt: closer to the iOS 44pt minimum without
-	 * crowding the chrome row. Pairs with the universal :active scale
-	 * for proper tactile feedback. */
-	@apply flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
+	/* Sized to 28px (w-7) so it matches the notification bell, score gauge,
+	 * and avatar — a uniform diameter keeps the chrome cluster evenly
+	 * spaced. Pairs with the universal :active scale for tactile feedback. */
+	@apply flex items-center justify-center w-7 h-7 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
 }
 
 .apps-shell__page {

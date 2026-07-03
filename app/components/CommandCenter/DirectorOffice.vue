@@ -182,6 +182,36 @@ function labelForType(t: string): string {
   return { create_tasks: 'Tasks', update_field: 'Update', send_email: 'Email', reschedule_project: 'Reschedule' }[t] || t;
 }
 
+// A friendly lucide glyph per action type — gives step chips a face, not just text.
+function iconForType(t: string): string {
+  return {
+    create_tasks: 'i-lucide-list-plus',
+    update_field: 'i-lucide-pencil',
+    send_email: 'i-lucide-mail',
+    reschedule_project: 'i-lucide-calendar-clock',
+  }[t] || 'i-lucide-sparkles';
+}
+
+// Pick an evocative icon for each agenda subject so the board packet reads at a glance.
+function iconForSubject(g: AgendaGroup): string {
+  const hay = `${g.subject} ${g.label}`.toLowerCase();
+  if (g.subject === 'money' || /financ|revenue|invoice|cash|budget|payment/.test(hay)) return 'i-lucide-banknote';
+  if (/client|account|customer/.test(hay)) return 'i-lucide-user-round';
+  if (/project/.test(hay)) return 'i-lucide-folder-kanban';
+  if (/task|to-?do/.test(hay)) return 'i-lucide-list-checks';
+  if (/meeting|event|calendar|schedul/.test(hay)) return 'i-lucide-calendar-clock';
+  if (/lead|pipeline|deal|opportun/.test(hay)) return 'i-lucide-trending-up';
+  if (/email|message|inbox/.test(hay)) return 'i-lucide-mail';
+  if (/ticket|support|issue/.test(hay)) return 'i-lucide-life-buoy';
+  if (/content|social|post|campaign/.test(hay)) return 'i-lucide-megaphone';
+  return 'i-lucide-sparkles';
+}
+
+// Priority → dot tint, for a small status pip alongside the label.
+function priorityDot(p: Priority): string {
+  return { urgent: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-blue-500', low: 'bg-muted-foreground/50' }[p];
+}
+
 function onClose() {
   // Only refetch the page behind us if the meeting actually changed data.
   if (mutated.value) refreshNuxtData();
@@ -204,65 +234,95 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
       >
         <section class="director-office w-full max-w-3xl my-auto rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
           <!-- Boardroom header -->
-          <header class="flex items-start justify-between gap-3 px-6 py-4 border-b border-border bg-muted/30">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <EarnestIcon class="w-5 h-5 text-primary" />
+          <header class="relative flex items-start justify-between gap-3 px-6 py-4 border-b border-border bg-gradient-to-br from-primary/10 via-muted/30 to-transparent">
+            <div class="relative flex items-center gap-3 min-w-0">
+              <div class="relative w-10 h-10 rounded-full bg-primary/15 ring-2 ring-primary/20 flex items-center justify-center shrink-0">
+                <span class="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-60" />
+                <EarnestIcon class="relative w-5 h-5 text-primary" />
               </div>
               <div class="min-w-0">
-                <h2 class="text-base font-semibold leading-tight">The Director's Office</h2>
+                <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
+                  The Director's Office
+                  <UIcon name="i-lucide-sparkles" class="w-3.5 h-3.5 text-primary/70" />
+                </h2>
                 <p class="text-xs text-muted-foreground truncate">
                   Reviewing {{ scopeLabel }} — approve each step, nothing runs on its own.
                 </p>
               </div>
             </div>
-            <button type="button" class="text-muted-foreground hover:text-foreground p-1 shrink-0" aria-label="Close" @click="onClose">
+            <button type="button" class="relative text-muted-foreground hover:text-foreground p-1 shrink-0" aria-label="Close" @click="onClose">
               <UIcon name="i-lucide-x" class="w-5 h-5" />
             </button>
           </header>
 
           <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
             <!-- Agenda loading / error -->
-            <div v-if="loadingAgenda" class="flex items-center gap-2 text-sm text-muted-foreground py-6">
-              <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
-              Reviewing the business…
+            <div v-if="loadingAgenda" class="flex flex-col items-center justify-center gap-3 py-10 text-center">
+              <span class="relative flex items-center justify-center w-12 h-12">
+                <span class="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                <EarnestIcon class="w-5 h-5 text-primary" />
+              </span>
+              <p class="text-sm text-muted-foreground">Convening the board — reviewing the business…</p>
             </div>
-            <div v-else-if="agendaError" class="text-sm text-red-600">{{ agendaError }}</div>
+            <div v-else-if="agendaError" class="flex items-center gap-2 text-sm text-red-600 py-4">
+              <UIcon name="i-lucide-alert-triangle" class="w-4 h-4 shrink-0" /> {{ agendaError }}
+            </div>
 
             <template v-else-if="agenda">
               <!-- Empty agenda -->
-              <div v-if="agenda.groups.length === 0" class="text-center py-8">
-                <UIcon name="i-lucide-check-circle" class="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p class="text-sm text-foreground">Nothing pressing on the agenda.</p>
+              <div v-if="agenda.groups.length === 0" class="text-center py-10">
+                <div class="relative mx-auto mb-3 w-16 h-16">
+                  <svg class="w-full h-full text-green-500" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                    <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2" stroke-opacity="0.25" />
+                    <circle cx="32" cy="32" r="19" fill="currentColor" fill-opacity="0.12" />
+                    <path d="M23 32.5l6 6 12-13" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <UIcon name="i-lucide-sparkles" class="absolute -top-1 -right-1 w-4 h-4 text-amber-400" />
+                  <UIcon name="i-lucide-sparkle" class="absolute bottom-0 -left-1 w-3 h-3 text-primary/60" />
+                </div>
+                <p class="text-sm font-medium text-foreground">All clear — nothing pressing on the agenda.</p>
                 <p class="text-xs text-muted-foreground">Earnest found no open issues for {{ scopeLabel }} right now.</p>
               </div>
 
               <!-- Agenda: subject cards -->
               <div v-else>
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Agenda</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
+                  <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5" /> Agenda
+                </p>
                 <div class="grid gap-2 sm:grid-cols-2">
                   <button
                     v-for="g in agenda.groups"
                     :key="g.subject"
                     type="button"
-                    class="text-left rounded-2xl border p-3 transition-colors hover:border-primary/40"
+                    class="group text-left rounded-2xl border p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
                     :class="activeSubject === g.subject ? 'border-primary/60 bg-primary/5' : 'border-border bg-background'"
                     @click="draftPlan(g.subject)"
                   >
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-sm font-medium">{{ g.label }}</span>
-                      <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-medium" :class="priorityClass(g.topPriority)">
-                        {{ g.topPriority }}
+                    <div class="flex items-start gap-2.5">
+                      <span
+                        class="mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                        :class="activeSubject === g.subject ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'"
+                      >
+                        <UIcon :name="iconForSubject(g)" class="w-4 h-4" />
                       </span>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2 mb-0.5">
+                          <span class="text-sm font-medium truncate">{{ g.label }}</span>
+                          <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-medium shrink-0" :class="priorityClass(g.topPriority)">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="priorityDot(g.topPriority)" />
+                            {{ g.topPriority }}
+                          </span>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                          <template v-if="g.subject === 'money'">
+                            Financial review — income, expenses &amp; forecast<template v-if="g.notices.length">, {{ g.notices.length }} flag{{ g.notices.length === 1 ? '' : 's' }}</template>
+                          </template>
+                          <template v-else>
+                            {{ g.notices.length }} item{{ g.notices.length === 1 ? '' : 's' }} needing attention
+                          </template>
+                        </p>
+                      </div>
                     </div>
-                    <p class="text-xs text-muted-foreground">
-                      <template v-if="g.subject === 'money'">
-                        Financial review — income, expenses &amp; forecast<template v-if="g.notices.length">, {{ g.notices.length }} flag{{ g.notices.length === 1 ? '' : 's' }}</template>
-                      </template>
-                      <template v-else>
-                        {{ g.notices.length }} item{{ g.notices.length === 1 ? '' : 's' }} needing attention
-                      </template>
-                    </p>
                   </button>
                 </div>
 
@@ -392,7 +452,10 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
                           <span class="text-sm font-medium" :class="step.status === 'rejected' ? 'line-through text-muted-foreground' : ''">{{ step.title }}</span>
-                          <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{{ labelForType(step.action_type) }}</span>
+                          <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            <UIcon :name="iconForType(step.action_type)" class="w-3 h-3" />
+                            {{ labelForType(step.action_type) }}
+                          </span>
                         </div>
 
                         <!-- Email preview before approving a send -->

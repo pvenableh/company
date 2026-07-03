@@ -702,7 +702,7 @@ watch(
 
 /* ── Bell button ────────────────────────────────────────────────────── */
 .notif-bell {
-	@apply relative inline-flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground transition-colors;
+	@apply relative inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground transition-colors;
 	background: transparent;
 }
 
