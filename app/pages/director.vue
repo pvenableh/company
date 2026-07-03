@@ -29,6 +29,7 @@ interface Meeting {
 
 const meetings = ref<Meeting[]>([]);
 const loading = ref(false);
+const search = ref('');
 
 async function load() {
   if (!selectedOrg.value) return;
@@ -86,14 +87,24 @@ function openMeeting(m: Meeting) {
     openDirectorOffice();
   }
 }
+
+// Free-text filter across the meeting's title, topic, scope and briefing text.
+const filteredMeetings = computed(() => {
+  const q = search.value.trim().toLowerCase();
+  if (!q) return meetings.value;
+  return meetings.value.filter((m) => {
+    const hay = [subjectLabel(m), m.topic, m.subject, scopeNote(m), m.intro].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+});
 </script>
 
 <template>
   <LayoutPageContainer>
     <div class="flex items-start justify-between gap-4 pt-2 mb-6">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-11 h-11 rounded-2xl bg-foreground text-background flex items-center justify-center shrink-0">
-          <DirectorChairIcon class="w-6 h-6" />
+        <div class="w-11 h-11 rounded-2xl bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
+          <ExecutiveChairIcon class="w-7 h-7" />
         </div>
         <div class="min-w-0">
           <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">The Director's Office</h1>
@@ -105,16 +116,25 @@ function openMeeting(m: Meeting) {
         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-sm ios-press shrink-0"
         @click="openDirectorOffice()"
       >
-        <DirectorChairIcon class="w-4 h-4" />
+        <ExecutiveChairIcon class="w-5 h-5" />
         <span class="hidden sm:inline">Convene the board</span>
         <span class="sm:hidden">Convene</span>
       </button>
     </div>
 
     <!-- Past meetings -->
-    <div class="mb-3 flex items-center gap-2">
+    <div class="mb-3 flex items-center gap-2 flex-wrap">
       <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Past meetings</p>
-      <span v-if="meetings.length" class="text-[10px] text-muted-foreground">· {{ meetings.length }}</span>
+      <span v-if="meetings.length" class="text-[10px] text-muted-foreground">· {{ filteredMeetings.length }}</span>
+      <div v-if="meetings.length" class="ml-auto relative">
+        <UIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search meetings…"
+          class="w-44 sm:w-64 rounded-full border border-border bg-background pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 text-sm text-muted-foreground py-8">
@@ -131,30 +151,46 @@ function openMeeting(m: Meeting) {
       </p>
     </div>
 
-    <div v-else class="grid gap-2 sm:grid-cols-2">
-      <button
-        v-for="m in meetings"
-        :key="m.id"
-        type="button"
-        class="group text-left rounded-2xl border border-border bg-background p-3.5 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
-        @click="openMeeting(m)"
-      >
-        <div class="flex items-start gap-3">
-          <span class="mt-0.5 w-9 h-9 rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center shrink-0 transition-colors">
-            <UIcon :name="subjectIcon(m)" class="w-4 h-4" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-sm font-medium truncate">{{ subjectLabel(m) }}</span>
-              <span class="text-[11px] text-muted-foreground shrink-0">{{ ago(m.date_created) }}</span>
-            </div>
-            <p class="text-[11px] text-muted-foreground mt-0.5">
-              {{ scopeNote(m) }}<span v-if="m.step_count"> · {{ m.step_count }} proposed step{{ m.step_count === 1 ? '' : 's' }}</span>
-            </p>
-            <p v-if="snippet(m.intro)" class="text-xs text-muted-foreground mt-1.5 line-clamp-2">{{ snippet(m.intro) }}</p>
-          </div>
-        </div>
-      </button>
+    <div v-else class="rounded-2xl border border-border overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th class="text-left font-medium px-4 py-2.5">Meeting</th>
+              <th class="text-left font-medium px-4 py-2.5 hidden sm:table-cell">Scope</th>
+              <th class="text-right font-medium px-4 py-2.5">Steps</th>
+              <th class="text-left font-medium px-4 py-2.5 hidden md:table-cell">Summary</th>
+              <th class="text-right font-medium px-4 py-2.5">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="m in filteredMeetings"
+              :key="m.id"
+              class="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors"
+              @click="openMeeting(m)"
+            >
+              <td class="px-4 py-2.5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="w-8 h-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                    <UIcon :name="subjectIcon(m)" class="w-4 h-4" />
+                  </span>
+                  <span class="font-medium truncate">{{ subjectLabel(m) }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-2.5 text-muted-foreground hidden sm:table-cell whitespace-nowrap">{{ scopeNote(m) }}</td>
+              <td class="px-4 py-2.5 text-right text-muted-foreground tabular-nums">{{ m.step_count || '—' }}</td>
+              <td class="px-4 py-2.5 hidden md:table-cell">
+                <div class="text-muted-foreground truncate max-w-[280px]">{{ snippet(m.intro) || '—' }}</div>
+              </td>
+              <td class="px-4 py-2.5 text-right text-muted-foreground whitespace-nowrap" :title="new Date(m.date_created).toLocaleString()">{{ ago(m.date_created) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="!filteredMeetings.length" class="px-4 py-8 text-center text-sm text-muted-foreground">
+        No meetings match “{{ search }}”.
+      </div>
     </div>
   </LayoutPageContainer>
 </template>

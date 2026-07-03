@@ -12,7 +12,8 @@
 -->
 <script setup lang="ts">
 const { isOpen, scope, close } = useDirectorOffice();
-const { selectedOrg } = useOrganization();
+const { selectedOrg, currentOrg } = useOrganization();
+const orgName = computed(() => (currentOrg.value as any)?.name || '');
 const toast = useToast();
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
@@ -26,6 +27,85 @@ interface Step { id: string; action_type: string; title: string; preview: any; s
 const agenda = ref<Agenda | null>(null);
 const loadingAgenda = ref(false);
 const agendaError = ref<string | null>(null);
+// Agenda presentation: the boardroom "table" (chairs = agenda items) by default,
+// or the plain card outline. Desktop only — mobile always shows the cards.
+const agendaView = ref<'table' | 'outline'>('table');
+
+// Seat each agenda group around the table along a shallow top arc (edges sit
+// lower/nearer, the middle sits higher/back), so N items read as one boardroom.
+const agendaSeats = computed(() => {
+  const gs = agenda.value?.groups || [];
+  const n = gs.length;
+  return gs.map((g, i) => {
+    const t = n <= 1 ? 0.5 : i / (n - 1);
+    const arc = Math.sin(t * Math.PI); // 0 at the edges, 1 in the middle
+    // Each chair takes a different palette accent (in the app rail's own gradient
+    // order) so the table reads as a chromatic spread, cohesive with the rail.
+    const accent = `var(--app-${CHAIR_ACCENT_IDS[i % CHAIR_ACCENT_IDS.length]}-icon, hsl(200 71% 40%))`;
+    return { g, left: `${22 + t * 56}%`, top: `${50 - arc * 28}px`, accent };
+  });
+});
+// App-rail accent ids in gradient order (bright cyan → dark blue) — reused to
+// tint the boardroom chairs the same chromatic way the rail tints its apps.
+const CHAIR_ACCENT_IDS = ['clients', 'work', 'money', 'marketing', 'director', 'organization', 'account'];
+
+// The Director at the head of the table — the current user. Name from the
+// session; job title needs the full user record (session omits it).
+const { user } = useUserSession();
+const { readMe } = useDirectusUsers();
+const directorName = computed(() => user.value?.first_name?.trim() || 'You');
+const directorTitle = ref('Director');
+onMounted(async () => {
+  try {
+    const me: any = await readMe({ fields: ['title'] });
+    if (me?.title) directorTitle.value = String(me.title);
+  } catch { /* keep the "Director" default */ }
+});
+
+// Collapsed "Raise a topic" affordance that expands to the input on click.
+const topicOpen = ref(false);
+const topicInputEl = ref<HTMLInputElement | null>(null);
+function openTopic() {
+  topicOpen.value = true;
+  nextTick(() => topicInputEl.value?.focus());
+}
+
+// This meeting's identity — its date/time (saved meetings are keyed on it).
+const meetingStartedAt = ref<Date | null>(null);
+const meetingLabel = computed(() =>
+  meetingStartedAt.value
+    ? meetingStartedAt.value.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : '',
+);
+
+// User tags on this meeting for future reference.
+const meetingTags = ref<string[]>([]);
+const tagInput = ref('');
+const tagOpen = ref(false);
+const tagInputEl = ref<HTMLInputElement | null>(null);
+function openTag() {
+  tagOpen.value = true;
+  nextTick(() => tagInputEl.value?.focus());
+}
+function addTag() {
+  const t = tagInput.value.trim().replace(/^#/, '');
+  if (t && !meetingTags.value.includes(t)) meetingTags.value.push(t);
+  tagInput.value = '';
+}
+function removeTag(tag: string) {
+  meetingTags.value = meetingTags.value.filter((x) => x !== tag);
+}
+
+// While a member is presenting (its plan is open), draw a dashed line from that
+// chair to the Director at the head. Coords are in the table's 600×208 space.
+const activeSeatLine = computed(() => {
+  if (!activeSubject.value) return null;
+  const seat = agendaSeats.value.find((s) => s.g.subject === activeSubject.value);
+  if (!seat) return null;
+  const x = (parseFloat(seat.left) / 100) * 600;
+  const y = parseFloat(seat.top) + 34;
+  return { x1: x, y1: y, x2: 300, y2: 150, accent: seat.accent };
+});
 
 const activeSubject = ref<string | null>(null);
 const planning = ref(false);
@@ -443,7 +523,7 @@ function onClose() {
 }
 
 // Load the agenda + recent meetings each time the office opens.
-watch(isOpen, (open) => { if (open) { loadAgenda(); loadRecent(); } });
+watch(isOpen, (open) => { if (open) { meetingStartedAt.value = new Date(); loadAgenda(); loadRecent(); } });
 onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 </script>
 
@@ -459,14 +539,12 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
           <!-- Boardroom header -->
           <header class="relative flex items-start justify-between gap-3 px-6 py-4 border-b border-border bg-gradient-to-br from-primary/10 via-muted/30 to-transparent">
             <div class="relative flex items-center gap-3 min-w-0">
-              <div class="relative w-10 h-10 rounded-full bg-primary/15 ring-2 ring-primary/20 flex items-center justify-center shrink-0">
-                <span class="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-60" />
-                <DirectorChairIcon class="relative w-5 h-5 text-primary" />
+              <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
+                <ExecutiveChairIcon class="w-6 h-6" />
               </div>
               <div class="min-w-0">
-                <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
+                <h2 class="text-base font-semibold leading-tight">
                   The Director's Office
-                  <UIcon name="i-lucide-sparkles" class="w-3.5 h-3.5 text-primary/70" />
                 </h2>
                 <p class="text-xs text-muted-foreground truncate">
                   Earnest AI reviewed {{ scopeLabel }} and drafted the work — approve each step, nothing runs on its own.
@@ -519,12 +597,138 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 <p class="text-xs text-muted-foreground">Earnest found no open issues for {{ scopeLabel }} right now.</p>
               </div>
 
-              <!-- Agenda: subject cards -->
+              <!-- Agenda: boardroom table (default) or card outline -->
               <div v-else>
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
-                  <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5" /> Agenda
-                </p>
-                <div class="grid gap-2 sm:grid-cols-2">
+                <div class="flex items-center justify-between mb-2 gap-2">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1.5 min-w-0">
+                    <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5 shrink-0" /> Agenda
+                    <span v-if="meetingLabel" class="font-normal text-muted-foreground/70 truncate">· meeting · {{ meetingLabel }}</span>
+                  </p>
+                  <!-- Table / Outline toggle — desktop only (mobile is always cards) -->
+                  <div class="hidden sm:inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                      :class="agendaView === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      @click="agendaView = 'table'"
+                    >
+                      <UIcon name="i-lucide-armchair" class="w-3.5 h-3.5" /> Table
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                      :class="agendaView === 'outline' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      @click="agendaView = 'outline'"
+                    >
+                      <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Meeting tags — for future reference -->
+                <div class="flex items-center flex-wrap gap-1.5 mb-2">
+                  <span
+                    v-for="tag in meetingTags"
+                    :key="tag"
+                    class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
+                  >
+                    #{{ tag }}
+                    <button type="button" class="hover:text-foreground" aria-label="Remove tag" @click="removeTag(tag)">
+                      <UIcon name="i-lucide-x" class="w-3 h-3" />
+                    </button>
+                  </span>
+                  <button
+                    v-if="!tagOpen"
+                    type="button"
+                    class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                    @click="openTag"
+                  >
+                    <UIcon name="i-lucide-tag" class="w-3 h-3" /> Add tag
+                  </button>
+                  <input
+                    v-else
+                    ref="tagInputEl"
+                    v-model="tagInput"
+                    type="text"
+                    placeholder="tag…"
+                    class="w-28 text-[11px] rounded-full border border-border bg-background px-2.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    @keydown.enter="addTag"
+                    @keydown.escape="tagOpen = false"
+                    @blur="tagOpen = false"
+                  />
+                </div>
+
+                <!-- Boardroom table — each agenda item is a member seated around
+                     the table. UPPERCASE title above; a subtle theme-tinted circle
+                     with an ALERT-colour border; the chair in the app's theme colour,
+                     angled toward the table. The subject icon + label reveal on hover.
+                     The Director sits at the head. Desktop only. -->
+                <div
+                  v-if="agendaView === 'table'"
+                  class="hidden sm:block relative mx-auto w-full max-w-[600px] mb-1"
+                  style="height: 208px"
+                >
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-12 w-[66%] h-[74px] rounded-[50%] bg-muted/40 border border-border" />
+
+                  <!-- Presence line — from the presenting member to the Director -->
+                  <Transition name="line-fade">
+                    <svg
+                      v-if="activeSeatLine"
+                      class="absolute inset-0 w-full h-full pointer-events-none"
+                      viewBox="0 0 600 208"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <line
+                        :x1="activeSeatLine.x1"
+                        :y1="activeSeatLine.y1"
+                        :x2="activeSeatLine.x2"
+                        :y2="activeSeatLine.y2"
+                        :stroke="activeSeatLine.accent"
+                        stroke-width="2"
+                        stroke-dasharray="5 6"
+                        stroke-linecap="round"
+                        vector-effect="non-scaling-stroke"
+                        class="director-presence-line"
+                      />
+                    </svg>
+                  </Transition>
+
+                  <button
+                    v-for="seat in agendaSeats"
+                    :key="seat.g.subject"
+                    type="button"
+                    class="group absolute -translate-x-1/2 flex flex-col items-center gap-1.5 w-[92px]"
+                    :style="{ left: seat.left, top: seat.top }"
+                    @click="draftPlan(seat.g.subject)"
+                  >
+                    <span class="flex items-center gap-1 max-w-full">
+                      <span class="text-[10px] font-semibold uppercase tracking-wider leading-tight text-center line-clamp-2 text-foreground">{{ seat.g.label }}</span>
+                      <span class="text-[9px] font-semibold px-1.5 py-px rounded-full leading-none shrink-0" :class="priorityClass(seat.g.topPriority)">{{ seat.g.notices.length }}</span>
+                    </span>
+                    <span
+                      class="w-11 h-11 rounded-full ring-1 flex items-center justify-center transition-transform group-hover:-translate-y-0.5"
+                      :class="activeSubject === seat.g.subject ? 'bg-background ring-primary/50 shadow-md' : 'bg-muted/50 ring-border shadow-sm'"
+                    >
+                      <DirectorChairIcon class="w-5 h-5" :style="{ color: seat.accent }" />
+                    </span>
+                    <!-- Hover: subject icon + label + count -->
+                    <span class="opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-medium px-2 py-0.5 rounded-full bg-card border border-border shadow-sm">
+                      <UIcon :name="iconForSubject(seat.g)" class="w-3 h-3" />
+                      {{ seat.g.label }} · {{ seat.g.notices.length }}
+                    </span>
+                  </button>
+
+                  <!-- The Director at the head of the table — the current user -->
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-0 z-10 flex flex-col items-center" title="You — the Director">
+                    <ExecutiveChairIcon class="w-16 h-16 drop-shadow-sm" />
+                    <span class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-foreground">{{ directorName }}</span>
+                    <span class="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground leading-none whitespace-nowrap">{{ directorTitle }}<template v-if="orgName"> @ {{ orgName }}</template></span>
+                  </div>
+                </div>
+
+                <!-- Card outline — mobile always; desktop when toggled to outline -->
+                <div class="grid gap-2 sm:grid-cols-2" :class="agendaView === 'table' ? 'sm:hidden' : ''">
                   <button
                     v-for="g in agenda.groups"
                     :key="g.subject"
@@ -542,7 +746,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                       </span>
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2 mb-0.5">
-                          <span class="text-sm font-medium truncate">{{ g.label }}</span>
+                          <span class="text-sm font-medium uppercase tracking-wide truncate">{{ g.label }}</span>
                           <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-medium shrink-0" :class="priorityClass(g.topPriority)">
                             <span class="w-1.5 h-1.5 rounded-full" :class="priorityDot(g.topPriority)" />
                             {{ g.topPriority }}
@@ -561,24 +765,47 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   </button>
                 </div>
 
-                <!-- Raise a topic (free-text steer) -->
-                <div class="mt-3 flex items-center gap-2">
-                  <input
-                    v-model="topicInput"
-                    type="text"
-                    placeholder="Raise a topic — e.g. “Are we on track to hit Q3 revenue?”"
-                    class="flex-1 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    @keydown.enter="raiseTopic"
-                  />
+                <!-- Raise a topic — collapsed to a pill, expands to the input on click -->
+                <div class="mt-3">
                   <button
+                    v-if="!topicOpen"
                     type="button"
-                    class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-foreground text-background disabled:opacity-50"
-                    :disabled="!topicInput.trim() || planning"
-                    @click="raiseTopic"
+                    class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                    @click="openTopic"
                   >
                     <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
-                    Discuss
+                    Raise a topic
                   </button>
+                  <Transition name="topic-expand">
+                    <div v-if="topicOpen" class="flex items-center gap-2">
+                      <input
+                        ref="topicInputEl"
+                        v-model="topicInput"
+                        type="text"
+                        placeholder="Raise a topic — e.g. “Are we on track to hit Q3 revenue?”"
+                        class="flex-1 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        @keydown.enter="raiseTopic"
+                        @keydown.escape="topicOpen = false"
+                      />
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-foreground text-background disabled:opacity-50 shrink-0"
+                        :disabled="!topicInput.trim() || planning"
+                        @click="raiseTopic"
+                      >
+                        <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
+                        Discuss
+                      </button>
+                      <button
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground p-1 shrink-0"
+                        aria-label="Collapse"
+                        @click="topicOpen = false"
+                      >
+                        <UIcon name="i-lucide-x" class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </Transition>
                 </div>
               </div>
 
@@ -751,7 +978,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 
                 <p v-if="outlineIntro && !planning" class="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ outlineIntro }}</p>
 
-                <!-- Step cards -->
+                <!-- Step cards — the presenting member's proposed actions -->
                 <div v-if="steps.length" class="space-y-2">
                   <div
                     v-for="(step, i) in steps"
@@ -894,6 +1121,42 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
   opacity: 0;
 }
 .director-office {
-  will-change: transform, opacity;
+  /* opacity only — `will-change: transform` would create a containing block that
+     traps the slides deck's full-screen (position: fixed) inside this panel. */
+  will-change: opacity;
+}
+
+/* Raise-a-topic input grows in from the left when the pill is clicked. */
+.topic-expand-enter-active {
+  transition: opacity 240ms ease, transform 280ms cubic-bezier(0.36, 0.66, 0.04, 1);
+  transform-origin: left center;
+}
+.topic-expand-enter-from {
+  opacity: 0;
+  transform: translateY(-4px) scaleX(0.9);
+}
+.topic-expand-leave-active {
+  transition: opacity 140ms ease;
+}
+.topic-expand-leave-to {
+  opacity: 0;
+}
+
+/* Presence line — marching dashes flowing toward the Director, fades in/out. */
+.director-presence-line {
+  animation: presence-dash 800ms linear infinite;
+}
+@keyframes presence-dash {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+.line-fade-enter-active,
+.line-fade-leave-active {
+  transition: opacity 260ms ease;
+}
+.line-fade-enter-from,
+.line-fade-leave-to {
+  opacity: 0;
 }
 </style>

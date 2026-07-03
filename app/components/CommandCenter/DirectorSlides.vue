@@ -164,10 +164,32 @@ function typingInField(): boolean {
 }
 onKeyStroke('ArrowRight', (e) => { if (typingInField()) return; e.preventDefault(); next(); });
 onKeyStroke('ArrowLeft', (e) => { if (typingInField()) return; e.preventDefault(); prev(); });
+
+// Full-screen presentation — the deck fills the display like a real slideshow.
+// Native Fullscreen API when allowed; falls back to a fixed full-viewport
+// overlay where it's blocked (e.g. a sandboxed preview iframe).
+const deckRoot = ref<HTMLElement | null>(null);
+const nativeFull = ref(false);
+const fauxFull = ref(false);
+const isFullscreen = computed(() => nativeFull.value || fauxFull.value);
+function toggleFullscreen() {
+  if (nativeFull.value || fauxFull.value) {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    fauxFull.value = false;
+    return;
+  }
+  const el = deckRoot.value;
+  const req = el?.requestFullscreen?.bind(el);
+  if (req) req().catch(() => { fauxFull.value = true; });
+  else fauxFull.value = true;
+}
+function onFsChange() { nativeFull.value = !!document.fullscreenElement; }
+onMounted(() => document.addEventListener('fullscreenchange', onFsChange));
+onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChange));
 </script>
 
 <template>
-  <div class="director-deck relative rounded-2xl overflow-hidden select-none">
+  <div ref="deckRoot" class="director-deck relative rounded-2xl overflow-hidden select-none" :class="{ 'director-deck--faux-full': fauxFull }">
     <!-- Faint chair watermark -->
     <DirectorChairIcon class="director-deck__watermark absolute -right-6 -bottom-8 w-48 h-48 text-white/[0.04]" />
 
@@ -175,9 +197,20 @@ onKeyStroke('ArrowLeft', (e) => { if (typingInField()) return; e.preventDefault(
     <div class="relative flex items-center justify-between px-5 pt-4 text-[11px] uppercase tracking-[0.18em] text-white/45">
       <span class="inline-flex items-center gap-1.5">
         <DirectorChairIcon class="w-3.5 h-3.5 text-indigo-300" />
-        Director's Briefing
+        <span class="text-white/75">{{ subjectTitle }}</span>
+        <span class="text-white/40">presenting</span>
       </span>
-      <span>{{ index + 1 }} / {{ slides.length }}</span>
+      <span class="inline-flex items-center gap-2.5">
+        {{ index + 1 }} / {{ slides.length }}
+        <button
+          type="button"
+          class="text-white/45 hover:text-white/85 transition-colors"
+          :aria-label="isFullscreen ? 'Exit full screen' : 'Present full screen'"
+          @click="toggleFullscreen"
+        >
+          <UIcon :name="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'" class="w-3.5 h-3.5" />
+        </button>
+      </span>
     </div>
 
     <!-- Slide stage -->
@@ -403,6 +436,35 @@ onKeyStroke('ArrowLeft', (e) => { if (typingInField()) return; e.preventDefault(
 }
 @media (min-width: 640px) {
   .director-deck__stage { min-height: 400px; }
+}
+/* Full-screen presentation — fill the display and centre the stage. Applies to
+   both native `:fullscreen` and the faux fixed-overlay fallback. */
+.director-deck:fullscreen,
+.director-deck--faux-full {
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.director-deck--faux-full {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+.director-deck:fullscreen .director-deck__stage,
+.director-deck--faux-full .director-deck__stage {
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+}
+.director-deck:fullscreen .director-deck__scroll,
+.director-deck--faux-full .director-deck__scroll {
+  max-height: 60vh;
+}
+.director-deck:fullscreen .director-deck__watermark,
+.director-deck--faux-full .director-deck__watermark {
+  width: 22rem;
+  height: 22rem;
 }
 .director-deck__scroll {
   max-height: 300px;

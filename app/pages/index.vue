@@ -342,7 +342,7 @@ const replayLazyLoaders = () => {
 onMounted(async () => {
 	if (user.value) {
 		// Fetch state and history in parallel, then run analysis
-		await Promise.all([fetchState(), fetchHistory(7)]);
+		await Promise.all([fetchState(), fetchHistory(30)]);
 		runAnalysis();
 	}
 });
@@ -416,9 +416,9 @@ watch(activeTab, (t) => {
 							<button
 								@click="openDirectorOffice()"
 								aria-label="Director's office"
-								class="flex items-center justify-center size-9 bg-foreground text-background rounded-full shadow-sm transition-all duration-200 ios-press"
+								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
 							>
-								<DirectorChairIcon class="w-4 h-4" />
+								<ExecutiveChairIcon class="w-5 h-5" />
 							</button>
 						</UTooltip>
 						<button
@@ -653,6 +653,11 @@ watch(activeTab, (t) => {
 							:dimensions="earnestState.dimensions"
 							:weekly-checkin-streak="weeklyCheckinStreak"
 						/>
+
+						<!-- 30-day Earnest Score trend sparkline -->
+						<div class="ios-card rounded-2xl border border-border bg-card p-4">
+							<EarnestTrendChart :history="earnestState.history" />
+						</div>
 
 						<!-- Stage 2.5: weekly check-in trigger pill. Renders only when
 						     >=1 of the user's active personal goals is stale (no snapshot

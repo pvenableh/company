@@ -301,19 +301,20 @@ function chipMagnifyStyle(appId: string) {
 								to="/director"
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': route.path.startsWith('/director') }"
-								:style="{
+								:style="[{
 									'--rail-h': 'var(--app-director-h, 222)',
 									'--rail-s': 'var(--app-director-s, 12%)',
 									'--rail-l': 'var(--app-director-l, 24%)',
 									'--rail-icon': 'var(--app-director-icon, hsl(0 0% 60%))',
 									'--rail-icon-bright': 'var(--app-director-icon, hsl(0 0% 92%))',
-								}"
+								}, itemMagnifyStyle('director')]"
+								data-app-id="director"
 								aria-label="Director's Office"
 								@click="hapticTap()"
 							>
-								<span class="app-rail__chip">
+								<span class="app-rail__chip" :style="chipMagnifyStyle('director')">
 									<span class="app-rail__icon">
-										<DirectorChairIcon class="app-rail__icon-layer app-rail__icon-base" />
+										<ExecutiveChairIcon mono class="app-rail__icon-layer app-rail__icon-base" />
 									</span>
 								</span>
 								<span class="app-rail__label">Director</span>
