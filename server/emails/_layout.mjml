@@ -28,12 +28,12 @@
     </mj-style>
   </mj-head>
 
-  <mj-body background-color="#f3f6fb" width="600px">
+  <mj-body background-color="#e6eef9" width="600px">
     <!-- Liquid-glass page wash from the default (Neutral) app palette. The
          blurred gradient is baked into an image (backdrop-filter can't render
          in email); clients that block images fall back to the solid cool
          background-color. -->
-    <mj-wrapper background-url="{{glassBgUrl}}" background-size="cover" background-position="center top" background-repeat="no-repeat" background-color="#f3f6fb" padding="40px 20px 44px 20px">
+    <mj-wrapper full-width="full-width" background-url="{{glassBgUrl}}" background-size="cover" background-position="center top" background-repeat="no-repeat" background-color="#e6eef9" padding="40px 20px 56px 20px">
 
       <!-- The card is the white header + content + footer sections stacked
            (partials injected by renderBrandedTemplate). _header rounds the top
