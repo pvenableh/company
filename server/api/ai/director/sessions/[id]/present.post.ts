@@ -1,15 +1,18 @@
 // server/api/ai/director/sessions/[id]/present.post.ts
 /**
- * Drive the shared deck. Three things, any combination:
- *   - takePresenter: become the presenter (attendees following will track you)
- *   - slide: move the shared deck to this slide (only honoured for the presenter)
- *   - follow: toggle whether attendees follow the presenter at all
+ * Drive the shared meeting screen + host settings. Any combination of:
+ *   - takePresenter: become the presenter (attendees following track you)
+ *   - subject / viewMode / slide: move the SHARED screen (only honoured for the
+ *     presenter) so followers see exactly what's projected — same advisor, same
+ *     view, same slide
+ *   - follow: toggle whether attendees follow the presenter
+ *   - viewOnly: (host only) lock participation — only the presenter can decide
  *
  * Auth: session + membership of the session's org.
- * Body: { slide?: number, takePresenter?: boolean, follow?: boolean }
+ * Body: { subject?, viewMode?, slide?, takePresenter?, follow?, viewOnly? }
  */
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
-import { loadSession, setPresenter, setPresenterSlide, recordActivity } from '~~/server/utils/director-sessions';
+import { loadSession, setPresenter, setSharedView, setViewOnly, recordActivity } from '~~/server/utils/director-sessions';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);
@@ -20,7 +23,10 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
   if (!id) throw createError({ statusCode: 400, message: 'Session id is required' });
 
-  const body = await readBody(event).catch(() => ({})) as { slide?: number; takePresenter?: boolean; follow?: boolean };
+  const body = await readBody(event).catch(() => ({})) as {
+    subject?: string | null; viewMode?: 'outline' | 'slides'; slide?: number;
+    takePresenter?: boolean; follow?: boolean; viewOnly?: boolean;
+  };
 
   const sess = await loadSession(id);
   if (!sess) throw createError({ statusCode: 404, message: 'Session not found' });
@@ -36,8 +42,22 @@ export default defineEventHandler(async (event) => {
     await setPresenter(id, presenterId, body.follow);
   }
 
-  if (typeof body.slide === 'number' && presenterId === userId) {
-    await setPresenterSlide(id, body.slide);
+  // Only the presenter moves the shared screen.
+  if (String(presenterId) === String(userId)) {
+    const view: { subject?: string | null; viewMode?: 'outline' | 'slides'; slide?: number } = {};
+    if (body.subject !== undefined) view.subject = body.subject;
+    if (body.viewMode !== undefined) view.viewMode = body.viewMode;
+    if (typeof body.slide === 'number') view.slide = body.slide;
+    if (Object.keys(view).length) await setSharedView(id, view);
+  }
+
+  // view_only is a host-only control.
+  if (typeof body.viewOnly === 'boolean') {
+    if (sess.hostId && String(sess.hostId) !== String(userId)) {
+      throw createError({ statusCode: 403, message: 'Only the host can lock participation' });
+    }
+    await setViewOnly(id, body.viewOnly);
+    await recordActivity(id, { type: 'settings', actorId: userId, actorName, label: body.viewOnly ? 'view-only on' : 'view-only off' });
   }
 
   return { ok: true, presenterId };

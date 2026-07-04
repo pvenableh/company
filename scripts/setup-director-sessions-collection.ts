@@ -240,6 +240,36 @@ async function setupSessions() {
 		schema: {},
 	});
 
+	// ── Curation + screen-sync + participation ───────────────────────────────
+	await createField('director_sessions', {
+		field: 'included_subjects',
+		type: 'json',
+		meta: { interface: 'input-code', options: { language: 'json' }, note: 'Which advisors (agenda subject keys) are IN the room. null/empty = all. Curation is the privacy lever — omit "money" and no one in the meeting sees the money.' },
+		schema: {},
+	});
+	await createField('director_sessions', {
+		field: 'view_only',
+		type: 'boolean',
+		meta: { interface: 'boolean', note: 'When on, only the presenter can approve/skip; everyone else is a view-only observer (and force-follows).' },
+		schema: { is_nullable: false, default_value: false },
+	});
+	await createField('director_sessions', {
+		field: 'shared_subject',
+		type: 'string',
+		meta: { interface: 'input', note: 'The advisor (subject) the presenter is currently on — followers mirror it.' },
+		schema: { is_nullable: true },
+	});
+	await createField('director_sessions', {
+		field: 'shared_view_mode',
+		type: 'string',
+		meta: {
+			interface: 'select-dropdown',
+			options: { choices: [{ text: 'Outline', value: 'outline' }, { text: 'Slides', value: 'slides' }] },
+			note: 'The presenter\'s current view mode — followers mirror it so they see the same screen.',
+		},
+		schema: { is_nullable: true },
+	});
+
 	await createField('director_sessions', {
 		field: 'date_created',
 		type: 'timestamp',

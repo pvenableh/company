@@ -14,6 +14,15 @@ useHead({ title: "Director's Office | Earnest" });
 const { open: openDirectorOffice } = useDirectorOffice();
 const { selectedOrg } = useOrganization();
 const { joinSession, session: liveSession } = useDirectorSession();
+const { user } = useUserSession();
+
+// Personal "My work" review — grounded on the current user's own assignments,
+// no org-wide financials. Modeled as a focused meeting on the `user` entity.
+function reviewMyWork() {
+  const id = (user.value as any)?.id;
+  if (!id) return;
+  openDirectorOffice({ mode: 'entity', entityType: 'user', entityId: String(id), label: 'My work' });
+}
 const route = useRoute();
 const router = useRouter();
 
@@ -163,15 +172,26 @@ const filteredMeetings = computed(() => {
           <p class="text-[15px] text-muted-foreground mt-0.5">Earnest AI reviews the business and proposes a plan you approve step by step.</p>
         </div>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-sm ios-press shrink-0"
-        @click="openDirectorOffice()"
-      >
-        <ExecutiveChairIcon class="w-5 h-5" />
-        <span class="hidden sm:inline">Convene the board</span>
-        <span class="sm:hidden">Convene</span>
-      </button>
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-border text-foreground text-sm font-medium ios-press"
+          title="Review just your own tasks & tickets"
+          @click="reviewMyWork"
+        >
+          <UIcon name="i-lucide-user-round" class="w-5 h-5" />
+          <span class="hidden sm:inline">My work</span>
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-sm ios-press"
+          @click="openDirectorOffice()"
+        >
+          <ExecutiveChairIcon class="w-5 h-5" />
+          <span class="hidden sm:inline">Convene the board</span>
+          <span class="sm:hidden">Convene</span>
+        </button>
+      </div>
     </div>
 
     <!-- Live now — join a meeting in progress -->

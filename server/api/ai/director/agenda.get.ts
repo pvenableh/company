@@ -19,8 +19,11 @@
  */
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { collectDirectorAgenda } from '~~/server/utils/ai-notices';
+import { collectPersonalAgenda } from '~~/server/utils/personal-agenda';
 
-const FOCUSABLE = new Set(['projects', 'clients', 'leads', 'proposals', 'invoices', 'tickets']);
+// 'user' is the pseudo-entity for a personal "My work" meeting — it reuses the
+// focused-entity plumbing but is grounded on the caller's own assignments.
+const FOCUSABLE = new Set(['projects', 'clients', 'leads', 'proposals', 'invoices', 'tickets', 'user']);
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);
@@ -44,6 +47,14 @@ export default defineEventHandler(async (event) => {
 
   const directus = getServerDirectus();
   try {
+    // Personal "My work" meeting — grounded on the caller's own assignments.
+    // A user may only run this for themselves.
+    if (entityType === 'user') {
+      if (entityId !== String(userId)) {
+        throw createError({ statusCode: 403, message: 'You can only review your own work.' });
+      }
+      return await collectPersonalAgenda(directus, organizationId, String(userId), new Date());
+    }
     const agenda = await collectDirectorAgenda(
       directus,
       organizationId,

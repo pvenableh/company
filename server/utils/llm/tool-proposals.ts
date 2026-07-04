@@ -17,9 +17,42 @@
  * The result shape mirrors ToolHandlerResult so chat.post.ts can treat proposed
  * and executed tool calls uniformly when streaming `tool_done` back to the model.
  */
+import { readUsers } from '@directus/sdk';
 import { logAiAction } from '~~/server/utils/ai-actions';
 import { UPDATE_FIELD_ALLOWLIST } from '~~/server/utils/ai-action-executors';
 import type { ToolHandlerResult } from './tool-handlers';
+
+/** Normalize the various assignee shapes a task tool may emit into a uuid list. */
+function extractAssignees(t: Record<string, any>): string[] {
+  const out: string[] = [];
+  const push = (v: any) => { if (v != null && v !== '') out.push(String(v)); };
+  if (Array.isArray(t.assigned_to)) t.assigned_to.forEach(push);
+  if (Array.isArray(t.assignee_ids)) t.assignee_ids.forEach(push);
+  push(t.assignee_id);
+  push(t.assignee);
+  return Array.from(new Set(out));
+}
+
+/** Resolve user uuids → display names for the approval preview (best-effort). */
+async function resolveUserNames(userIds: string[]): Promise<Record<string, string>> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  if (!ids.length) return {};
+  try {
+    const directus = getTypedDirectus();
+    const rows = await directus.request(readUsers({
+      filter: { id: { _in: ids } } as any,
+      fields: ['id', 'first_name', 'last_name', 'email'] as any,
+      limit: -1,
+    })) as any[];
+    const map: Record<string, string> = {};
+    for (const u of rows || []) {
+      map[u.id] = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || 'Teammate';
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
 export const PROPOSAL_TOOLS = new Set<string>(['send_email']);
@@ -280,6 +313,9 @@ async function proposeDirectorCreateTasks(
         client_id: input.client_id,
       }];
 
+  // Single add_task shape carries the assignee at the top level.
+  const singleAssignees = Array.isArray(input.tasks) ? [] : extractAssignees(input);
+
   const tasks = rawTasks
     .map((t) => {
       const title = (t?.title ?? '').toString().trim();
@@ -292,11 +328,20 @@ async function proposeDirectorCreateTasks(
       if (t.category) task.category = t.category;
       if (t.project_id) task.project_id = t.project_id;
       if (t.client_id) task.client_id = t.client_id;
+      // Carry the assignee(s) through so approved tasks are actually assigned —
+      // the executor reads `assigned_to` (array of user uuids).
+      const assignees = extractAssignees(t).concat(singleAssignees);
+      if (assignees.length) task.assigned_to = Array.from(new Set(assignees));
       return task;
     })
     .filter(Boolean) as Record<string, any>[];
 
   if (!tasks.length) return { success: false, summary: '', error: 'create_tasks needs at least one task with a title' };
+
+  // Resolve assignee names for the approval preview so the human sees who each
+  // task will go to BEFORE approving.
+  const allAssignees = Array.from(new Set(tasks.flatMap((t) => (t.assigned_to as string[]) || [])));
+  const nameMap = allAssignees.length ? await resolveUserNames(allAssignees) : {};
 
   const payload = { tasks };
   const title = tasks.length === 1 ? `Create task: ${tasks[0]!.title}` : `Create ${tasks.length} tasks`;
@@ -304,7 +349,11 @@ async function proposeDirectorCreateTasks(
     kind: 'create_tasks' as const,
     source: 'director',
     planId: ctx.planId,
+    // Titles kept as a plain string[] for backward-compat with existing preview
+    // renderers; assignee names ride alongside for the Director's Office card.
     tasks: tasks.map((t) => t.title),
+    taskAssignees: tasks.map((t) => ((t.assigned_to as string[]) || []).map((id) => nameMap[id] || 'Teammate')),
+    assignees: Array.from(new Set(Object.values(nameMap))),
   };
 
   const actionId = await logAiAction({

@@ -29,6 +29,8 @@ const props = defineProps<{
   follow?: boolean;
   /** Live meeting: the presenter's current slide index to sync to when following. */
   syncIndex?: number | null;
+  /** Live meeting: false for view-only observers — hides approve/skip. */
+  canDecide?: boolean;
 }>();
 
 const emit = defineEmits<{ approve: [step: Step]; skip: [step: Step]; slide: [label: string]; index: [n: number] }>();
@@ -357,6 +359,9 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           <p v-if="current.step.status === 'executed'" class="inline-flex items-center gap-1.5 text-sm text-emerald-300"><UIcon name="i-lucide-check-circle" class="w-4 h-4" /> Approved · done</p>
           <p v-else-if="current.step.status === 'rejected'" class="inline-flex items-center gap-1.5 text-sm text-white/40"><UIcon name="i-lucide-slash" class="w-4 h-4" /> Skipped</p>
           <p v-else-if="current.step.status === 'failed'" class="inline-flex items-center gap-1.5 text-sm text-rose-300"><UIcon name="i-lucide-alert-triangle" class="w-4 h-4" /> Failed — try it manually</p>
+
+          <!-- View-only observers can't decide -->
+          <p v-else-if="canDecide === false" class="inline-flex items-center gap-1.5 text-sm text-white/40"><UIcon name="i-lucide-eye" class="w-4 h-4" /> Awaiting the presenter's decision</p>
 
           <!-- Decision -->
           <div v-else class="flex items-center gap-2.5 pt-1">

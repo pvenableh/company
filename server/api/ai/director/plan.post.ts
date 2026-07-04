@@ -21,12 +21,14 @@
  *   topic?      — free-text steer (optional)
  */
 import { randomUUID } from 'crypto';
+import { readItems } from '@directus/sdk';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import type { ClaudeProvider } from '~~/server/utils/llm/claude';
 import { ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCHEDULE_PROJECT_TOOL } from '~~/server/utils/llm/tools';
 import { proposeDirectorStep } from '~~/server/utils/llm/tool-proposals';
 import { collectDirectorAgenda, type AINotice, type DirectorSubjectKey } from '~~/server/utils/ai-notices';
+import { collectPersonalAgenda } from '~~/server/utils/personal-agenda';
 import { saveDirectorBriefing } from '~~/server/utils/director-briefings';
 import { buildFinancialSnapshot, type FinancialSnapshot } from '~~/server/utils/financial-snapshot';
 import { buildOpportunityIntel, buildColdEffortIntel, type OpportunityIntel, type ColdEffortIntel } from '~~/server/utils/revenue-intel';
@@ -41,7 +43,7 @@ const DIRECTOR_TOOLS = [ADD_TASK_TOOL, UPDATE_FIELD_TOOL, SEND_EMAIL_TOOL, RESCH
 // notice.entityType (singular) → plural collection, for grounding update_field/add_task.
 const ENTITY_COLLECTION: Record<string, string> = {
   client: 'clients', project: 'projects', invoice: 'invoices',
-  lead: 'leads', proposal: 'proposals', ticket: 'tickets',
+  lead: 'leads', proposal: 'proposals', ticket: 'tickets', task: 'tasks',
 };
 const SUBJECT_ENTITIES: Record<DirectorSubjectKey, string[]> = {
   projects: ['project'], leads: ['lead'], proposals: ['proposal'],
@@ -72,19 +74,33 @@ export default defineEventHandler(async (event) => {
   const entityId = (body.entityId || '').toString().trim();
   const topic = (body.topic || '').toString().trim();
 
+  // Personal "My work" meeting is grounded on the caller's own assignments only,
+  // and only for themselves.
+  const isPersonal = entityType === 'user';
+  if (isPersonal && entityId !== String(userId)) {
+    throw createError({ statusCode: 403, message: 'You can only review your own work.' });
+  }
+
   const directus = getServerDirectus();
 
-  // 1. Ground the plan in the current agenda (focused entity or org-wide).
-  const agenda = await collectDirectorAgenda(
-    directus, organizationId, new Date(),
-    entityType && entityId ? { entityType, entityId } : undefined,
-  );
-
-  // Narrow to the requested subject when org-wide; otherwise use everything.
-  let notices: AINotice[] = agenda.groups.flatMap((g) => g.notices);
-  if (subject && SUBJECT_ENTITIES[subject as DirectorSubjectKey]) {
-    const group = agenda.groups.find((g) => g.subject === subject);
-    notices = group ? group.notices : [];
+  // 1. Ground the plan in the current agenda (personal, focused entity, or org-wide).
+  let notices: AINotice[];
+  if (isPersonal) {
+    const personal = await collectPersonalAgenda(directus, organizationId, String(userId), new Date());
+    let groups = personal.groups;
+    if (subject) groups = groups.filter((g) => g.subject === subject);
+    notices = groups.flatMap((g) => g.notices) as unknown as AINotice[];
+  } else {
+    const agenda = await collectDirectorAgenda(
+      directus, organizationId, new Date(),
+      entityType && entityId ? { entityType, entityId } : undefined,
+    );
+    // Narrow to the requested subject when org-wide; otherwise use everything.
+    notices = agenda.groups.flatMap((g) => g.notices);
+    if (subject && SUBJECT_ENTITIES[subject as DirectorSubjectKey]) {
+      const group = agenda.groups.find((g) => g.subject === subject);
+      notices = group ? group.notices : [];
+    }
   }
 
   const contextLines = notices.slice(0, 15).map((n) => {
@@ -96,11 +112,13 @@ export default defineEventHandler(async (event) => {
     ? contextLines.join('\n')
     : '(No open issues surfaced for this scope right now.)';
 
-  const scopeLabel = entityType && entityId
-    ? `the ${entityType.replace(/s$/, '')} in focus`
-    : subject
-      ? `the "${subject}" area of the business`
-      : 'the organization';
+  const scopeLabel = isPersonal
+    ? 'your own work & assignments'
+    : entityType && entityId
+      ? `the ${entityType.replace(/s$/, '')} in focus`
+      : subject
+        ? `the "${subject}" area of the business`
+        : 'the organization';
 
   // Money mode — financial snapshot + revenue-opportunity + effort-vs-return intel.
   const isMoney = subject === 'money' || entityType === 'invoices';
@@ -122,6 +140,25 @@ export default defineEventHandler(async (event) => {
   if (isClientReview) {
     scorecard = await buildClientScorecard(directus, entityId, organizationId, nowD).catch(() => null);
   }
+
+  // Team roster — lets the Director assign proposed tasks to real teammates by
+  // their exact user id (grounding; the model must never invent a user id).
+  const roster: Array<{ id: string; name: string; role: string | null }> = [];
+  try {
+    const rows = await directus.request(readItems('org_memberships' as any, {
+      filter: { _and: [{ organization: { _eq: organizationId } }, { status: { _eq: 'active' } }] } as any,
+      fields: ['role', 'user.id', 'user.first_name', 'user.last_name'],
+      limit: 100,
+    })) as any[];
+    const seen = new Set<string>();
+    for (const r of rows || []) {
+      const u = r.user;
+      const id = u?.id ?? (typeof u === 'string' ? u : null);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      roster.push({ id, name: [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim() || 'Teammate', role: r.role ?? null });
+    }
+  } catch { /* roster is optional — assignment just won't be offered */ }
 
   const systemPrompt = [
     EARNEST_VOICE_CHARTER,
@@ -153,6 +190,10 @@ export default defineEventHandler(async (event) => {
     'update_field is only for: leads.status, leads.stage, clients.status, projects.status, tasks.status, tasks.priority, tasks.schedule, tasks.due_date. For anything else, create a task.',
     'reschedule_project shifts a project timeline — use it only with a real project id and a delta_days (or new_start_date).',
     'Each step MUST be distinct — never propose the same action, task, or field change twice. If several records share one issue, address them in a SINGLE task, not one per record.',
+    ...(roster.length ? [
+      'TEAM & ASSIGNMENT — when a proposed task clearly belongs to a specific person (the account owner, the assigned rep, whoever raised it), assign it by setting add_task\'s assignee_id to that person\'s EXACT user id from the roster below. Only ever use an id from this roster; NEVER invent one. If ownership is unclear, leave it unassigned rather than guessing.',
+      `Team roster (name — role — user id):\n${roster.map((m) => `  - ${m.name}${m.role ? ` (${m.role})` : ''} — ${m.id}`).join('\n')}`,
+    ] : []),
     'Keep the plan tight and genuinely useful. Do not pad it to hit a number.',
     '',
     'SLIDE SUMMARY — after your full briefing prose, add ONE final line that begins EXACTLY with "TL;DR:" then 2 to 4 punchy takeaways separated by " | " (a space, pipe, space). Each takeaway ≤ 10 words, plain text, no markdown, self-contained. These are shown verbatim as presentation slide bullets, so make them crisp — the prose above stays as the detailed read.',

@@ -23,13 +23,17 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => ({})) as {
     organizationId?: string; scopeType?: string; entityType?: string; entityId?: string;
     subject?: string; topic?: string; planId?: string; title?: string;
+    includedSubjects?: string[]; viewOnly?: boolean;
   };
   const organizationId = (body.organizationId || '').toString();
   if (!organizationId) throw createError({ statusCode: 400, message: 'organizationId is required' });
 
   await requireOrgMembership(event, organizationId);
 
-  const scopeType = body.scopeType === 'entity' ? 'entity' : 'org';
+  const scopeType = body.scopeType === 'entity' ? 'entity' : body.scopeType === 'mine' ? 'mine' : 'org';
+  const includedSubjects = Array.isArray(body.includedSubjects)
+    ? body.includedSubjects.map((s) => String(s).trim()).filter(Boolean)
+    : null;
   const id = await createDirectorSession({
     organizationId,
     hostId: userId,
@@ -40,6 +44,8 @@ export default defineEventHandler(async (event) => {
     subject: body.subject?.toString().trim() || null,
     topic: body.topic?.toString().trim() || null,
     planId: body.planId?.toString().trim() || null,
+    includedSubjects,
+    viewOnly: body.viewOnly === true,
   });
 
   if (id == null) {

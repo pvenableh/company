@@ -33,6 +33,11 @@ export default defineEventHandler(async (event) => {
   if (!sess) throw createError({ statusCode: 404, message: 'Session not found' });
   await requireOrgMembership(event, String(sess.organizationId));
 
+  // View-only meetings: only the presenter (or host) may approve/skip.
+  if (sess.viewOnly && String(sess.presenterId) !== String(userId) && String(sess.hostId) !== String(userId)) {
+    throw createError({ statusCode: 403, message: 'This meeting is view-only — only the presenter can decide.' });
+  }
+
   const result = await decideAiAction({
     id: actionId,
     decision,

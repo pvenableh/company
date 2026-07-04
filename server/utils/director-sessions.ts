@@ -51,12 +51,16 @@ export interface CreateSessionParams {
   organizationId: string;
   hostId: string;
   title?: string | null;
-  scopeType: 'org' | 'entity';
+  scopeType: 'org' | 'entity' | 'mine';
   entityType?: string | null;
   entityId?: string | null;
   subject?: string | null;
   topic?: string | null;
   planId?: string | null;
+  /** Which advisors (subject keys) are in the room. null/empty = all. */
+  includedSubjects?: string[] | null;
+  /** Members can't approve/skip; forced to follow the presenter. */
+  viewOnly?: boolean;
 }
 
 /** Convene a live session and seat the host. Returns the session id or null. */
@@ -80,6 +84,10 @@ export async function createDirectorSession(params: CreateSessionParams): Promis
         follow_presenter: true,
         revision: 0,
         last_activity: null,
+        included_subjects: params.includedSubjects && params.includedSubjects.length ? params.includedSubjects : null,
+        view_only: params.viewOnly ?? false,
+        shared_subject: params.subject ?? null,
+        shared_view_mode: 'outline',
       }),
     ) as any;
     const id = created?.id ?? null;
@@ -220,6 +228,33 @@ export async function setPresenterSlide(sessionId: string | number, slide: numbe
   }
 }
 
+/** The presenter's whole screen — advisor (subject), view mode, and slide — so
+ * followers mirror exactly what's projected. Any field omitted is left as-is. */
+export async function setSharedView(
+  sessionId: string | number,
+  view: { subject?: string | null; viewMode?: 'outline' | 'slides'; slide?: number },
+): Promise<void> {
+  try {
+    const directus = getTypedDirectus();
+    const patch: Record<string, any> = {};
+    if (view.subject !== undefined) patch.shared_subject = view.subject;
+    if (view.viewMode !== undefined) patch.shared_view_mode = view.viewMode;
+    if (typeof view.slide === 'number') patch.current_slide = Math.max(0, Math.floor(view.slide));
+    if (Object.keys(patch).length) await directus.request(updateItem(SESSIONS, sessionId, patch));
+  } catch (err: any) {
+    console.warn('[director-sessions] setSharedView failed:', err?.message);
+  }
+}
+
+export async function setViewOnly(sessionId: string | number, viewOnly: boolean): Promise<void> {
+  try {
+    const directus = getTypedDirectus();
+    await directus.request(updateItem(SESSIONS, sessionId, { view_only: viewOnly }));
+  } catch (err: any) {
+    console.warn('[director-sessions] setViewOnly failed:', err?.message);
+  }
+}
+
 export async function setPresenter(sessionId: string | number, presenterId: string | null, followPresenter?: boolean): Promise<void> {
   try {
     const directus = getTypedDirectus();
@@ -325,7 +360,7 @@ export interface LoadedSession {
   presenterId: string | null;
   title: string | null;
   status: SessionStatus;
-  scopeType: 'org' | 'entity';
+  scopeType: 'org' | 'entity' | 'mine';
   entityType: string | null;
   entityId: string | null;
   subject: string | null;
@@ -336,6 +371,10 @@ export interface LoadedSession {
   revision: number;
   lastActivity: SessionActivity | null;
   dateCreated: string | null;
+  includedSubjects: string[] | null;
+  viewOnly: boolean;
+  sharedSubject: string | null;
+  sharedViewMode: 'outline' | 'slides';
 }
 
 function mapSession(r: any): LoadedSession {
@@ -347,7 +386,7 @@ function mapSession(r: any): LoadedSession {
     presenterId: idOf(r.presenter),
     title: r.title ?? null,
     status: (r.status === 'ended' ? 'ended' : 'live') as SessionStatus,
-    scopeType: (r.scope_type === 'entity' ? 'entity' : 'org') as 'org' | 'entity',
+    scopeType: (r.scope_type === 'entity' ? 'entity' : r.scope_type === 'mine' ? 'mine' : 'org') as 'org' | 'entity' | 'mine',
     entityType: r.entity_type ?? null,
     entityId: r.entity_id ?? null,
     subject: r.subject ?? null,
@@ -358,6 +397,10 @@ function mapSession(r: any): LoadedSession {
     revision: Number(r.revision) || 0,
     lastActivity: r.last_activity ?? null,
     dateCreated: r.date_created ?? null,
+    includedSubjects: Array.isArray(r.included_subjects) && r.included_subjects.length ? r.included_subjects : null,
+    viewOnly: r.view_only === true,
+    sharedSubject: r.shared_subject ?? null,
+    sharedViewMode: (r.shared_view_mode === 'slides' ? 'slides' : 'outline') as 'outline' | 'slides',
   };
 }
 
@@ -365,6 +408,7 @@ const SESSION_FIELDS = [
   'id', 'organization', 'host', 'presenter', 'title', 'status', 'scope_type',
   'entity_type', 'entity_id', 'subject', 'topic', 'plan_id', 'current_slide',
   'follow_presenter', 'revision', 'last_activity', 'date_created',
+  'included_subjects', 'view_only', 'shared_subject', 'shared_view_mode',
 ];
 
 export async function loadSession(sessionId: string | number): Promise<LoadedSession | null> {

@@ -56,7 +56,7 @@ export interface LiveSession {
   presenterId: string | null;
   title: string | null;
   status: 'live' | 'ended';
-  scopeType: 'org' | 'entity';
+  scopeType: 'org' | 'entity' | 'mine';
   entityType: string | null;
   entityId: string | null;
   subject: string | null;
@@ -66,6 +66,10 @@ export interface LiveSession {
   followPresenter: boolean;
   revision: number;
   lastActivity: any;
+  includedSubjects: string[] | null;
+  viewOnly: boolean;
+  sharedSubject: string | null;
+  sharedViewMode: 'outline' | 'slides';
 }
 
 interface StatePayload {
@@ -103,6 +107,19 @@ export function useDirectorSession() {
   const isLive = computed(() => !!_session.value && _session.value.status === 'live');
   const isHost = computed(() => !!_session.value && String(_session.value.hostId) === String(myUserId.value));
   const isPresenter = computed(() => !!_session.value && String(_session.value.presenterId) === String(myUserId.value));
+  // Who may approve/skip: everyone, unless the meeting is view-only (then only
+  // the presenter or host). Solo (not live) always true.
+  const canDecide = computed(() => {
+    if (!isLive.value) return true;
+    if (!_session.value?.viewOnly) return true;
+    return isPresenter.value || isHost.value;
+  });
+  // A follower mirrors the presenter's screen while follow is on and they aren't
+  // the presenter. In view-only meetings follow is forced for non-presenters.
+  const isFollowing = computed(() => {
+    if (!isLive.value || isPresenter.value) return false;
+    return !!_session.value?.followPresenter || !!_session.value?.viewOnly;
+  });
 
   // Everyone still at the table (host first, then join order).
   const attendees = computed(() => _participants.value.filter((p) => p.status !== 'left'));
@@ -191,8 +208,9 @@ export function useDirectorSession() {
 
   /** Convene a live meeting and take the host seat. Returns the session id. */
   async function convene(opts: {
-    scopeType?: 'org' | 'entity'; entityType?: string | null; entityId?: string | null;
+    scopeType?: 'org' | 'entity' | 'mine'; entityType?: string | null; entityId?: string | null;
     subject?: string | null; topic?: string | null; planId?: string | null; title?: string | null;
+    includedSubjects?: string[] | null; viewOnly?: boolean;
   }): Promise<string | null> {
     if (!selectedOrg.value) return null;
     _connecting.value = true;
@@ -316,11 +334,12 @@ export function useDirectorSession() {
     refresh();
   }
 
-  /** Presenter drives the shared deck to a slide. */
-  async function presentSlide(slide: number) {
-    if (!_sessionId) return;
+  /** Presenter drives the shared SCREEN — advisor (subject), view mode, slide.
+   * Any subset; followers mirror exactly what's projected. */
+  async function broadcastView(view: { subject?: string | null; viewMode?: 'outline' | 'slides'; slide?: number }) {
+    if (!_sessionId || !isPresenter.value) return;
     await $fetch(`/api/ai/director/sessions/${_sessionId}/present`, {
-      method: 'POST', body: { slide },
+      method: 'POST', body: view,
     }).catch(() => {});
   }
 
@@ -336,6 +355,15 @@ export function useDirectorSession() {
     if (!_sessionId) return;
     await $fetch(`/api/ai/director/sessions/${_sessionId}/present`, {
       method: 'POST', body: { follow },
+    }).catch(() => {});
+    refresh();
+  }
+
+  /** Host-only: lock participation so only the presenter can decide. */
+  async function setViewOnly(viewOnly: boolean) {
+    if (!_sessionId) return;
+    await $fetch(`/api/ai/director/sessions/${_sessionId}/present`, {
+      method: 'POST', body: { viewOnly },
     }).catch(() => {});
     refresh();
   }
@@ -360,11 +388,11 @@ export function useDirectorSession() {
     qa: readonly(_qa),
     connecting: readonly(_connecting),
     // computed
-    isLive, isHost, isPresenter, attendees, presentNow, myUserId,
+    isLive, isHost, isPresenter, canDecide, isFollowing, attendees, presentNow, myUserId,
     // lifecycle
     convene, joinSession, leave, end, invite, attachPlan, refresh, detach,
     // in-room
-    approveStep, skipStep, postQa, presentSlide, takePresenter, setFollowPresenter,
-    reportViewedSlide, sendHeartbeat,
+    approveStep, skipStep, postQa, broadcastView, takePresenter, setFollowPresenter,
+    setViewOnly, reportViewedSlide, sendHeartbeat,
   };
 }

@@ -1939,6 +1939,14 @@ export interface DirectorSession {
 	last_activity?: Record<string, any> | null;
 	date_created?: string | null;
 	date_updated?: string | null;
+	/** @description Which advisors (agenda subject keys) are IN the room. null/empty = all. Curation is the privacy lever — omit "money" and no one in the meeting sees the money. */
+	included_subjects?: Record<string, any> | null;
+	/** @description When on, only the presenter can approve/skip; everyone else is a view-only observer (and force-follows). */
+	view_only?: boolean;
+	/** @description The advisor (subject) the presenter is currently on — followers mirror it. */
+	shared_subject?: string | null;
+	/** @description The presenter's current view mode — followers mirror it so they see the same screen. */
+	shared_view_mode?: 'outline' | 'slides' | null;
 }
 
 export interface DocumentBlock {

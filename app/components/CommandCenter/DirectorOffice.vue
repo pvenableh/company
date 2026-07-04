@@ -25,6 +25,8 @@ const {
   isLive: liveActive,
   isHost: liveIsHost,
   isPresenter: liveIsPresenter,
+  canDecide: liveCanDecide,
+  isFollowing: liveIsFollowing,
   session: liveSession,
   connecting: liveConnecting,
   attendees: liveAttendees,
@@ -38,12 +40,18 @@ const {
   approveStep: approveStepLive,
   skipStep: skipStepLive,
   postQa,
-  presentSlide,
+  broadcastView,
+  takePresenter,
+  setViewOnly,
   reportViewedSlide,
   attachPlan,
 } = useDirectorSession();
 
 const showInvite = ref(false);
+// Go-live setup sheet — the host curates which advisors are in the room.
+const showGoLive = ref(false);
+const goLiveSubjects = ref<string[]>([]);
+const goLiveViewOnly = ref(false);
 const seatedIds = computed(() => liveAttendees.value.map((p) => String(p.userId)).filter(Boolean));
 
 function avatarFor(p: { avatar: string | null; name: string }): string {
@@ -51,10 +59,33 @@ function avatarFor(p: { avatar: string | null; name: string }): string {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || 'Teammate')}&background=6366f1&color=fff&size=48`;
 }
 
-// Convene a live meeting from the current scope + (if one is open) the drafted
-// plan, so invitees land on the same briefing.
-async function goLive() {
+// The advisors (agenda subjects) available to bring into a live meeting.
+interface Advisor { subject: string; label: string; icon: string }
+const availableAdvisors = computed<Advisor[]>(() =>
+  (agenda.value?.groups || []).map((g) => ({ subject: g.subject, label: g.label, icon: iconForSubject(g) })),
+);
+
+// Open the go-live setup sheet: seed the advisor selection (all in by default,
+// or just the one already open) so the host can curate who's in the room.
+function openGoLive() {
+  const all = availableAdvisors.value.map((a) => a.subject);
+  goLiveSubjects.value = activeSubject.value ? [activeSubject.value] : all;
+  goLiveViewOnly.value = false;
+  showGoLive.value = true;
+}
+
+function toggleGoLiveSubject(subject: string) {
+  const set = new Set(goLiveSubjects.value);
+  if (set.has(subject)) set.delete(subject);
+  else set.add(subject);
+  goLiveSubjects.value = Array.from(set);
+}
+
+// Convene the live meeting with the curated advisor set. Invitees land on the
+// same briefing and only ever see the advisors the host let into the room.
+async function confirmGoLive() {
   const s = scope.value;
+  const included = goLiveSubjects.value.slice();
   const id = await convene({
     scopeType: s?.mode === 'entity' ? 'entity' : 'org',
     entityType: s?.mode === 'entity' ? s.entityType : null,
@@ -63,7 +94,11 @@ async function goLive() {
     topic: topicInput.value.trim() || null,
     planId: planId.value || null,
     title: activeSubject.value ? recentLabelForSubject(activeSubject.value) : (s?.label || 'Working session'),
+    // Entity/focused meetings are inherently one advisor — no curation needed.
+    includedSubjects: s?.mode === 'entity' ? null : (included.length ? included : null),
+    viewOnly: goLiveViewOnly.value,
   });
+  showGoLive.value = false;
   if (id) {
     showInvite.value = true; // prompt to fill the table straight away
     toast.add({ title: 'You’re live', description: 'Invite teammates to review and approve together.', icon: 'i-lucide-radio', color: 'green' });
@@ -90,8 +125,10 @@ async function onLeaveMeeting() {
 // The presenter drives the shared deck; everyone reports their viewed slide.
 function onSlideIndex(n: number) {
   reportViewedSlide(n);
-  if (liveActive.value && liveIsPresenter.value) presentSlide(n);
+  if (liveActive.value && liveIsPresenter.value) broadcastView({ slide: n });
 }
+// NOTE: the presenter/follower screen-sync watchers live further down, after
+// `activeSubject` and `viewMode` are declared (they can't run before those refs).
 
 // Mirror live step state into the local `steps` the whole template already
 // renders — so a teammate's approve/skip shows for everyone. Live steps are the
@@ -111,8 +148,10 @@ watch([liveActive, liveQa], () => {
 // presenter opens a section), everyone catches up to the same briefing. This is
 // LOAD-ONLY — a catching-up attendee must never POST /plan (that would mint a
 // duplicate plan); they read the saved briefing + the session's shared steps.
-watch(() => liveSession.value?.subject, (subject) => {
+watch(() => liveSession.value?.sharedSubject ?? liveSession.value?.subject, (subject) => {
   if (!liveActive.value || !isOpen.value) return;
+  // Only followers snap to the presenter's advisor; the presenter drives freely.
+  if (!liveIsFollowing.value) return;
   if (subject && activeSubject.value !== subject) loadSharedSubject(subject);
 });
 
@@ -155,7 +194,7 @@ async function loadSharedSubject(subject: string) {
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 interface AgendaNotice { id: string; title: string; description: string; priority: Priority; entityType?: string; entityId?: string }
 interface AgendaGroup { subject: string; label: string; topPriority: Priority; notices: AgendaNotice[]; proposedCount: number }
-interface Agenda { mode: 'org' | 'entity'; groups: AgendaGroup[]; totalNotices: number; totalProposed: number }
+interface Agenda { mode: 'org' | 'entity' | 'mine'; groups: AgendaGroup[]; totalNotices: number; totalProposed: number }
 
 type StepStatus = 'pending' | 'executing' | 'executed' | 'rejected' | 'failed';
 interface Step { id: string; action_type: string; title: string; preview: any; status: StepStatus }
@@ -167,10 +206,20 @@ const agendaError = ref<string | null>(null);
 // or the plain card outline. Desktop only — mobile always shows the cards.
 const agendaView = ref<'table' | 'outline'>('table');
 
+// In a live meeting the host may have curated which advisors are in the room —
+// everyone (host included) only sees those. Solo/off-live shows all.
+const visibleAgendaGroups = computed(() => {
+  const gs = agenda.value?.groups || [];
+  const included = liveActive.value ? liveSession.value?.includedSubjects : null;
+  if (!included || !included.length) return gs;
+  const set = new Set(included);
+  return gs.filter((g) => set.has(g.subject));
+});
+
 // Seat each agenda group around the table along a shallow top arc (edges sit
 // lower/nearer, the middle sits higher/back), so N items read as one boardroom.
 const agendaSeats = computed(() => {
-  const gs = agenda.value?.groups || [];
+  const gs = visibleAgendaGroups.value;
   const n = gs.length;
   return gs.map((g, i) => {
     const t = n <= 1 ? 0.5 : i / (n - 1);
@@ -197,6 +246,15 @@ onMounted(async () => {
     if (me?.title) directorTitle.value = String(me.title);
   } catch { /* keep the "Director" default */ }
 });
+
+// Live: the OTHER humans present (not me — I'm the Director chair at the head),
+// seated flanking the head so the table shows real people. Split left/right so
+// they fan out symmetrically around the Director.
+const otherAttendees = computed(() =>
+  livePresentNow.value.filter((p) => String(p.userId) !== String(user.value?.id)),
+);
+const leftGuests = computed(() => otherAttendees.value.filter((_, i) => i % 2 === 0).slice(0, 3));
+const rightGuests = computed(() => otherAttendees.value.filter((_, i) => i % 2 === 1).slice(0, 3));
 
 // Collapsed "Raise a topic" affordance that expands to the input on click.
 const topicOpen = ref(false);
@@ -275,6 +333,20 @@ const hasBriefing = computed(() =>
   !!planIntro.value || steps.value.length > 0 || !!finance.value || !!clientRating.value || !!opportunity.value,
 );
 const showSlides = computed(() => viewMode.value === 'slides' && !planning.value && hasBriefing.value);
+
+// ── Live screen-sync (declared here — needs activeSubject + viewMode above) ──
+// Presenter broadcasts the whole screen — which advisor + which view — so
+// followers mirror exactly what's on the projector.
+watch(activeSubject, (subject) => {
+  if (liveActive.value && liveIsPresenter.value) broadcastView({ subject: subject || null });
+});
+watch(viewMode, (mode) => {
+  if (liveActive.value && liveIsPresenter.value) broadcastView({ viewMode: mode });
+});
+// Followers mirror the presenter's view mode.
+watch(() => liveSession.value?.sharedViewMode, (mode) => {
+  if (liveIsFollowing.value && mode && viewMode.value !== mode) viewMode.value = mode;
+});
 
 // Ask Earnest — advisory Q&A grounded in the current briefing (per-subject,
 // cached alongside the plan so flipping back keeps the conversation).
@@ -464,7 +536,7 @@ async function loadAgenda(force = false) {
 async function draftPlan(subject: string, force = false) {
   if (planning.value) return;
   const topic = topicInput.value.trim();
-  const key = `${subject} ${topic}`;
+  const key = `${subject} ${topic}`;
   activeSubject.value = subject;
   // Cache hit → restore the drafted plan verbatim (steps + approve/skip
   // statuses persist because it's the same reactive array) — no re-draft.
@@ -564,6 +636,11 @@ async function loadSteps(pid: string) {
 
 async function approveStep(step: Step) {
   if (step.status !== 'pending') return;
+  // View-only meeting: only the presenter/host may decide.
+  if (liveActive.value && !liveCanDecide.value) {
+    toast.add({ title: 'View-only meeting', description: 'Only the presenter can approve steps here.', icon: 'i-lucide-eye', color: 'blue' });
+    return;
+  }
   // Live: route through the session so the decision (and who made it) broadcasts.
   if (liveActive.value) { mutated.value = true; return approveStepLive(step as any); }
   step.status = 'executing';
@@ -579,6 +656,7 @@ async function approveStep(step: Step) {
 
 async function skipStep(step: Step) {
   if (step.status !== 'pending') return;
+  if (liveActive.value && !liveCanDecide.value) return;
   if (liveActive.value) return skipStepLive(step as any);
   const prev = step.status;
   step.status = 'rejected';
@@ -707,7 +785,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50"
                   title="Convene a live meeting others can join"
                   :disabled="liveConnecting"
-                  @click="goLive"
+                  @click="openGoLive"
                 >
                   <UIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-3.5 h-3.5" :class="liveConnecting ? 'animate-spin' : ''" />
                   <span class="hidden sm:inline">Go live</span>
@@ -787,12 +865,36 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 {{ livePresentNow.length }} here<template v-if="liveAttendees.length > livePresentNow.length"> · {{ liveAttendees.length - livePresentNow.length }} invited</template>
               </span>
               <div class="ml-auto flex items-center gap-2">
+                <!-- Host-only: lock participation to view-only -->
+                <button
+                  v-if="liveIsHost"
+                  type="button"
+                  class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full transition-colors"
+                  :class="liveSession?.viewOnly ? 'bg-amber-500/15 text-amber-600' : 'text-muted-foreground hover:text-foreground'"
+                  :title="liveSession?.viewOnly ? 'View-only is on — only you (presenter) can approve. Click to unlock.' : 'Lock participation — only the presenter can approve'"
+                  @click="setViewOnly(!liveSession?.viewOnly)"
+                >
+                  <UIcon :name="liveSession?.viewOnly ? 'i-lucide-lock' : 'i-lucide-lock-open'" class="w-3 h-3" />
+                  {{ liveSession?.viewOnly ? 'View-only' : 'Open' }}
+                </button>
                 <span v-if="liveIsPresenter" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary font-medium">
                   <UIcon name="i-lucide-presentation" class="w-3 h-3" /> You're presenting
                 </span>
-                <span v-else-if="liveSession?.followPresenter" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <UIcon name="i-lucide-eye" class="w-3 h-3" /> Following presenter
-                </span>
+                <template v-else>
+                  <span v-if="liveIsFollowing" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <UIcon name="i-lucide-eye" class="w-3 h-3" /> Following presenter
+                  </span>
+                  <!-- Take the deck (blocked in view-only meetings) -->
+                  <button
+                    v-if="!liveSession?.viewOnly"
+                    type="button"
+                    class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+                    title="Take over presenting"
+                    @click="takePresenter()"
+                  >
+                    <UIcon name="i-lucide-presentation" class="w-3 h-3" /> Present
+                  </button>
+                </template>
               </div>
             </div>
 
@@ -946,18 +1048,61 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                     </span>
                   </button>
 
-                  <!-- The Director at the head of the table — the current user -->
-                  <div class="absolute left-1/2 -translate-x-1/2 bottom-0 z-10 flex flex-col items-center" title="You — the Director">
-                    <ExecutiveChairIcon class="w-16 h-16 drop-shadow-sm" />
-                    <span class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-foreground">{{ directorName }}</span>
-                    <span class="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground leading-none whitespace-nowrap">{{ directorTitle }}<template v-if="orgName"> @ {{ orgName }}</template></span>
+                  <!-- The head of the table — the Director (you), flanked in a
+                       live meeting by the human guests actually in the room. -->
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-0 z-10 flex items-end gap-1.5" title="You — the Director">
+                    <!-- Guests on the left -->
+                    <div v-if="liveActive" class="flex items-end gap-1 mb-1.5">
+                      <span
+                        v-for="p in leftGuests"
+                        :key="p.id"
+                        class="relative"
+                        :title="p.name + (String(p.userId) === String(liveSession?.presenterId) ? ' · presenting' : '')"
+                      >
+                        <img
+                          :src="avatarFor(p)"
+                          :alt="p.name"
+                          class="w-8 h-8 rounded-full object-cover ring-2"
+                          :class="String(p.userId) === String(liveSession?.presenterId) ? 'ring-primary' : 'ring-card'"
+                        />
+                        <span v-if="String(p.userId) === String(liveSession?.presenterId)" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                          <UIcon name="i-lucide-presentation" class="w-2 h-2" />
+                        </span>
+                      </span>
+                    </div>
+
+                    <div class="flex flex-col items-center">
+                      <ExecutiveChairIcon class="w-16 h-16 drop-shadow-sm" />
+                      <span class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-foreground">{{ directorName }}</span>
+                      <span class="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground leading-none whitespace-nowrap">{{ directorTitle }}<template v-if="orgName"> @ {{ orgName }}</template></span>
+                    </div>
+
+                    <!-- Guests on the right -->
+                    <div v-if="liveActive" class="flex items-end gap-1 mb-1.5">
+                      <span
+                        v-for="p in rightGuests"
+                        :key="p.id"
+                        class="relative"
+                        :title="p.name + (String(p.userId) === String(liveSession?.presenterId) ? ' · presenting' : '')"
+                      >
+                        <img
+                          :src="avatarFor(p)"
+                          :alt="p.name"
+                          class="w-8 h-8 rounded-full object-cover ring-2"
+                          :class="String(p.userId) === String(liveSession?.presenterId) ? 'ring-primary' : 'ring-card'"
+                        />
+                        <span v-if="String(p.userId) === String(liveSession?.presenterId)" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                          <UIcon name="i-lucide-presentation" class="w-2 h-2" />
+                        </span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Card outline — mobile always; desktop when toggled to outline -->
                 <div class="grid gap-2 sm:grid-cols-2" :class="agendaView === 'table' ? 'sm:hidden' : ''">
                   <button
-                    v-for="g in agenda.groups"
+                    v-for="g in visibleAgendaGroups"
                     :key="g.subject"
                     type="button"
                     class="group text-left rounded-2xl border p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
@@ -1123,8 +1268,9 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   :opportunity="opportunity"
                   :client-rating="clientRating"
                   :steps="steps"
-                  :follow="liveActive && !!liveSession?.followPresenter && !liveIsPresenter"
+                  :follow="liveIsFollowing"
                   :sync-index="liveActive ? (liveSession?.currentSlide ?? null) : null"
+                  :can-decide="!liveActive || liveCanDecide"
                   @approve="approveStep"
                   @skip="skipStep"
                   @slide="slideContext = $event"
@@ -1240,13 +1386,18 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                           <p><span class="font-medium text-foreground">Subject:</span> {{ step.preview.subject }}</p>
                         </div>
 
+                        <!-- Task assignment preview before approving -->
+                        <p v-if="step.action_type === 'create_tasks' && step.preview?.assignees?.length" class="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <UIcon name="i-lucide-user-check" class="w-3.5 h-3.5" /> Assigns to {{ step.preview.assignees.join(', ') }}
+                        </p>
+
                         <!-- Status line -->
                         <p v-if="step.status === 'executed'" class="mt-1 text-xs text-green-600">Approved · done</p>
                         <p v-else-if="step.status === 'rejected'" class="mt-1 text-xs text-muted-foreground">Skipped</p>
                         <p v-else-if="step.status === 'failed'" class="mt-1 text-xs text-red-600">Failed — try it manually</p>
 
-                        <!-- Actions -->
-                        <div v-else class="mt-2 flex items-center gap-2">
+                        <!-- Actions — hidden for view-only observers -->
+                        <div v-else-if="!liveActive || liveCanDecide" class="mt-2 flex items-center gap-2">
                           <button
                             type="button"
                             class="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
@@ -1266,6 +1417,9 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                             Skip
                           </button>
                         </div>
+                        <p v-else class="mt-2 text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <UIcon name="i-lucide-eye" class="w-3.5 h-3.5" /> Awaiting the presenter's decision
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1334,6 +1488,78 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
             </template>
           </div>
         </section>
+
+        <!-- Go-live setup — curate which advisors are in the room -->
+        <Teleport to="body">
+          <div v-if="showGoLive" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showGoLive = false">
+            <section class="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
+              <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <UIcon name="i-lucide-radio" class="w-4.5 h-4.5" />
+                  </span>
+                  <div class="min-w-0">
+                    <h3 class="text-sm font-semibold leading-tight">Go live with the team</h3>
+                    <p class="text-xs text-muted-foreground truncate">Choose which advisors are in the room.</p>
+                  </div>
+                </div>
+                <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="showGoLive = false">
+                  <UIcon name="i-lucide-x" class="w-5 h-5" />
+                </button>
+              </header>
+
+              <div class="px-5 py-4 space-y-3">
+                <template v-if="scope?.mode !== 'entity' && availableAdvisors.length">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Advisors at the table</p>
+                  <p class="text-xs text-muted-foreground -mt-1">Unpicked advisors — and their data — stay out of this meeting. Leave “The Money” out and no one here sees the finances.</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      v-for="a in availableAdvisors"
+                      :key="a.subject"
+                      type="button"
+                      class="flex items-center gap-2 rounded-2xl border p-2.5 text-left transition-colors"
+                      :class="goLiveSubjects.includes(a.subject) ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'"
+                      @click="toggleGoLiveSubject(a.subject)"
+                    >
+                      <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :class="goLiveSubjects.includes(a.subject) ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'">
+                        <UIcon :name="a.icon" class="w-3.5 h-3.5" />
+                      </span>
+                      <span class="text-sm font-medium truncate flex-1">{{ a.label }}</span>
+                      <span class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0" :class="goLiveSubjects.includes(a.subject) ? 'bg-primary border-primary text-primary-foreground' : 'border-border'">
+                        <UIcon v-if="goLiveSubjects.includes(a.subject)" name="i-lucide-check" class="w-2.5 h-2.5" />
+                      </span>
+                    </button>
+                  </div>
+                </template>
+                <p v-else-if="scope?.mode === 'entity'" class="text-xs text-muted-foreground">
+                  This is a focused meeting on {{ scopeLabel }} — one advisor, ready to present.
+                </p>
+
+                <!-- Participation mode -->
+                <label class="flex items-start gap-2.5 rounded-2xl border border-border p-3 cursor-pointer">
+                  <input v-model="goLiveViewOnly" type="checkbox" class="mt-0.5 accent-primary" />
+                  <span class="min-w-0">
+                    <span class="text-sm font-medium block">View-only for guests</span>
+                    <span class="text-xs text-muted-foreground">Only you (the presenter) can approve steps. Everyone else watches and follows your screen.</span>
+                  </span>
+                </label>
+              </div>
+
+              <footer class="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-border">
+                <span class="text-xs text-muted-foreground">{{ scope?.mode === 'entity' ? '1 advisor' : (goLiveSubjects.length + ' advisor' + (goLiveSubjects.length === 1 ? '' : 's')) }}</span>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+                  :disabled="liveConnecting || (scope?.mode !== 'entity' && !goLiveSubjects.length)"
+                  @click="confirmGoLive"
+                >
+                  <UIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-4 h-4" :class="liveConnecting ? 'animate-spin' : ''" />
+                  Go live
+                </button>
+              </footer>
+            </section>
+          </div>
+        </Teleport>
 
         <!-- Invite teammates to the live table -->
         <CommandCenterDirectorInvitePicker
