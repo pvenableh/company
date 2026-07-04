@@ -8,17 +8,23 @@ by the same MJML compiler but edited in the admin UI.
 ## How it fits together
 
 ```
-server/emails/_layout.mjml        ← shared branded chrome (header + footer)
-server/emails/<name>.mjml          ← per-email content sections
+server/emails/_layout.mjml        ← skeleton: <mjml>/<mj-head>/<mj-body> + 3 markers
+server/emails/_header.mjml         ← universal header partial  → <!-- @HEADER -->
+server/emails/_footer.mjml         ← universal footer partial  → <!-- @FOOTER -->
+server/emails/<name>.mjml          ← per-email content sections → <!-- @CONTENT -->
         │
         ▼
 server/utils/email-templates.ts    ← renderBrandedTemplate(name, vars, { org })
-        │   • loads _layout + <name>, injects content at <!-- @CONTENT -->
+        │   • composes _layout with _header + _footer + <name> at the markers
         │   • computes brand vars from `org` (logo, brand_color, whitelabel)
         │   • compiles via server/utils/mjml-compiler.ts (MJML + Handlebars)
         ▼
 server/utils/email-send.ts         ← sendBrandedEmail(...) → SendGrid
 ```
+
+**To restyle the header or footer across every email at once, edit
+`_header.mjml` / `_footer.mjml`.** They're org/Earnest-aware (via `useOrg`,
+`logoUrl`, `brandColor`, `whitelabel`) and injected into the layout skeleton.
 
 A sender builds a `vars` object and calls the renderer:
 

@@ -79,6 +79,10 @@ export function compileMjml(
     const result = mjml2html(cleanedMjml, {
       validationLevel: 'soft',
       minify: false,
+      // Strip authored HTML comments from the output so dev/doc comments in
+      // template source (e.g. server/emails/_*.mjml) never ship in the email.
+      // MJML's own Outlook (MSO) conditional comments are still emitted.
+      keepComments: false,
     });
 
     return {

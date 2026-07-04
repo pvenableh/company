@@ -28,6 +28,8 @@ import type { OrgBrandRef } from './email-shell';
 // they're bundled + traced into the serverless output. This replaced
 // nitro.serverAssets, which came back empty at runtime on Vercel.
 import layoutMjml from '../emails/_layout.mjml';
+import headerMjml from '../emails/_header.mjml';
+import footerMjml from '../emails/_footer.mjml';
 import welcomeMjml from '../emails/welcome.mjml';
 import inviteMjml from '../emails/invite.mjml';
 import notificationMjml from '../emails/notification.mjml';
@@ -42,6 +44,8 @@ import meetingReminderMjml from '../emails/meeting-reminder.mjml';
 
 const TEMPLATES: Record<string, string> = {
 	_layout: layoutMjml,
+	_header: headerMjml,
+	_footer: footerMjml,
 	welcome: welcomeMjml,
 	invite: inviteMjml,
 	notification: notificationMjml,
@@ -167,12 +171,18 @@ export async function renderBrandedTemplate(
 	vars: Record<string, any> = {},
 	brand: BrandContext = {},
 ): Promise<RenderedTemplate> {
-	const [layout, content] = await Promise.all([
+	const [layout, header, footer, content] = await Promise.all([
 		loadTemplate('_layout'),
+		loadTemplate('_header'),
+		loadTemplate('_footer'),
 		loadTemplate(name),
 	]);
 
-	const combined = layout.replace('<!-- @CONTENT -->', content);
+	// Compose the shell from its partials, then inject the per-email content.
+	const combined = layout
+		.replace('<!-- @HEADER -->', header)
+		.replace('<!-- @CONTENT -->', content)
+		.replace('<!-- @FOOTER -->', footer);
 	const mergedVars = { ...brandVars(brand), ...vars };
 
 	const { html, errors } = compileMjml(combined, mergedVars);

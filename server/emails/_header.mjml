@@ -1,0 +1,22 @@
+<!-- Universal email header. Org-branded (logo, or org name in brand_color)
+     when an org is passed; Earnest wordmark otherwise. Edit here to restyle
+     the header across EVERY transactional email at once. -->
+<mj-section padding="24px 32px 8px 32px">
+  <mj-column>
+    {{#if useOrg}}
+      {{#if logoUrl}}
+        {{#if orgWebsite}}
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" href="{{orgWebsite}}" align="left" height="40px" width="200px" padding="0" />
+        {{else}}
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" align="left" height="40px" width="200px" padding="0" />
+        {{/if}}
+      {{else}}
+        <mj-text font-size="18px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>
+      {{/if}}
+    {{else}}
+      <mj-text font-size="18px" font-weight="700" letter-spacing="-0.01em" color="#141210" padding="0">
+        <a href="https://earnest.guru" style="color:#141210;text-decoration:none;">Earnest</a>
+      </mj-text>
+    {{/if}}
+  </mj-column>
+</mj-section>
