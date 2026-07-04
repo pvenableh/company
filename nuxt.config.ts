@@ -560,12 +560,24 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
-		// Bundle the transactional MJML email templates (server/emails/*.mjml)
-		// into the server output so they're readable at runtime in prod, not
-		// just dev. Access via useStorage('assets:emails').getItem('name.mjml').
-		serverAssets: [
-			{ baseName: 'emails', dir: 'server/emails' },
-		],
+		// Transactional MJML templates (server/emails/*.mjml) are imported as
+		// strings in server/utils/email-templates.ts. This rollup plugin turns a
+		// `.mjml` import into `export default "<raw contents>"` so the templates
+		// are bundled + traced into the serverless output. (nitro.serverAssets +
+		// useStorage proved unreliable on Vercel — the storage came back empty.)
+		rollupConfig: {
+			plugins: [
+				{
+					name: 'raw-mjml',
+					transform(code: string, id: string) {
+						if (id.endsWith('.mjml')) {
+							return { code: `export default ${JSON.stringify(code)};`, map: null };
+						}
+						return null;
+					},
+				},
+			],
+		},
 		externals: {
 			inline: [
 				'lodash',

@@ -23,6 +23,38 @@
 import { compileMjml } from './mjml-compiler';
 import type { OrgBrandRef } from './email-shell';
 
+// Templates are imported as strings (the raw-mjml rollup plugin in
+// nuxt.config.ts turns each `.mjml` into `export default "<contents>"`), so
+// they're bundled + traced into the serverless output. This replaced
+// nitro.serverAssets, which came back empty at runtime on Vercel.
+import layoutMjml from '../emails/_layout.mjml';
+import welcomeMjml from '../emails/welcome.mjml';
+import inviteMjml from '../emails/invite.mjml';
+import notificationMjml from '../emails/notification.mjml';
+import passwordResetMjml from '../emails/password-reset.mjml';
+import videoInviteMjml from '../emails/video-invite.mjml';
+import genericMjml from '../emails/generic.mjml';
+import meetingInvitedMjml from '../emails/meeting-invited.mjml';
+import meetingTimeChangedMjml from '../emails/meeting-time-changed.mjml';
+import meetingRemovedMjml from '../emails/meeting-removed.mjml';
+import meetingCancelledMjml from '../emails/meeting-cancelled.mjml';
+import meetingReminderMjml from '../emails/meeting-reminder.mjml';
+
+const TEMPLATES: Record<string, string> = {
+	_layout: layoutMjml,
+	welcome: welcomeMjml,
+	invite: inviteMjml,
+	notification: notificationMjml,
+	'password-reset': passwordResetMjml,
+	'video-invite': videoInviteMjml,
+	generic: genericMjml,
+	'meeting-invited': meetingInvitedMjml,
+	'meeting-time-changed': meetingTimeChangedMjml,
+	'meeting-removed': meetingRemovedMjml,
+	'meeting-cancelled': meetingCancelledMjml,
+	'meeting-reminder': meetingReminderMjml,
+};
+
 export interface BrandContext {
 	org?: (OrgBrandRef & { email_reply_to?: string | null }) | null;
 	/** Marketing/CAN-SPAM only — transactional sends omit these. */
@@ -47,27 +79,22 @@ async function loadTemplate(name: string): Promise<string> {
 	const cached = templateCache.get(name);
 	if (cached != null) return cached;
 
-	// Prod: the .mjml files are bundled into the server output via
-	// nitro.serverAssets and read from the `assets:emails` storage.
-	// Dev: that storage isn't populated, so fall back to a direct disk read
-	// from the source tree (cwd === project root under `pnpm dev`).
-	let str: string | null = null;
-	try {
-		const raw = await useStorage('assets:emails').getItem(`${name}.mjml`);
-		if (raw != null) str = typeof raw === 'string' ? raw : String(raw);
-	} catch {
-		// storage mount unavailable — fall through to fs
-	}
+	// Primary: the bundled string import (works in dev + prod).
+	let str: string | null = TEMPLATES[name] ?? null;
+
+	// Fallback: read from the source tree on disk. Only reachable if the
+	// rollup import somehow didn't inline (e.g. an ad-hoc template name); in
+	// dev cwd === project root so this still resolves.
 	if (str == null) {
 		try {
 			const { readFile } = await import('node:fs/promises');
 			str = await readFile(`${process.cwd()}/server/emails/${name}.mjml`, 'utf8');
 		} catch {
-			// fs read failed — reported below
+			// reported below
 		}
 	}
 	if (str == null) {
-		throw new Error(`[email-templates] template not found: ${name}.mjml (checked assets:emails storage + server/emails on disk)`);
+		throw new Error(`[email-templates] template not found: ${name}.mjml`);
 	}
 	templateCache.set(name, str);
 	return str;

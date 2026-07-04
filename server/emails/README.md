@@ -79,14 +79,19 @@ await sendBrandedEmail({ to, subject, html, text, org, categories: ['transaction
   `TRANSACTIONAL_TEMPLATES` list) and add its name to the page's `templates`
   array in `app/pages/email/preview-transactional.vue`.
 
-## Prod bundling (important)
+## Prod bundling
 
-The `.mjml` files are bundled into the server build via
-`nitro.serverAssets` (`nuxt.config.ts` → `{ baseName: 'emails', dir:
-'server/emails' }`) and read from the `assets:emails` storage. In dev that
-storage isn't populated, so the loader falls back to a direct disk read from
-`server/emails/`. **After deploying, spot-check one email** (e.g. the preview
-endpoint) to confirm the bundled path resolves in the serverless runtime.
+The `.mjml` files are imported as strings in `email-templates.ts` (see the
+static `import … from '../emails/*.mjml'` block). A tiny rollup plugin in
+`nuxt.config.ts` (`raw-mjml`) rewrites each `.mjml` import to
+`export default "<contents>"`, so the templates are bundled and traced into the
+serverless output — the same in dev and prod. `server/emails/mjml-modules.d.ts`
+declares the `*.mjml` module type for TypeScript.
+
+> Note: `nitro.serverAssets` + `useStorage('assets:emails')` was tried first but
+> came back empty at runtime on Vercel, so we switched to string imports. When
+> you add a template, add its `import` + `TEMPLATES` entry in
+> `email-templates.ts` (a fs fallback covers ad-hoc names in dev only).
 
 ## Notes
 
