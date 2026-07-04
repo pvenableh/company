@@ -2,7 +2,7 @@
      (serif, signature cyan period) + "Do good work." tagline — matching the app's
      EarnestBrand lockup. Org sends get the org logo (or org name in brand_color).
      Edit here to restyle the header across EVERY transactional email at once. -->
-<mj-section padding="30px 32px 4px 32px">
+<mj-section padding="30px 32px 4px 32px" border-radius="16px 16px 0 0" css-class="earnest-card-top">
   <mj-column>
     {{#if useOrg}}
       {{#if logoUrl}}
@@ -15,7 +15,7 @@
         <mj-text align="center" font-size="22px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>
       {{/if}}
     {{else}}
-      <mj-text align="center" font-family="'Bauer Bodoni Pro_1 W05 Roman', 'Bodoni Moda', Georgia, 'Times New Roman', serif" font-size="30px" font-weight="600" letter-spacing="-0.02em" color="#1f1f1f" line-height="1.05" padding="0">
+      <mj-text align="center" font-family="'Bauer Bodoni Pro_1 W05 Roman', 'Bodoni Moda', Georgia, 'Times New Roman', serif" font-size="30px" font-weight="600" letter-spacing="0.04em" color="#1f1f1f" line-height="1.05" padding="0">
         Earnest<span style="color:#00BFFF;">.</span>
       </mj-text>
       <mj-text align="center" font-family="'Gaegu', 'Segoe Script', 'Bradley Hand', cursive" font-size="15px" letter-spacing="0.02em" color="#737373" padding="3px 0 0 0">

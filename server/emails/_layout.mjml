@@ -19,20 +19,27 @@
     </mj-attributes>
 
     <mj-style>
-      /* Liquid-glass approximation — a soft floating shadow on the card.
-         Rendered by clients that honor &lt;style&gt; (Apple Mail); Gmail/Outlook
-         simply show the flat rounded card. */
-      .earnest-card { box-shadow: 0 12px 34px -18px rgba(20,18,16,0.20), 0 2px 8px -3px rgba(20,18,16,0.10); }
+      /* Soft depth on the rounded card sections — rendered by clients that
+         honor &lt;style&gt; (Apple Mail); Gmail/Outlook show the flat card on the
+         glass wash. Kept to the outer edges so stacked sections read as one. */
+      .earnest-card-top { box-shadow: 0 -6px 22px -12px rgba(24,54,110,0.16); }
+      .earnest-card-bottom { box-shadow: 0 16px 34px -18px rgba(24,54,110,0.26); }
       a { color: {{brandColor}}; }
     </mj-style>
   </mj-head>
 
-  <mj-body background-color="#faf7f4" width="560px">
-    <mj-wrapper background-color="#ffffff" border-radius="16px" padding="0" css-class="earnest-card">
+  <mj-body background-color="#f3f6fb" width="600px">
+    <!-- Liquid-glass page wash from the default (Neutral) app palette. The
+         blurred gradient is baked into an image (backdrop-filter can't render
+         in email); clients that block images fall back to the solid cool
+         background-color. -->
+    <mj-wrapper background-url="{{glassBgUrl}}" background-size="cover" background-position="center top" background-repeat="no-repeat" background-color="#f3f6fb" padding="40px 20px 44px 20px">
 
-      <!-- Partials injected by renderBrandedTemplate (server/utils/email-templates.ts).
-           Header + footer live in _header.mjml / _footer.mjml; per-email content
-           in <name>.mjml. -->
+      <!-- The card is the white header + content + footer sections stacked
+           (partials injected by renderBrandedTemplate). _header rounds the top
+           corners, _footer the bottom — together a rounded card floating on the
+           glass wash. Header/footer live in _header.mjml / _footer.mjml,
+           per-email content in <name>.mjml. -->
       <!-- @HEADER -->
 
       <!-- @CONTENT -->

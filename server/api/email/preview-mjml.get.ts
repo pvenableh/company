@@ -176,10 +176,13 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const vars = sampleVars(name);
-	// The renderer resolves the Earnest logo to an absolute prod URL, which
-	// isn't reachable from a local dev preview. Point it at the local file so
-	// the preview shows it; real sends always use the absolute URL.
-	if (import.meta.dev) (vars as any).earnestLogoUrl = '/email/earnest-logo.png';
+	// The renderer resolves the logo + glass background to absolute prod URLs,
+	// which aren't reachable from a local dev preview. Point them at the local
+	// files so the preview shows them; real sends always use the absolute URLs.
+	if (import.meta.dev) {
+		(vars as any).earnestLogoUrl = '/email/earnest-logo.png';
+		(vars as any).glassBgUrl = '/email/bg-glass.jpg';
+	}
 
 	const { html, text, errors } = await renderBrandedTemplate(name, vars, brand);
 

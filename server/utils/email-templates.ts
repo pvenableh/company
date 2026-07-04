@@ -141,13 +141,14 @@ function htmlToText(html: string): string {
 		.trim();
 }
 
-function earnestLogoUrl(): string {
-	// Absolute URL to the raster logomark (server/emails can't use SVG — email
-	// clients strip it). Served from public/email/earnest-logo.png; regenerate
-	// with scripts/generate-email-logo.ts.
+function appAsset(path: string): string {
+	// Absolute URL to a file under public/ — email needs absolute URLs. The
+	// logomark + liquid-glass background are pre-rendered rasters (email clients
+	// strip SVG and can't do backdrop-filter); regenerate them with
+	// scripts/generate-email-logo.ts and scripts/generate-email-bg.ts.
 	const config = useRuntimeConfig() as any;
 	const appUrl = config.public?.appUrl || config.public?.siteUrl || 'https://app.earnest.guru';
-	return `${String(appUrl).replace(/\/$/, '')}/email/earnest-logo.png`;
+	return `${String(appUrl).replace(/\/$/, '')}${path}`;
 }
 
 function brandVars(brand: BrandContext): Record<string, any> {
@@ -160,7 +161,8 @@ function brandVars(brand: BrandContext): Record<string, any> {
 		orgName,
 		brandColor,
 		logoUrl: directusAssetUrl(org?.logo ?? null),
-		earnestLogoUrl: earnestLogoUrl(),
+		earnestLogoUrl: appAsset('/email/earnest-logo.png'),
+		glassBgUrl: appAsset('/email/bg-glass.jpg'),
 		orgWebsite: safeUrl(org?.website),
 		whitelabel: org?.whitelabel === true,
 		unsubscribeUrl: safeUrl(brand.unsubscribeUrl),
