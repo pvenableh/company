@@ -130,22 +130,15 @@
 							/>
 						</div>
 
-						<div
-							v-if="appsModeChecked"
-							class="flex items-start justify-between gap-4"
-						>
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium">Show app names</p>
-								<p class="text-xs text-muted-foreground mt-1">
-									Label each app next to its icon in the top or bottom rail. Hide
-									for a cleaner icon-only pill once you know the icons — names
-									still surface as tooltips on hover.
-								</p>
-							</div>
-							<Switch
-								:model-value="railShowLabels"
-								@update:model-value="setRailShowLabels"
-							/>
+						<!-- Design options — labels, glass chrome, palette tint, and
+						     the app palette picker. Restored here after the header menu
+						     that used to hold them was retired in the chrome refactor.
+						     Client-only: palette + glass state is localStorage-backed and
+						     would hydrate-mismatch if rendered on the server. -->
+						<div v-if="appsModeChecked" class="pt-2 border-t border-border/40">
+							<ClientOnly>
+								<LayoutAppRailSettingsPanel />
+							</ClientOnly>
 						</div>
 					</div>
 				</section>
@@ -331,7 +324,7 @@ import { Switch } from '@/components/ui/switch';
 
 type SectionKey = 'profile' | 'goals' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
 
-const { isAppsMode, railShowLabels, setMode, setRailShowLabels } = useAppsMode();
+const { isAppsMode, setMode } = useAppsMode();
 const route = useRoute();
 const router = useRouter();
 

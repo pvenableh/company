@@ -35,7 +35,7 @@
  */
 
 import { createItem, updateItem, readItem, readItems } from '@directus/sdk';
-import { renderOrgEmail } from '~~/server/utils/email-shell';
+import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { fetchOrgBrand, sendBrandedEmail } from '~~/server/utils/email-send';
 
 export interface ExecutorContext {
@@ -299,13 +299,16 @@ const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) =
     ? { label: String(payload.cta.label), url: String(payload.cta.url) }
     : null;
 
-  const { html, text } = renderOrgEmail({
-    org,
+  // bodyHtml is AI-composed HTML — injected via the template's {{{ }}} exactly
+  // as the previous org shell placed it (same trust model).
+  const { html, text } = await renderBrandedTemplate('generic', {
     subject,
+    preheader: subject,
     heading: (payload.heading ?? subject).toString(),
     bodyHtml,
-    cta,
-  });
+    ctaUrl: cta?.url || '',
+    ctaLabel: cta?.label || '',
+  }, { org });
 
   // Default to dry-run: the email is fully rendered but NOT transmitted unless
   // AI_SEND_EMAIL_DRYRUN is explicitly 'false'.

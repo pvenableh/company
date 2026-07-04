@@ -1,15 +1,17 @@
 // server/utils/meeting-emails.ts
-// SendGrid templates for meeting/event lifecycle emails (video + non-video
-// appointments). Each helper accepts an optional org brand — when present
-// the email gets org logo + brand_color + reply-to chrome; otherwise it
-// falls back to Earnest branding.
+// Meeting/event lifecycle emails (video + non-video appointments), rendered
+// from the local MJML templates under server/emails/meeting-*.mjml via
+// `renderBrandedTemplate`. Each helper accepts an optional org brand — when
+// present the email gets org logo + brand_color + reply-to chrome; otherwise
+// it falls back to Earnest branding.
 //
 // External-guest invites for fresh video rooms still live inline in
 // create-room.post.ts and call sendMeetingInvitedEmail when reused for
 // teammate notifications.
 
-import { renderEarnestEmail, renderOrgEmail, escapeHtml, type OrgBrandRef } from './email-shell';
+import { renderBrandedTemplate } from './email-templates';
 import { sendBrandedEmail } from './email-send';
+import type { OrgBrandRef } from './email-shell';
 
 type MeetingKind = 'meeting' | 'event';
 
@@ -47,17 +49,6 @@ function formatDateTime(scheduledStart: Date) {
 	return { date, time };
 }
 
-function detailsBlock(meetingTitle: string, date: string, time: string, durationMinutes: number) {
-	return `
-		<div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;margin:16px 0;">
-			<p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">${escapeHtml(meetingTitle)}</p>
-			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Date:</strong> ${escapeHtml(date)}</p>
-			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Time:</strong> ${escapeHtml(time)}</p>
-			<p style="margin:0;font-size:14px;color:#444;"><strong>Duration:</strong> ${durationMinutes} minutes</p>
-		</div>
-	`;
-}
-
 function kindLabel(kind: MeetingKind | undefined) {
 	return kind === 'event' ? 'event' : 'meeting';
 }
@@ -66,48 +57,55 @@ function kindLabelCapitalized(kind: MeetingKind | undefined) {
 	return kind === 'event' ? 'Event' : 'Meeting';
 }
 
-function render(args: {
-	org?: OrgBrandRef | null;
-	subject: string;
-	heading: string;
-	bodyHtml: string;
-	cta?: { label: string; url: string } | null;
-}) {
-	return args.org
-		? renderOrgEmail({ org: args.org, subject: args.subject, heading: args.heading, bodyHtml: args.bodyHtml, cta: args.cta })
-		: renderEarnestEmail({ subject: args.subject, heading: args.heading, bodyHtml: args.bodyHtml, cta: args.cta });
+/** Plain-text details block mirroring the MJML card. */
+function detailsText(meetingTitle: string, date: string, time: string, durationMinutes: number) {
+	return `${meetingTitle}\nDate: ${date}\nTime: ${time}\nDuration: ${durationMinutes} minutes`;
 }
 
 export async function sendMeetingInvitedEmail(params: BaseParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const label = kindLabel(params.kind);
-	const labelCap = kindLabelCapitalized(params.kind);
-	const subject = `${labelCap}: ${params.meetingTitle}`;
+	const subject = `${kindLabelCapitalized(params.kind)}: ${params.meetingTitle}`;
 	const heading = `You've been added to a ${label}`;
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> added you to a ${label}.</p>
-		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-	`;
-	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
-	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	const ctaUrl = params.meetingUrl || '';
+	const { html, text } = await renderBrandedTemplate('meeting-invited', {
+		subject,
+		preheader: `${params.hostName} added you to a ${label}.`,
+		heading,
+		recipientName: params.recipientName,
+		hostName: params.hostName,
+		kindLabel: label,
+		meetingTitle: params.meetingTitle,
+		date,
+		time,
+		duration: params.durationMinutes,
+		ctaUrl,
+		text: `Hi ${params.recipientName},\n\n${params.hostName} added you to a ${label}.\n\n${detailsText(params.meetingTitle, date, time, params.durationMinutes)}${ctaUrl ? `\n\nJoin meeting: ${ctaUrl}` : ''}`,
+	}, { org: params.org });
 	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-invited'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 export async function sendMeetingTimeChangedEmail(params: BaseParams & { previousStart: Date }) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const prev = formatDateTime(params.previousStart);
-	const labelCap = kindLabelCapitalized(params.kind);
 	const subject = `Rescheduled: ${params.meetingTitle}`;
-	const heading = `${labelCap} time changed`;
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> rescheduled <strong>${escapeHtml(params.meetingTitle)}</strong>.</p>
-		<p style="margin:0 0 12px;color:#888;"><s>${escapeHtml(prev.date)} at ${escapeHtml(prev.time)}</s></p>
-		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-	`;
-	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
-	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	const heading = `${kindLabelCapitalized(params.kind)} time changed`;
+	const ctaUrl = params.meetingUrl || '';
+	const { html, text } = await renderBrandedTemplate('meeting-time-changed', {
+		subject,
+		preheader: `${params.hostName} rescheduled ${params.meetingTitle}.`,
+		heading,
+		recipientName: params.recipientName,
+		hostName: params.hostName,
+		meetingTitle: params.meetingTitle,
+		prevDate: prev.date,
+		prevTime: prev.time,
+		date,
+		time,
+		duration: params.durationMinutes,
+		ctaUrl,
+		text: `Hi ${params.recipientName},\n\n${params.hostName} rescheduled ${params.meetingTitle}.\nWas: ${prev.date} at ${prev.time}\n\n${detailsText(params.meetingTitle, date, time, params.durationMinutes)}${ctaUrl ? `\n\nJoin meeting: ${ctaUrl}` : ''}`,
+	}, { org: params.org });
 	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-time-changed'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
@@ -128,25 +126,35 @@ export async function sendMeetingRemovedEmail(params: MinimalParams) {
 	const label = kindLabel(params.kind);
 	const subject = `Removed: ${params.meetingTitle}`;
 	const heading = `You were removed from a ${label}`;
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> removed you from <strong>${escapeHtml(params.meetingTitle)}</strong> (${escapeHtml(date)} at ${escapeHtml(time)}).</p>
-		<p style="margin:0;font-size:13px;color:#888;">If this was a mistake, reach out to ${escapeHtml(params.hostName)} directly.</p>
-	`;
-	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
+	const { html, text } = await renderBrandedTemplate('meeting-removed', {
+		subject,
+		preheader: `${params.hostName} removed you from ${params.meetingTitle}.`,
+		heading,
+		recipientName: params.recipientName,
+		hostName: params.hostName,
+		meetingTitle: params.meetingTitle,
+		date,
+		time,
+		text: `Hi ${params.recipientName},\n\n${params.hostName} removed you from ${params.meetingTitle} (${date} at ${time}).\n\nIf this was a mistake, reach out to ${params.hostName} directly.`,
+	}, { org: params.org });
 	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-removed'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
 export async function sendMeetingCancelledEmail(params: MinimalParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
-	const labelCap = kindLabelCapitalized(params.kind);
 	const subject = `Cancelled: ${params.meetingTitle}`;
-	const heading = `${labelCap} cancelled`;
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> cancelled <strong>${escapeHtml(params.meetingTitle)}</strong> (${escapeHtml(date)} at ${escapeHtml(time)}).</p>
-	`;
-	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
+	const heading = `${kindLabelCapitalized(params.kind)} cancelled`;
+	const { html, text } = await renderBrandedTemplate('meeting-cancelled', {
+		subject,
+		preheader: `${params.hostName} cancelled ${params.meetingTitle}.`,
+		heading,
+		recipientName: params.recipientName,
+		hostName: params.hostName,
+		meetingTitle: params.meetingTitle,
+		date,
+		time,
+		text: `Hi ${params.recipientName},\n\n${params.hostName} cancelled ${params.meetingTitle} (${date} at ${time}).`,
+	}, { org: params.org });
 	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-cancelled'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }
 
@@ -157,17 +165,21 @@ interface ReminderParams extends BaseParams {
 export async function sendMeetingReminderEmail(params: ReminderParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const label = kindLabel(params.kind);
-	const lead = params.minutesUntilStart === 1
-		? '1 minute'
-		: `${params.minutesUntilStart} minutes`;
+	const lead = params.minutesUntilStart === 1 ? '1 minute' : `${params.minutesUntilStart} minutes`;
 	const subject = `Starting in ${lead}: ${params.meetingTitle}`;
 	const heading = `Your ${label} starts in ${lead}`;
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.meetingTitle)}</strong> begins at ${escapeHtml(time)}.</p>
-		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-	`;
-	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
-	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	const ctaUrl = params.meetingUrl || '';
+	const { html, text } = await renderBrandedTemplate('meeting-reminder', {
+		subject,
+		preheader: `${params.meetingTitle} begins at ${time}.`,
+		heading,
+		recipientName: params.recipientName,
+		meetingTitle: params.meetingTitle,
+		date,
+		time,
+		duration: params.durationMinutes,
+		ctaUrl,
+		text: `Hi ${params.recipientName},\n\n${params.meetingTitle} begins at ${time}.\n\n${detailsText(params.meetingTitle, date, time, params.durationMinutes)}${ctaUrl ? `\n\nJoin meeting: ${ctaUrl}` : ''}`,
+	}, { org: params.org });
 	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-reminder'], sendCollection: 'video_meetings', sendId: params.meetingId ?? null });
 }

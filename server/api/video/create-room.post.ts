@@ -1,6 +1,7 @@
 // server/api/video/create-room.post.ts
 import { createItem, readItem, updateItem } from '@directus/sdk';
-import { renderOrgEmail, escapeHtml, type OrgBrandRef } from '~~/server/utils/email-shell';
+import { escapeHtml, type OrgBrandRef } from '~~/server/utils/email-shell';
+import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { sendBrandedEmail, fetchOrgBrand } from '~~/server/utils/email-send';
 
 interface AttendeeInput {
@@ -466,23 +467,22 @@ async function sendEmailInvitation(params: {
 
 	const subject = `Video Meeting Invitation: ${meetingTitle}`;
 	const heading = "You're invited to a video meeting";
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${escapeHtml(guestName)},</p>
-		<p style="margin:0 0 12px;"><strong>${escapeHtml(hostName)}</strong> has invited you to a video meeting.</p>
-		<div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;margin:16px 0;">
-			<p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">${escapeHtml(meetingTitle)}</p>
-			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Date:</strong> ${escapeHtml(formattedDate)}</p>
-			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Time:</strong> ${escapeHtml(formattedTime)}</p>
-			<p style="margin:0;font-size:14px;color:#444;"><strong>Duration:</strong> ${durationMinutes} minutes</p>
-		</div>
-	`;
-	const { html, text } = renderOrgEmail({
-		org,
+	const { html, text } = await renderBrandedTemplate('video-invite', {
 		subject,
+		preheader: `${hostName} invited you to a video meeting.`,
 		heading,
-		bodyHtml,
-		cta: { label: 'Join meeting', url: meetingUrl },
-	});
+		recipientName: guestName,
+		introHtml: `<strong>${escapeHtml(hostName)}</strong> has invited you to a video meeting.`,
+		meetingTitle,
+		detailRows: [
+			{ label: 'Date', value: formattedDate },
+			{ label: 'Time', value: formattedTime },
+			{ label: 'Duration', value: `${durationMinutes} minutes` },
+		],
+		ctaUrl: meetingUrl,
+		ctaLabel: 'Join meeting',
+		text: `Hi ${guestName},\n\n${hostName} has invited you to a video meeting.\n\n${meetingTitle}\nDate: ${formattedDate}\nTime: ${formattedTime}\nDuration: ${durationMinutes} minutes\n\nJoin meeting: ${meetingUrl}`,
+	}, { org });
 
 	await sendBrandedEmail({
 		to,

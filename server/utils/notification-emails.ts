@@ -6,7 +6,8 @@
 // Earnest chrome when one isn't (e.g. a target with no org scope yet).
 // Meeting emails keep their bespoke templates in meeting-emails.ts.
 
-import { renderEarnestEmail, renderOrgEmail, escapeHtml, type OrgBrandRef } from './email-shell';
+import { escapeHtml, type OrgBrandRef } from './email-shell';
+import { renderBrandedTemplate } from './email-templates';
 import { sendBrandedEmail, fetchOrgBrand } from './email-send';
 import type { NotificationCategory } from './notification-categories';
 
@@ -41,23 +42,27 @@ export async function sendNotificationEmail(args: SendArgs): Promise<void> {
 		org = await fetchOrgBrand(args.orgId);
 	}
 
-	const safeName = recipientName ? escapeHtml(recipientName) : 'there';
-	const safeBody = escapeHtml(body || '').replace(/\n/g, '<br />');
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">Hi ${safeName},</p>
-		<p style="margin:0 0 12px;">${safeBody}</p>
-	`;
-	const cta = link ? { label: ctaLabel || 'View in Earnest', url: link } : null;
+	const label = ctaLabel || 'View in Earnest';
+	// `recipientName` is escaped by the template's {{ }}; the message body is
+	// server-built escaped HTML (preserving newlines) injected via {{{ }}}.
+	const bodyHtml = escapeHtml(body || '').replace(/\n/g, '<br />');
 
-	const rendered = org
-		? renderOrgEmail({ org, subject, heading, bodyHtml, cta })
-		: renderEarnestEmail({ subject, heading, bodyHtml, cta });
+	const { html, text } = await renderBrandedTemplate('notification', {
+		subject,
+		preheader: (body || heading || '').slice(0, 140),
+		heading,
+		recipientName: recipientName || 'there',
+		bodyHtml,
+		ctaUrl: link || '',
+		ctaLabel: label,
+		text: `Hi ${recipientName || 'there'},\n\n${body || ''}${link ? `\n\n${label}: ${link}` : ''}`,
+	}, { org });
 
 	await sendBrandedEmail({
 		to,
 		subject,
-		html: rendered.html,
-		text: rendered.text,
+		html,
+		text,
 		org,
 		categories: ['transactional', 'notification', ...(category ? [category] : [])],
 		emailName: category ? `notification-${category}` : 'notification',

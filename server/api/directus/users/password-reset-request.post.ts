@@ -11,9 +11,9 @@
  *   2. Generate a 64-char hex token (32 random bytes) + 1h TTL.
  *   3. Insert a row in `password_reset_tokens` (collection created by
  *      `scripts/setup-password-reset-tokens.ts`).
- *   4. Render a branded email via `renderEarnestEmail` (Earnest chrome,
- *      with the user's primary org name/logo mentioned in the body for
- *      context) and ship through SendGrid.
+ *   4. Render a branded email via the `password-reset` MJML template
+ *      (Earnest chrome, with the user's primary org name mentioned in the
+ *      body for context) and ship through SendGrid.
  *
  * The reset link points at `/auth/password-reset?token=<hex>` and is
  * consumed by `password-reset.post.ts` (same dir).
@@ -21,7 +21,7 @@
 
 import crypto from 'node:crypto';
 import { readItems, readUsers, createItem } from '@directus/sdk';
-import { renderEarnestEmail, escapeHtml } from '~~/server/utils/email-shell';
+import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { sendBrandedEmail } from '~~/server/utils/email-send';
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -114,35 +114,27 @@ export default defineEventHandler(async (event) => {
 
 		const resetUrl = `${appUrl}/auth/password-reset?token=${encodeURIComponent(token)}`;
 		const firstName = (user.first_name || '').toString().trim();
-		const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : 'Hi there,';
-
-		const orgContextLine = orgName
-			? `<p style="margin:0 0 12px;color:#666;font-size:13px;">For your <strong>${escapeHtml(orgName)}</strong> workspace on Earnest.</p>`
-			: '';
-
-		const bodyHtml = `
-			<p style="margin:0 0 12px;">${greeting}</p>
-			<p style="margin:0 0 12px;">We received a request to reset the password on your Earnest account. If this was you, click the button below to set a new one. The link expires in <strong>1 hour</strong>.</p>
-			${orgContextLine}
-			<p style="margin:16px 0 0;font-size:13px;color:#888;">If you didn't request this, you can safely ignore this email — your password won't change unless you click the link and set a new one.</p>
-		`;
 
 		const subject = 'Reset your Earnest password';
 		const heading = 'Reset your password';
 
-		const rendered = renderEarnestEmail({
+		// Earnest chrome (no org brand context) — see the org-omission note on
+		// sendBrandedEmail below. firstName/orgName are escaped by the template.
+		const { html, text } = await renderBrandedTemplate('password-reset', {
 			subject,
 			preheader: 'Set a new password for your Earnest account. Link expires in 1 hour.',
 			heading,
-			bodyHtml,
-			cta: { label: 'Set new password', url: resetUrl },
+			firstName,
+			orgName: orgName || '',
+			ctaUrl: resetUrl,
+			text: `${firstName ? `Hi ${firstName},` : 'Hi there,'}\n\nWe received a request to reset the password on your Earnest account. Set a new one (this link expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email — your password won't change.`,
 		});
 
 		const sendResult = await sendBrandedEmail({
 			to: user.email,
 			subject,
-			html: rendered.html,
-			text: rendered.text,
+			html,
+			text,
 			// Intentionally NOT passing `org` here. sendBrandedEmail uses
 			// org.name as the From name when provided, which would surface
 			// the user's workspace ("hue") as the sender of an

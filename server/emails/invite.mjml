@@ -1,0 +1,19 @@
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      {{heading}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{{introHtml}}}
+    </mj-text>
+    <mj-text font-size="13px" color="#666666" padding="0 0 12px 0">
+      Role: <strong>{{roleLabel}}</strong>
+    </mj-text>
+    <mj-button href="{{ctaUrl}}" background-color="{{brandColor}}" color="#ffffff" border-radius="8px" font-size="14px" font-weight="600" align="left" inner-padding="12px 22px" padding="16px 0 8px 0">
+      Accept invitation
+    </mj-button>
+    <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
+      Didn't expect this invitation? You can ignore the email — nothing happens until you click the button.
+    </mj-text>
+  </mj-column>
+</mj-section>

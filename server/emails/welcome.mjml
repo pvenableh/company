@@ -1,0 +1,22 @@
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      Welcome to Earnest, {{orgName}}!
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{#if firstName}}Hi {{firstName}},{{else}}Hi there,{{/if}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Your organization <strong>{{orgName}}</strong> is set up on the <strong>{{planLabel}}</strong> plan and ready to go.
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      The dashboard is the fastest way to get started — invite teammates, bring in clients, and start tracking work.
+    </mj-text>
+    <mj-button href="{{ctaUrl}}" background-color="{{brandColor}}" color="#ffffff" border-radius="8px" font-size="14px" font-weight="600" align="left" inner-padding="12px 22px" padding="16px 0 8px 0">
+      Open your dashboard
+    </mj-button>
+    <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
+      Questions? Just reply to this email — a real person reads it.
+    </mj-text>
+  </mj-column>
+</mj-section>

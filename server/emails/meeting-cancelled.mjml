@@ -1,0 +1,13 @@
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      {{heading}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Hi {{recipientName}},
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      <strong>{{hostName}}</strong> cancelled <strong>{{meetingTitle}}</strong> ({{date}} at {{time}}).
+    </mj-text>
+  </mj-column>
+</mj-section>

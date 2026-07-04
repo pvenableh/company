@@ -14,7 +14,8 @@
  * password directly, so we don't need to thread a Directus token through.
  */
 
-import { renderEarnestEmail, renderOrgEmail, escapeHtml, type OrgBrandRef } from './email-shell';
+import { escapeHtml, type OrgBrandRef } from './email-shell';
+import { renderBrandedTemplate } from './email-templates';
 import { sendBrandedEmail, fetchOrgBrand } from './email-send';
 
 interface InviteEmailParams {
@@ -56,36 +57,35 @@ export async function sendOrgInviteEmail(params: InviteEmailParams): Promise<{ s
 		? `${inviterLine} invited you to ${params.clientName ? `the <strong>${escapeHtml(params.clientName)}</strong> client portal on ` : ''}<strong>${escapeHtml(params.orgName)}</strong>. Click below to set your password and finish creating your account.`
 		: `${inviterLine} invited you to ${params.clientName ? `the <strong>${escapeHtml(params.clientName)}</strong> client portal on ` : ''}<strong>${escapeHtml(params.orgName)}</strong>. You already have an Earnest account — click below to accept and get access.`;
 
-	const bodyHtml = `
-		<p style="margin:0 0 12px;">${intro}</p>
-		<p style="margin:0 0 12px;color:#666;font-size:13px;">Role: <strong>${escapeHtml(params.roleLabel)}</strong></p>
-		<p style="margin:16px 0 0;font-size:13px;color:#888;">Didn't expect this invitation? You can ignore the email — nothing happens until you click the button.</p>
-	`;
+	// Plain-text intro mirrors `intro` without the HTML emphasis.
+	const who = params.inviterName
+		? `${params.inviterName}${params.inviterEmail ? ` (${params.inviterEmail})` : ''}`
+		: 'Someone';
+	const target = params.clientName
+		? `the ${params.clientName} client portal on ${params.orgName}`
+		: params.orgName;
+	const plainIntro = params.isNewUser
+		? `${who} invited you to ${target}. Set your password and finish creating your account:`
+		: `${who} invited you to ${target}. You already have an Earnest account — accept to get access:`;
 
-	// Use the org-branded shell when we have a brand row (logo + brand_color
-	// land in the header). Falls back to the Earnest shell otherwise.
-	const rendered = brand
-		? renderOrgEmail({
-			org: brand,
-			subject,
-			preheader: `${params.orgName} invited you to Earnest.`,
-			heading,
-			bodyHtml,
-			cta: { label: 'Accept invitation', url: acceptUrl },
-		})
-		: renderEarnestEmail({
-			subject,
-			preheader: `${params.orgName} invited you to Earnest.`,
-			heading,
-			bodyHtml,
-			cta: { label: 'Accept invitation', url: acceptUrl },
-		});
+	// `heading` / `roleLabel` are escaped by the template's {{ }}; `introHtml`
+	// is server-built escaped HTML injected via {{{ }}}. Passing brand.org
+	// picks the org-branded chrome (logo + brand_color); null → Earnest.
+	const { html, text } = await renderBrandedTemplate('invite', {
+		subject,
+		preheader: `${params.orgName} invited you to Earnest.`,
+		heading,
+		introHtml: intro,
+		roleLabel: params.roleLabel,
+		ctaUrl: acceptUrl,
+		text: `${plainIntro}\n${acceptUrl}\n\nRole: ${params.roleLabel}`,
+	}, { org: brand });
 
 	const res = await sendBrandedEmail({
 		to: params.to,
 		subject,
-		html: rendered.html,
-		text: rendered.text,
+		html,
+		text,
 		org: brand,
 		replyTo: params.inviterEmail || null,
 		categories: ['transactional', 'invite'],

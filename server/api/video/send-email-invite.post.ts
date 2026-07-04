@@ -4,7 +4,8 @@
 // the meeting row to render org-branded chrome from related_organization.
 
 import { createDirectus, rest, staticToken, readItems, updateItem } from '@directus/sdk';
-import { renderOrgEmail, escapeHtml } from '~~/server/utils/email-shell';
+import { escapeHtml } from '~~/server/utils/email-shell';
+import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { sendBrandedEmail, fetchOrgBrand } from '~~/server/utils/email-send';
 
 export default defineEventHandler(async (event) => {
@@ -87,29 +88,30 @@ export default defineEventHandler(async (event) => {
 		const org = orgId ? await fetchOrgBrand(orgId) : null;
 
 		const heading = 'Video meeting invitation';
-		const greeting = toName ? `Hi ${escapeHtml(toName)},` : 'Hi there,';
-		const bodyMessage = customMessage
+		// introHtml is server-built escaped HTML ({{{ }}}); detailRow values are
+		// escaped by the template's {{ }}.
+		const introHtml = customMessage
 			? escapeHtml(customMessage)
 			: `You're invited to a video meeting with <strong>${escapeHtml(meetingHost)}</strong>.`;
-		const bodyHtml = `
-			<p style="margin:0 0 12px;">${greeting}</p>
-			<p style="margin:0 0 12px;">${bodyMessage}</p>
-			<div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;margin:16px 0;">
-				<p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">${escapeHtml(meetingTitle)}</p>
-				<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>When:</strong> ${escapeHtml(startTimeFormatted)}</p>
-				${endTimeFormatted ? `<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Until:</strong> ${escapeHtml(endTimeFormatted)}</p>` : ''}
-				<p style="margin:0;font-size:14px;color:#444;"><strong>Host:</strong> ${escapeHtml(meetingHost)}</p>
-			</div>
-			<p style="margin:16px 0 0;font-size:12px;color:#888;">This meeting link is unique to you. Don't share it with others unless you want them to join.</p>
-		`;
+		const detailRows: Array<{ label: string; value: string }> = [
+			{ label: 'When', value: startTimeFormatted },
+		];
+		if (endTimeFormatted) detailRows.push({ label: 'Until', value: endTimeFormatted });
+		detailRows.push({ label: 'Host', value: meetingHost });
 
-		const { html, text } = renderOrgEmail({
-			org,
+		const { html, text } = await renderBrandedTemplate('video-invite', {
 			subject: emailSubject,
+			preheader: `You're invited to a video meeting${meetingHost ? ` with ${meetingHost}` : ''}.`,
 			heading,
-			bodyHtml,
-			cta: { label: 'Join video meeting', url: meetingUrl },
-		});
+			recipientName: toName || 'there',
+			introHtml,
+			meetingTitle,
+			detailRows,
+			noteHtml: "This meeting link is unique to you. Don't share it with others unless you want them to join.",
+			ctaUrl: meetingUrl,
+			ctaLabel: 'Join video meeting',
+			text: `Hi ${toName || 'there'},\n\n${customMessage || `You're invited to a video meeting with ${meetingHost}.`}\n\n${meetingTitle}\nWhen: ${startTimeFormatted}${endTimeFormatted ? `\nUntil: ${endTimeFormatted}` : ''}\nHost: ${meetingHost}\n\nJoin video meeting: ${meetingUrl}`,
+		}, { org });
 
 		const result = await sendBrandedEmail({
 			to: toEmail,

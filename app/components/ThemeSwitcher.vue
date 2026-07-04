@@ -304,7 +304,7 @@ function getStylePreviewClass(styleId: string): string {
 }
 
 .theme-switcher__grid--swatch {
-	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
 }
 
 .theme-switcher__grid--timeline {

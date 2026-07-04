@@ -1,0 +1,161 @@
+// server/utils/email-templates.ts
+/**
+ * Renderer for the local MJML transactional email templates.
+ *
+ * Templates live as editable `.mjml` files under `server/emails/` (bundled
+ * into the server output via nitro.serverAssets → `assets:emails`):
+ *   - `_layout.mjml`     → shared branded chrome (Earnest vs org header/footer)
+ *   - `<name>.mjml`      → per-email content sections injected at `<!-- @CONTENT -->`
+ *
+ * A sender calls `renderBrandedTemplate('welcome', vars, { org })` and gets
+ * `{ html, text }` back — same `sendBrandedEmail` transport as before, so
+ * delivery is unchanged; only the authoring surface moved to MJML.
+ *
+ * Branding: pass `brand.org` to render the org-branded variant (logo +
+ * brand_color + whitelabel-aware footer). Omit it for Earnest chrome.
+ *
+ * Dynamic content: plain `{{var}}` values are HTML-escaped by Handlebars.
+ * For server-built, already-escaped HTML fragments (e.g. a body with <br>
+ * or <strong>), name the var `*Html` and reference it with `{{{fooHtml}}}`
+ * in the template.
+ */
+
+import { compileMjml } from './mjml-compiler';
+import type { OrgBrandRef } from './email-shell';
+
+export interface BrandContext {
+	org?: (OrgBrandRef & { email_reply_to?: string | null }) | null;
+	/** Marketing/CAN-SPAM only — transactional sends omit these. */
+	unsubscribeUrl?: string | null;
+	physicalAddress?: string | null;
+}
+
+export interface RenderedTemplate {
+	html: string;
+	text: string;
+	errors: string[];
+}
+
+const EARNEST_BRAND_COLOR = '#141210';
+
+// Cache raw template strings for the process lifetime — the files are
+// immutable at runtime (bundled assets); re-reading per send is wasteful.
+// Dev HMR replaces the module, so edits still take effect on save.
+const templateCache = new Map<string, string>();
+
+async function loadTemplate(name: string): Promise<string> {
+	const cached = templateCache.get(name);
+	if (cached != null) return cached;
+
+	// Prod: the .mjml files are bundled into the server output via
+	// nitro.serverAssets and read from the `assets:emails` storage.
+	// Dev: that storage isn't populated, so fall back to a direct disk read
+	// from the source tree (cwd === project root under `pnpm dev`).
+	let str: string | null = null;
+	try {
+		const raw = await useStorage('assets:emails').getItem(`${name}.mjml`);
+		if (raw != null) str = typeof raw === 'string' ? raw : String(raw);
+	} catch {
+		// storage mount unavailable — fall through to fs
+	}
+	if (str == null) {
+		try {
+			const { readFile } = await import('node:fs/promises');
+			str = await readFile(`${process.cwd()}/server/emails/${name}.mjml`, 'utf8');
+		} catch {
+			// fs read failed — reported below
+		}
+	}
+	if (str == null) {
+		throw new Error(`[email-templates] template not found: ${name}.mjml (checked assets:emails storage + server/emails on disk)`);
+	}
+	templateCache.set(name, str);
+	return str;
+}
+
+function safeUrl(url: string | null | undefined): string | null {
+	if (!url) return null;
+	const trimmed = String(url).trim();
+	if (!/^https?:\/\//i.test(trimmed)) return null;
+	return trimmed;
+}
+
+function directusAssetUrl(logoId: string | null | undefined): string | null {
+	if (!logoId) return null;
+	const config = useRuntimeConfig() as any;
+	const directusUrl = config.directus?.url || config.public?.directusUrl;
+	if (!directusUrl) return null;
+	return `${String(directusUrl).replace(/\/$/, '')}/assets/${encodeURIComponent(logoId)}?height=80&fit=contain`;
+}
+
+/**
+ * Minimal HTML→text fallback for the text/plain alternative. Senders may
+ * pass an explicit `text` (preferred) — this only runs when they don't.
+ */
+function htmlToText(html: string): string {
+	return html
+		.replace(/<style[\s\S]*?<\/style>/gi, '')
+		.replace(/<head[\s\S]*?<\/head>/gi, '')
+		.replace(/<br\s*\/?>/gi, '\n')
+		.replace(/<\/(p|div|h1|h2|h3|li|tr|td)>/gi, '\n')
+		.replace(/<[^>]+>/g, '')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/[ \t]+/g, ' ')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}
+
+function brandVars(brand: BrandContext): Record<string, any> {
+	const org = brand.org;
+	const useOrg = !!org;
+	const orgName = (org?.name && String(org.name).trim()) || 'Your team';
+	const brandColor = (org?.brand_color && String(org.brand_color).trim()) || EARNEST_BRAND_COLOR;
+	return {
+		useOrg,
+		orgName,
+		brandColor,
+		logoUrl: directusAssetUrl(org?.logo ?? null),
+		orgWebsite: safeUrl(org?.website),
+		whitelabel: org?.whitelabel === true,
+		unsubscribeUrl: safeUrl(brand.unsubscribeUrl),
+		physicalAddress: (brand.physicalAddress && String(brand.physicalAddress).trim()) || null,
+	};
+}
+
+/**
+ * Render a transactional MJML template into { html, text }.
+ *
+ * @param name  Template basename under server/emails (without `.mjml`).
+ * @param vars  Content variables. `subject` + `preheader` drive the <head>;
+ *              `text` (optional) overrides the auto-derived plain-text part.
+ * @param brand Org/compliance context for the chrome.
+ */
+export async function renderBrandedTemplate(
+	name: string,
+	vars: Record<string, any> = {},
+	brand: BrandContext = {},
+): Promise<RenderedTemplate> {
+	const [layout, content] = await Promise.all([
+		loadTemplate('_layout'),
+		loadTemplate(name),
+	]);
+
+	const combined = layout.replace('<!-- @CONTENT -->', content);
+	const mergedVars = { ...brandVars(brand), ...vars };
+
+	const { html, errors } = compileMjml(combined, mergedVars);
+	if (errors.length) {
+		console.warn(`[email-templates] "${name}" compiled with warnings:`, errors.join('; '));
+	}
+
+	const text = typeof vars.text === 'string' && vars.text.trim()
+		? vars.text
+		: htmlToText(html);
+
+	return { html, text, errors };
+}

@@ -1,0 +1,31 @@
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      {{heading}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Hi {{recipientName}},
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{{introHtml}}}
+    </mj-text>
+    <mj-text padding="4px 0 8px 0">
+      <div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;">
+        <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">{{meetingTitle}}</p>
+        {{#each detailRows}}
+        <p style="margin:0 0 4px;font-size:14px;color:#444444;"><strong>{{label}}:</strong> {{value}}</p>
+        {{/each}}
+      </div>
+    </mj-text>
+    {{#if noteHtml}}
+    <mj-text font-size="12px" color="#888888" padding="0 0 8px 0">
+      {{{noteHtml}}}
+    </mj-text>
+    {{/if}}
+    {{#if ctaUrl}}
+    <mj-button href="{{ctaUrl}}" background-color="{{brandColor}}" color="#ffffff" border-radius="8px" font-size="14px" font-weight="600" align="left" inner-padding="12px 22px" padding="12px 0 8px 0">
+      {{ctaLabel}}
+    </mj-button>
+    {{/if}}
+  </mj-column>
+</mj-section>

@@ -184,10 +184,14 @@ export default defineNuxtConfig({
 		sendgridApiKey: process.env.SENDGRID_API_KEY,
 		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@earnest.guru',
 		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Earnest',
+		// Keys below match what the send code actually reads (see server/utils/email-send.ts):
+		// it looks up `sendgridBccEmail` / `sendgridReplyToEmail`. The old `BCC_EMAIL` /
+		// `REPLY_TO_EMAIL` names were dead — nothing read them — so BCC + reply-to never
+		// attached. `SENDGRID_API_KEY`/`FROM_EMAIL` stay as legacy fallbacks still referenced.
+		sendgridBccEmail: process.env.SENDGRID_BCC_EMAIL,
+		sendgridReplyToEmail: process.env.SENDGRID_REPLY_TO_EMAIL,
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
-		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
-		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
 
 		// Stripe (server-side only)
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
@@ -556,6 +560,12 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
+		// Bundle the transactional MJML email templates (server/emails/*.mjml)
+		// into the server output so they're readable at runtime in prod, not
+		// just dev. Access via useStorage('assets:emails').getItem('name.mjml').
+		serverAssets: [
+			{ baseName: 'emails', dir: 'server/emails' },
+		],
 		externals: {
 			inline: [
 				'lodash',
