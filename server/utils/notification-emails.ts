@@ -75,6 +75,7 @@ const CATEGORY_CTA: Record<NotificationCategory, string> = {
 	conversations: 'View conversation',
 	reactions: 'View item',
 	tickets: 'View ticket',
+	tasks: 'View task',
 	projects: 'View project',
 	invoices: 'View invoice',
 	contracts: 'View contract',

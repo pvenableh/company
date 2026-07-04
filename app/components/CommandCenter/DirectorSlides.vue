@@ -31,9 +31,58 @@ const props = defineProps<{
   syncIndex?: number | null;
   /** Live meeting: false for view-only observers — hides approve/skip. */
   canDecide?: boolean;
+  /** Assignable org teammates for the capture form + task re-assignment. */
+  users?: { id: string; label: string; avatar?: string | null }[];
+  /** False for view-only observers — hides the "assign an action item" affordances. */
+  canCapture?: boolean;
 }>();
 
-const emit = defineEmits<{ approve: [step: Step]; skip: [step: Step]; slide: [label: string]; index: [n: number] }>();
+const emit = defineEmits<{
+  approve: [step: Step];
+  skip: [step: Step];
+  slide: [label: string];
+  index: [n: number];
+  capture: [payload: { type: 'task' | 'ticket'; title: string; priority: string; assignTo: string[] }];
+  assign: [payload: { step: Step; userIds: string[] }];
+}>();
+
+const memberList = computed(() => props.users || []);
+
+// ── Capture an action item — mint a task/ticket and assign it, mid-meeting ──
+const showCapture = ref(false);
+const capType = ref<'task' | 'ticket'>('task');
+const capTitle = ref('');
+const capPriority = ref('medium');
+const capAssignees = ref<string[]>([]);
+const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+
+function openCapture() {
+  capType.value = 'task';
+  capTitle.value = '';
+  capPriority.value = 'medium';
+  capAssignees.value = [];
+  showCapture.value = true;
+}
+function submitCapture() {
+  const title = capTitle.value.trim();
+  if (!title) return;
+  emit('capture', { type: capType.value, title, priority: capPriority.value, assignTo: capAssignees.value.slice() });
+  showCapture.value = false;
+}
+
+// ── Re-assign an AI-proposed task before approving it ──
+const assignForStep = ref<string | null>(null); // step id whose picker is open
+const assignSelection = ref<string[]>([]);
+function openAssign(step: Step) {
+  assignForStep.value = step.id;
+  // Seed from the current preview assignees by matching display names → ids.
+  const names = new Set((step.preview?.assignees || []).map((n: string) => n));
+  assignSelection.value = memberList.value.filter((u) => names.has(u.label)).map((u) => u.id);
+}
+function submitAssign(step: Step) {
+  emit('assign', { step, userIds: assignSelection.value.slice() });
+  assignForStep.value = null;
+}
 
 const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
 const netClass = (n: number) => (Number(n) >= 0 ? 'text-emerald-300' : 'text-rose-300');
@@ -215,6 +264,16 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         <span class="text-white/40">presenting</span>
       </span>
       <span class="inline-flex items-center gap-2.5">
+        <button
+          v-if="canCapture !== false"
+          type="button"
+          class="inline-flex items-center gap-1 normal-case tracking-normal text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/10 text-white/80 hover:bg-white/15 hover:text-white transition-colors"
+          title="Create a task or ticket and assign it"
+          @click="openCapture"
+        >
+          <UIcon name="i-lucide-plus" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline">Assign action item</span>
+        </button>
         {{ index + 1 }} / {{ slides.length }}
         <button
           type="button"
@@ -355,6 +414,34 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
             <p><span class="text-white/45">Subject:</span> {{ current.step.preview.subject }}</p>
           </div>
 
+          <!-- Task assignment — pick who this AI-proposed task goes to before approving -->
+          <div v-if="current.step.action_type === 'create_tasks' && current.step.status === 'pending'" class="rounded-xl bg-white/5 ring-1 ring-white/10 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[11px] uppercase tracking-wider text-white/45 inline-flex items-center gap-1.5">
+                <UIcon name="i-lucide-user-check" class="w-3.5 h-3.5" />
+                {{ current.step.preview?.assignees?.length ? `Assigned to ${current.step.preview.assignees.join(', ')}` : 'Unassigned' }}
+              </p>
+              <button
+                v-if="canDecide !== false"
+                type="button"
+                class="text-[11px] text-indigo-300 hover:text-indigo-200 transition-colors"
+                @click="assignForStep === current.step.id ? (assignForStep = null) : openAssign(current.step)"
+              >
+                {{ assignForStep === current.step.id ? 'Done' : (current.step.preview?.assignees?.length ? 'Change' : 'Assign') }}
+              </button>
+            </div>
+            <template v-if="assignForStep === current.step.id">
+              <CommandCenterDirectorAssigneeSelect v-model="assignSelection" :users="memberList" />
+              <button
+                type="button"
+                class="text-xs font-medium px-3 py-1 rounded-full bg-white text-slate-900 hover:bg-white/90"
+                @click="submitAssign(current.step)"
+              >
+                Save assignees
+              </button>
+            </template>
+          </div>
+
           <!-- Decided states -->
           <p v-if="current.step.status === 'executed'" class="inline-flex items-center gap-1.5 text-sm text-emerald-300"><UIcon name="i-lucide-check-circle" class="w-4 h-4" /> Approved · done</p>
           <p v-else-if="current.step.status === 'rejected'" class="inline-flex items-center gap-1.5 text-sm text-white/40"><UIcon name="i-lucide-slash" class="w-4 h-4" /> Skipped</p>
@@ -434,6 +521,83 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         Next <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
       </button>
     </div>
+
+    <!-- Capture an action item — overlay so it works in full-screen too -->
+    <Transition name="deck-fwd">
+      <div
+        v-if="showCapture"
+        class="absolute inset-0 z-10 flex items-center justify-center p-5 bg-slate-950/60 backdrop-blur-sm"
+        @click.self="showCapture = false"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-[#141a33] ring-1 ring-white/15 shadow-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-white inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-clipboard-check" class="w-4 h-4 text-indigo-300" /> Assign an action item
+            </p>
+            <button type="button" class="text-white/45 hover:text-white" aria-label="Close" @click="showCapture = false">
+              <UIcon name="i-lucide-x" class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- Task / Ticket -->
+          <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-white/10">
+            <button
+              v-for="t in (['task', 'ticket'] as const)"
+              :key="t"
+              type="button"
+              class="px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors"
+              :class="capType === t ? 'bg-white text-slate-900' : 'text-white/70 hover:text-white'"
+              @click="capType = t"
+            >
+              {{ t }}
+            </button>
+          </div>
+
+          <input
+            v-model="capTitle"
+            type="text"
+            :placeholder="capType === 'ticket' ? 'What needs doing? (ticket title)' : 'What needs doing? (task title)'"
+            class="w-full text-sm rounded-full bg-white/5 ring-1 ring-white/15 text-white placeholder:text-white/35 px-4 py-2 focus:outline-none focus:ring-indigo-300/50"
+            @keydown.enter="submitCapture"
+          />
+
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-white/45 mb-1.5">Priority</p>
+            <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-white/10">
+              <button
+                v-for="p in PRIORITIES"
+                :key="p"
+                type="button"
+                class="px-2.5 py-1 rounded-full text-[11px] font-medium capitalize transition-colors"
+                :class="capPriority === p ? 'bg-white text-slate-900' : 'text-white/70 hover:text-white'"
+                @click="capPriority = p"
+              >
+                {{ p }}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-white/45 mb-1.5">Assign to</p>
+            <CommandCenterDirectorAssigneeSelect v-model="capAssignees" :users="memberList" />
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-1">
+            <button type="button" class="text-xs px-3 py-1.5 rounded-full text-white/60 hover:text-white" @click="showCapture = false">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full bg-white text-slate-900 hover:bg-white/90 disabled:opacity-40"
+              :disabled="!capTitle.trim()"
+              @click="submitCapture"
+            >
+              <UIcon name="i-lucide-check" class="w-4 h-4" /> Create &amp; assign
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 

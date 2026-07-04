@@ -70,6 +70,7 @@ export interface AppAccent {
 		| 'conversations'
 		| 'reactions'
 		| 'tickets'
+		| 'tasks'
 		| 'projects'
 		| 'invoices'
 		| 'contracts'
@@ -93,7 +94,7 @@ const APP_META: Record<AppId, AppMeta> = {
 	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'lucide:layout-dashboard',    to: '/' },
 	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'lucide:users',               to: '/apps/clients' },
 	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
-		notificationCategories: ['tickets', 'projects'] },
+		notificationCategories: ['tickets', 'tasks', 'projects'] },
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
 	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'lucide:megaphone',           to: '/apps/marketing' },

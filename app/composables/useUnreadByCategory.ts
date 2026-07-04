@@ -20,6 +20,7 @@ type CategoryKey =
 	| 'conversations'
 	| 'reactions'
 	| 'tickets'
+	| 'tasks'
 	| 'projects'
 	| 'invoices'
 	| 'contracts'
@@ -44,8 +45,9 @@ function categoryFor(notification: BellRow): CategoryKey | null {
 			return 'conversations';
 		case 'tickets':
 			return 'tickets';
-		case 'projects':
 		case 'tasks':
+			return 'tasks';
+		case 'projects':
 		case 'project_events':
 			return 'projects';
 		case 'invoices':

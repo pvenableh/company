@@ -16,6 +16,7 @@ export type NotificationCategory =
 	| 'conversations'
 	| 'reactions'
 	| 'tickets'
+	| 'tasks'
 	| 'projects'
 	| 'invoices'
 	| 'contracts'
@@ -35,7 +36,7 @@ export function categoryForCollection(collection: string | null | undefined): No
 	switch (collection) {
 		case 'tickets': return 'tickets';
 		case 'projects': return 'projects';
-		case 'tasks': return 'projects';
+		case 'tasks': return 'tasks';
 		case 'project_events': return 'projects';
 		case 'invoices': return 'invoices';
 		case 'contracts': return 'contracts';

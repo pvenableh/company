@@ -17,6 +17,18 @@ const orgName = computed(() => (currentOrg.value as any)?.name || '');
 const toast = useToast();
 const config = useRuntimeConfig();
 
+// Assignable teammates — for the deck's "assign an action item" capture form and
+// re-assigning an AI-proposed task before approving it.
+const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
+const assignableUsers = computed(() =>
+  (filteredUsers.value || []).map((u: any) => ({
+    id: String(u.id),
+    label: u.label || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Teammate',
+    avatar: u.avatar ? `${config.public.assetsUrl}${u.avatar}?key=avatar` : null,
+  })),
+);
+const usersById = computed(() => new Map(assignableUsers.value.map((u) => [u.id, u])));
+
 // ── Live, multiplayer meeting ────────────────────────────────────────────────
 // The office runs solo by default; going live convenes a shared session others
 // can be invited to. All live wiring is guarded by `liveActive` so solo mode is
@@ -668,6 +680,60 @@ async function skipStep(step: Step) {
   }
 }
 
+// When the meeting is focused on a project/client, a captured item inherits that
+// link; a client-review briefing carries its client id too.
+const captureProjectId = computed(() =>
+  scope.value?.mode === 'entity' && scope.value.entityType === 'projects' ? scope.value.entityId || null : null,
+);
+const captureClientId = computed(() => {
+  if (scope.value?.mode === 'entity' && scope.value.entityType === 'clients') return scope.value.entityId || null;
+  return (clientRating.value as any)?.clientId || null;
+});
+
+// Capture: mint a real task/ticket and assign it, right from the deck.
+async function captureActionItem(payload: { type: 'task' | 'ticket'; title: string; priority: string; assignTo: string[] }) {
+  if (!selectedOrg.value) return;
+  try {
+    await $fetch('/api/ai/director/capture', {
+      method: 'POST',
+      body: {
+        organizationId: selectedOrg.value,
+        type: payload.type,
+        title: payload.title,
+        priority: payload.priority,
+        assignTo: payload.assignTo,
+        projectId: captureProjectId.value,
+        clientId: captureClientId.value,
+      },
+    });
+    mutated.value = true;
+    const noun = payload.type === 'ticket' ? 'Ticket' : 'Task';
+    toast.add({
+      title: `${noun} created`,
+      description: payload.assignTo.length ? 'Assigned — the team was notified.' : 'Added to the board.',
+      icon: 'i-lucide-check-circle',
+      color: 'green',
+    });
+  } catch (err: any) {
+    toast.add({ title: 'Could not create it', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
+  }
+}
+
+// Re-assign an AI-proposed task before it's approved. Patches the stored action
+// (honored by both the solo and live approve paths); preview updates optimistically.
+async function reassignStep({ step, userIds }: { step: Step; userIds: string[] }) {
+  const names = userIds.map((id) => usersById.value.get(id)?.label).filter(Boolean) as string[];
+  const prev = step.preview?.assignees;
+  step.preview = { ...(step.preview || {}), assignees: names };
+  try {
+    const res = await $fetch<{ assignees: string[] }>(`/api/ai/actions/${step.id}/assignees`, { method: 'POST', body: { userIds } });
+    step.preview = { ...(step.preview || {}), assignees: res.assignees };
+  } catch (err: any) {
+    step.preview = { ...(step.preview || {}), assignees: prev };
+    toast.add({ title: 'Could not update assignees', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
+  }
+}
+
 async function askEarnest(seed?: string) {
   const question = (seed ?? qaInput.value).trim();
   if (!question || qaLoading.value) return;
@@ -749,7 +815,7 @@ function onClose() {
 }
 
 // Load the agenda + recent meetings each time the office opens.
-watch(isOpen, (open) => { if (open) { meetingStartedAt.value = new Date(); loadAgenda(); loadRecent(); } });
+watch(isOpen, (open) => { if (open) { meetingStartedAt.value = new Date(); loadAgenda(); loadRecent(); fetchFilteredUsers(); } });
 onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 </script>
 
@@ -1271,8 +1337,12 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   :follow="liveIsFollowing"
                   :sync-index="liveActive ? (liveSession?.currentSlide ?? null) : null"
                   :can-decide="!liveActive || liveCanDecide"
+                  :users="assignableUsers"
+                  :can-capture="!liveActive || liveCanDecide"
                   @approve="approveStep"
                   @skip="skipStep"
+                  @capture="captureActionItem"
+                  @assign="reassignStep"
                   @slide="slideContext = $event"
                   @index="onSlideIndex"
                 />
