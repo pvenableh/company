@@ -14,9 +14,7 @@
         <mj-text font-size="18px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>
       {{/if}}
     {{else}}
-      <mj-text font-size="18px" font-weight="700" letter-spacing="-0.01em" color="#141210" padding="0">
-        <a href="https://earnest.guru" style="color:#141210;text-decoration:none;">Earnest</a>
-      </mj-text>
+      <mj-image src="{{earnestLogoUrl}}" alt="Earnest" href="https://earnest.guru" align="left" width="40px" height="40px" padding="0" />
     {{/if}}
   </mj-column>
 </mj-section>

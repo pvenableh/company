@@ -175,7 +175,13 @@ export default defineEventHandler(async (event) => {
 		brand = { org: SAMPLE_ORG };
 	}
 
-	const { html, text, errors } = await renderBrandedTemplate(name, sampleVars(name), brand);
+	const vars = sampleVars(name);
+	// The renderer resolves the Earnest logo to an absolute prod URL, which
+	// isn't reachable from a local dev preview. Point it at the local file so
+	// the preview shows it; real sends always use the absolute URL.
+	if (import.meta.dev) (vars as any).earnestLogoUrl = '/email/earnest-logo.png';
+
+	const { html, text, errors } = await renderBrandedTemplate(name, vars, brand);
 
 	if (String(query.format) === 'json') {
 		return { template: name, brand: brandMode, errors, html, text };
