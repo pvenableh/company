@@ -1,20 +1,26 @@
-<!-- Universal email header. Org-branded (logo, or org name in brand_color)
-     when an org is passed; Earnest wordmark otherwise. Edit here to restyle
-     the header across EVERY transactional email at once. -->
-<mj-section padding="24px 32px 8px 32px">
+<!-- Universal email header, centered. Earnest sends get the "Earnest." wordmark
+     (serif, signature cyan period) + "Do good work." tagline — matching the app's
+     EarnestBrand lockup. Org sends get the org logo (or org name in brand_color).
+     Edit here to restyle the header across EVERY transactional email at once. -->
+<mj-section padding="30px 32px 4px 32px">
   <mj-column>
     {{#if useOrg}}
       {{#if logoUrl}}
         {{#if orgWebsite}}
-        <mj-image src="{{logoUrl}}" alt="{{orgName}}" href="{{orgWebsite}}" align="left" height="40px" width="200px" padding="0" />
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" href="{{orgWebsite}}" align="center" height="40px" width="220px" padding="0" />
         {{else}}
-        <mj-image src="{{logoUrl}}" alt="{{orgName}}" align="left" height="40px" width="200px" padding="0" />
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" align="center" height="40px" width="220px" padding="0" />
         {{/if}}
       {{else}}
-        <mj-text font-size="18px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>
+        <mj-text align="center" font-size="22px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>
       {{/if}}
     {{else}}
-      <mj-image src="{{earnestLogoUrl}}" alt="Earnest" href="https://earnest.guru" align="left" width="40px" height="40px" padding="0" />
+      <mj-text align="center" font-family="'Bauer Bodoni Pro_1 W05 Roman', 'Bodoni Moda', Georgia, 'Times New Roman', serif" font-size="30px" font-weight="600" letter-spacing="-0.02em" color="#1f1f1f" line-height="1.05" padding="0">
+        Earnest<span style="color:#00BFFF;">.</span>
+      </mj-text>
+      <mj-text align="center" font-family="'Gaegu', 'Segoe Script', 'Bradley Hand', cursive" font-size="15px" letter-spacing="0.02em" color="#737373" padding="3px 0 0 0">
+        Do good work.
+      </mj-text>
     {{/if}}
   </mj-column>
 </mj-section>

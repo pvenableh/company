@@ -26,6 +26,23 @@ server/utils/email-send.ts         ← sendBrandedEmail(...) → SendGrid
 `_header.mjml` / `_footer.mjml`.** They're org/Earnest-aware (via `useOrg`,
 `logoUrl`, `brandColor`, `whitelabel`) and injected into the layout skeleton.
 
+## Design language
+
+Mirrors the Earnest app, adapted to email constraints:
+
+- **Header** — centered "Earnest." wordmark (serif, signature cyan `#00BFFF`
+  period) over the "Do good work." tagline, matching the app's `EarnestBrand`.
+  `_layout.mjml` loads **Gaegu** (tagline) + **Bodoni Moda** (~Bauer Bodoni
+  wordmark) via `<mj-font>` as progressive enhancement — Apple Mail/iOS render
+  the real faces; Gmail/Outlook fall back to Georgia / cursive.
+- **Pill CTAs** — buttons default to `border-radius: 9999px` (set once in the
+  `_layout.mjml` `<mj-button>` attributes, so content templates just write
+  `<mj-button href="…">Label</mj-button>`). Real pills even in Outlook (VML).
+- **Liquid-glass (approximated)** — the card uses `16px` rounding + a soft
+  floating shadow (via the `.earnest-card` rule); detail cards use `14px`.
+  True backdrop-blur/transparency can't render in email, so this degrades to a
+  clean flat rounded card in Gmail/Outlook.
+
 A sender builds a `vars` object and calls the renderer:
 
 ```ts

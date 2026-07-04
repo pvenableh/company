@@ -2,19 +2,33 @@
   <mj-head>
     <mj-title>{{subject}}</mj-title>
     <mj-preview>{{preheader}}</mj-preview>
+
+    <!-- Brand faces as progressive enhancement: clients that support web fonts
+         (Apple Mail, iOS) get Gaegu (tagline) + Bodoni Moda (~Bauer Bodoni
+         wordmark); Gmail/Outlook fall back to the system stacks below. -->
+    <mj-font name="Gaegu" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400&display=swap" />
+    <mj-font name="Bodoni Moda" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,600&display=swap" />
+
     <mj-attributes>
       <mj-all font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" />
       <mj-text font-size="16px" line-height="1.6" color="#333333" />
       <mj-section background-color="#ffffff" padding="0" />
+      <!-- Universal pill CTA — fully rounded, brand-colored. Override per button
+           only when you need a different treatment. -->
+      <mj-button background-color="{{brandColor}}" color="#ffffff" border-radius="9999px" font-size="14px" font-weight="600" align="left" inner-padding="13px 28px" line-height="1.2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" />
     </mj-attributes>
+
     <mj-style>
-      .earnest-link a { color: #888888 !important; text-decoration: underline; }
+      /* Liquid-glass approximation — a soft floating shadow on the card.
+         Rendered by clients that honor &lt;style&gt; (Apple Mail); Gmail/Outlook
+         simply show the flat rounded card. */
+      .earnest-card { box-shadow: 0 12px 34px -18px rgba(20,18,16,0.20), 0 2px 8px -3px rgba(20,18,16,0.10); }
       a { color: {{brandColor}}; }
     </mj-style>
   </mj-head>
 
   <mj-body background-color="#faf7f4" width="560px">
-    <mj-wrapper background-color="#ffffff" border-radius="12px" padding="0" css-class="earnest-card">
+    <mj-wrapper background-color="#ffffff" border-radius="16px" padding="0" css-class="earnest-card">
 
       <!-- Partials injected by renderBrandedTemplate (server/utils/email-templates.ts).
            Header + footer live in _header.mjml / _footer.mjml; per-email content

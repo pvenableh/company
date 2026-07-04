@@ -10,7 +10,7 @@
       {{{bodyHtml}}}
     </mj-text>
     {{#if ctaUrl}}
-    <mj-button href="{{ctaUrl}}" background-color="{{brandColor}}" color="#ffffff" border-radius="8px" font-size="14px" font-weight="600" align="left" inner-padding="12px 22px" padding="16px 0 8px 0">
+    <mj-button href="{{ctaUrl}}"padding="16px 0 8px 0">
       {{ctaLabel}}
     </mj-button>
     {{/if}}
