@@ -19,9 +19,20 @@
     </mj-attributes>
 
     <mj-style>
-      /* Soft depth on the rounded card sections — rendered by clients that
-         honor &lt;style&gt; (Apple Mail); Gmail/Outlook show the flat card on the
-         glass wash. Kept to the outer edges so stacked sections read as one. */
+      /* Apple Mail / iOS (webkit clients that honor &lt;style&gt;) — stretch the
+         glass wash to fill the whole reading pane, so a short email still has a
+         full-viewport-height background instead of empty space below it. The
+         &lt;body&gt; carries the same image; height:100% + the pane's height lets it
+         fill. Gmail/Outlook strip &lt;style&gt; and fall back to the full-width
+         wrapper background (content-height only) — no downside. */
+      html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; }
+      body {
+        background-image: url("{{glassBgUrl}}") !important;
+        background-size: cover !important;
+        background-position: center top !important;
+        background-repeat: no-repeat !important;
+      }
+      /* Soft depth on the rounded card sections (also &lt;style&gt;-gated). */
       .earnest-card-top { box-shadow: 0 -6px 22px -12px rgba(24,54,110,0.16); }
       .earnest-card-bottom { box-shadow: 0 16px 34px -18px rgba(24,54,110,0.26); }
       a { color: {{brandColor}}; }
