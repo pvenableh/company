@@ -1867,6 +1867,80 @@ export interface DirectorBriefing {
 	date_updated?: string | null;
 }
 
+export interface DirectorParticipant {
+	/** @primaryKey */
+	id: number;
+	/** @description The live session. */
+	session?: DirectorSession | string | null;
+	/** @description Owning organization (row-scopes realtime read). */
+	organization?: Organization | string | null;
+	/** @description The attendee. */
+	user?: DirectusUser | string | null;
+	/** @description Host convened; members were invited or joined. */
+	role?: 'host' | 'member';
+	/** @description invited (notified, not joined) / active (in the room) / left. */
+	status?: 'invited' | 'active' | 'left';
+	/** @description Which slide this attendee is viewing (presence dot). */
+	current_slide?: number | null;
+	/** @description Last presence heartbeat. */
+	last_seen?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
+export interface DirectorQa {
+	/** @primaryKey */
+	id: number;
+	/** @description The live session. */
+	session?: DirectorSession | string | null;
+	/** @description Owning organization (row-scopes realtime read). */
+	organization?: Organization | string | null;
+	/** @description Who asked (null for Earnest's answer). */
+	user?: DirectusUser | string | null;
+	/** @description user question / assistant (Earnest) answer. */
+	role?: 'user' | 'assistant';
+	/** @description The question or answer text. */
+	text?: string | null;
+	date_created?: string | null;
+}
+
+export interface DirectorSession {
+	/** @primaryKey */
+	id: number;
+	/** @description Owning organization (row-scopes realtime read). */
+	organization?: Organization | string | null;
+	/** @description User who convened the meeting. */
+	host?: DirectusUser | string | null;
+	/** @description Who is currently driving the deck (attendees can follow). */
+	presenter?: DirectusUser | string | null;
+	/** @description Human label (subject / topic). */
+	title?: string | null;
+	/** @description Live meetings show in the join list; ended ones are history. */
+	status?: 'live' | 'ended';
+	/** @description Org-wide meeting or a focused one-entity meeting. */
+	scope_type?: 'org' | 'entity';
+	/** @description Focused meeting: the collection (e.g. "projects"). */
+	entity_type?: string | null;
+	/** @description Focused meeting: the record id. */
+	entity_id?: string | null;
+	/** @description Agenda subject key or blank for a free topic. */
+	subject?: string | null;
+	/** @description Optional free-text steer. */
+	topic?: string | null;
+	/** @description Ties this session to its proposed steps (ai_actions rows with session_id == this) + briefing. */
+	plan_id?: string | null;
+	/** @description The presenter's current slide index (attendees following jump here). */
+	current_slide?: number | null;
+	/** @description When on, attendees' decks follow the presenter's slide. */
+	follow_presenter?: boolean;
+	/** @description Bumped on every step decision / plan change so attendees re-fetch steps. */
+	revision?: number;
+	/** @description Last event {actorId, actorName, type, stepId, status, at} — drives the live ticker. */
+	last_activity?: Record<string, any> | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
 export interface DocumentBlock {
 	/** @primaryKey */
 	id: number;
@@ -5242,6 +5316,9 @@ export interface Schema {
 	courses: Course[];
 	current_work: CurrentWork[];
 	director_briefings: DirectorBriefing[];
+	director_participants: DirectorParticipant[];
+	director_qa: DirectorQa[];
+	director_sessions: DirectorSession[];
 	document_blocks: DocumentBlock[];
 	early_access: EarlyAccess[];
 	earnest_history: EarnestHistory[];
@@ -5493,6 +5570,9 @@ export enum CollectionNames {
 	courses = 'courses',
 	current_work = 'current_work',
 	director_briefings = 'director_briefings',
+	director_participants = 'director_participants',
+	director_qa = 'director_qa',
+	director_sessions = 'director_sessions',
 	document_blocks = 'document_blocks',
 	early_access = 'early_access',
 	earnest_history = 'earnest_history',

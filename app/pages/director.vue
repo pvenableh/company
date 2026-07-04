@@ -13,6 +13,49 @@ useHead({ title: "Director's Office | Earnest" });
 
 const { open: openDirectorOffice } = useDirectorOffice();
 const { selectedOrg } = useOrganization();
+const { joinSession, session: liveSession } = useDirectorSession();
+const route = useRoute();
+const router = useRouter();
+
+// Live meetings happening right now — anyone in the org can pull up a chair.
+interface LiveMeeting {
+  id: string | number; title: string | null; subject: string | null; topic: string | null;
+  scopeType: 'org' | 'entity'; entityType: string | null; entityId: string | null;
+  hostName: string | null; participantCount: number;
+}
+const liveMeetings = ref<LiveMeeting[]>([]);
+
+async function loadLive() {
+  if (!selectedOrg.value) { liveMeetings.value = []; return; }
+  try {
+    const res = await $fetch<{ sessions: any[] }>('/api/ai/director/sessions', { query: { organizationId: selectedOrg.value } });
+    liveMeetings.value = (res.sessions || []).map((s) => ({
+      id: s.id, title: s.title, subject: s.subject, topic: s.topic,
+      scopeType: s.scopeType, entityType: s.entityType, entityId: s.entityId,
+      hostName: s.hostName, participantCount: s.participantCount,
+    }));
+  } catch {
+    liveMeetings.value = [];
+  }
+}
+
+async function joinLive(id: string | number) {
+  const ok = await joinSession(String(id));
+  if (!ok) return;
+  const s = liveSession.value;
+  if (s?.scopeType === 'entity' && s.entityType && s.entityId) {
+    openDirectorOffice({ mode: 'entity', entityType: s.entityType, entityId: s.entityId, label: s.title || 'Live session' });
+  } else {
+    openDirectorOffice();
+  }
+}
+
+function liveLabel(m: LiveMeeting): string {
+  if (m.title) return m.title;
+  if (m.topic) return m.topic;
+  const s = (m.subject || '').toLowerCase();
+  return ({ money: 'The Money', clients: 'Clients', projects: 'Projects', leads: 'Pipeline', proposals: 'Proposals', tickets: 'Support' } as Record<string, string>)[s] || 'Working session';
+}
 
 interface Meeting {
   id: string | number;
@@ -42,7 +85,16 @@ async function load() {
   }
   loading.value = false;
 }
-watch(selectedOrg, load, { immediate: true });
+watch(selectedOrg, () => { load(); loadLive(); }, { immediate: true });
+
+// Deep-link from an invite notification: /director?session=<id> → join it.
+onMounted(async () => {
+  const sid = route.query.session;
+  if (sid) {
+    await joinLive(String(sid));
+    router.replace({ query: {} });
+  }
+});
 
 function subjectLabel(m: Meeting): string {
   if (m.topic) return m.topic;
@@ -120,6 +172,41 @@ const filteredMeetings = computed(() => {
         <span class="hidden sm:inline">Convene the board</span>
         <span class="sm:hidden">Convene</span>
       </button>
+    </div>
+
+    <!-- Live now — join a meeting in progress -->
+    <div v-if="liveMeetings.length" class="mb-6">
+      <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
+        <span class="relative flex w-1.5 h-1.5">
+          <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+          <span class="relative inline-flex rounded-full w-1.5 h-1.5 bg-red-500" />
+        </span>
+        Live now
+      </p>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <button
+          v-for="m in liveMeetings"
+          :key="m.id"
+          type="button"
+          class="group text-left rounded-2xl border border-primary/30 bg-primary/5 p-3.5 transition-all hover:border-primary/50 hover:shadow-sm hover:-translate-y-0.5"
+          @click="joinLive(m.id)"
+        >
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <UIcon name="i-lucide-users-round" class="w-4.5 h-4.5" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold truncate">{{ liveLabel(m) }}</p>
+              <p class="text-xs text-muted-foreground truncate">
+                <template v-if="m.hostName">{{ m.hostName }} · </template>{{ m.participantCount }} at the table
+              </p>
+            </div>
+            <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary text-primary-foreground shrink-0 group-hover:bg-primary/90">
+              <UIcon name="i-lucide-log-in" class="w-3.5 h-3.5" /> Join
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <!-- Past meetings -->

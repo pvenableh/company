@@ -15,6 +15,142 @@ const { isOpen, scope, close } = useDirectorOffice();
 const { selectedOrg, currentOrg } = useOrganization();
 const orgName = computed(() => (currentOrg.value as any)?.name || '');
 const toast = useToast();
+const config = useRuntimeConfig();
+
+// ── Live, multiplayer meeting ────────────────────────────────────────────────
+// The office runs solo by default; going live convenes a shared session others
+// can be invited to. All live wiring is guarded by `liveActive` so solo mode is
+// untouched. Realtime state (presence, steps, Q&A) comes from useDirectorSession.
+const {
+  isLive: liveActive,
+  isHost: liveIsHost,
+  isPresenter: liveIsPresenter,
+  session: liveSession,
+  connecting: liveConnecting,
+  attendees: liveAttendees,
+  presentNow: livePresentNow,
+  steps: liveSteps,
+  qa: liveQa,
+  convene,
+  leave: leaveSession,
+  end: endSession,
+  invite: inviteToSession,
+  approveStep: approveStepLive,
+  skipStep: skipStepLive,
+  postQa,
+  presentSlide,
+  reportViewedSlide,
+  attachPlan,
+} = useDirectorSession();
+
+const showInvite = ref(false);
+const seatedIds = computed(() => liveAttendees.value.map((p) => String(p.userId)).filter(Boolean));
+
+function avatarFor(p: { avatar: string | null; name: string }): string {
+  if (p.avatar) return `${config.public.assetsUrl}${p.avatar}?key=avatar`;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || 'Teammate')}&background=6366f1&color=fff&size=48`;
+}
+
+// Convene a live meeting from the current scope + (if one is open) the drafted
+// plan, so invitees land on the same briefing.
+async function goLive() {
+  const s = scope.value;
+  const id = await convene({
+    scopeType: s?.mode === 'entity' ? 'entity' : 'org',
+    entityType: s?.mode === 'entity' ? s.entityType : null,
+    entityId: s?.mode === 'entity' ? s.entityId : null,
+    subject: activeSubject.value || null,
+    topic: topicInput.value.trim() || null,
+    planId: planId.value || null,
+    title: activeSubject.value ? recentLabelForSubject(activeSubject.value) : (s?.label || 'Working session'),
+  });
+  if (id) {
+    showInvite.value = true; // prompt to fill the table straight away
+    toast.add({ title: 'You’re live', description: 'Invite teammates to review and approve together.', icon: 'i-lucide-radio', color: 'green' });
+  }
+}
+
+function recentLabelForSubject(subject: string): string {
+  const s = (subject || '').toLowerCase();
+  return ({ money: 'The Money', clients: 'Clients', projects: 'Projects', leads: 'Pipeline', proposals: 'Proposals', tickets: 'Support' } as Record<string, string>)[s]
+    || (subject ? subject.charAt(0).toUpperCase() + subject.slice(1) : 'Working session');
+}
+
+async function onInvite(userIds: string[]) {
+  const n = await inviteToSession(userIds);
+  showInvite.value = false;
+  if (n > 0) toast.add({ title: `Invited ${n} ${n === 1 ? 'teammate' : 'teammates'}`, description: 'They’ll get a notification to join.', icon: 'i-lucide-user-plus', color: 'green' });
+}
+
+async function onLeaveMeeting() {
+  if (liveIsHost.value) await endSession();
+  else await leaveSession();
+}
+
+// The presenter drives the shared deck; everyone reports their viewed slide.
+function onSlideIndex(n: number) {
+  reportViewedSlide(n);
+  if (liveActive.value && liveIsPresenter.value) presentSlide(n);
+}
+
+// Mirror live step state into the local `steps` the whole template already
+// renders — so a teammate's approve/skip shows for everyone. Live steps are the
+// authoritative objects (approveStepLive mutates them in place + re-syncs).
+watch([liveActive, liveSteps], () => {
+  // Guard on length so the brief empty state right after going live doesn't wipe
+  // the host's already-drafted steps before the first session sync lands.
+  if (liveActive.value && liveSteps.value.length) steps.value = liveSteps.value as any;
+}, { immediate: true });
+
+// Mirror the shared Q&A thread when live.
+watch([liveActive, liveQa], () => {
+  if (liveActive.value) qaThread.value = liveQa.value.map((t) => ({ role: t.role, text: t.text }));
+}, { immediate: true });
+
+// When a live session's shared subject changes (e.g. a follower joins, or the
+// presenter opens a section), everyone catches up to the same briefing. This is
+// LOAD-ONLY — a catching-up attendee must never POST /plan (that would mint a
+// duplicate plan); they read the saved briefing + the session's shared steps.
+watch(() => liveSession.value?.subject, (subject) => {
+  if (!liveActive.value || !isOpen.value) return;
+  if (subject && activeSubject.value !== subject) loadSharedSubject(subject);
+});
+
+async function loadSharedSubject(subject: string) {
+  activeSubject.value = subject;
+  topicInput.value = liveSession.value?.topic || '';
+  planning.value = true;
+  planIntro.value = '';
+  finance.value = null;
+  opportunity.value = null;
+  clientRating.value = null;
+  try {
+    const q: Record<string, string> = { organizationId: selectedOrg.value! };
+    if (subject) q.subject = subject;
+    if (topicInput.value.trim()) q.topic = topicInput.value.trim();
+    if (scope.value?.mode === 'entity' && scope.value.entityType && scope.value.entityId) {
+      q.entityType = scope.value.entityType;
+      q.entityId = scope.value.entityId;
+    }
+    const saved = await $fetch<{ found: boolean; planId?: string; intro?: string; stepCount?: number; finance?: any; opportunity?: any; clientRating?: any; savedAt?: string }>(
+      '/api/ai/director/briefing', { query: q },
+    ).catch(() => ({ found: false }) as any);
+    if (saved?.found) {
+      planId.value = saved.planId || liveSession.value?.planId || null;
+      planIntro.value = saved.intro || '';
+      finance.value = saved.finance || null;
+      opportunity.value = saved.opportunity || null;
+      clientRating.value = saved.clientRating || null;
+      briefingSavedAt.value = saved.savedAt || null;
+    }
+    // Steps come from the live session mirror; load by the shared planId as a
+    // fallback if the mirror hasn't landed yet.
+    const pid = liveSession.value?.planId || planId.value;
+    if (pid && !steps.value.length) await loadSteps(pid).catch(() => {});
+  } finally {
+    planning.value = false;
+  }
+}
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 interface AgendaNotice { id: string; title: string; description: string; priority: Priority; entityType?: string; entityId?: string }
@@ -402,6 +538,10 @@ async function draftPlan(subject: string, force = false) {
       at: nowMs(), savedAt: null, qa: qaThread.value,
     };
     loadRecent(); // a fresh draft is persisted — refresh the recents list
+    // Live host re-drafted in-room → push the new plan to everyone at the table.
+    if (liveActive.value && liveIsHost.value && planId.value) {
+      attachPlan(planId.value, recentLabelForSubject(subject));
+    }
   } catch (err: any) {
     toast.add({ title: 'Could not draft a plan', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
   } finally {
@@ -424,6 +564,8 @@ async function loadSteps(pid: string) {
 
 async function approveStep(step: Step) {
   if (step.status !== 'pending') return;
+  // Live: route through the session so the decision (and who made it) broadcasts.
+  if (liveActive.value) { mutated.value = true; return approveStepLive(step as any); }
   step.status = 'executing';
   try {
     await $fetch(`/api/ai/actions/${step.id}/approve`, { method: 'POST' });
@@ -437,6 +579,7 @@ async function approveStep(step: Step) {
 
 async function skipStep(step: Step) {
   if (step.status !== 'pending') return;
+  if (liveActive.value) return skipStepLive(step as any);
   const prev = step.status;
   step.status = 'rejected';
   try {
@@ -451,7 +594,8 @@ async function askEarnest(seed?: string) {
   const question = (seed ?? qaInput.value).trim();
   if (!question || qaLoading.value) return;
   const priorHistory = qaThread.value.map((m) => ({ role: m.role, text: m.text }));
-  qaThread.value.push({ role: 'user', text: question });
+  // Live: don't push locally — the shared thread echoes both turns to everyone.
+  if (!liveActive.value) qaThread.value.push({ role: 'user', text: question });
   qaInput.value = '';
   qaLoading.value = true;
   try {
@@ -472,7 +616,11 @@ async function askEarnest(seed?: string) {
       body.entityId = scope.value.entityId;
     }
     const res = await $fetch<{ answer: string }>('/api/ai/director/ask', { method: 'POST', body });
-    qaThread.value.push({ role: 'assistant', text: res.answer || 'I don’t have a clear answer for that right now.' });
+    const answer = res.answer || 'I don’t have a clear answer for that right now.';
+    // Live: persist the exchange to the shared thread (echoes to all attendees);
+    // solo: append locally as before.
+    if (liveActive.value) await postQa(question, answer);
+    else qaThread.value.push({ role: 'assistant', text: answer });
   } catch (err: any) {
     toast.add({ title: 'Could not get an answer', description: err?.data?.message || 'Please try again.', icon: 'i-lucide-alert-circle', color: 'red' });
   } finally {
@@ -551,7 +699,59 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 </p>
               </div>
             </div>
-            <div class="relative flex items-center gap-1 shrink-0">
+            <div class="relative flex items-center gap-1.5 shrink-0">
+              <!-- Collaboration: go live, or the live table controls -->
+              <template v-if="!liveActive">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50"
+                  title="Convene a live meeting others can join"
+                  :disabled="liveConnecting"
+                  @click="goLive"
+                >
+                  <UIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-3.5 h-3.5" :class="liveConnecting ? 'animate-spin' : ''" />
+                  <span class="hidden sm:inline">Go live</span>
+                </button>
+              </template>
+              <template v-else>
+                <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">
+                  <span class="relative flex w-1.5 h-1.5">
+                    <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+                    <span class="relative inline-flex rounded-full w-1.5 h-1.5 bg-red-500" />
+                  </span>
+                  Live
+                </span>
+                <!-- Who's at the table (present now) -->
+                <div class="hidden sm:flex items-center -space-x-1.5">
+                  <img
+                    v-for="p in livePresentNow.slice(0, 4)"
+                    :key="p.id"
+                    :src="avatarFor(p)"
+                    :alt="p.name"
+                    :title="p.name + (p.role === 'host' ? ' · host' : '')"
+                    class="w-6 h-6 rounded-full ring-2 ring-card object-cover"
+                  />
+                  <span v-if="livePresentNow.length > 4" class="w-6 h-6 rounded-full ring-2 ring-card bg-muted text-[9px] font-semibold flex items-center justify-center">+{{ livePresentNow.length - 4 }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+                  title="Invite teammates to the table"
+                  @click="showInvite = true"
+                >
+                  <UIcon name="i-lucide-user-plus" class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">Invite</span>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-red-600 hover:border-red-500/40 transition-colors"
+                  :title="liveIsHost ? 'End the meeting for everyone' : 'Leave the meeting'"
+                  @click="onLeaveMeeting"
+                >
+                  <UIcon :name="liveIsHost ? 'i-lucide-square' : 'i-lucide-log-out'" class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">{{ liveIsHost ? 'End' : 'Leave' }}</span>
+                </button>
+              </template>
               <button
                 type="button"
                 class="text-muted-foreground hover:text-foreground p-1 disabled:opacity-40"
@@ -569,6 +769,33 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
           </header>
 
           <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
+            <!-- Live: who's at the table -->
+            <div v-if="liveActive" class="flex items-center gap-2.5 flex-wrap rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5">
+              <UIcon name="i-lucide-users-round" class="w-4 h-4 text-primary shrink-0" />
+              <div class="flex items-center -space-x-1.5">
+                <img
+                  v-for="p in liveAttendees"
+                  :key="p.id"
+                  :src="avatarFor(p)"
+                  :alt="p.name"
+                  :title="p.name + (p.role === 'host' ? ' · host' : '') + (p.status === 'invited' ? ' · invited' : '')"
+                  class="w-7 h-7 rounded-full ring-2 ring-card object-cover"
+                  :class="p.status === 'invited' ? 'opacity-50' : ''"
+                />
+              </div>
+              <span class="text-xs text-muted-foreground">
+                {{ livePresentNow.length }} here<template v-if="liveAttendees.length > livePresentNow.length"> · {{ liveAttendees.length - livePresentNow.length }} invited</template>
+              </span>
+              <div class="ml-auto flex items-center gap-2">
+                <span v-if="liveIsPresenter" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary font-medium">
+                  <UIcon name="i-lucide-presentation" class="w-3 h-3" /> You're presenting
+                </span>
+                <span v-else-if="liveSession?.followPresenter" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <UIcon name="i-lucide-eye" class="w-3 h-3" /> Following presenter
+                </span>
+              </div>
+            </div>
+
             <!-- Agenda loading / error -->
             <div v-if="loadingAgenda" class="flex flex-col items-center justify-center gap-3 py-10 text-center">
               <span class="relative flex items-center justify-center w-12 h-12">
@@ -896,9 +1123,12 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   :opportunity="opportunity"
                   :client-rating="clientRating"
                   :steps="steps"
+                  :follow="liveActive && !!liveSession?.followPresenter && !liveIsPresenter"
+                  :sync-index="liveActive ? (liveSession?.currentSlide ?? null) : null"
                   @approve="approveStep"
                   @skip="skipStep"
                   @slide="slideContext = $event"
+                  @index="onSlideIndex"
                 />
 
                 <!-- Outline (stacked panel) view -->
@@ -1104,6 +1334,15 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
             </template>
           </div>
         </section>
+
+        <!-- Invite teammates to the live table -->
+        <CommandCenterDirectorInvitePicker
+          v-if="showInvite && liveActive && selectedOrg"
+          :organization-id="selectedOrg"
+          :seated-ids="seatedIds"
+          @invite="onInvite"
+          @close="showInvite = false"
+        />
       </div>
     </Transition>
   </Teleport>

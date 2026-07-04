@@ -25,9 +25,13 @@ const props = defineProps<{
   opportunity: any | null;
   clientRating: any | null;
   steps: Step[];
+  /** Live meeting: follow the presenter's slide (drives this deck's index). */
+  follow?: boolean;
+  /** Live meeting: the presenter's current slide index to sync to when following. */
+  syncIndex?: number | null;
 }>();
 
-const emit = defineEmits<{ approve: [step: Step]; skip: [step: Step]; slide: [label: string] }>();
+const emit = defineEmits<{ approve: [step: Step]; skip: [step: Step]; slide: [label: string]; index: [n: number] }>();
 
 const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
 const netClass = (n: number) => (Number(n) >= 0 ? 'text-emerald-300' : 'text-rose-300');
@@ -155,6 +159,14 @@ function slideLabel(s: Slide | undefined): string {
   }
 }
 watch(current, (c) => emit('slide', slideLabel(c)), { immediate: true });
+
+// Live meeting sync: broadcast our slide index up (for presence + presenter
+// driving), and — when following the presenter — track their slide.
+watch(index, (i) => emit('index', i), { immediate: true });
+watch(() => props.syncIndex, (target) => {
+  if (!props.follow || typeof target !== 'number') return;
+  if (target !== index.value) goTo(target);
+});
 
 // Don't hijack the arrow keys while the user is typing in a field (e.g. the
 // "Raise a topic" input that lives above the deck).
