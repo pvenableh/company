@@ -52,6 +52,10 @@ export function useAISmartPrompts() {
   const leadItems = useDirectusItems('leads');
 
   const orgFilter = () => selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
+  // Invoices have no direct `organization` column — they use `bill_to` for the
+  // org reference (matching useInvoices / useAIProductivityEngine). Filtering on
+  // `organization` here 403s ("field does not exist").
+  const invoiceOrgFilter = () => selectedOrg.value ? { bill_to: { _eq: selectedOrg.value } } : {};
 
   /** Fetch live data for prompt generation */
   const fetchSmartData = async () => {
@@ -82,7 +86,7 @@ export function useAISmartPrompts() {
         // Overdue invoices
         invoiceItems.list({
           filter: {
-            ...orgFilter(),
+            ...invoiceOrgFilter(),
             status: { _in: ['pending', 'processing'] },
             due_date: { _lt: now.toISOString() },
           },
