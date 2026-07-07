@@ -350,8 +350,8 @@ async function buildInvoicesSummary(directus: any, orgFilter: any, now: Date): P
     if (invoices.length === 0) return 'No outstanding invoices.';
 
     const overdue = invoices.filter(i => i.due_date && new Date(i.due_date) < now);
-    const overdueTotal = overdue.reduce((sum, i) => sum + (i.total_amount || 0), 0);
-    const pendingTotal = invoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+    const overdueTotal = overdue.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0);
+    const pendingTotal = invoices.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0);
 
     const lines: string[] = [];
     lines.push(`${invoices.length} outstanding invoices totaling $${pendingTotal.toLocaleString()}`);

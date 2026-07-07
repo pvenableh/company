@@ -119,7 +119,7 @@ export async function generateClientNotices(
   // Overdue invoices
   const overdueInvoices = (invoices || []).filter((i: any) => i.due_date && new Date(i.due_date) < now);
   if (overdueInvoices.length > 0) {
-    const total = overdueInvoices.reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0);
+    const total = overdueInvoices.reduce((sum: number, i: any) => sum + (Number(i.total_amount) || 0), 0);
     notices.push({
       id: `client-overdue-invoices-${clientId}`,
       priority: overdueInvoices.length >= 3 ? 'urgent' : 'high',
@@ -365,7 +365,7 @@ export async function generateInvoiceNotices(
       ) as any[];
 
       if (otherOverdue && otherOverdue.length > 0) {
-        const otherTotal = otherOverdue.reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0);
+        const otherTotal = otherOverdue.reduce((sum: number, i: any) => sum + (Number(i.total_amount) || 0), 0);
         notices.push({
           id: `invoice-client-overdue-${invoiceId}`,
           priority: 'high',
