@@ -40,6 +40,9 @@ const ACTIONS: Record<string, CreateAction[]> = {
     { label: 'Task', icon: 'lucide:check-square', prompt: 'Add a follow-up task for this lead.' },
     { label: 'Email', icon: 'lucide:mail', prompt: 'Draft an outreach email to this lead.' },
   ],
+  proposal: [
+    { label: 'Turn into contract', icon: 'lucide:file-signature', prompt: 'Turn this proposal into a contract — draft a contract (targets: contract) based on this proposal\'s scope and pricing, linked to the same lead.' },
+  ],
   contract: [
     { label: 'Create invoice', icon: 'lucide:receipt', prompt: 'Create an invoice from this contract — bill its client for the contract amount.' },
   ],

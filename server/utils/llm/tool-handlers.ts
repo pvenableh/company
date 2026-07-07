@@ -314,7 +314,15 @@ async function handleGenerateDocuments(
     : ['proposal', 'contract'];
 
   // Prefer an explicit lead_id; otherwise use the focused lead, if any.
-  const leadId = input.lead_id ?? (ctx.entityType === 'leads' ? ctx.entityId : null);
+  let leadId = input.lead_id ?? (ctx.entityType === 'leads' ? ctx.entityId : null);
+  // "Turn into contract" from a proposal: link the drafted doc to the same
+  // originating lead so it lands on the same record.
+  if (!leadId && (ctx.entityType === 'proposal' || ctx.entityType === 'proposals') && ctx.entityId) {
+    const prop = await ctx.directus.request(
+      readItem('proposals', ctx.entityId, { fields: ['id', 'lead'] }),
+    ).catch(() => null) as any;
+    leadId = prop?.lead ? (typeof prop.lead === 'object' ? prop.lead.id : prop.lead) : null;
+  }
 
   const provider = getLLMProvider();
   const gen = await generateDocuments({

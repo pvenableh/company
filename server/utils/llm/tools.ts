@@ -109,7 +109,7 @@ export const ADD_TASK_TOOL: ToolDefinition = {
 export const GENERATE_DOCUMENTS_TOOL: ToolDefinition = {
   name: 'generate_documents',
   description:
-    'Generates a DRAFT proposal and/or contract from a plain-language overview of the project deliverables, and saves them in "draft" status for the user to review and edit. Use when the user asks to "draft a proposal", "write up a contract", "put together a proposal and contract for this", etc. The overview is whatever the user described (scope, deliverables, pricing if mentioned). Nothing is sent or signed — these are editable drafts. If the chat is focused on a lead, its id is used automatically to ground and link the documents; do not invent client details not present in the conversation.',
+    'Generates a DRAFT proposal and/or contract from a plain-language overview of the project deliverables, and saves them in "draft" status for the user to review and edit. Use when the user asks to "draft a proposal", "write up a contract", "put together a proposal and contract for this", or "turn this proposal into a contract". The overview is whatever the user described (scope, deliverables, pricing if mentioned). Nothing is sent or signed — these are editable drafts. If the chat is focused on a lead, its id grounds + links the documents. If the chat is focused on a PROPOSAL (turning it into a contract), pass targets:["contract"] and base the overview on that proposal\'s scope + pricing — the server links it to the proposal\'s lead automatically. Do not invent client details not present in the conversation.',
   input_schema: {
     type: 'object',
     properties: {
