@@ -5,8 +5,31 @@
 
 import { getAnalyticsSnapshots, getSocialAccounts, getSocialAccountById } from '~~/server/utils/social-directus'
 import { requireSocialOrg } from '~~/server/utils/social-tenancy'
+import { isSocialPublishingEnabled } from '~~/server/utils/social-publishing'
+
+// Empty overview returned when there's nothing to aggregate — also the shape
+// callers (useMarketingPulse) read via `data.overview`.
+const EMPTY_OVERVIEW = {
+  data: {
+    overview: {
+      total_accounts: 0,
+      total_followers: 0,
+      total_reach: 0,
+      total_impressions: 0,
+      avg_engagement_rate: 0,
+    },
+    accounts: [],
+  },
+}
 
 export default defineEventHandler(async (event) => {
+  // Social is hidden until the Meta/LinkedIn apps are approved. Short-circuit
+  // before requireSocialOrg so dashboards that fetch this on mount get a clean
+  // empty payload instead of a 500 from the tenancy/Directus path.
+  if (!isSocialPublishingEnabled(event)) {
+    return EMPTY_OVERVIEW
+  }
+
   const { organizationId } = await requireSocialOrg(event)
   const query = getQuery(event)
   const accountId = query.account_id as string | undefined

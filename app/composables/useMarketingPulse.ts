@@ -39,6 +39,7 @@ interface SocialOverview {
  */
 export const useMarketingPulse = () => {
 	const { selectedOrg } = useOrganization();
+	const { socialPublishingEnabled } = useSocialPublishing();
 
 	const recommendations = useState<MarketingRecommendation[]>('marketingPulse:recs', () => []);
 	const metrics = useState<HealthMetrics | null>('marketingPulse:metrics', () => null);
@@ -83,6 +84,9 @@ export const useMarketingPulse = () => {
 		loading.value = true;
 		const fetchFn = useRequestFetch();
 		try {
+			// Social is hidden until the Meta/LinkedIn apps are approved — skip the
+			// social fetches entirely so they don't fire (and 500) on dashboard load.
+			const socialOn = socialPublishingEnabled.value;
 			const [recsRes, healthRes, analyticsRes, accountsRes] = await Promise.allSettled([
 				fetchFn<{ recommendations: MarketingRecommendation[] }>(
 					'/api/marketing/recommendations',
@@ -91,10 +95,14 @@ export const useMarketingPulse = () => {
 				fetchFn<{ metrics: HealthMetrics }>('/api/marketing/health-snapshot', {
 					query: { organizationId: orgId },
 				}),
-				fetchFn<{ data: { overview: SocialOverview } }>('/api/social/analytics').catch(
-					() => null,
-				),
-				fetchFn<{ data: SocialAccount[] }>('/api/social/accounts').catch(() => null),
+				socialOn
+					? fetchFn<{ data: { overview: SocialOverview } }>('/api/social/analytics').catch(
+							() => null,
+						)
+					: Promise.resolve(null),
+				socialOn
+					? fetchFn<{ data: SocialAccount[] }>('/api/social/accounts').catch(() => null)
+					: Promise.resolve(null),
 			]);
 
 			recommendations.value =
