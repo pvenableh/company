@@ -787,6 +787,10 @@ watch(() => props.clientId, () => {
 				</template>
 			</AppsClientsClientIdentityStrip>
 
+			<div class="flex justify-end mb-3">
+				<AppsCreateWithEarnest entity-type="client" />
+			</div>
+
 			<AppsClientsClientTabsBar
 				v-model="activeTab"
 				:counts="tabCounts"
