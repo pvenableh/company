@@ -55,7 +55,59 @@ async function resolveUserNames(userIds: string[]): Promise<Record<string, strin
 }
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
-export const PROPOSAL_TOOLS = new Set<string>(['send_email']);
+export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice']);
+
+/** Normalize AI line items into clean {description, rate, quantity, product?} rows. */
+function normalizeLineItems(raw: any): Array<Record<string, any>> {
+  return (Array.isArray(raw) ? raw : [])
+    .map((li) => {
+      const description = (li?.description ?? '').toString().trim();
+      const rate = Number(li?.rate);
+      if (!description || !Number.isFinite(rate)) return null;
+      const q = Number(li?.quantity);
+      const quantity = Number.isFinite(q) && q > 0 ? q : 1;
+      const item: Record<string, any> = { description, rate: Math.round(rate * 100) / 100, quantity };
+      if (li.product) item.product = String(li.product);
+      return item;
+    })
+    .filter(Boolean) as Array<Record<string, any>>;
+}
+
+function fmtUsd(n: number): string {
+  return `$${(Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+/** Normalize a raw tasks array (AI shape) into clean {title, due_date?, priority?} rows. */
+function normalizeTasks(raw: any): Array<Record<string, any>> {
+  return (Array.isArray(raw) ? raw : [])
+    .map((t) => {
+      const title = (t?.title ?? '').toString().trim();
+      if (!title) return null;
+      const task: Record<string, any> = { title };
+      if (t.due_date) task.due_date = String(t.due_date);
+      if (t.priority) task.priority = String(t.priority);
+      return task;
+    })
+    .filter(Boolean) as Array<Record<string, any>>;
+}
+
+/** Normalize a raw events array, carrying nested tasks. Returns cleaned events + total task count. */
+function normalizeEvents(raw: any): { events: Array<Record<string, any>>; taskCount: number } {
+  const events: Array<Record<string, any>> = [];
+  let taskCount = 0;
+  for (const e of Array.isArray(raw) ? raw : []) {
+    const title = (e?.title ?? '').toString().trim();
+    if (!title) continue;
+    const ev: Record<string, any> = { title };
+    if (e.event_date) ev.event_date = String(e.event_date);
+    if (e.end_date) ev.end_date = String(e.end_date);
+    if (e.description) ev.description = String(e.description);
+    const tasks = normalizeTasks(e.tasks);
+    if (tasks.length) { ev.tasks = tasks; taskCount += tasks.length; }
+    events.push(ev);
+  }
+  return { events, taskCount };
+}
 
 export function isProposalTool(name: string): boolean {
   return PROPOSAL_TOOLS.has(name);
@@ -81,9 +133,183 @@ export async function proposeToolCall(
   switch (toolName) {
     case 'send_email':
       return await proposeSendEmail(input, ctx);
+    case 'create_project':
+      return await proposeCreateProject(input, ctx);
+    case 'add_event':
+      return await proposeAddEvent(input, ctx);
+    case 'create_invoice':
+      return await proposeCreateInvoice(input, ctx);
     default:
       return { success: false, summary: '', error: `Unknown proposal tool: ${toolName}` };
   }
+}
+
+// ── create_invoice ─────────────────────────────────────────────────────────
+// Approval-gated: the invoice + line items are queued; the executor generates
+// the invoice code and totals on approval. Line items need a description + rate.
+async function proposeCreateInvoice(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
+  const clientId = input.client_id ?? (isClientFocus ? ctx.entityId : null);
+  if (!clientId) {
+    return { success: false, summary: '', error: 'create_invoice needs a client_id (or focus the chat on a client)' };
+  }
+
+  const lineItems = normalizeLineItems(input.line_items);
+  if (!lineItems.length) {
+    return { success: false, summary: '', error: 'create_invoice needs at least one line item with a description and rate' };
+  }
+
+  const subtotal = lineItems.reduce((s, li) => s + li.quantity * li.rate, 0);
+
+  const payload = {
+    client_id: String(clientId),
+    invoice_date: input.invoice_date ? String(input.invoice_date) : null,
+    due_date: input.due_date ? String(input.due_date) : null,
+    line_items: lineItems,
+  };
+
+  const rowTitle = `Create invoice — ${fmtUsd(subtotal)} (${lineItems.length} item${lineItems.length !== 1 ? 's' : ''})`;
+  const preview = {
+    kind: 'create_invoice' as const,
+    subtotal,
+    due_date: payload.due_date,
+    lineItems: lineItems.map((li) => ({ description: li.description, quantity: li.quantity, rate: li.rate, amount: Math.round(li.quantity * li.rate * 100) / 100 })),
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'create_invoice',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: 'clients',
+    entityId: String(clientId),
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the invoice for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — no invoice has been created yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+// ── create_project ─────────────────────────────────────────────────────────
+// Approval-gated: a whole project (with its events + tasks) is queued as one
+// pending row. The executor (ai-action-executors.ts createProjectExecutor)
+// creates the tree on approval. entity_type/id point at the client (if linked)
+// so the row surfaces on that client's activity; there's no project id yet.
+async function proposeCreateProject(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const title = (input.title ?? '').toString().trim();
+  if (!title) return { success: false, summary: '', error: 'title is required to create a project' };
+
+  const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
+  const clientId = input.client_id ?? (isClientFocus ? ctx.entityId : null);
+
+  const { events, taskCount: eventTaskCount } = normalizeEvents(input.events);
+  const projectTasks = normalizeTasks(input.tasks);
+  const totalTasks = eventTaskCount + projectTasks.length;
+
+  const payload: Record<string, any> = {
+    title,
+    client_id: clientId ?? null,
+    description: input.description ? String(input.description) : null,
+    start_date: input.start_date ? String(input.start_date) : null,
+    due_date: input.due_date ? String(input.due_date) : null,
+    events,
+    tasks: projectTasks,
+  };
+
+  const parts: string[] = [];
+  if (events.length) parts.push(`${events.length} event${events.length !== 1 ? 's' : ''}`);
+  if (totalTasks) parts.push(`${totalTasks} task${totalTasks !== 1 ? 's' : ''}`);
+  const rowTitle = `Create project "${title}"${parts.length ? ` with ${parts.join(' and ')}` : ''}`;
+
+  const preview = {
+    kind: 'create_project' as const,
+    title,
+    description: payload.description,
+    start_date: payload.start_date,
+    due_date: payload.due_date,
+    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length })),
+    projectTaskCount: projectTasks.length,
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'create_project',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: clientId ? 'clients' : 'projects',
+    entityId: clientId ?? null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the project for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — nothing has been created yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+// ── add_event ──────────────────────────────────────────────────────────────
+// Approval-gated: adds events (+ their tasks) to an EXISTING project.
+async function proposeAddEvent(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const isProjectFocus = ctx.entityType === 'project' || ctx.entityType === 'projects';
+  const projectId = input.project_id ?? (isProjectFocus ? ctx.entityId : null);
+  if (!projectId) {
+    return { success: false, summary: '', error: 'add_event needs a project_id (or focus the chat on a project)' };
+  }
+
+  const { events, taskCount } = normalizeEvents(input.events);
+  if (!events.length) return { success: false, summary: '', error: 'add_event needs at least one event with a title' };
+
+  const payload = { project_id: String(projectId), events };
+
+  const parts = [`${events.length} event${events.length !== 1 ? 's' : ''}`];
+  if (taskCount) parts.push(`${taskCount} task${taskCount !== 1 ? 's' : ''}`);
+  const rowTitle = `Add ${parts.join(' and ')} to project`;
+
+  const preview = {
+    kind: 'add_event' as const,
+    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length })),
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'add_event',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: 'projects',
+    entityId: String(projectId),
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the events for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. Waiting in your AI Activity queue for approval.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
 }
 
 async function proposeSendEmail(

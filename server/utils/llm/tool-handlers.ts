@@ -155,7 +155,10 @@ const ORG_SCOPED_COLLECTIONS: Record<string, string> = {
   projects: 'organization',
   tickets: 'organization',
   tasks: 'organization_id',
-  invoices: 'organization',
+  // invoices have no direct organization column — scope via the client.
+  invoices: 'client.organization',
+  proposals: 'organization',
+  contracts: 'organization',
   leads: 'organization',
   contacts: 'organization',
   project_events: 'project.organization',

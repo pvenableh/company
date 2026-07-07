@@ -142,8 +142,11 @@ const createTasksExecutor: AiActionExecutor = async ({ action, organizationId })
 export const UPDATE_FIELD_ALLOWLIST: Record<string, string[]> = {
   leads: ['status', 'stage'],
   clients: ['status'],
-  projects: ['status'],
+  projects: ['status', 'title', 'description', 'start_date', 'due_date', 'contract_value'],
   tasks: ['status', 'priority', 'schedule', 'due_date'],
+  proposals: ['proposal_status', 'title'],
+  contracts: ['contract_status', 'title'],
+  invoices: ['status', 'due_date'],
 };
 
 // Org column per allow-listed collection (tasks uses organization_id).
@@ -152,6 +155,10 @@ export const UPDATE_ORG_FIELD: Record<string, string> = {
   clients: 'organization',
   projects: 'organization',
   tasks: 'organization_id',
+  proposals: 'organization',
+  contracts: 'organization',
+  // invoices have no direct organization column — scope via the client.
+  invoices: 'client.organization',
 };
 
 const updateFieldExecutor: AiActionExecutor = async ({ action, organizationId }) => {
@@ -429,6 +436,284 @@ const rescheduleProjectExecutor: AiActionExecutor = async ({ action, organizatio
   };
 };
 
+// ── create_project / add_event ─────────────────────────────────────────────────
+// Internal creation (no outbound effect), but blast-radius is a whole tree of
+// rows, so it's approval-gated: proposed pending (tool-proposals.ts) and only
+// created here on approve. Writes use the admin client; the project's org is set
+// from the membership-verified action, and any client link is org-verified.
+
+/** Create one task row. Returns true if created, false if the title was empty. */
+async function createTaskRow(
+  directus: ReturnType<typeof getServerDirectus>,
+  t: Record<string, any>,
+): Promise<boolean> {
+  const title = (t?.title ?? '').toString().trim();
+  if (!title) return false;
+  const fields: Record<string, any> = {
+    title,
+    organization_id: t.organization_id,
+    status: 'new',
+    schedule: 'unscheduled',
+    ai_suggested: true,
+  };
+  if (t.category) fields.category = t.category;
+  if (t.project_id) fields.project_id = t.project_id;
+  if (t.project_event_id) fields.project_event_id = t.project_event_id;
+  if (t.due_date) fields.due_date = String(t.due_date);
+  if (t.priority) fields.priority = String(t.priority);
+  if (t.description) fields.description = String(t.description);
+  await directus.request(createItem('tasks' as any, fields, { fields: ['id'] as any }));
+  return true;
+}
+
+/**
+ * Create a list of project events under a project, each with its optional tasks.
+ * Mirrors server/api/projects/save-events.post.ts: events are linked
+ * sequentially via depends_on, tasks attach to both the event and the project.
+ */
+async function createEventsWithTasks(
+  directus: ReturnType<typeof getServerDirectus>,
+  projectId: string,
+  organizationId: string,
+  rawEvents: any,
+): Promise<{ eventsCreated: number; tasksCreated: number }> {
+  let eventsCreated = 0;
+  let tasksCreated = 0;
+  let previousEventId: string | null = null;
+  let sort = 0;
+
+  for (const e of Array.isArray(rawEvents) ? rawEvents : []) {
+    const title = (e?.title ?? '').toString().trim();
+    if (!title) continue;
+
+    const evFields: Record<string, any> = {
+      project: projectId,
+      title,
+      status: 'Scheduled',
+      priority: 'Normal',
+      sort: sort++,
+      depends_on: previousEventId,
+    };
+    if (e.description) evFields.description = String(e.description);
+    if (e.event_date) { evFields.event_date = String(e.event_date); evFields.date = String(e.event_date); }
+    if (e.end_date) evFields.end_date = String(e.end_date);
+
+    const created = (await directus.request(
+      createItem('project_events' as any, evFields, { fields: ['id'] as any }),
+    )) as any;
+    if (!created?.id) continue;
+    eventsCreated++;
+    previousEventId = String(created.id);
+
+    for (const t of Array.isArray(e.tasks) ? e.tasks : []) {
+      const ok = await createTaskRow(directus, {
+        ...t,
+        project_id: projectId,
+        project_event_id: created.id,
+        organization_id: organizationId,
+        category: 'event',
+      });
+      if (ok) tasksCreated++;
+    }
+  }
+
+  return { eventsCreated, tasksCreated };
+}
+
+const createProjectExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const title = (payload.title ?? '').toString().trim();
+  if (!title) throw new Error('create_project: title is required');
+
+  const directus = getServerDirectus();
+
+  const projectFields: Record<string, any> = {
+    title,
+    organization: organizationId,
+    status: 'Scheduled',
+  };
+  if (payload.description) projectFields.description = String(payload.description);
+  if (payload.start_date) projectFields.start_date = String(payload.start_date);
+  if (payload.due_date) projectFields.due_date = String(payload.due_date);
+
+  // Org-verify the client link (fail-soft: drop a cross-org client, keep project).
+  if (payload.client_id) {
+    const orgId = await loadOrgId(directus, 'clients', payload.client_id, 'organization');
+    if (orgId === organizationId) projectFields.client = payload.client_id;
+  }
+
+  const project = (await directus.request(
+    createItem('projects' as any, projectFields, { fields: ['id'] as any }),
+  )) as any;
+  const projectId = project?.id ? String(project.id) : null;
+  if (!projectId) throw new Error('create_project: project creation returned no id');
+
+  const { eventsCreated, tasksCreated } = await createEventsWithTasks(
+    directus, projectId, organizationId, payload.events,
+  );
+
+  // Project-level tasks (not tied to a specific event).
+  let projectTasks = 0;
+  for (const t of Array.isArray(payload.tasks) ? payload.tasks : []) {
+    const ok = await createTaskRow(directus, {
+      ...t, project_id: projectId, organization_id: organizationId, category: 'project',
+    });
+    if (ok) projectTasks++;
+  }
+
+  return { projectId, eventsCreated, tasksCreated: tasksCreated + projectTasks };
+};
+
+const addEventExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const projectId = payload.project_id ? String(payload.project_id) : null;
+  if (!projectId) throw new Error('add_event: project_id is required');
+
+  const directus = getServerDirectus();
+
+  const orgId = await loadOrgId(directus, 'projects', projectId, 'organization');
+  if (orgId !== organizationId) throw new Error('add_event: project belongs to another organization');
+
+  const { eventsCreated, tasksCreated } = await createEventsWithTasks(
+    directus, projectId, organizationId, payload.events,
+  );
+  if (!eventsCreated) throw new Error('add_event: no events were created (all entries were empty)');
+
+  return { projectId, eventsCreated, tasksCreated };
+};
+
+// ── create_invoice ─────────────────────────────────────────────────────────────
+// Approval-gated: a real invoice + line items. The server generates the invoice
+// code (INV-{ORG}-{CLIENT}-{YEAR}-{NNNN}, mirroring useInvoices.generateInvoiceCode)
+// and lets the invoice Flow compute totals. Line items require a product FK
+// (products are global) — resolve by name, else a default service product.
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function generateInvoiceCodeServer(
+  directus: ReturnType<typeof getServerDirectus>,
+  client: any,
+  organizationId: string,
+  invoiceDate: string,
+): Promise<string | null> {
+  try {
+    const clientCode = String(client?.code || '').toUpperCase();
+    if (!clientCode) return null;
+    const org = (await directus.request(
+      readItem('organizations' as any, organizationId, { fields: ['id', 'code'] as any }),
+    ).catch(() => null)) as any;
+    const orgCode = String(org?.code || '').toUpperCase();
+
+    let year = new Date().getFullYear();
+    const parsed = new Date(invoiceDate);
+    if (!isNaN(parsed.getTime())) year = parsed.getFullYear();
+
+    const newPrefix = orgCode ? `INV-${orgCode}-${clientCode}-${year}-` : `INV-${clientCode}-${year}-`;
+    const legacyPrefix = `INV-${clientCode}-${year}-`;
+    const prefixes = orgCode ? [newPrefix, legacyPrefix] : [legacyPrefix];
+
+    let maxNum = 0;
+    for (const prefix of prefixes) {
+      const rows = (await directus.request(
+        readItems('invoices' as any, { fields: ['invoice_code'] as any, filter: { invoice_code: { _starts_with: prefix } }, limit: -1 }),
+      )) as any[];
+      for (const inv of rows || []) {
+        const m = String(inv?.invoice_code || '').match(/(\d+)$/);
+        if (m) { const n = parseInt(m[1]!, 10); if (n > maxNum) maxNum = n; }
+      }
+    }
+    return `${newPrefix}${String(maxNum + 1).padStart(4, '0')}`;
+  } catch {
+    return null;
+  }
+}
+
+const createInvoiceExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const clientId = payload.client_id ? String(payload.client_id) : null;
+  if (!clientId) throw new Error('create_invoice: client_id is required');
+
+  const directus = getServerDirectus();
+
+  const client = (await directus.request(
+    readItem('clients' as any, clientId, { fields: ['id', 'code', 'organization'] as any }),
+  ).catch(() => null)) as any;
+  if (!client) throw new Error('create_invoice: client not found');
+  if (resolveId(client.organization) !== organizationId) {
+    throw new Error('create_invoice: client belongs to another organization');
+  }
+
+  const rawLines = Array.isArray(payload.line_items) ? payload.line_items : [];
+  if (!rawLines.length) throw new Error('create_invoice: at least one line item is required');
+
+  // Line items need a product FK (required, global collection). Resolve by name,
+  // else a default service product; no products at all is a clear, fail-hard error.
+  const products = (await directus.request(
+    readItems('products' as any, { fields: ['id', 'name', 'type'] as any, limit: 200 }),
+  )) as any[];
+  if (!products.length) {
+    throw new Error('create_invoice: no products configured — add a product (e.g. "Services") before Earnest can create invoices');
+  }
+  const byName = new Map(products.map((p) => [String(p.name || '').toLowerCase().trim(), p.id]));
+  const defaultProduct =
+    products.find((p) => /service|consult|hour|fee/i.test(String(p.name || ''))) ||
+    products.find((p) => p.type === 'Service') ||
+    products[0];
+
+  const line_items = rawLines
+    .map((li: any) => {
+      const description = String(li?.description || '').trim();
+      const rate = Number(li?.rate);
+      if (!description || !Number.isFinite(rate)) return null;
+      const quantity = Number.isFinite(Number(li?.quantity)) && Number(li?.quantity) > 0 ? Number(li.quantity) : 1;
+      let productId = defaultProduct.id;
+      if (li.product) {
+        const m = byName.get(String(li.product).toLowerCase().trim());
+        if (m) productId = m;
+      }
+      return {
+        product: productId,
+        description,
+        quantity,
+        rate: Math.round(rate * 100) / 100,
+        amount: Math.round(quantity * rate * 100) / 100,
+      };
+    })
+    .filter(Boolean) as Array<Record<string, any>>;
+  if (!line_items.length) throw new Error('create_invoice: no valid line items (each needs a description + rate)');
+
+  const invoiceDate = payload.invoice_date ? String(payload.invoice_date) : new Date().toISOString().slice(0, 10);
+  const dueDate = payload.due_date ? String(payload.due_date) : addDays(invoiceDate, 30);
+  const invoiceCode = await generateInvoiceCodeServer(directus, client, organizationId, invoiceDate);
+
+  const invoiceFields: Record<string, any> = {
+    client: clientId,
+    invoice_date: invoiceDate,
+    due_date: dueDate,
+    status: 'pending',
+    bill_to: organizationId,
+    line_items,
+  };
+  if (invoiceCode) invoiceFields.invoice_code = invoiceCode;
+
+  const created = (await directus.request(
+    createItem('invoices' as any, invoiceFields, { fields: ['id', 'invoice_code', 'total_amount'] as any }),
+  )) as any;
+  if (!created?.id) throw new Error('create_invoice: invoice creation returned no id');
+
+  const subtotal = line_items.reduce((s, l) => s + Number(l.amount || 0), 0);
+  return {
+    invoiceId: String(created.id),
+    invoice_code: created.invoice_code ?? invoiceCode ?? null,
+    lineCount: line_items.length,
+    total: created.total_amount ?? subtotal,
+  };
+};
+
 // ── stubs for not-yet-outbound types ──────────────────────────────────────────
 // generate_documents draft-creation is non-outbound and logged straight to
 // `executed`, so it never flows through approval — but we register a stub anyway
@@ -452,6 +737,9 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   update_field: updateFieldExecutor,
   send_email: sendEmailExecutor,
   reschedule_project: rescheduleProjectExecutor,
+  create_project: createProjectExecutor,
+  add_event: addEventExecutor,
+  create_invoice: createInvoiceExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),
   other: makeStub('other'),

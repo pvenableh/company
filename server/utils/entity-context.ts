@@ -65,6 +65,14 @@ export async function getEntityContext(
       return await buildListContext(directus, entityId, now);
     } else if (entityType === 'social_post') {
       return await buildSocialPostContext(directus, entityId, now);
+    } else if (entityType === 'task') {
+      return await buildTaskContext(directus, entityId, now);
+    } else if (entityType === 'contract') {
+      return await buildContractContext(directus, entityId, now);
+    } else if (entityType === 'marketing_campaign') {
+      return await buildMarketingCampaignContext(directus, entityId, now);
+    } else if (entityType === 'content_plan') {
+      return await buildContentPlanContext(directus, entityId, now);
     }
     return '';
   } catch (err: any) {
@@ -1504,6 +1512,180 @@ async function buildSocialPostContext(directus: any, postId: string, now: Date):
 
   lines.push('');
   lines.push('Focus your reasoning on this social post. Suggest caption tightening, hashtags, timing, or platform-specific tweaks. When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Task Context ───────────────────────────────────────────────────────────
+
+async function buildTaskContext(directus: any, taskId: string, now: Date): Promise<string> {
+  const task = await directus.request(
+    readItem('tasks', taskId, {
+      fields: [
+        'id', 'title', 'description', 'status', 'priority', 'due_date', 'date_completed',
+        'date_created', 'category',
+        'project_id.id', 'project_id.title', 'project_id.status',
+        'assigned_to.directus_users_id.first_name', 'assigned_to.directus_users_id.last_name',
+      ],
+    }),
+  ).catch(() => null) as any;
+
+  if (!task) return '';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Task "${task.title || 'Untitled task'}"`);
+
+  lines.push('[Source: Task Profile]');
+  lines.push(`Status: ${task.status || 'new'}`);
+  if (task.priority) lines.push(`Priority: ${task.priority}`);
+  if (task.category) lines.push(`Category: ${task.category}`);
+  if (task.due_date) {
+    const daysUntil = Math.ceil((new Date(task.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    lines.push(`Due: ${task.due_date}${daysUntil < 0 ? ` (${Math.abs(daysUntil)}d OVERDUE)` : daysUntil <= 7 ? ` (${daysUntil}d remaining)` : ''}`);
+  }
+  if (task.date_completed) lines.push(`Completed: ${String(task.date_completed).split('T')[0]}`);
+
+  if (task.project_id?.title) {
+    lines.push('');
+    lines.push('[Source: Project]');
+    lines.push(`Project: ${task.project_id.title} (${task.project_id.status || 'unknown'})`);
+  }
+
+  const assignees = (task.assigned_to || [])
+    .map((a: any) => a.directus_users_id)
+    .filter(Boolean)
+    .map((u: any) => `${u.first_name || ''} ${u.last_name || ''}`.trim())
+    .filter(Boolean);
+  if (assignees.length > 0) {
+    lines.push('');
+    lines.push('[Source: Assignments]');
+    lines.push(`Assigned to: ${assignees.join(', ')}`);
+  }
+
+  if (task.description) {
+    lines.push('');
+    lines.push('[Source: Task Profile]');
+    lines.push(`Description: ${String(task.description).replace(/<[^>]+>/g, ' ').substring(0, 400)}`);
+  }
+
+  lines.push('');
+  lines.push('Focus your reasoning on this task. Recommend next steps, prioritization, or delegation. When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Contract Context ───────────────────────────────────────────────────────
+
+async function buildContractContext(directus: any, contractId: string, now: Date): Promise<string> {
+  const key = Number.isFinite(Number(contractId)) ? Number(contractId) : contractId;
+  const contract = await directus.request(
+    readItem('contracts', key as any, {
+      fields: [
+        'id', 'title', 'contract_status', 'total_value',
+        'date_sent', 'valid_until', 'effective_date', 'signed_at',
+        'signed_by_name', 'date_created',
+        'client.id', 'client.name',
+        'contact.first_name', 'contact.last_name', 'contact.company',
+        'organization.name',
+      ],
+    }),
+  ).catch(() => null) as any;
+
+  if (!contract) return '';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Contract "${contract.title || 'Untitled'}"`);
+
+  lines.push('[Source: Contract Profile]');
+  lines.push(`Status: ${contract.contract_status || 'draft'}`);
+  if (contract.total_value) lines.push(`Value: $${Number(contract.total_value).toLocaleString()}`);
+  if (contract.client?.name) lines.push(`Client: ${contract.client.name}`);
+  if (contract.contact) {
+    const c = contract.contact;
+    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+    if (name || c.company) lines.push(`Signer: ${name || '(no name)'}${c.company ? ` — ${c.company}` : ''}`);
+  }
+  if (contract.effective_date) lines.push(`Effective: ${contract.effective_date}`);
+  if (contract.date_sent) lines.push(`Sent: ${String(contract.date_sent).split('T')[0]}`);
+  if (contract.valid_until) {
+    const daysUntil = Math.ceil((new Date(contract.valid_until).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    lines.push(`Valid until: ${contract.valid_until}${daysUntil < 0 ? ` (${Math.abs(daysUntil)}d EXPIRED)` : daysUntil <= 7 ? ` (${daysUntil}d remaining)` : ''}`);
+  }
+  if (contract.signed_at) {
+    lines.push(`Signed: ${String(contract.signed_at).split('T')[0]}${contract.signed_by_name ? ` by ${contract.signed_by_name}` : ''}`);
+  }
+
+  lines.push('');
+  lines.push('Focus your reasoning on this contract. Recommend actions based on status (draft→ready-to-send, sent→follow up for signature, expired→renew). When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Marketing Campaign Context ─────────────────────────────────────────────
+
+async function buildMarketingCampaignContext(directus: any, campaignId: string, now: Date): Promise<string> {
+  const key = Number.isFinite(Number(campaignId)) ? Number(campaignId) : campaignId;
+  const campaign = await directus.request(
+    readItem('marketing_campaigns', key as any, {
+      fields: [
+        'id', 'title', 'status', 'type', 'goal', 'start_date', 'end_date',
+        'date_created', 'date_updated',
+      ],
+    }),
+  ).catch(() => null) as any;
+
+  if (!campaign) return '';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Marketing campaign "${campaign.title || 'Untitled'}"`);
+
+  lines.push('[Source: Campaign Profile]');
+  lines.push(`Status: ${campaign.status || 'draft'}`);
+  if (campaign.type) lines.push(`Type: ${campaign.type}`);
+  if (campaign.goal) lines.push(`Goal: ${campaign.goal}`);
+  if (campaign.start_date) lines.push(`Start: ${String(campaign.start_date).split('T')[0]}`);
+  if (campaign.end_date) {
+    const daysUntil = Math.ceil((new Date(campaign.end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    lines.push(`End: ${String(campaign.end_date).split('T')[0]}${daysUntil < 0 ? ` (ended ${Math.abs(daysUntil)}d ago)` : daysUntil <= 7 ? ` (${daysUntil}d remaining)` : ''}`);
+  }
+
+  lines.push('');
+  lines.push('Focus your reasoning on this campaign. Recommend actions based on status and timing. When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Content Plan Context ───────────────────────────────────────────────────
+
+async function buildContentPlanContext(directus: any, planId: string, now: Date): Promise<string> {
+  const key = Number.isFinite(Number(planId)) ? Number(planId) : planId;
+  const plan = await directus.request(
+    readItem('content_plans', key as any, {
+      fields: [
+        'id', 'title', 'state', 'plan_type', 'objective', 'target_month',
+        'date_created', 'sent_for_review_at', 'approved_at',
+        'project.title', 'target_client.name',
+      ],
+    }),
+  ).catch(() => null) as any;
+
+  if (!plan) return '';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Content plan "${plan.title || 'Untitled plan'}"`);
+
+  lines.push('[Source: Content Plan Profile]');
+  lines.push(`Status: ${plan.state || 'draft'}`);
+  if (plan.plan_type) lines.push(`Type: ${plan.plan_type}`);
+  if (plan.objective) lines.push(`Objective: ${plan.objective}`);
+  if (plan.target_month) lines.push(`Target month: ${String(plan.target_month).split('T')[0]}`);
+  if (plan.target_client?.name) lines.push(`Client: ${plan.target_client.name}`);
+  if (plan.project?.title) lines.push(`Project: ${plan.project.title}`);
+  if (plan.sent_for_review_at) lines.push(`Sent for review: ${String(plan.sent_for_review_at).split('T')[0]}`);
+  if (plan.approved_at) lines.push(`Approved: ${String(plan.approved_at).split('T')[0]}`);
+
+  lines.push('');
+  lines.push('Focus your reasoning on this content plan. Recommend actions based on its review state and timing. When citing data, include the [Source: X] tag.');
 
   return truncate(lines.join('\n'));
 }
