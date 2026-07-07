@@ -77,6 +77,7 @@ const sessionEP = ref(0); // EP earned this session (nice running tally)
 
 let _lastRewardAt = 0;
 let _idSeq = 0;
+let _comboTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function useArcade() {
   const sound = useArcadeSound();
@@ -108,6 +109,15 @@ export function useArcade() {
       window.setTimeout(() => {
         pops.value = pops.value.filter((p) => p.id !== pop.id);
       }, POP_TTL);
+
+      // Decay the combo once the chain window lapses with no new reward, so the
+      // combo meter fades out instead of lingering on screen indefinitely. Each
+      // reward resets the timer, keeping an active chain visible.
+      if (_comboTimer) clearTimeout(_comboTimer);
+      _comboTimer = setTimeout(() => {
+        combo.value = 0;
+        _comboTimer = undefined;
+      }, COMBO_WINDOW);
     }
     return pop;
   };
