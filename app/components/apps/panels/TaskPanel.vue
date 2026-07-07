@@ -14,9 +14,13 @@ const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayloa
 const emit = defineEmits<{ (e: 'close'): void }>();
 
 const task = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(t: any) {
   task.value = t;
+  // Register task context so Earnest is aware of what you're viewing in the
+  // slide-over (tasks have no full page, so this panel is the only surface).
+  setEntity('task', String(t.id), t.title || 'Task');
 }
 
 const title = computed(() => task.value?.title || 'Task');
@@ -37,6 +41,10 @@ const statusLabel = computed(() => {
 const priorityLabel = computed(() => {
   const p = (task.value as any)?.priority;
   return p && p !== 'medium' ? p : null;
+});
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
 });
 </script>
 

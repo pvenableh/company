@@ -21,10 +21,22 @@ const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const client = ref<Client | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(c: Client) {
 	client.value = c;
+	// Register client context so Earnest is aware of who you're viewing in
+	// the slide-over (the full page does this; the panel previously didn't).
+	setEntity('client', String(c.id), c.name || 'Client');
 }
+
+// Drop the entity context when the slide-over closes — but only if it's
+// still pointing at us (a panel pushed on top may have taken over). Use
+// resetEntityContext so closing the panel doesn't also close a deliberately
+// opened Earnest panel.
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>
@@ -40,6 +52,6 @@ function onLoaded(c: Client) {
 			</NuxtLink>
 		</template>
 
-		<AppsClientsClientWorkspace :client-id="id" @loaded="onLoaded" />
+		<AppsClientsClientWorkspace :client-id="id" compact @loaded="onLoaded" />
 	</AppSlideOverShell>
 </template>

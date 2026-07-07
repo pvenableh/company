@@ -14,9 +14,12 @@ const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayloa
 defineEmits<{ (e: 'close'): void }>();
 
 const contract = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(c: any) {
   contract.value = c;
+  // Register contract context so Earnest is aware of what you're viewing.
+  setEntity('contract', String(c.id), c.title || 'Contract');
 }
 
 const title = computed(() => contract.value?.title || 'Contract');
@@ -36,6 +39,10 @@ const fullPageHref = computed(() => {
 
 const statusLabel = computed(() => (contract.value as any)?.contract_status || null);
 const clientName = computed(() => (contract.value as any)?.client?.name || null);
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

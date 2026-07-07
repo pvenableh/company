@@ -15,9 +15,11 @@ defineEmits<{ (e: 'close'): void }>();
 
 const list = ref<MailingList | null>(null);
 const workspaceRef = ref<{ openEdit: () => void } | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(l: MailingList) {
   list.value = l;
+  if (l?.id) setEntity('list', String(l.id), l.name || 'List');
 }
 
 const title = computed(() => list.value?.name || 'Mailing List');
@@ -25,6 +27,10 @@ const subscriberCount = computed(() => Number((list.value as any)?.subscriber_co
 const subtitle = computed(() => {
   if (!list.value) return null;
   return `${subscriberCount.value} active subscriber${subscriberCount.value === 1 ? '' : 's'}`;
+});
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
 });
 </script>
 

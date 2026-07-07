@@ -16,6 +16,7 @@ const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const { pop } = useAppSlideOverStack();
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 const refreshSignal = useState<number>('marketing-campaigns-refresh', () => 0);
 
 const campaignItemsApi = useDirectusItems('marketing_campaigns');
@@ -61,6 +62,8 @@ watch(
 				draft.goal = campaign.value.goal || '';
 				draft.start_date = toDateInput(campaign.value.start_date);
 				draft.end_date = toDateInput(campaign.value.end_date);
+					// Register campaign context so Earnest is aware of what you're viewing.
+					setEntity('marketing_campaign', String(campaign.value.id), campaign.value.title || 'Campaign');
 			}
 		} catch (err: any) {
 			error.value = err?.message || 'Failed to load campaign';
@@ -94,6 +97,10 @@ async function save() {
 		saving.value = false;
 	}
 }
+
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

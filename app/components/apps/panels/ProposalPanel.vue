@@ -13,9 +13,13 @@ const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayloa
 defineEmits<{ (e: 'close'): void }>();
 
 const proposal = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(p: any) {
   proposal.value = p;
+  // Register proposal context so Earnest is aware of what you're viewing in
+  // the slide-over (the full workspace does this; the panel previously didn't).
+  setEntity('proposal', String(p.id), p.title || 'Proposal');
 }
 
 const title = computed(() => proposal.value?.title || 'Proposal');
@@ -40,6 +44,12 @@ const heroSubtitle = computed(() => {
   const c = p.contact;
   const name = c ? [c.first_name, c.last_name].filter(Boolean).join(' ').trim() : '';
   return name || p.organization?.name || null;
+});
+
+// Drop the entity context when the slide-over closes — but only if it's
+// still pointing at us (a panel pushed on top may have taken over).
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
 });
 </script>
 

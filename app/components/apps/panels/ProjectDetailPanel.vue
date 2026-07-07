@@ -19,10 +19,19 @@ const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const project = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(p: any) {
 	project.value = p;
+	// Register project context so Earnest is aware of the project in the
+	// slide-over (the full page does this; the panel previously didn't).
+	setEntity('project', String(p.id), p.title || 'Project');
 }
+
+// Drop the entity context on close, but only if it still points at us.
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

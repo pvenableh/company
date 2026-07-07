@@ -13,9 +13,11 @@ const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayloa
 defineEmits<{ (e: 'close'): void }>();
 
 const event = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(e: any) {
   event.value = e;
+  if (e?.id) setEntity('project_event', String(e.id), e.title || e.name || 'Event');
 }
 
 const title = computed(() => event.value?.title || 'Event');
@@ -40,6 +42,10 @@ const eventDate = computed(() => {
   try {
     return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   } catch { return null; }
+});
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
 });
 </script>
 

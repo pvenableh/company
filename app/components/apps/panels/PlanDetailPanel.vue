@@ -14,10 +14,7 @@ const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const plan = ref<ContentPlanRecord | null>(null);
-
-function onLoaded(p: ContentPlanRecord) {
-  plan.value = p;
-}
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -33,6 +30,16 @@ const title = computed(() => {
     if (m) return `${MONTH_NAMES[Number(m[2]) - 1]} ${m[1]}`;
   }
   return 'Plan';
+});
+
+function onLoaded(p: ContentPlanRecord) {
+  plan.value = p;
+  // Register content-plan context so Earnest is aware of what you're viewing.
+  setEntity('content_plan', String(p.id), title.value);
+}
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
 });
 </script>
 

@@ -25,6 +25,7 @@ const { push } = useAppSlideOverStack();
 const { getStatusPillClass, getPriorityBadgeClass } = useStatusStyle();
 const toast = useToast();
 const { awardEvent } = useArcadeAwards();
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 const ticket = ref<any | null>(null);
 const loading = ref(false);
@@ -55,6 +56,9 @@ async function load(id: string) {
 	error.value = null;
 	try {
 		ticket.value = await ticketItems.get(id, { fields: TICKET_FIELDS });
+		// Register ticket context so Earnest is aware of what you're viewing in
+		// the slide-over (the full page does this; the panel previously didn't).
+		if (ticket.value) setEntity('ticket', String(ticket.value.id), ticket.value.title || 'Ticket');
 	} catch (err: any) {
 		error.value = err?.message || 'Failed to load ticket';
 	} finally {
@@ -103,6 +107,12 @@ async function changeStatus(next: string) {
 		updatingStatus.value = false;
 	}
 }
+
+// Drop the entity context when the slide-over closes — but only if it's
+// still pointing at us (a panel pushed on top may have taken over).
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

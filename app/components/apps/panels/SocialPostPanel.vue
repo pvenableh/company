@@ -22,6 +22,7 @@ const props = defineProps<{ id: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const post = ref<SocialPost | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 const loading = ref(false);
 const saving = ref(false);
 const error = ref<string | null>(null);
@@ -105,6 +106,7 @@ async function load(id: string) {
 		if (post.value) {
 			draft.caption = post.value.caption || '';
 			draft.scheduled_at = toDateTimeLocalInput(post.value.scheduled_at);
+			setEntity('social_post', String(post.value.id), post.value.caption?.slice(0, 60) || 'Post');
 		}
 	} catch (err: any) {
 		error.value = err?.data?.message || err?.message || 'Failed to load post';
@@ -114,6 +116,10 @@ async function load(id: string) {
 }
 
 watch(() => props.id, (id) => { if (id) load(id); }, { immediate: true });
+
+onBeforeUnmount(() => {
+	if (entityId.value === String(props.id)) resetEntityContext();
+});
 
 async function save() {
 	if (!post.value || saving.value) return;

@@ -13,9 +13,11 @@ const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayloa
 defineEmits<{ (e: 'close'): void }>();
 
 const meeting = ref<any | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(m: any) {
   meeting.value = m;
+  if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
 }
 
 const title = computed(() => meeting.value?.title || 'Meeting');
@@ -35,6 +37,10 @@ const startsAt = computed(() => {
   } catch { return null; }
 });
 const statusLabel = computed(() => (meeting.value as any)?.status || null);
+
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
+});
 </script>
 
 <template>

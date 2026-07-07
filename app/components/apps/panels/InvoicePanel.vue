@@ -10,14 +10,24 @@
 import type { Invoice } from '~~/shared/directus';
 import AppSlideOverShell from '../AppSlideOverShell.vue';
 
-defineProps<{ id: string; mode?: string }>();
+const props = defineProps<{ id: string; mode?: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
 const invoice = ref<Invoice | null>(null);
+const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
 function onLoaded(inv: Invoice) {
   invoice.value = inv;
+  // Register invoice context so Earnest is aware of what you're viewing in
+  // the slide-over (the full workspace does this; the panel previously didn't).
+  setEntity('invoice', String(inv.id), inv.invoice_code || 'Invoice');
 }
+
+// Drop the entity context when the slide-over closes — but only if it's
+// still pointing at us (a panel pushed on top may have taken over).
+onBeforeUnmount(() => {
+  if (entityId.value === String(props.id)) resetEntityContext();
+});
 
 const title = computed(() => invoice.value?.invoice_code || 'Invoice');
 const subtitle = computed(() => {
