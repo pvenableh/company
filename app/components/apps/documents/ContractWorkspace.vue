@@ -183,6 +183,41 @@ function copySigningLink() {
   toast.add({ title: 'Copied', color: 'green' });
 }
 
+// ── Inline-editable Details ───────────────────────────────────────
+const detailValues = computed(() => ({
+  title: contract.value?.title ?? '',
+  contract_status: contract.value?.contract_status ?? '',
+  total_value: contract.value?.total_value ?? '',
+  effective_date: contract.value?.effective_date ? String(contract.value.effective_date).slice(0, 10) : '',
+  valid_until: contract.value?.valid_until ? String(contract.value.valid_until).slice(0, 10) : '',
+  date_sent: contract.value?.date_sent ? String(contract.value.date_sent).slice(0, 10) : '',
+}));
+
+const detailFields = [
+  { key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Contract title' },
+  {
+    key: 'contract_status', label: 'Status', type: 'select' as const,
+    options: [
+      { value: 'draft', label: 'Draft' },
+      { value: 'sent', label: 'Sent' },
+      { value: 'signed', label: 'Signed' },
+      { value: 'declined', label: 'Declined' },
+      { value: 'cancelled', label: 'Cancelled' },
+      { value: 'expired', label: 'Expired' },
+    ],
+  },
+  { key: 'total_value', label: 'Value', type: 'number' as const, prefix: '$' },
+  { key: 'effective_date', label: 'Effective', type: 'date' as const },
+  { key: 'valid_until', label: 'Valid until', type: 'date' as const },
+  { key: 'date_sent', label: 'Sent', type: 'date' as const },
+];
+
+function onDetailsUpdated(patch: Record<string, any>) {
+  if (!contract.value) return;
+  Object.assign(contract.value, patch);
+  emit('loaded', contract.value);
+}
+
 // Mark-read only when this workspace owns the full page chrome — inside the
 // slide-over the panel owns the read-tracking decision (currently it doesn't
 // mark, matching the InvoiceWorkspace convention).
@@ -296,6 +331,18 @@ if (!props.compact) {
             <span class="hidden sm:inline">Details</span>
           </button>
         </div>
+      </div>
+
+      <!-- Inline-editable details -->
+      <div class="ios-card p-5 mb-4">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
+        <AppsInlineDetailsEditor
+          collection="contracts"
+          :item-id="String(contract.id)"
+          :model-value="detailValues"
+          :fields="detailFields"
+          @updated="onDetailsUpdated"
+        />
       </div>
 
       <!-- Signing-link callout when sent -->

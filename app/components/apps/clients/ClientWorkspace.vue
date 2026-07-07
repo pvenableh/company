@@ -34,9 +34,10 @@ import VueDraggable from 'vuedraggable';
 const props = defineProps<{
 	clientId: string;
 	/**
-	 * Slim mode for the slide-over: skip the identity strip (the shell
-	 * already shows the client name + close chrome). Page mode renders
-	 * the full identity strip.
+	 * Slim mode for the slide-over: the shell already shows the client name +
+	 * close chrome, so the identity strip tightens to a slim rating row
+	 * (the Earnest rating is a universal element shown on every surface).
+	 * Page mode renders the full identity strip.
 	 */
 	compact?: boolean;
 	/**
@@ -56,6 +57,7 @@ const { getClient } = useClients();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { push: pushPanel } = useAppSlideOverStack();
 
+const clientItemsApi = useDirectusItems('clients');
 const projectItemsApi = useDirectusItems('projects');
 const invoiceItemsApi = useDirectusItems('invoices');
 const channelItemsApi = useDirectusItems('channels');
@@ -66,6 +68,45 @@ const projectsContactsApi = useDirectusItems('projects_contacts');
 const toast = useToast();
 
 const client = ref<Client | null>(null);
+
+// ── Overview tab (inline-editable) ──────────────────────────────────────────
+// The client's "who they are" fields, edited in place via <AppsInlineDetailsEditor>
+// so a user can update them without leaving the slide-over. Website lives here
+// (moved out of the identity strip).
+const industryItemsApi = useDirectusItems('industries');
+const industries = ref<Array<{ id: string; name: string }>>([]);
+async function loadIndustries() {
+	if (industries.value.length) return;
+	try {
+		industries.value = await industryItemsApi.list({ fields: ['id', 'name'], filter: { status: { _eq: 'published' } }, sort: ['name'], limit: -1 });
+	} catch { industries.value = []; }
+}
+
+const overviewValues = computed<Record<string, any>>(() => {
+	const c = client.value as any;
+	if (!c) return {};
+	return {
+		website: c.website ?? '',
+		industry: (typeof c.industry === 'object' ? c.industry?.id : c.industry) ?? '',
+		location: c.location ?? '',
+		brand_direction: c.brand_direction ?? '',
+		goals: c.goals ?? '',
+		target_audience: c.target_audience ?? '',
+		notes: c.notes ?? '',
+	};
+});
+const overviewFields = computed(() => [
+	{ key: 'website', label: 'Website', type: 'url' as const, placeholder: 'https://' },
+	{ key: 'industry', label: 'Industry', type: 'select' as const, placeholder: 'Select industry…', options: industries.value.map((i) => ({ value: i.id, label: i.name })) },
+	{ key: 'location', label: 'Location', type: 'text' as const, placeholder: 'City, region, or Remote/Global' },
+	{ key: 'brand_direction', label: 'Brand Direction', type: 'textarea' as const, placeholder: 'Positioning, voice, visual direction…', suggest: true },
+	{ key: 'goals', label: 'Goals', type: 'textarea' as const, placeholder: 'Business goals and objectives…', suggest: true },
+	{ key: 'target_audience', label: 'Target Audience', type: 'textarea' as const, placeholder: 'Who are we speaking to?', suggest: true },
+	{ key: 'notes', label: 'Notes', type: 'richtext' as const, placeholder: 'Internal notes about this client…' },
+]);
+function onOverviewUpdated(patch: Record<string, any>) {
+	if (client.value) Object.assign(client.value, patch);
+}
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -159,6 +200,7 @@ const activeTab = ref<ClientTabKey>(props.initialTab || 'activity');
 // the useDirectusItems request-dedup layer eliminates same-key races).
 function loadForTab(tab: ClientTabKey) {
 	switch (tab) {
+		case 'overview': loadIndustries(); break;
 		case 'projects': if (!projectsLoaded.value && !projectsLoading.value) loadProjects(); break;
 		case 'invoices': if (!invoicesLoaded.value && !invoicesLoading.value) loadInvoices(); break;
 		case 'messages': if (!channelsLoaded.value && !channelsLoading.value) loadChannels(); break;
@@ -215,10 +257,15 @@ function contentStateLabel(s: string | undefined): string {
 	}
 }
 
-async function loadClient() {
+async function loadClient(force = false) {
 	loading.value = true;
 	error.value = null;
 	try {
+		// After a child mutation (e.g. attaching a contact) the embedded
+		// `clients` record is still cached (30s TTL); mutating `contacts`
+		// only invalidates the contacts cache. Force-bust so the reload
+		// reflects the just-linked contact instead of the stale client.
+		if (force) clientItemsApi.invalidateCache();
 		const c = await getClient(props.clientId);
 		client.value = c;
 		if (c) emit('loaded', c);
@@ -575,12 +622,12 @@ async function quickAddTask() {
 
 function onContactAttached() {
 	showAttachContactModal.value = false;
-	loadClient();
+	loadClient(true);
 }
 
 function onContactCreated() {
 	showCreateContactModal.value = false;
-	loadClient();
+	loadClient(true);
 }
 
 function onProjectCreated() {
@@ -730,8 +777,8 @@ watch(() => props.clientId, () => {
 
 		<template v-else-if="client">
 			<AppsClientsClientIdentityStrip
-				v-if="!compact"
 				:client="client"
+				:compact="compact"
 				size="sm"
 				class="mb-5"
 			>
@@ -748,8 +795,21 @@ watch(() => props.clientId, () => {
 			/>
 
 			<div class="ios-card p-4 sm:p-6">
+				<!-- Overview — inline-editable "who they are": website, industry,
+				     location, brand direction, goals, target audience, notes.
+				     Autosaves each field; no need to leave the slide-over. -->
+				<div v-if="activeTab === 'overview'">
+					<AppsInlineDetailsEditor
+						collection="clients"
+						:item-id="String(client.id)"
+						:model-value="overviewValues"
+						:fields="overviewFields"
+						@updated="onOverviewUpdated"
+					/>
+				</div>
+
 				<!-- Activity -->
-				<div v-if="activeTab === 'activity'">
+				<div v-else-if="activeTab === 'activity'">
 					<div class="flex items-center gap-1 rounded-full border border-border bg-card p-0.5 mb-4 w-fit">
 						<button
 							v-for="chip in activityFilterChips"
@@ -773,7 +833,7 @@ watch(() => props.clientId, () => {
 						<!-- Activity river — only on 'all' filter. Shows recent
 						     rhythm at a glance; the list below stays for deep
 						     scroll-back and load-more. -->
-						<div v-if="activityFilter === 'all'" class="glass-surface p-4 mb-4">
+						<div v-if="activityFilter === 'all'" class="mb-4">
 							<div class="flex items-center justify-between mb-3">
 								<h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
 									Activity river

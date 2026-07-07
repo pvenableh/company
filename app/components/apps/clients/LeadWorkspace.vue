@@ -216,6 +216,43 @@ const isOverdueFollowUp = computed(() => {
 	return new Date(lead.value.next_follow_up) < new Date();
 });
 
+// ── Inline-editable details (autosaves to the `leads` collection) ──
+const LEAD_DETAIL_FIELDS = [
+	{ key: 'priority', label: 'Priority', type: 'select', options: [
+		{ value: 'low', label: 'Low' },
+		{ value: 'medium', label: 'Medium' },
+		{ value: 'high', label: 'High' },
+		{ value: 'urgent', label: 'Urgent' },
+	] },
+	{ key: 'source', label: 'Source', type: 'select', options: [
+		{ value: 'business card', label: 'Business card' },
+		{ value: 'call', label: 'Call' },
+		{ value: 'website', label: 'Website' },
+		{ value: 'referral', label: 'Referral' },
+		{ value: 'event', label: 'Event' },
+	] },
+	{ key: 'estimated_value', label: 'Estimated Value', type: 'number', prefix: '$', placeholder: '0' },
+	{ key: 'timeline', label: 'Timeline', type: 'select', options: [
+		{ value: 'urgent', label: 'Urgent' },
+		{ value: '1-3 months', label: '1–3 months' },
+		{ value: '3-6 months', label: '3–6 months' },
+		{ value: 'flexible', label: 'Flexible' },
+	] },
+	{ key: 'next_follow_up', label: 'Next Follow-up', type: 'date' },
+	{ key: 'project_type', label: 'Project Type', type: 'text', placeholder: 'e.g. Website redesign' },
+	{ key: 'notes', label: 'Notes', type: 'textarea', rows: 4, placeholder: 'Internal notes…' },
+] as const;
+
+const leadDetailValues = computed(() => ({
+	priority: lead.value?.priority ?? '',
+	source: lead.value?.source ?? '',
+	estimated_value: lead.value?.estimated_value ?? '',
+	timeline: lead.value?.timeline ?? '',
+	next_follow_up: lead.value?.next_follow_up ? String(lead.value.next_follow_up).slice(0, 10) : '',
+	project_type: lead.value?.project_type ?? '',
+	notes: lead.value?.notes ?? '',
+}));
+
 // ── Mailing list membership ──
 const availableLists = ref<any[]>([]);
 const showListPicker = ref(false);
@@ -552,9 +589,21 @@ function openContactPivot() {
 				<div v-else :class="compact ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-3 gap-6'">
 					<!-- Left: Lead info -->
 					<div :class="compact ? 'space-y-4' : 'lg:col-span-1 space-y-4'">
-						<!-- Details -->
+						<!-- Editable Details -->
 						<div class="ios-card p-4 space-y-3">
 							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Details</p>
+							<AppsInlineDetailsEditor
+								collection="leads"
+								:item-id="String(lead.id)"
+								:model-value="leadDetailValues"
+								:fields="LEAD_DETAIL_FIELDS as any"
+								@updated="patch => Object.assign(lead, patch)"
+							/>
+						</div>
+
+						<!-- At-a-glance -->
+						<div class="ios-card p-4 space-y-3">
+							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">At a Glance</p>
 							<div class="grid grid-cols-2 gap-2 text-xs">
 								<div>
 									<p class="t-text-muted">Score</p>

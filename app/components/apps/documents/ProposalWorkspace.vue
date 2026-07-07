@@ -183,6 +183,39 @@ function formatTotal(n: number | null | undefined) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n));
 }
 
+// ── Inline-editable Details ───────────────────────────────────────
+const detailValues = computed(() => ({
+  title: proposal.value?.title ?? '',
+  proposal_status: proposal.value?.proposal_status ?? '',
+  total_value: proposal.value?.total_value ?? '',
+  valid_until: proposal.value?.valid_until ? String(proposal.value.valid_until).slice(0, 10) : '',
+  date_sent: proposal.value?.date_sent ? String(proposal.value.date_sent).slice(0, 10) : '',
+}));
+
+const detailFields = [
+  { key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Proposal title' },
+  {
+    key: 'proposal_status', label: 'Status', type: 'select' as const,
+    options: [
+      { value: 'draft', label: 'Draft' },
+      { value: 'sent', label: 'Sent' },
+      { value: 'viewed', label: 'Viewed' },
+      { value: 'accepted', label: 'Accepted' },
+      { value: 'rejected', label: 'Rejected' },
+      { value: 'expired', label: 'Expired' },
+    ],
+  },
+  { key: 'total_value', label: 'Value', type: 'number' as const, prefix: '$' },
+  { key: 'valid_until', label: 'Valid until', type: 'date' as const },
+  { key: 'date_sent', label: 'Sent', type: 'date' as const },
+];
+
+function onDetailsUpdated(patch: Record<string, any>) {
+  if (!proposal.value) return;
+  Object.assign(proposal.value, patch);
+  emit('loaded', proposal.value);
+}
+
 if (!props.compact) {
   useMarkItemRead('proposals', toRef(() => props.proposalId));
 }
@@ -298,6 +331,18 @@ if (!props.compact) {
       <ClientOnly>
         <AIProactiveNotices v-if="proposal?.id" entity-type="proposal" :entity-id="String(proposal.id)" />
       </ClientOnly>
+
+      <!-- Inline-editable details -->
+      <div class="ios-card p-5 mb-5">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
+        <AppsInlineDetailsEditor
+          collection="proposals"
+          :item-id="String(proposal.id)"
+          :model-value="detailValues"
+          :fields="detailFields"
+          @updated="onDetailsUpdated"
+        />
+      </div>
 
       <!-- Save bar (sticky) when editing blocks -->
       <div

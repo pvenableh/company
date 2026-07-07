@@ -295,6 +295,33 @@ async function handleSendEmail() {
   }
 }
 
+// ── Inline-editable Details ───────────────────────────────────────
+const detailValues = computed(() => ({
+  status: invoice.value?.status ?? '',
+  invoice_date: invoice.value?.invoice_date ? String(invoice.value.invoice_date).slice(0, 10) : '',
+  due_date: invoice.value?.due_date ? String(invoice.value.due_date).slice(0, 10) : '',
+}));
+
+const detailFields = [
+  {
+    key: 'status', label: 'Status', type: 'select' as const,
+    options: [
+      { value: 'pending', label: 'Pending' },
+      { value: 'processing', label: 'Processing' },
+      { value: 'paid', label: 'Paid' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { key: 'invoice_date', label: 'Invoice date', type: 'date' as const },
+  { key: 'due_date', label: 'Due date', type: 'date' as const },
+];
+
+function onDetailsUpdated(patch: Record<string, any>) {
+  if (!invoice.value) return;
+  Object.assign(invoice.value, patch);
+  emit('loaded', invoice.value);
+}
+
 onMounted(loadInvoice);
 
 // Refetch when the panel reuses this component for a different invoice
@@ -543,6 +570,18 @@ if (!props.compact) {
       <ClientOnly>
         <AIProactiveNotices v-if="invoice?.id" entity-type="invoice" :entity-id="String(invoice.id)" />
       </ClientOnly>
+
+      <!-- Inline-editable details -->
+      <div class="ios-card p-5 mb-5">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
+        <AppsInlineDetailsEditor
+          collection="invoices"
+          :item-id="String(invoice.id)"
+          :model-value="detailValues"
+          :fields="detailFields"
+          @updated="onDetailsUpdated"
+        />
+      </div>
 
       <div class="grid grid-cols-1 gap-6" :class="{ 'lg:grid-cols-3': !compact }">
         <!-- Main: Details -->

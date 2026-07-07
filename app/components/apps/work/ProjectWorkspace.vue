@@ -65,6 +65,10 @@ const { awardEvent } = useArcadeAwards();
 
 const projectItemsApi = useDirectusItems('projects');
 const taskItemsApi = useDirectusItems('tasks');
+// Same "Mine vs. Everyone" lens the Tasks list applies, so the tab badge
+// count can't diverge from what the list actually renders.
+const { isMine } = useDataScope();
+const { user: scopeUser } = useDirectusAuth();
 const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
@@ -77,6 +81,44 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 
 const activeTab = ref<ProjectTabKey>(props.initialTab || 'activity');
+
+// ── Overview tab (inline-editable) ──────────────────────────────────────────
+// Core project fields, editable in place via <AppsInlineDetailsEditor> so a
+// user can update the project without leaving the slide-over.
+const projectOverviewValues = computed<Record<string, any>>(() => {
+	const p = project.value as any;
+	if (!p) return {};
+	return {
+		title: p.title ?? '',
+		description: p.description ?? '',
+		status: p.status ?? '',
+		start_date: p.start_date ? String(p.start_date).slice(0, 10) : '',
+		due_date: p.due_date ? String(p.due_date).slice(0, 10) : '',
+		contract_value: p.contract_value ?? '',
+	};
+});
+const PROJECT_OVERVIEW_FIELDS = [
+	{ key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Project title' },
+	{ key: 'description', label: 'Description', type: 'textarea' as const, placeholder: 'What is this project?', suggest: true },
+	{ key: 'status', label: 'Status', type: 'select' as const, options: [
+		{ value: 'Pending', label: 'Pending' },
+		{ value: 'Scheduled', label: 'Scheduled' },
+		{ value: 'In Progress', label: 'In Progress' },
+		{ value: 'completed', label: 'Completed' },
+		{ value: 'Archived', label: 'Archived' },
+	] },
+	{ key: 'start_date', label: 'Start Date', type: 'date' as const },
+	{ key: 'due_date', label: 'Due Date', type: 'date' as const },
+	{ key: 'contract_value', label: 'Contract Value', type: 'number' as const, prefix: '$', placeholder: '0' },
+];
+const projectClientId = computed(() => {
+	const c = (project.value as any)?.client;
+	return c ? (typeof c === 'object' ? c.id : c) : null;
+});
+function onProjectOverviewUpdated(patch: Record<string, any>) {
+	if (project.value) Object.assign(project.value, patch);
+	emit('loaded', project.value);
+}
 
 // Tab data — lazy-loaded on activation. The Tasks and Tickets boards
 // fetch their own rows internally; we mirror their counts here just to
@@ -232,16 +274,36 @@ async function patchProject(fields: Record<string, any>) {
 
 async function refreshTaskCount() {
 	try {
-		taskCount.value = await taskItemsApi.count({
-			_or: [
-				{ project_id: { _eq: props.projectId } },
-				{ project_event_id: { project: { _eq: props.projectId } } },
+		const myId = (scopeUser.value as any)?.id;
+		const filter: any = {
+			_and: [
+				{
+					_or: [
+						{ project_id: { _eq: props.projectId } },
+						{ project_event_id: { project: { _eq: props.projectId } } },
+					],
+				},
 			],
-		}).catch(() => 0);
+		};
+		// Mirror Tasks/ListView.vue: when scoped to "mine", only count tasks
+		// assigned to or created by the current user, so the badge matches
+		// the list instead of counting other people's tasks.
+		if (isMine.value && myId) {
+			filter._and.push({
+				_or: [
+					{ assigned_to: { directus_users_id: { _eq: myId } } },
+					{ user_created: { _eq: myId } },
+				],
+			});
+		}
+		taskCount.value = await taskItemsApi.count(filter).catch(() => 0);
 	} catch {
 		taskCount.value = 0;
 	}
 }
+
+// Keep the badge in sync when an admin flips the global Mine/Everyone lens.
+watch(isMine, () => refreshTaskCount());
 
 async function refreshTicketCount() {
 	try {
@@ -652,12 +714,22 @@ watch(() => props.projectId, () => {
 
 		<template v-else-if="project">
 			<AppsWorkProjectIdentityStrip
-				v-if="!compact"
 				:project="project"
+				:compact="compact"
 				size="sm"
 				class="mb-5"
 				@update="patchProject"
 			>
+				<!-- Satisfaction score sits in the universal rating position,
+				     matching the client surface. Set from the portal on
+				     completion, so it only appears once submitted. -->
+				<template v-if="project.csat_rating" #rating>
+					<CsatBadge
+						:rating="project.csat_rating"
+						:comment="project.csat_comment"
+						:submitted-at="project.csat_submitted_at"
+					/>
+				</template>
 				<template #actions>
 					<!-- Convene a focused Director's Office meeting on just this
 					     project — same overlay as the org-wide command center,
@@ -681,18 +753,22 @@ watch(() => props.projectId, () => {
 				@prefetch="loadForTab"
 			/>
 
-			<!-- Client satisfaction (set from the portal when the project completes) -->
-			<CsatBadge
-				v-if="project.csat_rating"
-				:rating="project.csat_rating"
-				:comment="project.csat_comment"
-				:submitted-at="project.csat_submitted_at"
-				class="mb-4"
-			/>
-
 			<div class="ios-card p-4 sm:p-6">
+				<!-- Overview — inline-editable core project fields. -->
+				<div v-if="activeTab === 'overview'">
+					<AppsInlineDetailsEditor
+						v-if="project.id"
+						collection="projects"
+						:item-id="String(project.id)"
+						:model-value="projectOverviewValues"
+						:fields="PROJECT_OVERVIEW_FIELDS"
+						:suggest-client-id="projectClientId"
+						@updated="onProjectOverviewUpdated"
+					/>
+				</div>
+
 				<!-- Activity -->
-				<div v-if="activeTab === 'activity'">
+				<div v-else-if="activeTab === 'activity'">
 					<ProjectsActivityTimeline :project-id="projectId" />
 				</div>
 

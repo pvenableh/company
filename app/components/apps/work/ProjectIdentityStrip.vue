@@ -14,6 +14,10 @@ import { Button } from '~/components/ui/button';
 const props = defineProps<{
 	project: any;
 	size?: 'sm' | 'md';
+	// Slide-over surfaces pass `compact`; the strip still renders (metadata +
+	// rating are shown on every surface) but stays slim. Accepted for parity
+	// with ClientIdentityStrip; the row is already compact so no layout change.
+	compact?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: 'update', fields: Record<string, any>): void }>();
@@ -77,6 +81,11 @@ function saveDates() {
 
 <template>
 	<div class="flex items-center gap-3">
+		<!-- Rating slot — the project's satisfaction score, kept in the same
+		     universal identity position as the client rating. -->
+		<div v-if="$slots.rating" class="shrink-0">
+			<slot name="rating" />
+		</div>
 		<!-- Title + status live in the page hero (AppHeader); this strip is
 		     the metadata row so the title isn't repeated. -->
 		<div class="min-w-0 flex-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">

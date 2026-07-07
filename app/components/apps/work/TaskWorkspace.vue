@@ -79,6 +79,38 @@ const projectInfo = computed(() => {
   return { id: p.id, title: p.title || 'Project' };
 });
 
+// Inline "Details" editor — plain scalar fields that autosave straight back to
+// Directus. Status/assignee/category are intentionally omitted: they're handled
+// by the dedicated controls below (arcade EP + date_completed + junction logic)
+// which the generic PATCH would bypass.
+const detailFields = [
+  { key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Task title…' },
+  {
+    key: 'priority', label: 'Priority', type: 'select' as const, options: [
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+      { value: 'urgent', label: 'Urgent' },
+    ],
+  },
+  {
+    key: 'schedule', label: 'Schedule', type: 'select' as const, options: [
+      { value: 'today', label: 'Today' },
+      { value: 'this_week', label: 'This week' },
+      { value: 'later', label: 'Later' },
+      { value: 'unscheduled', label: 'Unscheduled' },
+    ],
+  },
+  { key: 'due_date', label: 'Due Date', type: 'date' as const },
+];
+
+const detailValues = computed(() => ({
+  title: task.value?.title ?? '',
+  priority: task.value?.priority ?? '',
+  schedule: task.value?.schedule ?? '',
+  due_date: (task.value?.due_date || '').slice(0, 10),
+}));
+
 async function loadTask() {
   loading.value = true;
   error.value = null;
@@ -256,6 +288,18 @@ function openProject() {
           class="w-full text-base font-semibold bg-transparent border-none outline-none placeholder:text-muted-foreground/40"
           placeholder="Task title..."
           @blur="saveField('title', task.title)"
+        />
+      </div>
+
+      <!-- Details (inline autosaving editor) -->
+      <div class="mb-5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Details</span>
+        <AppsInlineDetailsEditor
+          collection="tasks"
+          :item-id="String(task.id)"
+          :model-value="detailValues"
+          :fields="detailFields"
+          @updated="patch => Object.assign(task, patch)"
         />
       </div>
 

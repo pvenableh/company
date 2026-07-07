@@ -165,6 +165,43 @@ const projectInfo = computed(() => {
 	};
 });
 
+// Inline "Details" editor — autosaving scalar fields. Enum values match the
+// project_events interface verbatim (note the Capitalized status/type values).
+const detailFields = [
+	{ key: 'title', label: 'Title', type: 'text', placeholder: 'Event title…' },
+	{
+		key: 'type', label: 'Type', type: 'select', options: [
+			{ value: 'General', label: 'General' },
+			{ value: 'Design', label: 'Design' },
+			{ value: 'Content', label: 'Content' },
+			{ value: 'Timeline', label: 'Timeline' },
+			{ value: 'Financial', label: 'Financial' },
+			{ value: 'Hours', label: 'Hours' },
+		],
+	},
+	{
+		key: 'status', label: 'Status', type: 'select', options: [
+			{ value: 'draft', label: 'Draft' },
+			{ value: 'Scheduled', label: 'Scheduled' },
+			{ value: 'Active', label: 'Active' },
+			{ value: 'Completed', label: 'Completed' },
+			{ value: 'archived', label: 'Archived' },
+		],
+	},
+	{ key: 'event_date', label: 'Event Date', type: 'date' },
+	{ key: 'end_date', label: 'End Date', type: 'date' },
+	{ key: 'description', label: 'Description', type: 'textarea', rows: 4 },
+];
+
+const detailValues = computed(() => ({
+	title: event.value?.title ?? '',
+	type: event.value?.type ?? '',
+	status: event.value?.status ?? '',
+	event_date: (event.value?.event_date || '').slice(0, 10),
+	end_date: (event.value?.end_date || '').slice(0, 10),
+	description: event.value?.description ?? '',
+}));
+
 function openProject() {
 	if (!projectInfo.value?.id) return;
 	if (props.compact) {
@@ -262,11 +299,17 @@ function openProject() {
 					/>
 				</div>
 			</div>
-			<div
-				v-if="compact && event.description"
-				class="px-4 pb-2 text-sm text-muted-foreground prose prose-sm max-w-none"
-				v-html="event.description"
-			/>
+			<!-- Details (inline autosaving editor) -->
+			<div :class="compact ? 'px-4 pb-2 pt-1' : 'p-4'">
+				<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Details</span>
+				<AppsInlineDetailsEditor
+					collection="project_events"
+					:item-id="String(event.id)"
+					:model-value="detailValues"
+					:fields="detailFields"
+					@updated="patch => Object.assign(event, patch)"
+				/>
+			</div>
 
 			<!-- Main content: two columns in page mode, stacked in compact -->
 			<div

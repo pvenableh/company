@@ -59,6 +59,7 @@ const fetchMeeting = async () => {
 						'id',
 						'title',
 						'description',
+						'notes',
 						'status',
 						'scheduled_start',
 						'actual_start',
@@ -285,6 +286,21 @@ const meetingClient = computed(() => {
 	if (m.related_organization?.name) return { id: null, name: m.related_organization.name };
 	return null;
 });
+
+// Inline "Details" editor — video_meetings is mostly relations, so keep this to
+// the freeform scalar fields (title / agenda / notes) that autosave to Directus.
+// Scheduling times live on datetime fields and are left to the scheduler surfaces.
+const detailFields = [
+	{ key: 'title', label: 'Title', type: 'text', placeholder: 'Meeting title…' },
+	{ key: 'description', label: 'Agenda / Description', type: 'textarea', rows: 4 },
+	{ key: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
+];
+
+const detailValues = computed(() => ({
+	title: meeting.value?.title ?? '',
+	description: meeting.value?.description ?? '',
+	notes: meeting.value?.notes ?? '',
+}));
 
 // ─── Pivot navigation: push panel in compact mode, land the user in the
 //     apps shell with the destination slide-over already open in full-page
@@ -993,6 +1009,18 @@ const promoteActionItem = async (idx) => {
 						<span class="ml-auto text-[10px] text-muted-foreground">Sets the meeting description on Accept</span>
 					</div>
 				</div>
+			</div>
+
+			<!-- Details (inline autosaving editor) -->
+			<div class="ios-card p-5 mb-4">
+				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Details</h2>
+				<AppsInlineDetailsEditor
+					collection="video_meetings"
+					:item-id="String(meeting.id)"
+					:model-value="detailValues"
+					:fields="detailFields"
+					@updated="patch => Object.assign(meeting, patch)"
+				/>
 			</div>
 
 			<!-- Recordings -->

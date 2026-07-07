@@ -13,11 +13,15 @@ import type { Client } from '~~/shared/directus';
 const props = defineProps<{
 	client: Client;
 	size?: 'sm' | 'md';
+	// Slide-over surfaces pass `compact` — the panel shell already shows the
+	// name, so the strip tightens to a slim rating row. It still renders (the
+	// rating is a universal element on every surface); it does not hide.
+	compact?: boolean;
 }>();
 
 const config = useRuntimeConfig();
 
-const logoSize = computed(() => (props.size === 'sm' ? 'w-10 h-10' : 'w-12 h-12'));
+const logoSize = computed(() => (props.compact || props.size === 'sm' ? 'w-10 h-10' : 'w-12 h-12'));
 
 const logoUrl = computed(() => {
 	const c = props.client;
@@ -28,7 +32,6 @@ const logoUrl = computed(() => {
 });
 
 const initial = computed(() => (props.client.name || '?').charAt(0).toUpperCase());
-const cleanWebsite = computed(() => props.client.website?.replace(/^https?:\/\//, ''));
 </script>
 
 <template>
@@ -38,31 +41,23 @@ const cleanWebsite = computed(() => props.client.website?.replace(/^https?:\/\//
 				v-if="logoUrl"
 				:src="logoUrl"
 				:alt="client.name || 'Client'"
-				class="rounded-lg object-contain bg-white"
+				class="rounded-lg object-contain bg-white shadow-md ring-1 ring-black/5"
 				:class="logoSize"
 			/>
 			<div
 				v-else
-				class="rounded-lg bg-muted/60 flex items-center justify-center text-sm font-semibold text-muted-foreground"
+				class="rounded-lg bg-muted/60 flex items-center justify-center text-sm font-semibold text-muted-foreground shadow-md ring-1 ring-black/5"
 				:class="logoSize"
 			>
 				{{ initial }}
 			</div>
 		</div>
-		<div class="min-w-0 flex-1">
+		<div class="min-w-0 flex-1 flex items-center gap-1.5">
 			<!-- Name + status live in the page hero (AppHeader); this strip is
-			     the metadata row so the name isn't repeated. -->
-			<div v-if="client.id" class="flex items-center gap-1.5 mb-0.5">
-				<ClientsClientRatingBadge :client-id="String(client.id)" size="sm" />
-				<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Earnest rating</span>
-			</div>
-			<p v-if="cleanWebsite" class="text-xs text-muted-foreground truncate inline-flex items-center gap-1">
-				<Icon name="lucide:globe" class="w-3 h-3 shrink-0" />
-				<a :href="client.website!" target="_blank" rel="noopener" class="hover:text-foreground truncate">
-					{{ cleanWebsite }}
-				</a>
-			</p>
-			<p v-else class="text-xs text-muted-foreground italic">No website set</p>
+			     the metadata row so the name isn't repeated. The Earnest rating
+			     shows its breakdown inline (revenue, touch-points, overdue AR,
+			     staleness). Website + brand/strategy details live in Overview. -->
+			<ClientsClientRatingBadge v-if="client.id" :client-id="String(client.id)" size="sm" detailed />
 		</div>
 		<div v-if="$slots.actions" class="flex items-center gap-1.5 shrink-0">
 			<slot name="actions" />

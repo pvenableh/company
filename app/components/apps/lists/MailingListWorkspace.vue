@@ -98,6 +98,19 @@ function openContact(contactId: string | number) {
 
 const subscriberCount = computed(() => contacts.value.length);
 
+// ── Inline-editable details (autosaves to the `mailing_lists` collection) ──
+const LIST_DETAIL_FIELDS = [
+  { key: 'name', label: 'Name', type: 'text', placeholder: 'List name' },
+  { key: 'slug', label: 'Slug', type: 'text', placeholder: 'list-slug' },
+  { key: 'description', label: 'Description', type: 'textarea', rows: 3, placeholder: 'What is this list for?' },
+] as const;
+
+const listDetailValues = computed(() => ({
+  name: list.value?.name ?? '',
+  slug: list.value?.slug ?? '',
+  description: list.value?.description ?? '',
+}));
+
 if (!props.compact) {
   watch(list, (l) => {
     if (l) setEntity('list', String(l.id), l.name || 'Mailing List');
@@ -156,6 +169,18 @@ defineExpose({ openEdit: () => { showEditModal.value = true; } });
     </div>
 
     <div v-else-if="list" class="space-y-5">
+      <!-- Editable Details -->
+      <div class="space-y-3">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Details</p>
+        <AppsInlineDetailsEditor
+          collection="mailing_lists"
+          :item-id="String(list.id)"
+          :model-value="listDetailValues"
+          :fields="LIST_DETAIL_FIELDS as any"
+          @updated="patch => Object.assign(list, patch)"
+        />
+      </div>
+
       <!-- Description + flags (compact mode only — full page surfaces them in the header) -->
       <div
         v-if="compact && (list.description || (list as any).is_default || (list as any).double_opt_in)"

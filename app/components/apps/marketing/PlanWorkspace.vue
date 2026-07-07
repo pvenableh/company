@@ -168,6 +168,43 @@ async function patchPlan(patch: Partial<ContentPlanRecord>) {
   }
 }
 
+// ── Inline-editable Details ───────────────────────────────────────
+const detailValues = computed(() => ({
+  title: plan.value?.title ?? '',
+  state: plan.value?.state ?? '',
+  plan_type: plan.value?.plan_type ?? '',
+  target_month: plan.value?.target_month ?? '',
+}));
+
+const detailFields = [
+  { key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Plan title' },
+  {
+    key: 'state', label: 'State', type: 'select' as const,
+    options: [
+      { value: 'draft', label: 'Draft' },
+      { value: 'in_review', label: 'In Review' },
+      { value: 'approved', label: 'Approved' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  {
+    key: 'plan_type', label: 'Type', type: 'select' as const,
+    options: [
+      { value: 'monthly_cadence', label: 'Monthly Cadence' },
+      { value: 'campaign', label: 'Campaign' },
+      { value: 'launch', label: 'Launch' },
+      { value: 'custom', label: 'Custom' },
+    ],
+  },
+  { key: 'target_month', label: 'Target month', type: 'text' as const, placeholder: 'YYYY-MM' },
+];
+
+function onDetailsUpdated(patch: Record<string, any>) {
+  if (!plan.value) return;
+  Object.assign(plan.value, patch);
+  emit('loaded', plan.value);
+}
+
 let strategyTimer: ReturnType<typeof setTimeout> | null = null;
 function onStrategyInput(value: string) {
   if (!plan.value) return;
@@ -455,6 +492,23 @@ onMounted(() => {
       <div class="plan-layout">
         <!-- ─── Main column ───────────────────────────────────────── -->
         <div class="plan-main">
+          <!-- Inline-editable details -->
+          <section class="plan-card">
+            <header class="plan-card__header">
+              <Icon name="lucide:sliders-horizontal" class="w-4 h-4 text-primary" />
+              <h2>Details</h2>
+            </header>
+            <div class="plan-card__body">
+              <AppsInlineDetailsEditor
+                collection="content_plans"
+                :item-id="String(plan.id)"
+                :model-value="detailValues"
+                :fields="detailFields"
+                @updated="onDetailsUpdated"
+              />
+            </div>
+          </section>
+
           <!-- Strategy card -->
           <section class="plan-card">
             <header class="plan-card__header">

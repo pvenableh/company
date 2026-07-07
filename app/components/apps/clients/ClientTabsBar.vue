@@ -5,6 +5,7 @@
 -->
 <script setup lang="ts">
 export type ClientTabKey =
+	| 'overview'
 	| 'activity'
 	| 'contacts'
 	| 'projects'
@@ -38,6 +39,7 @@ function prefetch(key: ClientTabKey) {
 }
 
 const tabs: Array<{ key: ClientTabKey; label: string; icon: string }> = [
+	{ key: 'overview', label: 'Overview', icon: 'lucide:building-2' },
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
 	{ key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
@@ -68,7 +70,7 @@ const tabs: Array<{ key: ClientTabKey; label: string; icon: string }> = [
 		>
 			<Icon :name="tab.icon" class="w-3.5 h-3.5" />
 			{{ tab.label }}
-			<span v-if="tab.key !== 'activity' && counts[tab.key] !== undefined" class="text-[10px] opacity-70 ml-0.5">
+			<span v-if="!['overview', 'activity'].includes(tab.key) && counts[tab.key] !== undefined" class="text-[10px] opacity-70 ml-0.5">
 				{{ counts[tab.key] }}
 			</span>
 		</button>
