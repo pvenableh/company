@@ -149,6 +149,7 @@ async function setupAiActions() {
 					{ text: 'Create tasks', value: 'create_tasks' },
 					{ text: 'Create project', value: 'create_project' },
 					{ text: 'Add events', value: 'add_event' },
+					{ text: 'Create ticket', value: 'create_ticket' },
 					{ text: 'Create invoice', value: 'create_invoice' },
 					{ text: 'Update field', value: 'update_field' },
 					{ text: 'Other', value: 'other' },

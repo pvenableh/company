@@ -55,7 +55,7 @@ async function resolveUserNames(userIds: string[]): Promise<Record<string, strin
 }
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
-export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice']);
+export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket']);
 
 /** Normalize AI line items into clean {description, rate, quantity, product?} rows. */
 function normalizeLineItems(raw: any): Array<Record<string, any>> {
@@ -139,9 +139,58 @@ export async function proposeToolCall(
       return await proposeAddEvent(input, ctx);
     case 'create_invoice':
       return await proposeCreateInvoice(input, ctx);
+    case 'create_ticket':
+      return await proposeCreateTicket(input, ctx);
     default:
       return { success: false, summary: '', error: `Unknown proposal tool: ${toolName}` };
   }
+}
+
+// ── create_ticket ──────────────────────────────────────────────────────────
+async function proposeCreateTicket(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const title = (input.title ?? '').toString().trim();
+  if (!title) return { success: false, summary: '', error: 'title is required to create a ticket' };
+
+  const isClient = ctx.entityType === 'client' || ctx.entityType === 'clients';
+  const isProject = ctx.entityType === 'project' || ctx.entityType === 'projects';
+  const clientId = input.client_id ?? (isClient ? ctx.entityId : null);
+  const projectId = input.project_id ?? (isProject ? ctx.entityId : null);
+  const tasks = normalizeTasks(input.tasks);
+
+  const payload: Record<string, any> = {
+    title,
+    client_id: clientId ?? null,
+    project_id: projectId ?? null,
+    description: input.description ? String(input.description) : null,
+    priority: input.priority ?? null,
+    tasks,
+  };
+
+  const rowTitle = `Create ticket "${title}"${tasks.length ? ` with ${tasks.length} task${tasks.length !== 1 ? 's' : ''}` : ''}`;
+  const preview = { kind: 'create_ticket' as const, title, priority: input.priority ?? null, tasks: tasks.map((t) => t.title) };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'create_ticket',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: projectId ? 'projects' : (clientId ? 'clients' : 'tickets'),
+    entityId: projectId ?? clientId ?? null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the ticket for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — nothing has been created yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
 }
 
 // ── create_invoice ─────────────────────────────────────────────────────────

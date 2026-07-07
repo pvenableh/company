@@ -133,6 +133,19 @@ function build(): { payload: any; preview: any; title: string } {
     };
   }
 
+  if (t === 'create_ticket') {
+    const title = (p.title ?? '').toString().trim() || 'Untitled ticket';
+    const tasks = (Array.isArray(p.tasks) ? p.tasks : [])
+      .map((x: any) => ({ ...x, title: (x?.title ?? '').toString().trim() }))
+      .filter((x: any) => x.title);
+    const rowTitle = `Create ticket "${title}"${tasks.length ? ` with ${tasks.length} task${tasks.length !== 1 ? 's' : ''}` : ''}`;
+    return {
+      payload: { ...p, title, tasks },
+      preview: { ...(props.action?.preview || {}), kind: 'create_ticket', title, priority: p.priority ?? null, tasks: tasks.map((x: any) => x.title) },
+      title: rowTitle,
+    };
+  }
+
   if (t === 'update_field') {
     const value = p.value;
     const rowTitle = `Set ${p.collection} ${p.field} → ${String(value)}`;
@@ -158,7 +171,7 @@ function build(): { payload: any; preview: any; title: string } {
   return { payload: { ...p }, preview: props.action?.preview ?? null, title: props.action?.title ?? '' };
 }
 
-const editable = computed(() => ['create_project', 'add_event', 'create_invoice', 'create_tasks', 'update_field', 'send_email'].includes(type.value));
+const editable = computed(() => ['create_project', 'add_event', 'create_ticket', 'create_invoice', 'create_tasks', 'update_field', 'send_email'].includes(type.value));
 
 async function save() {
   if (saving.value) return;
@@ -246,6 +259,24 @@ const inputCls = 'w-full rounded-lg border border-border bg-background px-2.5 h-
       <div class="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
         <span class="text-muted-foreground">Subtotal</span>
         <span class="font-semibold">{{ fmtUsd(invoiceSubtotal) }}</span>
+      </div>
+    </template>
+
+    <!-- create_ticket -->
+    <template v-else-if="type === 'create_ticket'">
+      <div class="space-y-1">
+        <label class="text-[10px] uppercase tracking-wider text-muted-foreground">Ticket title</label>
+        <input v-model="p.title" :class="inputCls" placeholder="Ticket title" />
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Tasks</span>
+        <button type="button" class="text-[11px] text-primary hover:underline" @click="addTask">+ Task</button>
+      </div>
+      <div v-for="(tk, i) in (p.tasks || [])" :key="i" class="flex items-center gap-1.5">
+        <input v-model="tk.title" :class="inputCls" placeholder="Task" />
+        <button type="button" class="shrink-0 text-muted-foreground hover:text-destructive" @click="removeTask(i)">
+          <Icon name="lucide:x" class="w-3 h-3" />
+        </button>
       </div>
     </template>
 

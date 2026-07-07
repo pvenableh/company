@@ -459,6 +459,7 @@ async function createTaskRow(
   if (t.category) fields.category = t.category;
   if (t.project_id) fields.project_id = t.project_id;
   if (t.project_event_id) fields.project_event_id = t.project_event_id;
+  if (t.ticket_id) fields.ticket_id = t.ticket_id;
   if (t.due_date) fields.due_date = String(t.due_date);
   if (t.priority) fields.priority = String(t.priority);
   if (t.description) fields.description = String(t.description);
@@ -580,6 +581,43 @@ const addEventExecutor: AiActionExecutor = async ({ action, organizationId }) =>
   if (!eventsCreated) throw new Error('add_event: no events were created (all entries were empty)');
 
   return { projectId, eventsCreated, tasksCreated };
+};
+
+// ── create_ticket ──────────────────────────────────────────────────────────────
+// Approval-gated ticket (+ optional task checklist). Org-set; client/project
+// links org-verified fail-soft. tickets.status is Capitalized ('Pending').
+const createTicketExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const title = (payload.title ?? '').toString().trim();
+  if (!title) throw new Error('create_ticket: title is required');
+
+  const directus = getServerDirectus();
+
+  const fields: Record<string, any> = { title, organization: organizationId, status: 'Pending' };
+  if (payload.description) fields.description = String(payload.description);
+  if (payload.priority) fields.priority = String(payload.priority);
+  if (payload.client_id) {
+    const orgId = await loadOrgId(directus, 'clients', payload.client_id, 'organization');
+    if (orgId === organizationId) fields.client = payload.client_id;
+  }
+  if (payload.project_id) {
+    const orgId = await loadOrgId(directus, 'projects', payload.project_id, 'organization');
+    if (orgId === organizationId) fields.project = payload.project_id;
+  }
+
+  const ticket = (await directus.request(
+    createItem('tickets' as any, fields, { fields: ['id'] as any }),
+  )) as any;
+  const ticketId = ticket?.id ? String(ticket.id) : null;
+  if (!ticketId) throw new Error('create_ticket: ticket creation returned no id');
+
+  let tasksCreated = 0;
+  for (const t of Array.isArray(payload.tasks) ? payload.tasks : []) {
+    const ok = await createTaskRow(directus, { ...t, ticket_id: ticketId, organization_id: organizationId, category: 'ticket' });
+    if (ok) tasksCreated++;
+  }
+
+  return { ticketId, tasksCreated };
 };
 
 // ── create_invoice ─────────────────────────────────────────────────────────────
@@ -739,6 +777,7 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   reschedule_project: rescheduleProjectExecutor,
   create_project: createProjectExecutor,
   add_event: addEventExecutor,
+  create_ticket: createTicketExecutor,
   create_invoice: createInvoiceExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),

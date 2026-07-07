@@ -380,6 +380,10 @@ function openContactPivot() {
 		</div>
 
 		<template v-else-if="lead">
+			<div class="flex justify-end mb-3">
+				<AppsCreateWithEarnest entity-type="lead" />
+			</div>
+
 			<!-- Page-mode header -->
 			<div v-if="!compact" class="mb-6">
 				<BackButton to="/apps/clients?view=leads" label="Back to leads" class="mb-3" />

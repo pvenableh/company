@@ -746,6 +746,10 @@ watch(() => props.projectId, () => {
 				</template>
 			</AppsWorkProjectIdentityStrip>
 
+			<div class="flex justify-end mb-3">
+				<AppsCreateWithEarnest entity-type="project" />
+			</div>
+
 			<AppsWorkProjectTabsBar
 				v-model="activeTab"
 				:counts="tabCounts"

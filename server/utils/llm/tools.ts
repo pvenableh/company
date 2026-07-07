@@ -283,6 +283,36 @@ export const CREATE_INVOICE_TOOL: ToolDefinition = {
   },
 };
 
+export const CREATE_TICKET_TOOL: ToolDefinition = {
+  name: 'create_ticket',
+  description:
+    'Creates a support/work TICKET for a client or project, optionally with a checklist of tasks. APPROVAL-GATED: it queues the ticket for the user to review and approve; nothing is created until approved. Use when the user asks to "open a ticket", "log a request/issue", or "create a ticket with these tasks". Pass client_id/project_id ONLY if the exact UUID appears verbatim in the context; if the chat is focused on a client or project, the server links it automatically.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'The ticket title / summary.' },
+      client_id: { type: 'string', description: 'Optional client UUID. Pass ONLY a UUID present verbatim in the context; omit to use the focused client.' },
+      project_id: { type: 'string', description: 'Optional project UUID. Pass ONLY a UUID present verbatim in the context; omit to use the focused project.' },
+      description: { type: 'string', description: 'Optional details / scope of the ticket.' },
+      priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Optional ticket priority.' },
+      tasks: {
+        type: 'array',
+        description: 'Optional tasks (checklist) to create under this ticket.',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'The task title.' },
+            due_date: { type: 'string', description: 'Optional due date in YYYY-MM-DD format.' },
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Optional task priority.' },
+          },
+          required: ['title'],
+        },
+      },
+    },
+    required: ['title'],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
   RESCHEDULE_PROJECT_TOOL,
@@ -290,6 +320,7 @@ export const MUTATION_TOOLS: ToolDefinition[] = [
   ADD_TASK_TOOL,
   CREATE_PROJECT_TOOL,
   ADD_EVENT_TOOL,
+  CREATE_TICKET_TOOL,
   CREATE_INVOICE_TOOL,
   GENERATE_DOCUMENTS_TOOL,
   SEND_EMAIL_TOOL,
