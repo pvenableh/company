@@ -498,6 +498,14 @@ async function createEventsWithTasks(
     if (e.description) evFields.description = String(e.description);
     if (e.event_date) { evFields.event_date = String(e.event_date); evFields.date = String(e.event_date); }
     if (e.end_date) evFields.end_date = String(e.end_date);
+    // A payment_amount turns this into a Financial billing milestone that can
+    // later be invoiced (create_invoice project_event_id).
+    const pay = Number(e.payment_amount);
+    if (Number.isFinite(pay) && pay > 0) {
+      evFields.payment_amount = String(Math.round(pay * 100) / 100);
+      evFields.is_milestone = true;
+      evFields.type = e.type || 'Financial';
+    }
 
     const created = (await directus.request(
       createItem('project_events' as any, evFields, { fields: ['id'] as any }),
@@ -743,12 +751,29 @@ const createInvoiceExecutor: AiActionExecutor = async ({ action, organizationId 
   )) as any;
   if (!created?.id) throw new Error('create_invoice: invoice creation returned no id');
 
+  // Link to a project payment milestone via the project_events_invoices junction
+  // (fail-soft: the invoice still stands if the link can't be written).
+  let linkedEventId: string | null = null;
+  if (payload.project_event_id) {
+    const evOrg = await loadOrgId(directus, 'project_events', payload.project_event_id, 'project.organization');
+    if (evOrg === organizationId) {
+      try {
+        await directus.request(createItem('project_events_invoices' as any, {
+          project_events_id: payload.project_event_id,
+          invoices_id: created.id,
+        }));
+        linkedEventId = String(payload.project_event_id);
+      } catch { /* fail-soft — invoice created, link skipped */ }
+    }
+  }
+
   const subtotal = line_items.reduce((s, l) => s + Number(l.amount || 0), 0);
   return {
     invoiceId: String(created.id),
     invoice_code: created.invoice_code ?? invoiceCode ?? null,
     lineCount: line_items.length,
     total: created.total_amount ?? subtotal,
+    linkedEventId,
   };
 };
 

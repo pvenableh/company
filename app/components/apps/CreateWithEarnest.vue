@@ -40,12 +40,22 @@ const ACTIONS: Record<string, CreateAction[]> = {
     { label: 'Task', icon: 'lucide:check-square', prompt: 'Add a follow-up task for this lead.' },
     { label: 'Email', icon: 'lucide:mail', prompt: 'Draft an outreach email to this lead.' },
   ],
+  contract: [
+    { label: 'Create invoice', icon: 'lucide:receipt', prompt: 'Create an invoice from this contract — bill its client for the contract amount.' },
+  ],
+  project_event: [
+    { label: 'Bill this milestone', icon: 'lucide:receipt', prompt: 'Create an invoice to bill this payment milestone for the project client.' },
+  ],
 };
 
 const actions = computed(() => ACTIONS[props.entityType] || []);
 
 const open = ref(false);
-function toggle() { open.value = !open.value; }
+function toggle() {
+  // A single action needs no menu — run it straight away.
+  if (actions.value.length === 1) { run(actions.value[0]!); return; }
+  open.value = !open.value;
+}
 function close() { open.value = false; }
 function run(a: CreateAction) {
   close();
@@ -62,7 +72,7 @@ function run(a: CreateAction) {
     >
       <EarnestIcon class="w-3.5 h-3.5" />
       <span class="hidden sm:inline">{{ label || 'Create with Earnest' }}</span>
-      <Icon :name="open ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
+      <Icon v-if="actions.length > 1" :name="open ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
     </button>
 
     <template v-if="open">

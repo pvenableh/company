@@ -227,6 +227,14 @@ function openProject() {
 		</div>
 
 		<template v-else-if="event">
+			<!-- Bill this milestone — only on Financial payment milestones. -->
+			<div
+				v-if="event.payment_amount || event.type === 'Financial' || event.is_milestone"
+				class="flex justify-end px-4 pt-3"
+			>
+				<AppsCreateWithEarnest entity-type="project_event" label="Bill this milestone" />
+			</div>
+
 			<!-- Header (page mode only) -->
 			<div
 				v-if="!compact"

@@ -17,7 +17,7 @@
  * The result shape mirrors ToolHandlerResult so chat.post.ts can treat proposed
  * and executed tool calls uniformly when streaming `tool_done` back to the model.
  */
-import { readUsers } from '@directus/sdk';
+import { readUsers, readItem } from '@directus/sdk';
 import { logAiAction } from '~~/server/utils/ai-actions';
 import { UPDATE_FIELD_ALLOWLIST } from '~~/server/utils/ai-action-executors';
 import type { ToolHandlerResult } from './tool-handlers';
@@ -102,6 +102,9 @@ function normalizeEvents(raw: any): { events: Array<Record<string, any>>; taskCo
     if (e.event_date) ev.event_date = String(e.event_date);
     if (e.end_date) ev.end_date = String(e.end_date);
     if (e.description) ev.description = String(e.description);
+    // A payment_amount marks this as a Financial billing milestone.
+    const pay = Number(e.payment_amount);
+    if (Number.isFinite(pay) && pay > 0) ev.payment_amount = Math.round(pay * 100) / 100;
     const tasks = normalizeTasks(e.tasks);
     if (tasks.length) { ev.tasks = tasks; taskCount += tasks.length; }
     events.push(ev);
@@ -196,19 +199,61 @@ async function proposeCreateTicket(
 // ── create_invoice ─────────────────────────────────────────────────────────
 // Approval-gated: the invoice + line items are queued; the executor generates
 // the invoice code and totals on approval. Line items need a description + rate.
+function idOf(v: any): string | null {
+  if (v == null) return null;
+  return typeof v === 'object' ? (v.id != null ? String(v.id) : null) : String(v);
+}
+
 async function proposeCreateInvoice(
   input: Record<string, any>,
   ctx: ProposalContext,
 ): Promise<ToolHandlerResult> {
+  const directus = getTypedDirectus();
+  const orgId = ctx.organizationId;
+
+  // Billing source — explicit ids or the focused entity.
+  const contractId = input.from_contract_id ?? (ctx.entityType === 'contract' || ctx.entityType === 'contracts' ? ctx.entityId : null);
+  const eventId = input.project_event_id ?? (ctx.entityType === 'project_event' ? ctx.entityId : null);
   const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
-  const clientId = input.client_id ?? (isClientFocus ? ctx.entityId : null);
-  if (!clientId) {
-    return { success: false, summary: '', error: 'create_invoice needs a client_id (or focus the chat on a client)' };
+
+  let clientId: string | null = input.client_id ?? null;
+  let projectEventId: string | null = null;
+  let seededLine: Record<string, any> | null = null;
+
+  // Bill from a contract → pull its client + total value.
+  if (contractId) {
+    const c = (await directus.request(
+      readItem('contracts' as any, contractId, { fields: ['id', 'title', 'total_value', 'organization', 'client'] as any }),
+    ).catch(() => null)) as any;
+    if (!c) return { success: false, summary: '', error: 'Contract not found' };
+    if (idOf(c.organization) !== orgId) return { success: false, summary: '', error: 'Contract belongs to another organization' };
+    if (!clientId) clientId = idOf(c.client);
+    const amt = Number(c.total_value);
+    if (Number.isFinite(amt) && amt > 0) seededLine = { description: (c.title || 'Contract').toString(), quantity: 1, rate: Math.round(amt * 100) / 100 };
   }
 
-  const lineItems = normalizeLineItems(input.line_items);
+  // Bill a project milestone → pull the project client + milestone amount + link.
+  if (eventId) {
+    const ev = (await directus.request(
+      readItem('project_events' as any, eventId, { fields: ['id', 'title', 'payment_amount', 'amount', 'project.id', 'project.client', 'project.organization'] as any }),
+    ).catch(() => null)) as any;
+    if (!ev) return { success: false, summary: '', error: 'Milestone event not found' };
+    if (idOf(ev.project?.organization) !== orgId) return { success: false, summary: '', error: 'Milestone belongs to another organization' };
+    projectEventId = String(ev.id);
+    if (!clientId) clientId = idOf(ev.project?.client);
+    const amt = Number(ev.payment_amount ?? ev.amount);
+    if (!seededLine && Number.isFinite(amt) && amt > 0) seededLine = { description: `${ev.title || 'Milestone'} — milestone payment`, quantity: 1, rate: Math.round(amt * 100) / 100 };
+  }
+
+  if (!clientId && isClientFocus) clientId = ctx.entityId ?? null;
+  if (!clientId) {
+    return { success: false, summary: '', error: 'create_invoice needs a client — focus a client, contract, or milestone, or pass client_id' };
+  }
+
+  let lineItems = normalizeLineItems(input.line_items);
+  if (!lineItems.length && seededLine) lineItems = [seededLine];
   if (!lineItems.length) {
-    return { success: false, summary: '', error: 'create_invoice needs at least one line item with a description and rate' };
+    return { success: false, summary: '', error: 'create_invoice needs at least one line item (or a contract / milestone amount to bill from)' };
   }
 
   const subtotal = lineItems.reduce((s, li) => s + li.quantity * li.rate, 0);
@@ -218,6 +263,7 @@ async function proposeCreateInvoice(
     invoice_date: input.invoice_date ? String(input.invoice_date) : null,
     due_date: input.due_date ? String(input.due_date) : null,
     line_items: lineItems,
+    project_event_id: projectEventId,
   };
 
   const rowTitle = `Create invoice — ${fmtUsd(subtotal)} (${lineItems.length} item${lineItems.length !== 1 ? 's' : ''})`;
@@ -226,6 +272,8 @@ async function proposeCreateInvoice(
     subtotal,
     due_date: payload.due_date,
     lineItems: lineItems.map((li) => ({ description: li.description, quantity: li.quantity, rate: li.rate, amount: Math.round(li.quantity * li.rate * 100) / 100 })),
+    fromContract: !!contractId,
+    linkedMilestone: !!projectEventId,
   };
 
   const actionId = await logAiAction({
@@ -236,8 +284,8 @@ async function proposeCreateInvoice(
     title: rowTitle,
     payload,
     preview,
-    entityType: 'clients',
-    entityId: String(clientId),
+    entityType: projectEventId ? 'project_events' : 'clients',
+    entityId: projectEventId ?? String(clientId),
     sessionId: ctx.sessionId ?? null,
   });
   if (actionId == null) return { success: false, summary: '', error: 'Could not queue the invoice for approval. Please try again.' };
@@ -289,7 +337,7 @@ async function proposeCreateProject(
     description: payload.description,
     start_date: payload.start_date,
     due_date: payload.due_date,
-    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length })),
+    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length, payment_amount: (e as any).payment_amount ?? null })),
     projectTaskCount: projectTasks.length,
   };
 
@@ -337,7 +385,7 @@ async function proposeAddEvent(
 
   const preview = {
     kind: 'add_event' as const,
-    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length })),
+    events: events.map((e) => ({ title: e.title, event_date: e.event_date ?? null, taskCount: ((e.tasks as any[]) || []).length, payment_amount: (e as any).payment_amount ?? null })),
   };
 
   const actionId = await logAiAction({
