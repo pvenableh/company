@@ -137,6 +137,36 @@ const handleSend = async () => {
 
 const handlePromptClick = (prompt: string) => send(prompt);
 
+// Actions Earnest can actually perform on the focused entity — surfaced so the
+// user knows these are on the table (each seeds a chat message that triggers the
+// approval-gated tool). Keyed by the setEntity type.
+const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> = {
+	client: [
+		{ label: 'Create a project', prompt: 'Create a new project for this client with a short timeline of phases and a few tasks under each.' },
+		{ label: 'Draft a proposal & contract', prompt: 'Draft a proposal and a contract for this client based on what you know about them.' },
+		{ label: 'Create an invoice', prompt: 'Create an invoice for this client for recent work.' },
+		{ label: 'Add a task', prompt: 'Add a follow-up task for this client.' },
+	],
+	project: [
+		{ label: 'Add a phase / event', prompt: 'Add a phase to this project with a couple of tasks under it.' },
+		{ label: 'Add tasks', prompt: 'Add a few tasks to this project.' },
+		{ label: 'Reschedule', prompt: 'Reschedule this project — push the dates out by two weeks and cascade to events and tasks.' },
+		{ label: 'Update a field', prompt: 'Change this project\'s status.' },
+	],
+	lead: [
+		{ label: 'Draft a proposal & contract', prompt: 'Draft a proposal and contract for this lead.' },
+		{ label: 'Add a follow-up task', prompt: 'Add a follow-up task for this lead.' },
+		{ label: 'Draft an outreach email', prompt: 'Draft an outreach email to this lead.' },
+	],
+};
+const entityActions = computed(() => {
+	const t = aware.entityType.value;
+	if (!aware.hasEntity.value || !t) return [];
+	const key = t === 'work-project' || /(^|_)project$/.test(t) ? 'project' : t;
+	return ENTITY_ACTIONS[key] || [];
+});
+const showActions = ref(false);
+
 const handleKeydown = (e: KeyboardEvent) => {
 	if (e.key === 'Enter' && !e.shiftKey) {
 		e.preventDefault();
@@ -371,6 +401,33 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 								<EarnestIcon class="w-3 h-3 text-primary/60 inline-block mr-1.5" />
 								{{ prompt }}
 							</button>
+
+							<!-- Actions Earnest can take on this entity (approval-gated). Tells
+							     the user these are possible, and one tap sets them up. -->
+							<div v-if="entityActions.length" class="pt-1">
+								<button
+									type="button"
+									class="w-full flex items-center gap-1.5 px-1 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+									@click="showActions = !showActions"
+								>
+									<Icon name="lucide:wand-2" class="w-3 h-3" />
+									Things Earnest can do here
+									<Icon :name="showActions ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3 ml-auto" />
+								</button>
+								<div v-if="showActions" class="flex flex-wrap gap-1.5 pt-1.5">
+									<button
+										v-for="a in entityActions"
+										:key="a.label"
+										type="button"
+										class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+										:title="a.prompt"
+										@click="handlePromptClick(a.prompt)"
+									>
+										<Icon name="lucide:sparkles" class="w-3 h-3" />
+										{{ a.label }}
+									</button>
+								</div>
+							</div>
 						</div>
 					</div>
 

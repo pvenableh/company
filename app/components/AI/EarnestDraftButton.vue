@@ -25,6 +25,10 @@ const props = defineProps<{
   label?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** 'pill' (default) is the standalone chip; 'link' is a small inline text link. */
+  variant?: 'pill' | 'link';
+  /** Allow generating with no brief — one-click "suggest from context". */
+  allowEmpty?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -45,7 +49,7 @@ function toggle() {
 
 function submit() {
   const value = brief.value.trim();
-  if (!value || props.loading) return;
+  if ((!value && !props.allowEmpty) || props.loading) return;
   emit('submit', value);
   open.value = false;
 }
@@ -58,6 +62,18 @@ function close() {
 <template>
   <div class="relative inline-flex">
     <button
+      v-if="variant === 'link'"
+      type="button"
+      class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+      :disabled="disabled"
+      @click="toggle"
+    >
+      <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3 h-3 animate-spin" />
+      <EarnestIcon v-else class="w-3 h-3" />
+      {{ loading ? 'Suggesting…' : (label || 'Earnest Suggest') }}
+    </button>
+    <button
+      v-else
       type="button"
       class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors disabled:opacity-50"
       :disabled="disabled"
@@ -78,7 +94,7 @@ function close() {
       >
         <div class="flex items-center gap-1.5 text-xs font-medium text-primary">
           <EarnestIcon class="w-3.5 h-3.5" />
-          Draft with Earnest
+          {{ label || 'Draft with Earnest' }}
         </div>
         <textarea
           ref="inputEl"
@@ -89,6 +105,7 @@ function close() {
           @keydown.meta.enter="submit"
           @keydown.ctrl.enter="submit"
         />
+        <p v-if="allowEmpty" class="text-[10px] text-muted-foreground">Optional — leave blank to let Earnest suggest from what it knows.</p>
         <div class="flex items-center justify-end gap-2">
           <button
             type="button"
@@ -100,12 +117,12 @@ function close() {
           <button
             type="button"
             class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-            :disabled="!brief.trim() || loading"
+            :disabled="(!brief.trim() && !allowEmpty) || loading"
             @click="submit"
           >
             <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
             <UIcon v-else name="i-lucide-sparkles" class="w-3.5 h-3.5" />
-            Draft
+            {{ variant === 'link' ? 'Suggest' : 'Draft' }}
           </button>
         </div>
       </div>

@@ -28,6 +28,8 @@ const { refresh: refreshPendingActions } = useAiPendingActions();
 
 const proposalSlide = useAppSlideOver('proposal');
 const contractSlide = useAppSlideOver('contract');
+const projectSlide = useAppSlideOver('work-project');
+const invoiceSlide = useAppSlideOver('invoice');
 
 const actions = ref<any[]>([]);
 const loading = ref(true);
@@ -201,6 +203,22 @@ async function bulkResolve(decision: 'approve' | 'reject') {
   }
 }
 
+// ── Edit before approve (pending rows) ──────────────────────────────────────────
+// A pending action can be adjusted before it runs — the edit endpoint patches the
+// row's payload/preview/title and the executor re-validates on approve.
+const EDITABLE_TYPES = new Set(['create_project', 'add_event', 'create_invoice', 'create_tasks', 'update_field', 'send_email']);
+const editingId = ref<string | number | null>(null);
+function canEditAction(a: any): boolean {
+  return a?.status === 'pending' && EDITABLE_TYPES.has(a?.action_type);
+}
+function onEdited(a: any, patch: { payload: any; preview: any; title: string }) {
+  a.payload = patch.payload;
+  a.preview = patch.preview;
+  a.title = patch.title;
+  editingId.value = null;
+  toast.add({ title: 'Changes saved', color: 'green' });
+}
+
 // ── Undo (executed update_field only) ──────────────────────────────────────────
 // The forward executor captured `previous`, so an executed update_field can be
 // reversed one-click. The row stays `executed` but its result is stamped `undone`.
@@ -244,6 +262,9 @@ const ACTION_LABELS: Record<string, string> = {
   draft_email: 'Drafted email',
   send_email: 'Sent email',
   create_tasks: 'Created tasks',
+  create_project: 'Create project',
+  add_event: 'Add events',
+  create_invoice: 'Create invoice',
   update_field: 'Updated a field',
   other: 'Action',
 };
@@ -314,13 +335,41 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+// Preview of a project/events proposal — shown BEFORE approval so the user sees
+// the whole tree (events + task counts) that a single Approve will create.
+function projectPreview(a: any): { events: Array<{ title: string; event_date: string | null; taskCount: number }>; projectTaskCount: number } | null {
+  const p = a?.preview;
+  if (!p || (p.kind !== 'create_project' && p.kind !== 'add_event')) return null;
+  return {
+    events: Array.isArray(p.events) ? p.events : [],
+    projectTaskCount: Number(p.projectTaskCount) || 0,
+  };
+}
+
+// Invoice preview (create_invoice) — line items + subtotal, shown before approval.
+function invoicePreview(a: any): { lineItems: Array<{ description: string; quantity: number; rate: number; amount: number }>; subtotal: number } | null {
+  const p = a?.preview;
+  if (!p || p.kind !== 'create_invoice') return null;
+  return {
+    lineItems: Array.isArray(p.lineItems) ? p.lineItems : [],
+    subtotal: Number(p.subtotal) || 0,
+  };
+}
+function fmtMoney(n: number): string {
+  return `$${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
 // Real artifacts this action produced, as clickable links into the slide-over stack.
 function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
   const links: Array<{ label: string; open: () => void }> = [];
   const proposalId = a?.result?.proposalId;
   const contractId = a?.result?.contractId;
+  const projectId = a?.result?.projectId;
+  const invoiceId = a?.result?.invoiceId;
   if (proposalId) links.push({ label: 'View proposal', open: () => proposalSlide.open(String(proposalId), 'edit') });
   if (contractId) links.push({ label: 'View contract', open: () => contractSlide.open(String(contractId), 'edit') });
+  if (projectId) links.push({ label: 'View project', open: () => projectSlide.open(String(projectId)) });
+  if (invoiceId) links.push({ label: 'View invoice', open: () => invoiceSlide.open(String(invoiceId)) });
   return links;
 }
 </script>
@@ -469,28 +518,87 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
               >{{ emailPreview(a)!.body }}</p>
             </div>
 
-            <!-- HITL controls: only pending actions are actionable. -->
-            <div v-if="a.status === 'pending'" class="flex items-center gap-2 mt-2">
-              <Button
-                size="sm"
-                class="h-7 rounded-full px-3 text-[11px]"
-                :disabled="isBusy(a.id)"
-                @click="resolveAction(a, 'approve')"
+            <!-- Project / events preview: the whole tree one Approve will create. -->
+            <div v-if="projectPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1">
+              <div
+                v-for="(ev, i) in projectPreview(a)!.events"
+                :key="i"
+                class="flex items-baseline gap-1.5 text-[11px]"
               >
-                <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-                <UIcon v-else name="lucide:check" class="w-3 h-3" />
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                class="h-7 rounded-full px-3 text-[11px]"
-                :disabled="isBusy(a.id)"
-                @click="resolveAction(a, 'reject')"
+                <UIcon name="lucide:flag" class="w-3 h-3 text-muted-foreground shrink-0 translate-y-0.5" />
+                <span class="font-medium text-foreground break-words">{{ ev.title }}</span>
+                <span v-if="ev.event_date" class="text-muted-foreground shrink-0">{{ ev.event_date }}</span>
+                <span v-if="ev.taskCount" class="text-muted-foreground shrink-0">· {{ ev.taskCount }} task{{ ev.taskCount === 1 ? '' : 's' }}</span>
+              </div>
+              <div v-if="projectPreview(a)!.projectTaskCount" class="text-[11px] text-muted-foreground">
+                + {{ projectPreview(a)!.projectTaskCount }} project task{{ projectPreview(a)!.projectTaskCount === 1 ? '' : 's' }}
+              </div>
+              <div
+                v-if="!projectPreview(a)!.events.length && !projectPreview(a)!.projectTaskCount"
+                class="text-[11px] text-muted-foreground"
               >
-                <UIcon name="lucide:x" class="w-3 h-3" />
-                Reject
-              </Button>
+                Just the project — no events or tasks.
+              </div>
+            </div>
+
+            <!-- Invoice preview (create_invoice): line items + total before approval. -->
+            <div v-if="invoicePreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1">
+              <div
+                v-for="(li, i) in invoicePreview(a)!.lineItems"
+                :key="i"
+                class="flex items-baseline gap-1.5 text-[11px]"
+              >
+                <span class="text-foreground break-words flex-1 min-w-0">{{ li.description }}</span>
+                <span class="text-muted-foreground shrink-0">{{ li.quantity }} × {{ fmtMoney(li.rate) }}</span>
+                <span class="font-medium text-foreground shrink-0">{{ fmtMoney(li.amount) }}</span>
+              </div>
+              <div class="flex items-baseline gap-1.5 text-[11px] pt-1 border-t border-border/40">
+                <span class="text-muted-foreground flex-1">Subtotal</span>
+                <span class="font-semibold text-foreground">{{ fmtMoney(invoicePreview(a)!.subtotal) }}</span>
+              </div>
+            </div>
+
+            <!-- HITL controls: only pending actions are actionable. Editable
+                 types can be adjusted in place before approving. -->
+            <div v-if="a.status === 'pending'" class="mt-2">
+              <AiActionEditor
+                v-if="editingId === a.id"
+                :action="a"
+                @saved="onEdited(a, $event)"
+                @cancel="editingId = null"
+              />
+              <div v-else class="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  class="h-7 rounded-full px-3 text-[11px]"
+                  :disabled="isBusy(a.id)"
+                  @click="resolveAction(a, 'approve')"
+                >
+                  <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                  <UIcon v-else name="lucide:check" class="w-3 h-3" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  class="h-7 rounded-full px-3 text-[11px]"
+                  :disabled="isBusy(a.id)"
+                  @click="resolveAction(a, 'reject')"
+                >
+                  <UIcon name="lucide:x" class="w-3 h-3" />
+                  Reject
+                </Button>
+                <button
+                  v-if="canEditAction(a)"
+                  type="button"
+                  class="inline-flex items-center gap-1 h-7 px-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  :disabled="isBusy(a.id)"
+                  @click="editingId = a.id"
+                >
+                  <UIcon name="lucide:pencil" class="w-3 h-3" />
+                  Edit
+                </button>
+              </div>
             </div>
 
             <!-- Undo: reverse an executed field change (writes the captured
