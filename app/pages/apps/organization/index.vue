@@ -70,7 +70,7 @@ watch([floor, selectedOrg], ([f, orgId]) => {
   if (f === 'teams' && orgId) fetchTeams(orgId as string).catch(() => {});
 }, { immediate: true });
 
-const canManageOrg = computed(() => canAccess('organization_settings'));
+const canManageOrg = computed(() => canAccess('org_settings'));
 
 const org = computed(() => currentOrg.value as any);
 const orgName = computed(() => org.value?.name || 'Organization');

@@ -665,9 +665,12 @@ const addUserToOrganization = async (userId) => {
 	if (!selectedOrg.value || !userId) return;
 	addingUser.value = true;
 	try {
-		await orgUserJunction.create({
-			organizations_id: selectedOrg.value,
-			directus_users_id: userId,
+		// Route through the server endpoint so an org_membership row (which carries
+		// the role) is created alongside the legacy junction — a raw junction
+		// insert leaves the user with no org role and therefore no permissions.
+		await $fetch('/api/org/add-member', {
+			method: 'POST',
+			body: { organizationId: selectedOrg.value, userId },
 		});
 		toast.add({ title: 'Success', description: 'User added to organization', color: 'green' });
 		await fetchFilteredUsers(selectedOrg.value);

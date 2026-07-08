@@ -118,8 +118,9 @@
 									<p v-if="request.admin_notes" class="text-[11px] text-primary mt-1">Response: {{ request.admin_notes }}</p>
 								</div>
 								<button
-									v-if="request.request_status === 'approved' && request.linked_appointment"
+									v-if="request.request_status === 'approved' && appointmentRoomName(request.linked_appointment)"
 									class="flex items-center gap-1 px-2.5 py-1.5 bg-success/10 text-success rounded-lg text-[11px] font-medium ios-press"
+									@click="joinRequestMeeting(request)"
 								>
 									<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
 									Join
@@ -515,6 +516,19 @@ const handleEditEvent = (event: CalendarEvent) => {
 
 const handleJoinMeeting = (event: CalendarEvent) => {
 	if (event.room_name) router.push(`/meeting/${event.room_name}`);
+};
+
+// Resolve the meeting room for an approved request's linked appointment.
+// room_name lives on the appointment for Twilio rooms, or on the nested
+// video_meeting for video bookings.
+const appointmentRoomName = (appt: any): string | null => {
+	if (!appt || typeof appt !== 'object') return null;
+	return appt.room_name || appt.video_meeting?.room_name || null;
+};
+
+const joinRequestMeeting = (request: any) => {
+	const roomName = appointmentRoomName(request?.linked_appointment);
+	if (roomName) router.push(`/meeting/${roomName}`);
 };
 
 const handleEventCreated = () => {

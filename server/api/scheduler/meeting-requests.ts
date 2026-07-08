@@ -48,6 +48,7 @@ async function handleGet(event: any) {
 				'host_user.last_name',
 				'host_user.email',
 				'linked_appointment.*',
+				'linked_appointment.video_meeting.room_name',
 			],
 			filter,
 			sort: ['-date_created'],
