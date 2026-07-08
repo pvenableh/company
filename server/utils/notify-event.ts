@@ -143,8 +143,28 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 			}),
 		)) as any;
 	} catch (err) {
-		console.error('[notify-event] failed to load recipients:', err);
-		return { bellSent: 0, emailSent: 0 };
+		// A missing or perm-blocked `notification_preferences` field 403s the
+		// whole bulk read, which would silently zero the entire fan-out (this
+		// happened in prod when the column was never migrated). Fall back to the
+		// remaining fields and treat prefs as absent — missing keys default to
+		// opt-in, so recipients still get their bell + email.
+		console.warn(
+			'[notify-event] recipient load failed on full field set; retrying without notification_preferences:',
+			(err as any)?.message || err,
+		);
+		try {
+			const rows = (await directus.request(
+				readUsers({
+					filter: { id: { _in: unique } } as any,
+					fields: RECIPIENT_FIELDS.filter((f) => f !== 'notification_preferences') as any,
+					limit: -1,
+				}),
+			)) as any[];
+			recipients = rows.map((r) => ({ ...r, notification_preferences: null })) as any;
+		} catch (err2) {
+			console.error('[notify-event] failed to load recipients (even without prefs):', err2);
+			return { bellSent: 0, emailSent: 0 };
+		}
 	}
 
 	let bellSent = 0;

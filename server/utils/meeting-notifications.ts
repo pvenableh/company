@@ -118,8 +118,26 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 			}),
 		)) as any;
 	} catch (err) {
-		console.error('[meeting-notifications] failed to load recipients:', err);
-		return;
+		// Don't let a missing/perm-blocked `notification_preferences` field 403
+		// the whole read and silently drop every meeting notification. Retry
+		// without it and treat prefs as absent (missing keys default to opt-in).
+		console.warn(
+			'[meeting-notifications] recipient load failed on full field set; retrying without notification_preferences:',
+			(err as any)?.message || err,
+		);
+		try {
+			const rows = (await directus.request(
+				readUsers({
+					filter: { id: { _in: uniqueIds } } as any,
+					fields: ['id', 'email', 'first_name', 'last_name', 'email_notifications'] as any,
+					limit: -1,
+				}),
+			)) as any[];
+			recipients = rows.map((r) => ({ ...r, notification_preferences: null })) as any;
+		} catch (err2) {
+			console.error('[meeting-notifications] failed to load recipients (even without prefs):', err2);
+			return;
+		}
 	}
 
 	const prefKey = PREFERENCE_KEY[event.kind];
