@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -225,6 +225,7 @@ export function useOrganization() {
 					notes: org.notes ?? null,
 					email_reply_to: org.email_reply_to ?? null,
 					mailing_address: org.mailing_address ?? null,
+					email_bcc: org.email_bcc ?? null,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,

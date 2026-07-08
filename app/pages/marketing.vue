@@ -498,28 +498,23 @@ const recommendations = ref<any[]>([]);
 const dismissingId = ref<string | null>(null);
 
 // ── Email engagement (SendGrid events over the active range) ──────────
+// email_events has no authenticated row-level read perm — route through the
+// org-scoped server endpoint (admin token + requireOrgMembership).
 const emailEventsRaw = ref<any[]>([]);
-const emailEventItems = useDirectusItems('email_events');
 
 async function fetchEmailEvents() {
 	if (!selectedOrg.value) {
 		emailEventsRaw.value = [];
 		return;
 	}
-	const since = new Date(Date.now() - rangeDays.value * 86400000).toISOString();
 	try {
-		const evs = await emailEventItems.list({
-			fields: ['id', 'event', 'recipient', 'timestamp'],
-			filter: {
-				_and: [
-					{ organization: { _eq: selectedOrg.value } },
-					{ timestamp: { _gte: since } },
-				],
-			},
-			sort: ['-timestamp'],
-			limit: 500,
+		const res = await $fetch<{ events: any[] }>('/api/email/events', {
+			// Marketing engagement = newsletter campaigns only; exclude transactional
+			// (notifications, password-reset, AI, contract sends) so they don't
+			// inflate open/click/bounce rates.
+			query: { org: selectedOrg.value, days: rangeDays.value, kind: 'campaign' },
 		});
-		emailEventsRaw.value = (evs as any[]) || [];
+		emailEventsRaw.value = res.events || [];
 	} catch {
 		emailEventsRaw.value = [];
 	}

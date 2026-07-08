@@ -101,20 +101,37 @@ async function sendForSignature() {
   if (!contract.value?.id || sendingForSignature.value) return;
   sendingForSignature.value = true;
   try {
-    const patch: Record<string, any> = { contract_status: 'sent' };
-    if (!contract.value.signing_token) patch.signing_token = crypto.randomUUID();
-    if (!contract.value.date_sent) patch.date_sent = new Date().toISOString().split('T')[0];
-    const updated = await contractItems.update(contract.value.id, patch);
-    contract.value = { ...contract.value, ...updated };
-    const url = `${window.location.origin}/contracts/sign/${contract.value.signing_token}`;
-    await navigator.clipboard.writeText(url).catch(() => {});
-    toast.add({
-      title: 'Marked as sent',
-      description: 'Signing link copied to clipboard',
-      color: 'green',
-    });
+    // Server-side transition + gated email. For allow-listed orgs it emails the
+    // contact directly; otherwise it returns transmitted:false and we fall back
+    // to copying the signing link (the historical behaviour).
+    const res = await $fetch<{
+      status: string; signing_token: string; url: string; transmitted: boolean; recipient?: string; reason?: string;
+    }>(`/api/contracts/${contract.value.id}/send`, { method: 'POST' });
+
+    contract.value = {
+      ...contract.value,
+      contract_status: res.status,
+      signing_token: res.signing_token,
+      date_sent: contract.value.date_sent || new Date().toISOString().split('T')[0],
+    };
+    emit('loaded', contract.value);
+
+    if (res.transmitted) {
+      toast.add({
+        title: 'Sent for signature',
+        description: res.recipient ? `Emailed to ${res.recipient}` : 'Signing email sent',
+        color: 'green',
+      });
+    } else {
+      await navigator.clipboard.writeText(res.url).catch(() => {});
+      toast.add({
+        title: 'Marked as sent',
+        description: 'Signing link copied to clipboard',
+        color: 'green',
+      });
+    }
   } catch (err: any) {
-    toast.add({ title: 'Failed', description: err.message, color: 'red' });
+    toast.add({ title: 'Failed', description: err.data?.message || err.message, color: 'red' });
   } finally {
     sendingForSignature.value = false;
   }

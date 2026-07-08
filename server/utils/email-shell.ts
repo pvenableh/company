@@ -40,6 +40,8 @@ export interface OrgBrandRef {
 	whitelabel?: boolean | null;
 	website?: string | null;
 	mailing_address?: string | null;
+	/** Optional per-org monitoring BCC — added to every branded send for this org. */
+	email_bcc?: string | null;
 }
 
 interface OrgShellArgs extends EarnestShellArgs {

@@ -1,10 +1,26 @@
+import { readItem } from '@directus/sdk';
 import sgMail from '@sendgrid/mail';
+import { resolveMonitoringBcc } from '~~/server/utils/email-send';
 
 export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
-	logger.info('Payment notification received', { emails: body.emails });
+	console.log('Payment notification received', { emails: body.emails });
 
 	sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+	// Resolve the owning org from the invoice id (body.id) so the send can be
+	// per-org BCC'd and attributed to the org in /email/activity. Fail-soft.
+	let orgId = null;
+	if (body.id) {
+		try {
+			const inv = await getServerDirectus().request(
+				readItem('invoices', body.id, { fields: ['bill_to'] }),
+			);
+			orgId = inv && typeof inv.bill_to === 'object' ? inv.bill_to?.id ?? null : inv?.bill_to ?? null;
+		} catch {
+			// no org attribution — still sends, just untagged to an org
+		}
+	}
 
 	const formatRecipients = (emails) => {
 		if (!emails) return [];
@@ -31,17 +47,20 @@ export default defineEventHandler(async (event) => {
 		return billTo || 'Not specified';
 	};
 
+	// Monitoring BCC = global SENDGRID_BCC_EMAIL + the org's optional email_bcc,
+	// excluding the recipients. Both optional — no BCC if neither is set.
+	const toEmails = (Array.isArray(body.emails) ? body.emails : [body.emails || body.email]).filter(Boolean);
+	const bccList = await resolveMonitoringBcc({ orgId, exclude: toEmails });
+
+	const personalization = {
+		to: formatRecipients(body.emails || body.email),
+	};
+	if (bccList.length > 0) {
+		personalization.bcc = bccList.map((email) => ({ email }));
+	}
+
 	const message = {
-		personalizations: [
-			{
-				to: formatRecipients(body.emails || body.email),
-				bcc: [
-					{
-						email: 'hello@earnest.guru',
-					},
-				],
-			},
-		],
+		personalizations: [personalization],
 		from: {
 			email: 'hello@earnest.guru',
 			name: 'Earnest',
@@ -73,7 +92,16 @@ export default defineEventHandler(async (event) => {
 			payment_method: body.payment_method || 'Not specified',
 			receipt_url: body.receipt_url || null,
 		},
-		categories: ['hue'],
+		// Tagged as an Earnest send so the SendGrid webhook keeps the events and
+		// (when the invoice resolved an org) attributes them in /email/activity.
+		categories: ['earnest', 'payment'],
+		customArgs: {
+			app: 'earnest',
+			email_name: 'payment-notification',
+			send_collection: 'invoices',
+			...(body.id ? { send_id: String(body.id) } : {}),
+			...(orgId ? { organization: String(orgId) } : {}),
+		},
 	};
 
 	try {
@@ -84,7 +112,7 @@ export default defineEventHandler(async (event) => {
 
 		const response = await sgMail.send(message);
 
-		logger.info('Payment notification sent successfully', {
+		console.log('Payment notification sent successfully', {
 			recipients: message.personalizations[0].to,
 		});
 		return {
@@ -95,7 +123,7 @@ export default defineEventHandler(async (event) => {
 			},
 		};
 	} catch (error) {
-		logger.error('Payment notification failed', error);
+		console.error('Payment notification failed', error);
 		throw createError({
 			statusCode: error.code || 500,
 			message: error.message,

@@ -52,7 +52,7 @@ interface SendResult {
 	reason?: string;
 }
 
-const ORG_BRAND_FIELDS = ['id', 'name', 'logo', 'brand_color', 'whitelabel', 'website', 'email_reply_to', 'mailing_address'] as const;
+const ORG_BRAND_FIELDS = ['id', 'name', 'logo', 'brand_color', 'whitelabel', 'website', 'email_reply_to', 'mailing_address', 'email_bcc'] as const;
 
 /**
  * Fetches the minimum brand+reply-to context for an org. Returns null on
@@ -79,11 +79,39 @@ export async function fetchOrgBrand(orgId: string | null | undefined): Promise<(
 			website: row.website ?? null,
 			email_reply_to: row.email_reply_to ?? null,
 			mailing_address: row.mailing_address ?? null,
+			email_bcc: row.email_bcc ?? null,
 		};
 	} catch (err) {
 		console.warn('[email-send] fetchOrgBrand failed:', (err as any)?.message || err);
 		return null;
 	}
+}
+
+/**
+ * Resolve the monitoring BCC list for a send: the global SENDGRID_BCC_EMAIL
+ * plus (when an org is known) that org's optional `email_bcc`. Deduped, and
+ * with any `exclude` addresses (the to/cc recipients) removed so SendGrid never
+ * sees a to==bcc collision. Returns plain address strings.
+ *
+ * Shared so the raw-SendGrid senders (invoice / payment notice) apply the exact
+ * same monitoring BCC as sendBrandedEmail instead of a hardcoded address.
+ */
+export async function resolveMonitoringBcc(
+	opts: { orgId?: string | null; exclude?: (string | null | undefined)[] } = {},
+): Promise<string[]> {
+	const config = useRuntimeConfig() as any;
+	const global = config.sendgridBccEmail || config.SENDGRID_BCC_EMAIL || process.env.SENDGRID_BCC_EMAIL;
+
+	const list: string[] = [];
+	if (global) list.push(String(global).trim());
+	if (opts.orgId) {
+		const org = await fetchOrgBrand(opts.orgId);
+		const orgBcc = (org as any)?.email_bcc;
+		if (orgBcc) list.push(String(orgBcc).trim());
+	}
+
+	const exclude = new Set((opts.exclude || []).filter(Boolean).map((e) => String(e).toLowerCase()));
+	return Array.from(new Set(list.filter((e) => e && !exclude.has(e.toLowerCase()))));
 }
 
 export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
@@ -131,7 +159,20 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
 	};
 	if (text) message.text = text;
 	if (resolvedReplyTo) message.replyTo = resolvedReplyTo;
-	if (bcc && bcc !== to) message.bcc = bcc;
+
+	// BCC = global monitoring address (SENDGRID_BCC_EMAIL) + the org's optional
+	// per-org monitoring BCC (organizations.email_bcc). Deduped, and never the
+	// recipient itself (SendGrid 400s on to==bcc).
+	const toLower = to.toLowerCase();
+	const bccList = Array.from(
+		new Set(
+			[bcc, (org as any)?.email_bcc]
+				.map((e) => (e ? String(e).trim() : ''))
+				.filter((e) => e && e.toLowerCase() !== toLower),
+		),
+	);
+	if (bccList.length === 1) message.bcc = bccList[0];
+	else if (bccList.length > 1) message.bcc = bccList;
 	message.categories = mergedCategories;
 	message.customArgs = mergedArgs;
 

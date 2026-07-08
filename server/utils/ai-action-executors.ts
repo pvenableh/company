@@ -37,6 +37,7 @@
 import { createItem, updateItem, readItem, readItems } from '@directus/sdk';
 import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { fetchOrgBrand, sendBrandedEmail } from '~~/server/utils/email-send';
+import { evaluateOutboundGate } from '~~/server/utils/outbound-gate';
 
 export interface ExecutorContext {
   /** The full ai_actions row being executed (id, payload, entity_type, …). */
@@ -265,9 +266,19 @@ export async function undoUpdateField(
 }
 
 // ── send_email ────────────────────────────────────────────────────────────────
-// Irreversible → last to ship, and DEFAULTS to dry-run. The full render + audit
-// path runs for real while AI_SEND_EMAIL_DRYRUN is unset/'true'; flip it to
-// 'false' in a properly-configured env to actually transmit. See SendEmailPayload.
+// Irreversible → last to ship. Transmit is decided by the per-org / per-template
+// OUTBOUND GATE (server/utils/outbound-gate.ts), NOT the old global
+// AI_SEND_EMAIL_DRYRUN boolean: an org must be on OUTBOUND_EMAIL_ALLOWED_ORGS
+// (default deny-all) and the template on OUTBOUND_EMAIL_ALLOWED_TEMPLATES
+// (default 'generic'), with OUTBOUND_EMAIL_KILL as a master off-switch.
+//
+// Either way the email is FULLY RENDERED and the rendered { to, subject, html,
+// text } + the gate decision are ALWAYS returned as the action `result` — so
+// every send, transmitted or held, leaves a previewable send-log row (surfaced
+// by GET /api/ai/actions/[id]/preview). Only when the gate allows do we hand off
+// to SendGrid.
+
+const AI_EMAIL_TEMPLATE = 'generic';
 
 const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) => {
   const payload = action?.payload || {};
@@ -308,7 +319,7 @@ const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) =
 
   // bodyHtml is AI-composed HTML — injected via the template's {{{ }}} exactly
   // as the previous org shell placed it (same trust model).
-  const { html, text } = await renderBrandedTemplate('generic', {
+  const { html, text } = await renderBrandedTemplate(AI_EMAIL_TEMPLATE, {
     subject,
     preheader: subject,
     heading: (payload.heading ?? subject).toString(),
@@ -317,10 +328,14 @@ const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) =
     ctaLabel: cta?.label || '',
   }, { org });
 
-  // Default to dry-run: the email is fully rendered but NOT transmitted unless
-  // AI_SEND_EMAIL_DRYRUN is explicitly 'false'.
-  if (process.env.AI_SEND_EMAIL_DRYRUN !== 'false') {
-    return { sent: false, dryRun: true, to, subject };
+  // Always carry the rendered preview + gate decision so a held email is still a
+  // complete send-log row (previewable, auditable) — not just a "sent:false".
+  const preview = { to, subject, html, text };
+  const gate = evaluateOutboundGate({ channel: 'ai_email', orgId: organizationId, template: AI_EMAIL_TEMPLATE });
+
+  // Gate held it: fully rendered but NOT transmitted. Record why.
+  if (!gate.allowed) {
+    return { sent: false, dryRun: true, to, subject, gate: { allowed: false, reason: gate.reason }, preview };
   }
 
   const res = await sendBrandedEmail({
@@ -336,7 +351,7 @@ const sendEmailExecutor: AiActionExecutor = async ({ action, organizationId }) =
   });
   if (!res.sent) throw new Error(res.reason || 'Email transport failed');
 
-  return { sent: true, to, subject };
+  return { sent: true, to, subject, gate: { allowed: true, reason: gate.reason }, preview };
 };
 
 // ── reschedule_project ─────────────────────────────────────────────────────────

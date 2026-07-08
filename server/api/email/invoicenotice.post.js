@@ -1,4 +1,5 @@
 import sgMail from '@sendgrid/mail';
+import { resolveMonitoringBcc } from '~~/server/utils/email-send';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -158,10 +159,20 @@ export default defineEventHandler(async (event) => {
 			const allCcEmails = [...new Set([...remainingContacts, ...invoiceExtraEmails, ...(ownerEmail ? [ownerEmail] : [])])]
 				.filter((e) => e && e !== primaryEmail);
 
+			// Monitoring BCC = global SENDGRID_BCC_EMAIL + this org's optional
+			// email_bcc, excluding the to/cc recipients. Both are optional — if
+			// neither is set the email simply goes out with no BCC.
+			const bccList = await resolveMonitoringBcc({
+				orgId: organization?.id,
+				exclude: [primaryEmail || organization.email, ...allCcEmails],
+			});
+
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }],
-				bcc: [{ email: 'hello@earnest.guru' }],
 			};
+			if (bccList.length > 0) {
+				personalization.bcc = bccList.map((email) => ({ email }));
+			}
 
 			// Add additional CC recipients if they exist
 			if (allCcEmails.length > 0) {
@@ -195,7 +206,15 @@ export default defineEventHandler(async (event) => {
 					email_date: formatDate(new Date()),
 					has_overdue: formattedInvoices.some((inv) => inv.overdue),
 				},
-				categories: ['hue', 'invoices'],
+				// Tagged as an Earnest send so the SendGrid webhook keeps the events
+				// (app:'earnest') and attributes them to the org for /email/activity.
+				categories: ['earnest', 'invoices'],
+				customArgs: {
+					app: 'earnest',
+					email_name: 'invoice-notice',
+					send_collection: 'invoices',
+					...(organization?.id ? { organization: String(organization.id) } : {}),
+				},
 			};
 
 			try {

@@ -139,6 +139,7 @@ const savingEmailBranding = ref(false);
 const emailBrandingForm = ref({
 	email_reply_to: '',
 	mailing_address: '',
+	email_bcc: '',
 });
 const emailPreviewTemplate = ref('marketing-touch');
 const emailPreviewTemplates = [
@@ -162,6 +163,7 @@ const startEditEmailBranding = () => {
 	emailBrandingForm.value = {
 		email_reply_to: org.value?.email_reply_to || '',
 		mailing_address: org.value?.mailing_address || '',
+		email_bcc: org.value?.email_bcc || '',
 	};
 	editingEmailBranding.value = true;
 };
@@ -172,6 +174,7 @@ const saveEmailBranding = async () => {
 		await organizationItems.update(org.value.id, {
 			email_reply_to: emailBrandingForm.value.email_reply_to || null,
 			mailing_address: emailBrandingForm.value.mailing_address || null,
+			email_bcc: emailBrandingForm.value.email_bcc || null,
 		});
 		toast.add({ title: 'Success', description: 'Email branding updated', color: 'green' });
 		editingEmailBranding.value = false;
@@ -1590,12 +1593,17 @@ watch(searchEmail, (val) => {
 									<!-- View mode -->
 									<div v-if="!editingEmailBranding" class="space-y-3 text-sm">
 										<p class="text-xs text-muted-foreground">
-											Logo + brand color (set above) plus these two fields drive every email Earnest sends on your behalf — notifications, meeting invites, marketing campaigns, and newsletters.
+											Logo + brand color (set above) plus these fields drive every email Earnest sends on your behalf — notifications, meeting invites, marketing campaigns, and newsletters.
 										</p>
 										<div class="flex justify-between">
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Reply-to</span>
 											<span v-if="org.email_reply_to" class="truncate max-w-[180px]">{{ org.email_reply_to }}</span>
 											<span v-else class="text-muted-foreground italic">Earnest default</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Monitoring BCC</span>
+											<span v-if="org.email_bcc" class="truncate max-w-[180px]">{{ org.email_bcc }}</span>
+											<span v-else class="text-muted-foreground italic">None</span>
 										</div>
 										<div>
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Mailing address</span>
@@ -1610,6 +1618,9 @@ watch(searchEmail, (val) => {
 									<div v-else class="space-y-3">
 										<UFormGroup label="Reply-to address" help="Address recipients hit when they reply. Leave blank to use the Earnest default.">
 											<UInput v-model="emailBrandingForm.email_reply_to" placeholder="team@yourdomain.com" type="email" />
+										</UFormGroup>
+										<UFormGroup label="Monitoring BCC" help="Optional. Every email sent for this org is also BCC'd here so you keep a copy. Note: this receives the full contents of client-facing emails. Leave blank for none.">
+											<UInput v-model="emailBrandingForm.email_bcc" placeholder="records@yourdomain.com" type="email" />
 										</UFormGroup>
 										<UFormGroup label="Mailing address" help="Physical address rendered in the footer of marketing emails (CAN-SPAM). Multi-line OK.">
 											<UTextarea

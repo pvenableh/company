@@ -17,7 +17,6 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Email Activity | Earnest' });
 
 const { selectedOrg } = useOrganization();
-const eventItems = useDirectusItems('email_events');
 const emailItems = useDirectusItems('emails');
 
 const events = ref<any[]>([]);
@@ -31,6 +30,21 @@ const RANGES = [
 	{ value: 90, label: 'Last 90 days' },
 ];
 
+// Scope filter: campaign events carry an email_id (marketing newsletters);
+// transactional events (contract/AI/invoice/notification) have email_id null.
+type Scope = 'all' | 'campaign' | 'transactional';
+const scope = ref<Scope>('all');
+const SCOPES: { value: Scope; label: string }[] = [
+	{ value: 'all', label: 'All' },
+	{ value: 'campaign', label: 'Campaigns' },
+	{ value: 'transactional', label: 'Transactional' },
+];
+const scopedEvents = computed(() => {
+	if (scope.value === 'campaign') return events.value.filter((e) => e.email_id);
+	if (scope.value === 'transactional') return events.value.filter((e) => !e.email_id);
+	return events.value;
+});
+
 async function load() {
 	if (!selectedOrg.value) {
 		events.value = [];
@@ -40,43 +54,35 @@ async function load() {
 	}
 	loading.value = true;
 	const since = new Date(Date.now() - range.value * 86400000).toISOString();
-	try {
-		const [evs, camps] = await Promise.all([
-			eventItems.list({
-				fields: [
-					'id', 'event', 'recipient', 'timestamp', 'url', 'reason',
-					'email_id.id', 'email_id.name', 'email_id.subject',
+
+	// Fetch delivery events and campaign roll-up INDEPENDENTLY — a permission
+	// gap on the marketing `emails` collection must not blank the delivery
+	// monitor (and vice-versa). Each settles on its own.
+	const [evsRes, campsRes] = await Promise.allSettled([
+		// email_events has no authenticated row-level read perm — route through
+		// the org-scoped server endpoint (admin token + requireOrgMembership).
+		$fetch<{ events: any[] }>('/api/email/events', {
+			query: { org: selectedOrg.value, days: range.value },
+		}).then((r) => r.events || []),
+		emailItems.list({
+			fields: ['id', 'name', 'subject', 'sent_at', 'total_recipients', 'total_sent', 'total_failed'],
+			filter: {
+				_and: [
+					{ organization: { _eq: selectedOrg.value } },
+					{ sent_at: { _gte: since } },
 				],
-				filter: {
-					_and: [
-						{ organization: { _eq: selectedOrg.value } },
-						{ timestamp: { _gte: since } },
-					],
-				},
-				sort: ['-timestamp'],
-				limit: 500,
-			}),
-			emailItems.list({
-				fields: ['id', 'name', 'subject', 'sent_at', 'total_recipients', 'total_sent', 'total_failed'],
-				filter: {
-					_and: [
-						{ organization: { _eq: selectedOrg.value } },
-						{ sent_at: { _gte: since } },
-					],
-				},
-				sort: ['-sent_at'],
-				limit: 50,
-			}),
-		]);
-		events.value = (evs as any[]) || [];
-		campaigns.value = (camps as any[]) || [];
-	} catch (err) {
-		console.error('[email/activity] load failed:', err);
-		events.value = [];
-		campaigns.value = [];
-	} finally {
-		loading.value = false;
-	}
+			},
+			sort: ['-sent_at'],
+			limit: 50,
+		}),
+	]);
+
+	if (evsRes.status === 'fulfilled') events.value = (evsRes.value as any[]) || [];
+	else { console.error('[email/activity] events load failed:', evsRes.reason); events.value = []; }
+	if (campsRes.status === 'fulfilled') campaigns.value = (campsRes.value as any[]) || [];
+	else { console.warn('[email/activity] campaigns load failed (non-fatal):', campsRes.reason); campaigns.value = []; }
+
+	loading.value = false;
 }
 
 watch([selectedOrg, range], load, { immediate: true });
@@ -86,7 +92,7 @@ const stats = computed(() => {
 	const counts: Record<string, number> = {};
 	const uniqueOpens = new Set<string>();
 	const uniqueClicks = new Set<string>();
-	for (const e of events.value) {
+	for (const e of scopedEvents.value) {
 		const k = e.event || 'unknown';
 		counts[k] = (counts[k] || 0) + 1;
 		if (k === 'open' && e.recipient) uniqueOpens.add(e.recipient);
@@ -103,7 +109,7 @@ const stats = computed(() => {
 		uniqueOpens: uniqueOpens.size,
 		uniqueClicks: uniqueClicks.size,
 		openRate, clickRate,
-		totalEvents: events.value.length,
+		totalEvents: scopedEvents.value.length,
 	};
 });
 
@@ -145,10 +151,46 @@ const campaignRows = computed(() => {
 	});
 });
 
+// ── Transactional breakdown ──
+// Non-campaign sends (email_id == null): contract signatures, AI emails, invites,
+// notifications, meeting invites, etc. Grouped by the send's email_name /
+// send_collection so each transactional TYPE is monitorable, not just aggregate.
+const TXN_LABELS: Record<string, string> = {
+	'contract-signature': 'Contract signatures',
+	'ai-action': 'AI emails',
+	invite: 'Team invites',
+	welcome: 'Welcome emails',
+	'meeting-invited': 'Meeting invites',
+	'meeting-reminder': 'Meeting reminders',
+	'video-invite': 'Video room invites',
+	notification: 'Notifications',
+	transactional: 'Transactional',
+	invoices: 'Invoice notices',
+};
+function prettyTxnLabel(key: string): string {
+	if (TXN_LABELS[key]) return TXN_LABELS[key]!;
+	return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+const transactionalRows = computed(() => {
+	const groups = new Map<string, { key: string; label: string; delivered: number; bounced: number; opens: number; recipients: Set<string> }>();
+	for (const ev of events.value) {
+		if (ev.email_id) continue; // campaign event — shown in the Campaigns roll-up
+		const raw = ev.raw || {};
+		const key = raw.email_name || raw.send_collection || 'other';
+		let g = groups.get(key);
+		if (!g) { g = { key, label: prettyTxnLabel(key), delivered: 0, bounced: 0, opens: 0, recipients: new Set() }; groups.set(key, g); }
+		if (ev.recipient) g.recipients.add(ev.recipient);
+		if (ev.event === 'delivered') g.delivered++;
+		else if (ev.event === 'bounce' || ev.event === 'dropped' || ev.event === 'spamreport') g.bounced++;
+		else if (ev.event === 'open') g.opens++;
+	}
+	return Array.from(groups.values()).sort((a, b) => (b.delivered + b.bounced) - (a.delivered + a.bounced));
+});
+
 // ── Top clicked links ──
 const topLinks = computed(() => {
 	const counts = new Map<string, number>();
-	for (const ev of events.value) {
+	for (const ev of scopedEvents.value) {
 		if (ev.event !== 'click' || !ev.url) continue;
 		counts.set(ev.url, (counts.get(ev.url) || 0) + 1);
 	}
@@ -159,7 +201,7 @@ const topLinks = computed(() => {
 
 // ── Recent bounces / failures ──
 const recentBounces = computed(() => {
-	return events.value
+	return scopedEvents.value
 		.filter((e) => e.event === 'bounce' || e.event === 'dropped' || e.event === 'spamreport')
 		.slice(0, 20);
 });
@@ -197,19 +239,35 @@ function eventColor(ev: string | null | undefined) {
 			:subtitle="`Opens, clicks, bounces — last ${range} days`"
 		>
 			<template #actions>
-				<div class="flex items-center gap-1.5">
-					<button
-						v-for="r in RANGES"
-						:key="r.value"
-						type="button"
-						class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
-						:class="r.value === range
-							? 'border-primary/40 bg-primary/10 text-primary font-semibold'
-							: 'border-border text-muted-foreground hover:bg-muted/60'"
-						@click="range = r.value as 7 | 30 | 90"
-					>
-						{{ r.label }}
-					</button>
+				<div class="flex items-center gap-3 flex-wrap justify-end">
+					<div class="flex items-center gap-1.5">
+						<button
+							v-for="s in SCOPES"
+							:key="s.value"
+							type="button"
+							class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
+							:class="s.value === scope
+								? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+								: 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="scope = s.value"
+						>
+							{{ s.label }}
+						</button>
+					</div>
+					<div class="flex items-center gap-1.5">
+						<button
+							v-for="r in RANGES"
+							:key="r.value"
+							type="button"
+							class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
+							:class="r.value === range
+								? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+								: 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="range = r.value as 7 | 30 | 90"
+						>
+							{{ r.label }}
+						</button>
+					</div>
 				</div>
 			</template>
 		</LayoutPageHeader>
@@ -256,8 +314,10 @@ function eventColor(ev: string | null | undefined) {
 
 		<!-- Content -->
 		<div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			<!-- Campaign roll-up — spans 2 cols -->
-			<div class="lg:col-span-2 ios-card p-5">
+			<!-- Left column: campaigns + transactional (spans 2 cols) -->
+			<div class="lg:col-span-2 space-y-6">
+			<!-- Campaign roll-up -->
+			<div v-if="scope !== 'transactional'" class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Campaigns</h3>
 					<UiViewLink to="/email" variant="muted" size="sm">All emails</UiViewLink>
@@ -293,6 +353,35 @@ function eventColor(ev: string | null | undefined) {
 						</div>
 					</div>
 				</div>
+			</div>
+
+			<!-- Transactional roll-up — contract/AI/invoice/notification sends -->
+			<div v-if="scope !== 'campaign'" class="ios-card p-5">
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Transactional</h3>
+					<span class="text-[10px] uppercase tracking-wider text-muted-foreground">delivery by type</span>
+				</div>
+				<div v-if="!transactionalRows.length" class="text-sm text-muted-foreground text-center py-8">
+					No transactional email in this window.
+				</div>
+				<div v-else class="space-y-1.5">
+					<div
+						v-for="row in transactionalRows"
+						:key="row.key"
+						class="flex items-center gap-3 py-2 border-b border-border/30 last:border-b-0"
+					>
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium truncate">{{ row.label }}</p>
+							<p class="text-[10px] text-muted-foreground mt-0.5">{{ row.recipients.size }} recipient{{ row.recipients.size === 1 ? '' : 's' }}</p>
+						</div>
+						<div class="flex items-center gap-3 text-[11px] tabular-nums shrink-0">
+							<span class="text-success">{{ row.delivered }} delivered</span>
+							<span v-if="row.opens" class="text-sky-600 dark:text-sky-400">{{ row.opens }} opens</span>
+							<span v-if="row.bounced" class="text-destructive">{{ row.bounced }} failed</span>
+						</div>
+					</div>
+				</div>
+			</div>
 			</div>
 
 			<!-- Side column: top links + bounces -->
