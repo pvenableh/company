@@ -9,10 +9,12 @@ export function useStatusStyle() {
   // ── Status buckets (single source of truth; normalized keys) ──
   // Normalization strips spaces/underscores/hyphens and lowercases, so
   // "In Progress", "in_progress", "in-progress" all match "inprogress".
-  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed', 'won', 'signed', 'accepted', 'admitted', 'sent', 'resolved', 'completedearly', 'completedlate'];
+  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed', 'won', 'signed', 'accepted', 'admitted', 'resolved', 'completedearly', 'completedlate'];
   const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow', 'lost', 'expired', 'revoked', 'bounced', 'error', 'pastdue'];
   const ACTIVE = ['active', 'inprogress', 'open', 'ontrack'];
-  const SCHEDULED = ['scheduled', 'submitted'];
+  // 'sent'/'submitted' = handed off, awaiting response (payment/signature/reply).
+  // Kept OUT of SUCCESS so a sent-but-unpaid invoice never reads as paid-green.
+  const SCHEDULED = ['scheduled', 'submitted', 'sent'];
   const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect', 'sending', 'invited', 'trialing', 'atrisk'];
   const MUTED = ['archived', 'closed', 'inactive', 'refunded', 'unsubscribed'];
 
