@@ -21,7 +21,11 @@ const TOKEN = process.env.DIRECTUS_SERVER_TOKEN || process.env.DIRECTUS_ADMIN_TO
 if (!TOKEN) { console.error('Error: DIRECTUS_SERVER_TOKEN required'); process.exit(1); }
 const APPLY = process.argv.includes('--apply');
 
-const UNUSED = ['earnest_reviews', 'earnest_scan_credits', 'earnest_token_pools'];
+// earnest_* : only in generated types, read/written nowhere.
+// comment_reports : WRITE-ONLY in the app (useComments.reportComment → .create);
+//   never READ via a session, so closing its public READ grant breaks nothing
+//   (moderation review, if any, is admin-only via the admin token).
+const UNUSED = ['earnest_reviews', 'earnest_scan_credits', 'earnest_token_pools', 'comment_reports'];
 
 async function req(path: string, method = 'GET') {
 	const r = await fetch(BASE + path, { method, headers: { Authorization: `Bearer ${TOKEN}` } });
