@@ -161,6 +161,11 @@ const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> =
 		{ label: 'Add a follow-up task', prompt: 'Add a follow-up task for this lead.' },
 		{ label: 'Draft an outreach email', prompt: 'Draft an outreach email to this lead.' },
 	],
+	invoice: [
+		{ label: 'Send a payment reminder', prompt: 'Draft a payment reminder email for this invoice to the client.' },
+		{ label: 'Extend the due date', prompt: 'Push this invoice\'s due date out by two weeks.' },
+		{ label: 'Update status', prompt: 'Change this invoice\'s status.' },
+	],
 };
 const entityActions = computed(() => {
 	const t = aware.entityType.value;
@@ -168,7 +173,10 @@ const entityActions = computed(() => {
 	const key = t === 'work-project' || /(^|_)project$/.test(t) ? 'project' : t;
 	return ENTITY_ACTIONS[key] || [];
 });
-const showActions = ref(false);
+// Surface the "things Earnest can do here" chips by DEFAULT — they were the
+// highest-value affordance in the panel yet sat collapsed below the prompts.
+// The toggle stays so a user can still fold them away; this only opens on mount.
+const showActions = ref(true);
 
 const handleKeydown = (e: KeyboardEvent) => {
 	if (e.key === 'Enter' && !e.shiftKey) {
