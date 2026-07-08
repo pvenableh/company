@@ -6,6 +6,7 @@ import { updateItems, updateItem, readItem, readItems, createItem, readUsers, up
 import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
+import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
 import { notifyEvent } from '~~/server/utils/notify-event';
 
 export default defineEventHandler(async (event) => {
@@ -50,6 +51,17 @@ export default defineEventHandler(async (event) => {
 		if (stripeEvent.type === 'payment_intent.payment_failed') {
 			const paymentIntent = stripeEvent.data.object as Stripe.PaymentIntent;
 			await handlePaymentIntentFailed(paymentIntent);
+		}
+
+		// ── Refunds ──
+		// Platform-scoped charges only (connect events already returned above).
+		// Books a negative adjustment row + recomputes the invoice so a refund
+		// drops it back to processing/pending. orgId is null here — platform
+		// payment rows aren't org-stamped; the adjustment inherits the original
+		// row's org (also null for legacy platform payments).
+		if (stripeEvent.type === 'charge.refunded') {
+			const charge = stripeEvent.data.object as Stripe.Charge;
+			await applyRefundAdjustment(charge, null);
 		}
 
 		// ── Subscription Events ──

@@ -23,6 +23,7 @@ import { createItem, readItem, readItems, updateItem, updateItems } from '@direc
 import { useStripe } from '~~/server/utils/stripe';
 import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
+import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
 import { notifyEvent } from '~~/server/utils/notify-event';
 
 type ConnectStatus = 'none' | 'pending' | 'active' | 'restricted';
@@ -127,7 +128,7 @@ export default defineEventHandler(async (event) => {
 
 			case 'charge.refunded': {
 				const charge = stripeEvent.data.object as Stripe.Charge;
-				await handleChargeRefunded(charge);
+				await applyRefundAdjustment(charge, orgId);
 				break;
 			}
 
@@ -326,48 +327,3 @@ async function handleSchedulerBookingPaid(session: Stripe.Checkout.Session, orgI
 	}
 }
 
-async function handleChargeRefunded(charge: Stripe.Charge) {
-	try {
-		const directus = getTypedDirectus();
-		const piId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id || null;
-
-		const matches = (await directus.request(
-			readItems('payments_received', {
-				filter: {
-					_or: [
-						...(piId ? [{ payment_intent: { _eq: piId } } as any] : []),
-						...(charge.id ? [{ charge_id: { _eq: charge.id } } as any] : []),
-					],
-				},
-				fields: ['id', 'note', 'amount'],
-				limit: 1,
-			}),
-		)) as Array<{ id: string; note?: string | null; amount?: string | null }>;
-
-		const match = matches?.[0];
-		if (!match) {
-			console.warn(`[Stripe Connect] charge.refunded but no payments_received row for ${charge.id}`);
-			return;
-		}
-
-		const fullyRefunded =
-			!match.amount || Math.round(parseFloat(match.amount) * 100) === charge.amount_refunded;
-		const note = [
-			match.note?.trim(),
-			`Refund recorded ${new Date().toISOString().slice(0, 10)}: $${(charge.amount_refunded / 100).toFixed(2)}`,
-		]
-			.filter(Boolean)
-			.join('\n');
-
-		await directus.request(
-			updateItem('payments_received', match.id, {
-				stripe_status: fullyRefunded ? 'refunded' : 'partially_refunded',
-				note,
-			}),
-		);
-
-		console.log(`[Stripe Connect] charge.refunded mirrored: ${charge.id} → ${match.id} (${fullyRefunded ? 'full' : 'partial'})`);
-	} catch (error) {
-		console.error('[Stripe Connect] Error handling charge.refunded:', error);
-	}
-}
