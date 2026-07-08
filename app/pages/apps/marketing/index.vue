@@ -493,7 +493,6 @@ const EMAIL_RANGES = [
 const emailEventsRaw = ref<any[]>([]);
 const emailCampaignsRaw = ref<any[]>([]);
 const emailEventsLoading = ref(false);
-const emailRecordItems = useDirectusItems('emails');
 
 type EmailSort = 'sent_at' | 'total_sent' | 'openRate' | 'clickRate' | 'bounceRate';
 const emailSortBy = ref<EmailSort>('sent_at');
@@ -511,7 +510,6 @@ function toggleEmailSort(column: EmailSort) {
 async function fetchEmailEvents() {
   if (!selectedOrg.value) return;
   emailEventsLoading.value = true;
-  const since = new Date(Date.now() - emailRange.value * 86400000).toISOString();
   // Settle independently: email_events routes through the org-scoped server
   // endpoint (no authenticated row-level read perm on the collection); the
   // `emails` campaign roll-up must not blank the engagement data if it fails.
@@ -520,17 +518,9 @@ async function fetchEmailEvents() {
       // Campaign events only — keep transactional email out of marketing KPIs.
       query: { org: selectedOrg.value, days: emailRange.value, kind: 'campaign' },
     }).then((r) => r.events || []),
-    emailRecordItems.list({
-      fields: ['id', 'name', 'subject', 'sent_at', 'total_recipients', 'total_sent', 'total_failed'],
-      filter: {
-        _and: [
-          { organization: { _eq: selectedOrg.value } },
-          { sent_at: { _gte: since } },
-        ],
-      },
-      sort: ['-sent_at'],
-      limit: 100,
-    }),
+    $fetch<{ campaigns: any[] }>('/api/email/campaigns', {
+      query: { org: selectedOrg.value, days: emailRange.value, limit: 100 },
+    }).then((r) => r.campaigns || []),
   ]);
   emailEventsRaw.value = evsRes.status === 'fulfilled' ? (evsRes.value as any[]) || [] : [];
   emailCampaignsRaw.value = campsRes.status === 'fulfilled' ? (campsRes.value as any[]) || [] : [];

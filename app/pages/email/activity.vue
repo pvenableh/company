@@ -17,7 +17,6 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Email Activity | Earnest' });
 
 const { selectedOrg } = useOrganization();
-const emailItems = useDirectusItems('emails');
 
 const events = ref<any[]>([]);
 const campaigns = ref<any[]>([]);
@@ -53,28 +52,20 @@ async function load() {
 		return;
 	}
 	loading.value = true;
-	const since = new Date(Date.now() - range.value * 86400000).toISOString();
 
 	// Fetch delivery events and campaign roll-up INDEPENDENTLY — a permission
 	// gap on the marketing `emails` collection must not blank the delivery
 	// monitor (and vice-versa). Each settles on its own.
 	const [evsRes, campsRes] = await Promise.allSettled([
-		// email_events has no authenticated row-level read perm — route through
-		// the org-scoped server endpoint (admin token + requireOrgMembership).
+		// email_events + emails both lack an authenticated row-level read perm —
+		// route through the org-scoped server endpoints (admin token +
+		// requireOrgMembership) so neither collection is queried directly.
 		$fetch<{ events: any[] }>('/api/email/events', {
 			query: { org: selectedOrg.value, days: range.value },
 		}).then((r) => r.events || []),
-		emailItems.list({
-			fields: ['id', 'name', 'subject', 'sent_at', 'total_recipients', 'total_sent', 'total_failed'],
-			filter: {
-				_and: [
-					{ organization: { _eq: selectedOrg.value } },
-					{ sent_at: { _gte: since } },
-				],
-			},
-			sort: ['-sent_at'],
-			limit: 50,
-		}),
+		$fetch<{ campaigns: any[] }>('/api/email/campaigns', {
+			query: { org: selectedOrg.value, days: range.value, limit: 50 },
+		}).then((r) => r.campaigns || []),
 	]);
 
 	if (evsRes.status === 'fulfilled') events.value = (evsRes.value as any[]) || [];
