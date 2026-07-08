@@ -6,6 +6,8 @@
  */
 import { readItems, updateItem } from '@directus/sdk';
 import { awardUserEP } from '~~/server/utils/earnestScoreUser';
+import { notifyEvent } from '~~/server/utils/notify-event';
+import { writeClientTimeline } from '~~/server/utils/write-timeline';
 
 interface SignBody {
 	token?: string;
@@ -35,7 +37,7 @@ export default defineEventHandler(async (event) => {
 
 	const rows = await directus.request(
 		readItems('contracts', {
-			fields: ['id', 'contract_status', 'organization', 'user_created'],
+			fields: ['id', 'contract_status', 'organization', 'user_created', 'client', 'title'],
 			filter: { signing_token: { _eq: token } },
 			limit: 1,
 		}),
@@ -77,6 +79,41 @@ export default defineEventHandler(async (event) => {
 			(e) => console.warn('[contracts/sign] Failed to award EP:', e),
 		);
 	}
+
+	// ── Return leg ─────────────────────────────────────────────────────────
+	// Notify the agency (staff-only — never echo the signature back to the
+	// client) and drop a CRM timeline row. Both are fire-and-forget: a
+	// notification/log failure must not fail the signature itself.
+	const clientId =
+		typeof contract.client === 'object' ? contract.client?.id : contract.client;
+	const contractTitle = contract.title || 'Contract';
+
+	void notifyEvent({
+		directus,
+		collection: 'contracts',
+		action: 'update',
+		item: { contract_status: 'signed', client: clientId, title: contractTitle, organization: orgId },
+		previousItem: { contract_status: 'sent' },
+		itemId: String(contract.id),
+		userId: '', // anonymous signer — no acting user to exclude
+		orgId,
+		staffOnly: true,
+		actorName: name,
+	}).catch((e) => console.warn('[contracts/sign] notify failed:', e));
+
+	void writeClientTimeline({
+		organizationId: orgId,
+		clientId,
+		verb: 'contract.signed',
+		title: `${contractTitle} signed`,
+		subtitle: `Signed by ${name}`,
+		actorType: 'client',
+		actorName: name,
+		sourceCollection: 'contracts',
+		sourceId: contract.id,
+		href: `/contracts/${contract.id}`,
+		icon: 'lucide:file-signature',
+	});
 
 	return { ok: true, id: contract.id, signed_at: (updated as any)?.signed_at };
 });

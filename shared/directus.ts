@@ -1578,6 +1578,40 @@ export interface ClientTestimonial {
 	service_category?: 'brand_design' | 'web_design' | 'digital_marketing' | 'strategy' | null;
 }
 
+export interface ClientTimeline {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Owning org. */
+	organization?: Organization | string;
+	/** @description Client this event belongs to. */
+	client?: Client | string;
+	/** @description e.g. contract.signed, invoice.paid, proposal.accepted, plan.approved, csat.submitted, changes.requested. */
+	verb?: string;
+	/** @description Human-readable one-liner shown on the timeline. */
+	title?: string;
+	/** @description Optional secondary detail (note text, amount label). */
+	subtitle?: string | null;
+	/** @description Who performed the action. */
+	actor_type?: 'client' | 'staff' | 'system' | null;
+	/** @description Display name of the actor (signer name, portal user). */
+	actor_name?: string | null;
+	/** @description The directus user, when the actor was authenticated. Null for anonymous portal actions. */
+	actor_user?: DirectusUser | string | null;
+	/** @description Collection of the doc that triggered this (contracts, invoices, ...). */
+	source_collection?: string | null;
+	/** @description PK of the source doc. */
+	source_id?: string | null;
+	/** @description Money amount for payment events (dollars). */
+	amount?: number | null;
+	/** @description App-relative link the timeline row points at. */
+	href?: string | null;
+	/** @description Lucide icon name for the timeline row. */
+	icon?: string | null;
+	/** @description Freeform extra data. */
+	metadata?: Record<string, any> | null;
+}
+
 export interface CommentReport {
 	/** @primaryKey */
 	id: number;
@@ -5316,6 +5350,7 @@ export interface Schema {
 	clients_directus_users: ClientsDirectusUser[];
 	clients_teams: ClientsTeam[];
 	client_testimonials: ClientTestimonial[];
+	client_timeline: ClientTimeline[];
 	comment_reports: CommentReport[];
 	comments: Comment[];
 	contact_connections: ContactConnection[];
@@ -5570,6 +5605,7 @@ export enum CollectionNames {
 	clients_directus_users = 'clients_directus_users',
 	clients_teams = 'clients_teams',
 	client_testimonials = 'client_testimonials',
+	client_timeline = 'client_timeline',
 	comment_reports = 'comment_reports',
 	comments = 'comments',
 	contact_connections = 'contact_connections',

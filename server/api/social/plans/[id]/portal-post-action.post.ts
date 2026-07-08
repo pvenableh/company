@@ -11,6 +11,8 @@
 import { z } from 'zod'
 import { getContentPlanById, getContentPlanPosts } from '~~/server/utils/content-plans'
 import { updateSocialPost } from '~~/server/utils/social-directus'
+import { notifyEvent } from '~~/server/utils/notify-event'
+import { writeClientTimeline } from '~~/server/utils/write-timeline'
 
 const bodySchema = z.object({
   token: z.string().min(8).max(128),
@@ -71,5 +73,45 @@ export default defineEventHandler(async (event) => {
         }
 
   const updated = await updateSocialPost(parsed.data.postId, patch as any)
+
+  // ── Return leg (request-changes only) ────────────────────────────────────
+  // A client asking for changes is internal WIP: notify ONLY the assigned
+  // staff (the resolver never touches portal users) and log it on the client
+  // timeline. Fire-and-forget.
+  if (parsed.data.action === 'request_changes') {
+    const orgId = typeof plan.organization === 'object' ? (plan.organization as any)?.id : plan.organization
+    const clientId = typeof plan.target_client === 'object' ? (plan.target_client as any)?.id : plan.target_client
+    const projectId = typeof (post as any).project === 'object' ? (post as any).project?.id : (post as any).project
+    const note = parsed.data.note?.trim() || null
+
+    void notifyEvent({
+      collection: 'social_posts',
+      action: 'update',
+      item: {
+        project: projectId,
+        user_created: (post as any).user_created,
+        client_feedback: note,
+        organization: orgId,
+      },
+      itemId: String(parsed.data.postId),
+      userId: approverId || '',
+      orgId,
+      staffOnly: true,
+    }).catch((e) => console.warn('[plans/portal-post-action] notify failed:', e))
+
+    void writeClientTimeline({
+      organizationId: orgId,
+      clientId,
+      verb: 'changes.requested',
+      title: 'Requested changes on a post',
+      subtitle: note,
+      actorType: 'client',
+      actorUserId: approverId,
+      sourceCollection: 'social_posts',
+      sourceId: parsed.data.postId,
+      icon: 'lucide:message-square-warning',
+    })
+  }
+
   return { data: updated }
 })

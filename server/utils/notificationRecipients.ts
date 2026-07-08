@@ -29,6 +29,12 @@ interface NotificationEvent {
 	 * Set this when the caller has access to the pre-update state — lets us
 	 * notify only on meaningful field changes rather than every PATCH. */
 	previousItem?: Record<string, any>;
+	/** When true, suppress the portal-user fan-out entirely — only internal
+	 * staff (assignees + org admins) are notified. Used by the inline
+	 * return-leg callers (a client just signed/paid/approved): we notify the
+	 * agency, never echo the action back to the client. Defaults to false so
+	 * the Flow-webhook path keeps its existing portal behaviour. */
+	staffOnly?: boolean;
 }
 
 export interface NotificationTarget {
@@ -49,12 +55,12 @@ export async function resolveNotificationTargets(
 	event: NotificationEvent,
 ): Promise<NotificationTarget[]> {
 	const targets: NotificationTarget[] = [];
-	const { collection, action, item, itemId, userId, orgId, previousItem } = event;
+	const { collection, action, item, itemId, userId, orgId, previousItem, staffOnly } = event;
 
 	try {
 		switch (collection) {
 			case 'comments':
-				await resolveCommentTargets(directus, item, itemId, userId, targets);
+				await resolveCommentTargets(directus, item, itemId, userId, targets, staffOnly);
 				break;
 
 			case 'reactions':
@@ -62,8 +68,10 @@ export async function resolveNotificationTargets(
 				break;
 
 			case 'tickets':
-				if (action === 'update') {
-					await resolveTicketUpdateTargets(directus, item, previousItem, itemId, userId, targets);
+				if (action === 'create') {
+					await resolveTicketCreateTargets(directus, item, itemId, userId, orgId, targets, staffOnly);
+				} else if (action === 'update') {
+					await resolveTicketUpdateTargets(directus, item, previousItem, itemId, userId, targets, staffOnly);
 				}
 				break;
 
@@ -75,19 +83,19 @@ export async function resolveNotificationTargets(
 
 			case 'projects':
 				if (action === 'update') {
-					await resolveProjectUpdateTargets(directus, item, previousItem, itemId, userId, targets);
+					await resolveProjectUpdateTargets(directus, item, previousItem, itemId, userId, targets, staffOnly);
 				}
 				break;
 
 			case 'invoices':
 				if (action === 'update' || action === 'create') {
-					await resolveInvoiceTargets(directus, item, previousItem, itemId, userId, orgId, targets);
+					await resolveInvoiceTargets(directus, item, previousItem, itemId, userId, orgId, targets, staffOnly);
 				}
 				break;
 
 			case 'contracts':
 				if (action === 'update' || action === 'create') {
-					await resolveContractTargets(directus, item, previousItem, itemId, userId, orgId, targets);
+					await resolveContractTargets(directus, item, previousItem, itemId, userId, orgId, targets, staffOnly);
 				}
 				break;
 
@@ -101,6 +109,20 @@ export async function resolveNotificationTargets(
 				if (action === 'create' || action === 'update') {
 					await resolveProjectEventTargets(directus, item, userId, targets);
 				}
+				break;
+
+			// ── Return-leg inbound events (always staff-only) ──────────────────
+			case 'csat':
+				await resolveCsatTargets(directus, item, userId, orgId, targets);
+				break;
+
+			case 'content_plans':
+				await resolveContentPlanTargets(directus, item, itemId, userId, orgId, targets);
+				break;
+
+			case 'social_posts':
+				// Only the request-changes signal routes here (assigned staffer).
+				await resolveSocialPostChangeTargets(directus, item, itemId, userId, orgId, targets);
 				break;
 		}
 	} catch (err) {
@@ -118,6 +140,7 @@ async function resolveCommentTargets(
 	itemId: string,
 	userId: string,
 	targets: NotificationTarget[],
+	staffOnly?: boolean,
 ) {
 	const text = item.content || item.comment || '';
 	const parentCollection = item.collection;
@@ -157,7 +180,7 @@ async function resolveCommentTargets(
 
 	// Portal users: anyone whose client_portal_users.client is an ancestor
 	// of the parent item's client (or the client itself).
-	const clientId = await getItemClientId(directus, parentCollection, parentId);
+	const clientId = staffOnly ? null : await getItemClientId(directus, parentCollection, parentId);
 	if (clientId) {
 		const portalRecipients = await getClientPortalRecipients(directus, clientId);
 		for (const id of portalRecipients) {
@@ -215,6 +238,7 @@ async function resolveTicketUpdateTargets(
 	itemId: string,
 	userId: string,
 	targets: NotificationTarget[],
+	staffOnly?: boolean,
 ) {
 	const statusChanged = item.status && (!previousItem || previousItem.status !== item.status);
 	const assignmentChanged = item.assigned_to && (!previousItem || JSON.stringify(previousItem.assigned_to) !== JSON.stringify(item.assigned_to));
@@ -223,7 +247,7 @@ async function resolveTicketUpdateTargets(
 
 	// Staff assignees + portal users on the ticket's client share this branch.
 	const staff = await getItemAssignees(directus, 'tickets', itemId);
-	const clientId = await getItemClientId(directus, 'tickets', itemId);
+	const clientId = staffOnly ? null : await getItemClientId(directus, 'tickets', itemId);
 	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
 	const recipients = unique([...staff, ...portal]);
 
@@ -256,6 +280,42 @@ async function resolveTicketUpdateTargets(
 				itemId,
 			});
 		}
+	}
+}
+
+// ── Ticket create (new ticket opened) ──────────────────────────────────────────
+// The Flow-webhook resolver only handled updates. A brand-new ticket — often
+// opened by a client in the portal — needs to reach the agency. Notify current
+// assignees plus org admins so nothing lands unwatched. Portal fan-out is
+// suppressed under staffOnly (the client who opened it doesn't need an echo).
+
+async function resolveTicketCreateTargets(
+	directus: any,
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+	staffOnly?: boolean,
+) {
+	const staff = await getItemAssignees(directus, 'tickets', itemId);
+	const admins = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const clientId = staffOnly ? null : await getItemClientId(directus, 'tickets', itemId);
+	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
+	const recipients = unique([...staff, ...admins, ...portal]);
+
+	const title = item.title || 'New ticket';
+	for (const id of recipients) {
+		if (id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: 'tickets',
+			type: 'ticket.created',
+			subject: `New ticket: ${title}`,
+			message: item.priority ? `${formatStatus(item.priority)} priority` : 'A new ticket was opened.',
+			collection: 'tickets',
+			itemId,
+		});
 	}
 }
 
@@ -299,6 +359,7 @@ async function resolveProjectUpdateTargets(
 	itemId: string,
 	userId: string,
 	targets: NotificationTarget[],
+	staffOnly?: boolean,
 ) {
 	const statusChanged = item.status && (!previousItem || previousItem.status !== item.status);
 	const dueDateChanged = item.due_date && (!previousItem || previousItem.due_date !== item.due_date);
@@ -307,7 +368,7 @@ async function resolveProjectUpdateTargets(
 	if (!statusChanged && !dueDateChanged && !completionChanged) return;
 
 	const staff = await getItemAssignees(directus, 'projects', itemId);
-	const clientId = await getItemClientId(directus, 'projects', itemId);
+	const clientId = staffOnly ? null : await getItemClientId(directus, 'projects', itemId);
 	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
 	const recipients = unique([...staff, ...portal]);
 
@@ -370,6 +431,7 @@ async function resolveInvoiceTargets(
 	userId: string,
 	orgId: string | undefined,
 	targets: NotificationTarget[],
+	staffOnly?: boolean,
 ) {
 	// Trigger on the meaningful transitions only:
 	//   - sent: pending → processing (we issue the invoice)
@@ -380,7 +442,7 @@ async function resolveInvoiceTargets(
 	const paid = status === 'paid' && prevStatus !== 'paid';
 	if (!issued && !paid) return;
 
-	const clientId = typeof item.client === 'object' ? item.client?.id : item.client;
+	const clientId = staffOnly ? null : (typeof item.client === 'object' ? item.client?.id : item.client);
 	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
 	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
 	const recipients = unique([...staff, ...portal]);
@@ -423,6 +485,7 @@ async function resolveContractTargets(
 	userId: string,
 	orgId: string | undefined,
 	targets: NotificationTarget[],
+	staffOnly?: boolean,
 ) {
 	const cs = item.contract_status;
 	const prev = previousItem?.contract_status;
@@ -430,7 +493,7 @@ async function resolveContractTargets(
 	const signed = cs === 'signed' && prev !== 'signed';
 	if (!sent && !signed) return;
 
-	const clientId = typeof item.client === 'object' ? item.client?.id : item.client;
+	const clientId = staffOnly ? null : (typeof item.client === 'object' ? item.client?.id : item.client);
 	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
 	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
 	const recipients = unique([...staff, ...portal]);
@@ -480,9 +543,12 @@ async function resolveProposalTargets(
 ) {
 	const ps = item.proposal_status;
 	const prev = previousItem?.proposal_status;
+	// The portal decline action writes 'declined'; some flows use 'rejected'.
+	// Treat both as the same decline event.
+	const isDecline = (s: string | undefined) => s === 'rejected' || s === 'declined';
 	const sent = ps === 'sent' && prev !== 'sent';
 	const accepted = ps === 'accepted' && prev !== 'accepted';
-	const rejected = ps === 'rejected' && prev !== 'rejected';
+	const rejected = isDecline(ps) && !isDecline(prev);
 	if (!sent && !accepted && !rejected) return;
 
 	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
@@ -545,6 +611,119 @@ async function resolveProjectEventTargets(
 			message: item.title || item.description || 'Project activity',
 			collection: 'projects',
 			itemId: projectId,
+		});
+	}
+}
+
+// ── CSAT (client rated delivered work) ─────────────────────────────────────────
+// Staff-only by nature. Every rating pings the item's assignees; a low score
+// (≤2) additionally escalates to org admins so a dissatisfied client surfaces
+// loudly. Caller passes collection='csat', itemId=<ticket/project id> and
+// item={ source_collection, rating, comment, title }.
+
+async function resolveCsatTargets(
+	directus: any,
+	item: Record<string, any>,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	const itemId = String(item.source_id || item.itemId || '');
+	if (!itemId) return;
+	const src = item.source_collection === 'projects' ? 'projects' : 'tickets';
+	const rating = Number(item.rating);
+	const low = Number.isFinite(rating) && rating <= 2;
+
+	const assignees = await getItemAssignees(directus, src, itemId);
+	const admins = low && orgId ? await getOrgAdmins(directus, orgId) : [];
+	const recipients = unique([...assignees, ...admins]);
+
+	const cat = src === 'projects' ? 'projects' : 'tickets';
+	const label = item.title || (src === 'projects' ? 'Project' : 'Ticket');
+	const message = item.comment
+		? truncateText(item.comment, 160)
+		: `Client rated their experience ${rating}/5.`;
+
+	for (const id of recipients) {
+		if (id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: cat,
+			type: low ? 'csat.low' : 'csat.received',
+			subject: low ? `Low satisfaction (${rating}/5): ${label}` : `New rating (${rating}/5): ${label}`,
+			message,
+			collection: src,
+			itemId,
+		});
+	}
+}
+
+// ── Content plan approved (client signed off on the plan) ──────────────────────
+// Staff-only. Reaches the plan's creator, the project's assignees, and org
+// admins so the agency knows work can proceed.
+
+async function resolveContentPlanTargets(
+	directus: any,
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	const title = item.title || 'Content plan';
+	const projectId = typeof item.project === 'object' ? item.project?.id : item.project;
+	const assignees = projectId ? await getItemAssignees(directus, 'projects', projectId) : [];
+	const creator = typeof item.user_created === 'object' ? item.user_created?.id : item.user_created;
+	const admins = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const recipients = unique([creator, ...assignees, ...admins].filter(Boolean) as string[]);
+
+	for (const id of recipients) {
+		if (id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: 'projects',
+			type: 'content_plan.approved',
+			subject: `Plan approved: ${title}`,
+			message: `The client approved "${title}".`,
+			collection: 'content_plans',
+			itemId,
+		});
+	}
+}
+
+// ── Social post — client requested changes ─────────────────────────────────────
+// GUARDRAIL: this is internal WIP. Route ONLY to the assigned staffer(s) — the
+// post creator, project assignees, and org admins — NEVER to portal users. A
+// client's request-changes note must not fan back out to other portal users.
+
+async function resolveSocialPostChangeTargets(
+	directus: any,
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	const projectId = typeof item.project === 'object' ? item.project?.id : item.project;
+	const assignees = projectId ? await getItemAssignees(directus, 'projects', projectId) : [];
+	const creator = typeof item.user_created === 'object' ? item.user_created?.id : item.user_created;
+	const admins = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const recipients = unique([creator, ...assignees, ...admins].filter(Boolean) as string[]);
+
+	const feedback = item.client_feedback
+		? truncateText(item.client_feedback, 160)
+		: 'The client requested changes on a post.';
+
+	for (const id of recipients) {
+		if (id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: 'projects',
+			type: 'social_post.changes_requested',
+			subject: 'Changes requested on a post',
+			message: feedback,
+			collection: 'social_posts',
+			itemId,
 		});
 	}
 }

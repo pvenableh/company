@@ -2,9 +2,11 @@
 // Stripe webhook handler for payment and subscription events
 import { defineEventHandler, getHeader, readRawBody } from 'h3';
 import Stripe from 'stripe';
-import { updateItems, updateItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
+import { updateItems, updateItem, readItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
 import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
+import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
+import { notifyEvent } from '~~/server/utils/notify-event';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -106,18 +108,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 		const directus = getTypedDirectus();
 		const invoiceId = paymentIntent.metadata?.invoice_id;
 
-		if (invoiceId) {
-			// Update invoice status
-			await directus.request(
-				updateItems('invoices', [invoiceId], {
-					status: 'paid',
-					payment_intent: paymentIntent.id,
-				})
-			);
-		}
-
-		// Record payment. Stripe amounts are minor units (cents); the column
-		// stores dollars as a 2-decimal string.
+		// Record the payment FIRST. Stripe amounts are minor units (cents); the
+		// column stores dollars as a 2-decimal string.
 		await directus.request(
 			createItem('payments_received', {
 				payment_intent: paymentIntent.id,
@@ -130,9 +122,61 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 			})
 		);
 
+		if (invoiceId) {
+			// Stamp the PI ref (useful lookup), then let the payment total drive
+			// the status. A PARTIAL payment must NOT mark the whole invoice paid —
+			// recomputeInvoiceStatus sums payments_received and sets
+			// paid / processing / pending accordingly.
+			await directus.request(
+				updateItems('invoices', [invoiceId], { payment_intent: paymentIntent.id })
+			);
+			const result = await recomputeInvoiceStatus(invoiceId);
+
+			// Return leg: notify the agency only when the invoice actually became
+			// fully paid (staff-only; the client isn't emailed this sprint).
+			if (result.changed && result.newStatus === 'paid') {
+				await notifyInvoicePaid(directus, invoiceId, result.previousStatus);
+			}
+		}
+
 		console.log(`[Stripe] Payment succeeded: ${paymentIntent.id}`);
 	} catch (error) {
 		console.error('[Stripe] Error handling payment success:', error);
+	}
+}
+
+/**
+ * Fire the inline "invoice paid" staff notification. Reads the invoice's org +
+ * client so the resolver can fan out to org admins. Fire-and-forget: a notify
+ * failure never rolls back the payment. The paid event still surfaces on the
+ * client Activity tab via the read-time composer (no timeline row needed —
+ * it's derivable), so we only handle notification here.
+ */
+async function notifyInvoicePaid(directus: any, invoiceId: string, previousStatus: string | null) {
+	try {
+		const inv = (await directus.request(
+			(readItem as any)('invoices', invoiceId, { fields: ['id', 'invoice_code', 'title', 'client', 'organization'] })
+		)) as any;
+		const orgId = typeof inv?.organization === 'object' ? inv.organization?.id : inv?.organization;
+		void notifyEvent({
+			directus,
+			collection: 'invoices',
+			action: 'update',
+			item: {
+				status: 'paid',
+				client: inv?.client,
+				invoice_code: inv?.invoice_code,
+				title: inv?.title,
+				organization: orgId,
+			},
+			previousItem: { status: previousStatus || 'processing' },
+			itemId: String(invoiceId),
+			userId: '',
+			orgId,
+			staffOnly: true,
+		}).catch((e) => console.warn('[Stripe] invoice-paid notify failed:', e));
+	} catch (err) {
+		console.warn('[Stripe] could not load invoice for paid notify:', err);
 	}
 }
 

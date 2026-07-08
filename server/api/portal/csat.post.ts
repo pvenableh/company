@@ -12,6 +12,8 @@
  */
 import { readItem, updateItem } from '@directus/sdk';
 import { requirePortalContext } from '~~/server/utils/portal-auth';
+import { notifyEvent } from '~~/server/utils/notify-event';
+import { writeClientTimeline } from '~~/server/utils/write-timeline';
 
 // Which status counts as "delivered" per collection (case differs by design:
 // tickets.status is Capitalized, projects.status is lowercase).
@@ -41,7 +43,7 @@ export default defineEventHandler(async (event) => {
 
 	const row = (await directus.request(
 		readItem(collection, itemId, {
-			fields: ['id', 'status', 'organization', 'client'],
+			fields: ['id', 'status', 'organization', 'client', 'title'],
 		}),
 	)) as any;
 
@@ -67,6 +69,42 @@ export default defineEventHandler(async (event) => {
 			csat_submitted_at: new Date().toISOString(),
 		}),
 	);
+
+	// ── Return leg ─────────────────────────────────────────────────────────
+	// Notify the item's assignees (a low score ≤2 also escalates to org
+	// admins) and log the rating on the client timeline. Both fire-and-forget.
+	const label = row.title || (collection === 'projects' ? 'Project' : 'Ticket');
+
+	void notifyEvent({
+		directus,
+		collection: 'csat',
+		action: 'create',
+		item: {
+			source_collection: collection,
+			source_id: itemId,
+			rating,
+			comment,
+			title: label,
+		},
+		itemId: String(itemId),
+		userId: '', // portal actor is not a staff directus user
+		orgId: ctx.organizationId,
+		staffOnly: true,
+	}).catch((e) => console.warn('[portal/csat] notify failed:', e));
+
+	void writeClientTimeline({
+		organizationId: ctx.organizationId,
+		clientId: client,
+		verb: 'csat.submitted',
+		title: `Rated ${rating}/5 · ${label}`,
+		subtitle: comment,
+		actorType: 'client',
+		sourceCollection: collection,
+		sourceId: itemId,
+		href: collection === 'projects' ? `/projects/${itemId}` : `/tickets/${itemId}`,
+		icon: rating <= 2 ? 'lucide:frown' : 'lucide:smile',
+		metadata: { rating },
+	});
 
 	return { ok: true, id: itemId, rating, data: updated };
 });

@@ -13,11 +13,12 @@
 // Recipient pref lookup happens here (single source of truth) so callers
 // don't each have to re-implement the master-toggle / per-category check.
 
-import { createNotification, readNotifications, readUsers, updateNotification } from '@directus/sdk';
+import { createNotification, readItem, readNotifications, readUsers, updateNotification } from '@directus/sdk';
 import { ctaLabelFor, sendNotificationEmail } from './notification-emails';
 import { fetchOrgBrand } from './email-send';
 import { NEVER_EMAIL, type NotificationCategory } from './notification-categories';
 import { pushToUser } from './web-push';
+import { resolveNotificationTargets } from './notificationRecipients';
 
 interface EmitArgs {
 	category: NotificationCategory;
@@ -304,4 +305,153 @@ async function upsertReactionBell(args: UpsertArgs) {
 function stripHtmlTags(html: string | null | undefined): string {
 	if (!html) return '';
 	return html.replace(/<[^>]*>?/gm, '');
+}
+
+// ── Inline event → notification orchestrator ─────────────────────────────────
+// The one-call path for server endpoints that already run on the admin token
+// and know the org (contract sign, portal accept/pay/approve, CSAT). It does
+// what `/api/notifications/trigger` does — resolve targets, dedupe into
+// buckets, fan out — but WITHOUT the Directus-Flow webhook or its
+// NOTIFICATION_WEBHOOK_SECRET (which has drifted in prod). Call it directly.
+//
+// Pass `staffOnly: true` for return-leg events so the client's own action is
+// never echoed back to portal users (this sprint sends no client emails).
+
+export interface NotifyEventInput {
+	/** Admin Directus client. Defaults to getServerDirectus() when omitted. */
+	directus?: any;
+	collection: string;
+	action: 'create' | 'update' | 'delete';
+	/** The (possibly partial) item. Hydrated from Directus if too thin. */
+	item?: Record<string, any>;
+	itemId: string;
+	/** The actor who triggered the event (skipped from recipients). */
+	userId: string;
+	orgId?: string | null;
+	previousItem?: Record<string, any>;
+	/** Suppress portal-user fan-out — internal staff only. */
+	staffOnly?: boolean;
+	/** Pre-resolved actor display name; looked up if omitted. */
+	actorName?: string | null;
+}
+
+export async function notifyEvent(input: NotifyEventInput): Promise<{ bellSent: number; emailSent: number }> {
+	const directus = input.directus || getServerDirectus();
+	const config = useRuntimeConfig();
+
+	// Hydrate the item when the caller only had a diff — resolvers need enough
+	// fields to route. Synthetic collections (e.g. 'csat') carry their own
+	// payload and have no Directus row to read, so skip hydration for those.
+	let fullItem = input.item || {};
+	const HYDRATABLE = new Set(['tickets', 'projects', 'tasks', 'invoices', 'contracts', 'proposals', 'project_events', 'comments', 'reactions', 'content_plans', 'social_posts']);
+	if (HYDRATABLE.has(input.collection) && Object.keys(fullItem).length < 2) {
+		try {
+			fullItem = (await directus.request((readItem as any)(input.collection, input.itemId, { fields: ['*'] })) as any) || fullItem;
+		} catch {
+			// Fall through — resolvers tolerate missing fields.
+		}
+	}
+
+	const targets = await resolveNotificationTargets(directus, {
+		collection: input.collection,
+		action: input.action,
+		item: fullItem,
+		itemId: input.itemId,
+		userId: input.userId,
+		orgId: input.orgId ?? undefined,
+		previousItem: input.previousItem,
+		staffOnly: input.staffOnly,
+	});
+
+	if (targets.length === 0) return { bellSent: 0, emailSent: 0 };
+
+	// Resolve the actor name once for email CTAs / reaction folds.
+	let actorName: string | null = input.actorName ?? null;
+	if (!actorName && input.userId) {
+		try {
+			const actor = (await directus.request(readUsers({
+				filter: { id: { _eq: input.userId } } as any,
+				fields: ['first_name', 'last_name', 'email'] as any,
+				limit: 1,
+			})) as any[])?.[0];
+			actorName = [actor?.first_name, actor?.last_name].filter(Boolean).join(' ').trim() || actor?.email || null;
+		} catch {
+			// Non-fatal.
+		}
+	}
+
+	// Bucket by (category, collection, itemId, type, subject, message) so a
+	// recipient hitting multiple branches gets one bell row per bucket.
+	const buckets = new Map<string, {
+		recipientIds: string[];
+		category: NotificationCategory;
+		type: string;
+		subject: string;
+		message: string;
+		collection: string;
+		itemId: string;
+		metadata?: Record<string, any>;
+	}>();
+	for (const t of targets) {
+		const key = `${t.category}|${t.collection}|${t.itemId}|${t.type}|${t.subject}|${t.message}`;
+		const existing = buckets.get(key);
+		if (existing) {
+			if (!existing.recipientIds.includes(t.recipientId)) existing.recipientIds.push(t.recipientId);
+		} else {
+			buckets.set(key, {
+				recipientIds: [t.recipientId],
+				category: t.category,
+				type: t.type,
+				subject: t.subject,
+				message: t.message,
+				collection: t.collection,
+				itemId: t.itemId,
+				metadata: t.metadata,
+			});
+		}
+	}
+
+	const base = config.public?.appBaseUrl || (config as any).appBaseUrl || '';
+	let bellSent = 0;
+	let emailSent = 0;
+	for (const b of buckets.values()) {
+		const res = await emitNotification({
+			category: b.category,
+			type: b.type,
+			collection: b.collection,
+			itemId: b.itemId,
+			orgId: input.orgId ?? undefined,
+			actorId: input.userId,
+			actorName,
+			recipientIds: b.recipientIds,
+			subject: b.subject,
+			message: b.message,
+			link: buildNotificationLink(base, b.collection, b.itemId),
+			metadata: b.metadata,
+		});
+		bellSent += res.bellSent;
+		emailSent += res.emailSent;
+	}
+
+	return { bellSent, emailSent };
+}
+
+export function buildNotificationLink(baseUrl: string, collection: string, itemId: string): string | null {
+	const path = notificationItemPath(collection, itemId);
+	if (!path) return null;
+	if (!baseUrl) return path;
+	return baseUrl.replace(/\/$/, '') + path;
+}
+
+function notificationItemPath(collection: string, itemId: string): string | null {
+	switch (collection) {
+		case 'tickets': return `/tickets/${itemId}`;
+		case 'projects': return `/projects/${itemId}`;
+		case 'tasks': return `/projects/${itemId}`;
+		case 'invoices': return `/invoices/${itemId}`;
+		case 'contracts': return `/contracts/${itemId}`;
+		case 'proposals': return `/proposals/${itemId}`;
+		case 'video_meetings': return `/meetings/${itemId}`;
+		default: return null;
+	}
 }

@@ -22,6 +22,8 @@ import Stripe from 'stripe';
 import { createItem, readItem, readItems, updateItem, updateItems } from '@directus/sdk';
 import { useStripe } from '~~/server/utils/stripe';
 import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
+import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
+import { notifyEvent } from '~~/server/utils/notify-event';
 
 type ConnectStatus = 'none' | 'pending' | 'active' | 'restricted';
 
@@ -220,11 +222,41 @@ async function handlePaymentSucceeded(
 		}
 
 		if (invoiceId) {
-			await directus.request(
-				updateItems('invoices', [invoiceId], {
-					status: 'paid',
-				}),
-			);
+			// Recompute from the payment total instead of force-flipping to paid —
+			// a partial payment must leave the invoice in 'processing', not 'paid'.
+			const result = await recomputeInvoiceStatus(invoiceId);
+
+			// Return leg: notify the agency only on a genuine paid transition
+			// (staff-only; client isn't emailed this sprint). The paid event
+			// itself surfaces on the client Activity tab via the read-time
+			// composer, so no timeline row is written here.
+			if (result.changed && result.newStatus === 'paid') {
+				try {
+					const inv = (await directus.request(
+						readItem('invoices', invoiceId, { fields: ['id', 'invoice_code', 'title', 'client', 'organization'] }),
+					)) as any;
+					const invOrg = typeof inv?.organization === 'object' ? inv.organization?.id : inv?.organization;
+					void notifyEvent({
+						directus,
+						collection: 'invoices',
+						action: 'update',
+						item: {
+							status: 'paid',
+							client: inv?.client,
+							invoice_code: inv?.invoice_code,
+							title: inv?.title,
+							organization: invOrg,
+						},
+						previousItem: { status: result.previousStatus || 'processing' },
+						itemId: String(invoiceId),
+						userId: '',
+						orgId: invOrg,
+						staffOnly: true,
+					}).catch((e) => console.warn('[Stripe Connect] invoice-paid notify failed:', e));
+				} catch (err) {
+					console.warn('[Stripe Connect] could not load invoice for paid notify:', err);
+				}
+			}
 		}
 
 		console.log(`[Stripe Connect] payment succeeded: ${paymentIntent.id} (org ${orgId || 'unknown'}, invoice ${invoiceId || 'n/a'})`);

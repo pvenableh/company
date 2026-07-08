@@ -9,9 +9,11 @@
  *   - video_meetings (started, when an actual_start exists)
  *   - tasks (completed; via project.client = id)
  *
- * Composes at read time — no aggregation table. Each source is queried
- * with its own filter, mapped to a normalized ActivityRow, then merged
- * and sorted by date desc. Pagination uses a simple offset cursor.
+ * Composes at read time from the noun graph AND merges the append-only
+ * `client_timeline` log (return-leg events: contract signed, proposal
+ * accepted, plan approved, CSAT, changes requested — things not derivable
+ * from an entity's current state). The two sources don't overlap by design,
+ * so the merge is a straight concat + sort. Pagination uses an offset cursor.
  *
  * v1 scope. Out of scope (deferred to a follow-up if usage warrants):
  *   - marketing_touches per-contact send events
@@ -23,6 +25,8 @@ import { readItems } from '@directus/sdk';
 
 interface ActivityRow {
   id: string;
+  // Read-time-composed kinds, plus client_timeline `verb`s (dotted) for
+  // return-leg events the composer can't derive.
   kind:
     | 'invoice_created'
     | 'invoice_paid'
@@ -30,13 +34,25 @@ interface ActivityRow {
     | 'project_created'
     | 'project_event_created'
     | 'meeting_started'
-    | 'task_completed';
+    | 'task_completed'
+    | string;
   ts: string;
   title: string;
   subtitle?: string | null;
   href?: string | null;
   icon: string;
 }
+
+// Which filter chip a client_timeline verb belongs to.
+const TIMELINE_VERB_CHIP: Record<string, string> = {
+  'contract.signed': 'money',
+  'invoice.paid': 'money',
+  'proposal.accepted': 'money',
+  'proposal.declined': 'money',
+  'plan.approved': 'projects',
+  'csat.submitted': 'projects',
+  'changes.requested': 'projects',
+};
 
 const PAGE_SIZE = 25;
 
@@ -71,7 +87,7 @@ export default defineEventHandler(async (event) => {
   // rows after pagination.
   const SLICE = 60;
 
-  const [invoices, tickets, projects, projectEvents, meetings, tasks] = await Promise.all([
+  const [invoices, tickets, projects, projectEvents, meetings, tasks, timeline] = await Promise.all([
     want(['money']) ? directus.request(readItems('invoices', {
       filter: { client: { _eq: clientId } },
       fields: ['id', 'invoice_code', 'status', 'total_amount', 'date_created', 'date_updated', 'invoice_date'],
@@ -119,6 +135,16 @@ export default defineEventHandler(async (event) => {
       sort: ['-date_completed'],
       limit: SLICE,
     })).catch(() => []) as Promise<any[]> : Promise.resolve([]),
+
+    // Append-only return-leg log. Filtered by chip in JS (per-verb map), so
+    // fetch it whenever the collection exists — a 403/404 (not yet migrated)
+    // just yields []. Never overlaps the composed sources above.
+    directus.request(readItems('client_timeline' as any, {
+      filter: { client: { _eq: clientId } },
+      fields: ['id', 'verb', 'title', 'subtitle', 'href', 'icon', 'amount', 'date_created', 'source_collection', 'source_id'],
+      sort: ['-date_created'],
+      limit: SLICE,
+    })).catch(() => []) as Promise<any[]>,
   ]);
 
   const rows: ActivityRow[] = [];
@@ -212,6 +238,22 @@ export default defineEventHandler(async (event) => {
       subtitle: t.project_id?.title ? `in ${t.project_id.title}` : null,
       href: t.project_id?.id ? `/projects/${t.project_id.id}` : null,
       icon: 'lucide:check-square',
+    });
+  }
+
+  // client_timeline (return-leg log). Honor the chip filter via the verb map;
+  // an unmapped verb only shows under 'all'.
+  for (const ev of timeline as any[]) {
+    if (!ev.date_created) continue;
+    if (filter !== 'all' && TIMELINE_VERB_CHIP[ev.verb] !== filter) continue;
+    rows.push({
+      id: `timeline-${ev.id}`,
+      kind: ev.verb || 'timeline_event',
+      ts: ev.date_created,
+      title: ev.title || 'Activity',
+      subtitle: ev.subtitle ?? (ev.amount != null ? `$${Number(ev.amount).toLocaleString()}` : null),
+      href: ev.href || null,
+      icon: ev.icon || 'lucide:activity',
     });
   }
 
