@@ -60,6 +60,15 @@ export interface ToolCallState {
   success?: boolean;
 }
 
+/** A row in the past-conversations browser (from GET /api/ai/sessions). */
+export interface ChatSessionSummary {
+  id: string;
+  title: string | null;
+  status?: string;
+  date_created: string;
+  date_updated: string;
+}
+
 // Module-level shared state — persists across sidebar open/close
 const entityChats = reactive(new Map<string, EntityChat>());
 const activeEntityKey = ref<string | null>(null);
@@ -114,6 +123,9 @@ export function useContextualChat() {
       sendMessage: async (_content: string, _opts?: SendOpts) => {},
       cancelStream: () => {},
       clearChat: () => {},
+      listSessions: async (_opts?: { limit?: number }) => [] as ChatSessionSummary[],
+      loadSession: async (_id: string) => {},
+      deleteSession: async (_id: string) => false,
     };
   }
 
@@ -443,6 +455,72 @@ export function useContextualChat() {
     error.value = null;
   };
 
+  /** List the user's past chat sessions for the history browser. */
+  const listSessions = async (opts: { limit?: number } = {}): Promise<ChatSessionSummary[]> => {
+    try {
+      const data = await $fetch('/api/ai/sessions', {
+        params: { limit: opts.limit ?? 50, status: 'active' },
+      }) as any;
+      return (data?.sessions || []) as ChatSessionSummary[];
+    } catch (e: any) {
+      console.error('[ContextualChat] Failed to list sessions:', e.message);
+      return [];
+    }
+  };
+
+  /** Load an arbitrary past session's messages into the current chat surface,
+   * so the user can read it and keep replying (new messages append to it). */
+  const loadSession = async (id: string) => {
+    if (!activeEntityKey.value) return;
+    if (isStreaming.value) abortController?.abort();
+    const chat = getOrCreateChat(activeEntityKey.value);
+    try {
+      isLoadingHistory.value = true;
+      error.value = null;
+      const data = await $fetch(`/api/ai/sessions/${id}`, { params: { messageLimit: 100 } }) as any;
+      chat.sessionId = data?.session?.id ?? id;
+      chat.hydrated = true;
+      chat.savedMessageIds = new Set();
+      chat.messages = (data?.messages || []).map((m: any) => {
+        const mid = String(m.id);
+        return {
+          id: mid,
+          serverId: mid,
+          key: mid,
+          role: m.role,
+          content: m.content,
+          date_created: m.date_created,
+          feedback: m.feedback || undefined,
+        } as ContextualMessage;
+      });
+    } catch (e: any) {
+      console.error('[ContextualChat] Failed to load session:', e.message);
+      error.value = 'Could not load that conversation';
+    } finally {
+      isLoadingHistory.value = false;
+    }
+  };
+
+  /** Delete a past session. If it's the one currently open, reset to a blank thread. */
+  const deleteSession = async (id: string): Promise<boolean> => {
+    try {
+      await $fetch(`/api/ai/sessions/${id}`, { method: 'DELETE' });
+      if (activeEntityKey.value) {
+        const chat = getOrCreateChat(activeEntityKey.value);
+        if (chat.sessionId === id) {
+          chat.messages.length = 0;
+          chat.sessionId = null;
+          chat.hydrated = false;
+          chat.savedMessageIds = new Set();
+        }
+      }
+      return true;
+    } catch (e: any) {
+      console.error('[ContextualChat] Failed to delete session:', e.message);
+      return false;
+    }
+  };
+
   return {
     messages,
     sessionId,
@@ -463,5 +541,8 @@ export function useContextualChat() {
     sendMessage,
     cancelStream,
     clearChat,
+    listSessions,
+    loadSession,
+    deleteSession,
   };
 }

@@ -214,6 +214,7 @@ async function proposeCreateInvoice(
   // Billing source — explicit ids or the focused entity.
   const contractId = input.from_contract_id ?? (ctx.entityType === 'contract' || ctx.entityType === 'contracts' ? ctx.entityId : null);
   const eventId = input.project_event_id ?? (ctx.entityType === 'project_event' ? ctx.entityId : null);
+  const projectId = input.project_id ?? (ctx.entityType === 'project' || ctx.entityType === 'projects' ? ctx.entityId : null);
   const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
 
   let clientId: string | null = input.client_id ?? null;
@@ -245,9 +246,20 @@ async function proposeCreateInvoice(
     if (!seededLine && Number.isFinite(amt) && amt > 0) seededLine = { description: `${ev.title || 'Milestone'} — milestone payment`, quantity: 1, rate: Math.round(amt * 100) / 100 };
   }
 
+  // Bill from a project → pull its client (no amount seeded; needs explicit line items).
+  if (!clientId && projectId) {
+    const p = (await directus.request(
+      readItem('projects' as any, projectId, { fields: ['id', 'client', 'organization'] as any }),
+    ).catch(() => null)) as any;
+    if (!p) return { success: false, summary: '', error: 'Project not found' };
+    if (idOf(p.organization) !== orgId) return { success: false, summary: '', error: 'Project belongs to another organization' };
+    clientId = idOf(p.client);
+    if (!clientId) return { success: false, summary: '', error: 'This project has no client set — assign a client to it first, or pass client_id' };
+  }
+
   if (!clientId && isClientFocus) clientId = ctx.entityId ?? null;
   if (!clientId) {
-    return { success: false, summary: '', error: 'create_invoice needs a client — focus a client, contract, or milestone, or pass client_id' };
+    return { success: false, summary: '', error: 'create_invoice needs a client — focus a client, contract, milestone, or project, or pass client_id' };
   }
 
   let lineItems = normalizeLineItems(input.line_items);

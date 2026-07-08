@@ -38,6 +38,9 @@ const {
 	sendMessage,
 	cancelStream,
 	clearChat,
+	listSessions,
+	loadSession,
+	deleteSession,
 } = useContextualChat();
 const { saveNoteFromMessage } = useAINotes();
 const { personas, selectedPersona, activePersona } = useAIPersona();
@@ -273,6 +276,65 @@ const titleLine = computed(() => (aware.hasEntity.value
 // has a pinned footer input; UTabs' <TabsContent> wrapping would break that
 // flex-col layout. The visual matches the pill design system.
 const activeTab = ref<'chat' | 'activity'>('chat');
+
+// ── Past-conversation history browser ────────────────────────────────────────
+// The unified panel restores only the latest thread for the current focus; this
+// overlay brings back the list/open/delete of past sessions that used to live
+// only in the legacy full-page chat (/command-center/ai).
+const showHistory = ref(false);
+const historyLoading = ref(false);
+const historySessions = ref<import('~/composables/useContextualChat').ChatSessionSummary[]>([]);
+const deletingId = ref<string | null>(null);
+
+// Always land on the chat (not a stale history list) when the panel reopens.
+watch(panelOpen, (open) => { if (open) showHistory.value = false; });
+
+async function openHistory() {
+	showHistory.value = true;
+	historyLoading.value = true;
+	try {
+		historySessions.value = await listSessions({ limit: 50 });
+	} finally {
+		historyLoading.value = false;
+	}
+}
+function closeHistory() {
+	showHistory.value = false;
+}
+async function pickSession(id: string) {
+	await loadSession(id);
+	showHistory.value = false;
+	await nextTick();
+	scrollToBottom();
+}
+async function removeSession(id: string) {
+	deletingId.value = id;
+	const ok = await deleteSession(id);
+	deletingId.value = null;
+	if (ok) historySessions.value = historySessions.value.filter((s) => s.id !== id);
+}
+
+// "New conversation" should also drop out of the history view.
+function newConversation() {
+	clearChat();
+	showHistory.value = false;
+}
+
+const sessionDateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+function formatSessionTime(iso?: string): string {
+	if (!iso) return '';
+	const then = new Date(iso).getTime();
+	if (Number.isNaN(then)) return '';
+	const diffMs = Date.now() - then;
+	const mins = Math.round(diffMs / 60000);
+	if (mins < 1) return 'just now';
+	if (mins < 60) return `${mins}m ago`;
+	const hrs = Math.round(mins / 60);
+	if (hrs < 24) return `${hrs}h ago`;
+	const days = Math.round(hrs / 24);
+	if (days < 7) return `${days}d ago`;
+	return sessionDateFmt.format(then);
+}
 </script>
 
 <template>
@@ -308,8 +370,17 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
 							<button
+								v-if="activeTab === 'chat'"
+								@click="showHistory ? closeHistory() : openHistory()"
+								class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+								:class="showHistory ? 'bg-muted text-foreground' : ''"
+								title="Past conversations"
+							>
+								<Icon name="lucide:history" class="w-3.5 h-3.5" :class="showHistory ? 'text-foreground' : 'text-muted-foreground'" />
+							</button>
+							<button
 								v-if="hasHistory"
-								@click="clearChat"
+								@click="newConversation"
 								class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
 								title="New conversation"
 							>
@@ -375,8 +446,56 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 					<AiActivityList show-filters />
 				</div>
 
+				<!-- History: past conversations (list / open / delete) -->
+				<div v-if="activeTab === 'chat' && showHistory" class="flex-1 overflow-y-auto px-3 py-3 flex flex-col">
+					<div class="flex items-center justify-between px-1 pb-2">
+						<span class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Past conversations</span>
+						<button @click="closeHistory" class="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5">
+							<Icon name="lucide:arrow-left" class="w-3 h-3" /> Back
+						</button>
+					</div>
+
+					<div v-if="historyLoading" class="flex items-center justify-center py-8 text-xs text-muted-foreground/70 gap-2">
+						<Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Loading…
+					</div>
+
+					<div v-else-if="!historySessions.length" class="flex-1 flex flex-col items-center justify-center text-center px-4 py-8">
+						<Icon name="lucide:message-square-dashed" class="w-6 h-6 text-muted-foreground/50 mb-2" />
+						<p class="text-xs text-muted-foreground">No past conversations yet.</p>
+					</div>
+
+					<ul v-else class="space-y-1">
+						<li
+							v-for="s in historySessions"
+							:key="s.id"
+							class="group flex items-center gap-2 px-2.5 py-2 rounded-xl border border-border/60 hover:bg-primary/5 hover:border-primary/30 transition-colors cursor-pointer"
+							:class="{ 'bg-primary/5 border-primary/40': s.id === sessionId }"
+							@click="pickSession(s.id)"
+						>
+							<Icon name="lucide:message-circle" class="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+							<div class="min-w-0 flex-1">
+								<p class="text-xs text-foreground truncate">{{ s.title || 'Untitled conversation' }}</p>
+								<p class="text-[10px] text-muted-foreground">{{ formatSessionTime(s.date_updated || s.date_created) }}</p>
+							</div>
+							<button
+								class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-destructive/10 text-muted-foreground/70 hover:text-destructive shrink-0"
+								title="Delete conversation"
+								@click.stop="removeSession(s.id)"
+							>
+								<Icon v-if="deletingId === s.id" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+								<Icon v-else name="lucide:trash-2" class="w-3 h-3" />
+							</button>
+						</li>
+					</ul>
+
+					<!-- Also improve the path back to the legacy full-page chat. -->
+					<div class="mt-auto pt-3 flex justify-center">
+						<UiViewLink to="/command-center/ai" label="Open full chat page" @click="closeEarnestPanel" />
+					</div>
+				</div>
+
 				<!-- Messages -->
-				<div v-show="activeTab === 'chat'" ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+				<div v-show="activeTab === 'chat' && !showHistory" ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
 					<div v-if="isLoadingHistory" class="flex items-center justify-center h-full text-xs text-muted-foreground/70 gap-2">
 						<Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Loading conversation…
 					</div>
@@ -513,7 +632,7 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 				</div>
 
 				<!-- Input -->
-				<div v-if="activeTab === 'chat'" class="border-t border-border/30 p-3 shrink-0">
+				<div v-if="activeTab === 'chat' && !showHistory" class="border-t border-border/30 p-3 shrink-0">
 					<div class="flex items-end gap-2">
 						<textarea
 							v-model="newMessage"

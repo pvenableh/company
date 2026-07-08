@@ -274,13 +274,14 @@ async function buildProjectContext(directus: any, projectId: string, now: Date):
 
   const lines: string[] = [];
   const clientName = (project.client as any)?.name;
+  const clientId = (project.client as any)?.id;
 
   lines.push(`CURRENT FOCUS: Project "${project.title}" (id: ${project.id})`);
 
   // [Source: Project Profile]
   lines.push('[Source: Project Profile]');
   lines.push(`Status: ${project.status || 'unknown'}`);
-  if (clientName) lines.push(`Client: ${clientName}`);
+  if (clientName) lines.push(`Client: ${clientName}${clientId ? ` (Client ID: ${clientId})` : ''}`);
   if (project.start_date) lines.push(`Start: ${project.start_date}`);
   if (project.due_date) {
     const daysUntil = Math.ceil((new Date(project.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));

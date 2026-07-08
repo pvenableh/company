@@ -264,38 +264,26 @@ function tonePrompt(persona: string, type: string, data: Record<string, any>): s
     stale_client: {
       default: `Follow up with ${data.name} — no activity in ${data.days} days`,
       director: `${data.name} needs attention — ${data.days} days inactive. Action required.`,
-      buddy: `Hey, should we check in with ${data.name}? It's been ${data.days} days`,
-      motivator: `Worth reconnecting with ${data.name} — ${data.days} days since last activity`,
     },
     overdue_invoices: {
       default: `Review ${data.count} overdue invoice${data.count > 1 ? 's' : ''} — $${(data.total || 0).toLocaleString()} outstanding`,
       director: `${data.count} overdue invoice${data.count > 1 ? 's' : ''}: $${(data.total || 0).toLocaleString()}. Chase these now.`,
-      buddy: `Heads up — ${data.count} invoice${data.count > 1 ? 's' : ''} past due ($${(data.total || 0).toLocaleString()})`,
-      motivator: `Let's collect that $${(data.total || 0).toLocaleString()} — ${data.count} invoice${data.count > 1 ? 's' : ''} past due`,
     },
     overdue_project: {
       default: `"${data.title}" is overdue — review status and next steps`,
       director: `Project "${data.title}" is past deadline. What's the blocker?`,
-      buddy: `"${data.title}" is running behind — need help getting it unstuck?`,
-      motivator: `Let's get "${data.title}" back on track — it's past deadline`,
     },
     overdue_tasks: {
       default: `${data.count} overdue task${data.count > 1 ? 's' : ''} need attention`,
       director: `${data.count} task${data.count > 1 ? 's' : ''} overdue. Prioritize and clear the backlog.`,
-      buddy: `You've got ${data.count} task${data.count > 1 ? 's' : ''} past due — want help triaging?`,
-      motivator: `Let's clear those ${data.count} overdue task${data.count > 1 ? 's' : ''} — one at a time`,
     },
     open_deals: {
       default: `Review pipeline — ${data.count} open deal${data.count > 1 ? 's' : ''} worth $${(data.value || 0).toLocaleString()}`,
       director: `Pipeline: ${data.count} deal${data.count > 1 ? 's' : ''}, $${(data.value || 0).toLocaleString()}. What's closest to closing?`,
-      buddy: `Your pipeline's looking good — ${data.count} deal${data.count > 1 ? 's' : ''} totaling $${(data.value || 0).toLocaleString()}`,
-      motivator: `$${(data.value || 0).toLocaleString()} across ${data.count} open deal${data.count > 1 ? 's' : ''} — let's move the closest ones forward`,
     },
     pending_tasks: {
       default: `Plan today's priorities from ${data.count} pending tasks`,
       director: `${data.count} tasks pending. Rank by impact and execute.`,
-      buddy: `What should we tackle first from your ${data.count} tasks?`,
-      motivator: `${data.count} tasks pending — let's pick the few that matter most today`,
     },
   };
 
@@ -316,18 +304,6 @@ function getStaticPrompts(persona: string): string[] {
       'Give me a game plan for this week',
       'Which clients need immediate attention?',
       'Revenue status and next actions',
-    ],
-    buddy: [
-      'What\'s going on across the business?',
-      'Help me word this email nicely',
-      'I\'m overwhelmed — help me prioritize',
-      'Any clients I should check in with?',
-    ],
-    motivator: [
-      'Show me what I\'ve accomplished recently',
-      'Help me get energized about today\'s work',
-      'What wins can we celebrate?',
-      'Help me tackle my biggest challenge',
     ],
   };
 

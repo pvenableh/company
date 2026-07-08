@@ -157,7 +157,9 @@ export interface AiPreference {
 	/** @required */
 	user: DirectusUser | string;
 	user_created?: DirectusUser | string | null;
-	persona?: 'default' | 'director' | 'buddy' | 'motivator' | null;
+	// 'buddy' | 'motivator' retired 2026-07-07 (folded into the warm default 'default'/Earnest);
+	// legacy rows may still hold those values — they're treated as 'default' on read.
+	persona?: 'default' | 'director' | null;
 	/** @description Enable AI-generated personalized greetings */
 	personalizations_enabled?: boolean | null;
 	/** @description Reduce AI token usage */

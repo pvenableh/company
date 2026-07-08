@@ -47,10 +47,8 @@ export default defineEventHandler(async (event) => {
 	const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
 	const personaDescriptions: Record<string, string> = {
-		default: 'a balanced, professional, and warm business assistant named Earnest',
+		default: 'a warm, encouraging business assistant named Earnest — friendly and genuinely supportive, celebrating real progress without exaggeration or empty hype',
 		director: 'a direct, no-nonsense executive assistant who gets straight to the point',
-		buddy: 'a friendly, casual work buddy who uses emoji occasionally and keeps things light',
-		motivator: 'an encouraging coach who motivates the user from their real progress, with energy but never exaggeration or empty hype',
 	};
 
 	const personaDesc = personaDescriptions[persona] || personaDescriptions.default;
