@@ -75,6 +75,14 @@ const leadSearch = ref('');
 const leadStageFilter = ref('');
 const leadPriorityFilter = ref('');
 
+// Manual "New Lead" creation from the Grid view. The Board view has its own
+// create button inside LeadsPipelineBoard; the Grid had no way to add a lead.
+const showLeadForm = ref(false);
+function handleLeadCreated() {
+  showLeadForm.value = false;
+  fetchLeadsData();
+}
+
 async function fetchLeadsData() {
   leadsLoading.value = true;
   try {
@@ -896,6 +904,11 @@ watch(view, (next) => {
         </div>
 
         <div v-show="leadActiveView !== 'board'">
+          <div class="flex justify-end mb-3">
+            <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
+              New Lead
+            </UiActionButton>
+          </div>
           <LeadsLeadFilters
             v-model:search="leadSearch"
             v-model:stage="leadStageFilter"
@@ -918,8 +931,20 @@ watch(view, (next) => {
             <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p class="text-muted-foreground">No leads found</p>
             <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms will appear here</p>
+            <div class="mt-4">
+              <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
+                New Lead
+              </UiActionButton>
+            </div>
           </div>
         </div>
+
+        <!-- Manual lead creation (Grid view) -->
+        <LeadsFormModal
+          v-model="showLeadForm"
+          :organization-id="selectedOrg"
+          @created="handleLeadCreated"
+        />
       </template>
 
       <!-- ── Card Desk view ───────────────────────────────────────────── -->
