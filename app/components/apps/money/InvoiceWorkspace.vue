@@ -279,11 +279,27 @@ async function handleSendEmail() {
   if (!invoice.value) return;
   sendingEmail.value = true;
   try {
-    await $fetch('/api/email/invoicenotice', {
+    const res: any = await $fetch('/api/email/invoicenotice', {
       method: 'POST',
       body: invoice.value,
     });
-    toast.add({ title: 'Invoice email sent', color: 'green' });
+    // With the money gate enabled, a non-allow-listed org's email is HELD as a
+    // draft (not sent) — surface that instead of a misleading "sent". Gate is
+    // default-off, so results are always 'success' until it's turned on.
+    const results: any[] = res?.body?.results ?? [];
+    const held = results.filter((r) => r?.status === 'held');
+    const sent = results.filter((r) => r?.status === 'success');
+    if (held.length && !sent.length) {
+      toast.add({
+        title: 'Held as draft — not sent',
+        description: held[0]?.reason || 'Outbound money email is gated for this organization.',
+        color: 'amber',
+      });
+    } else if (held.length) {
+      toast.add({ title: `Sent ${sent.length}, ${held.length} held as draft`, color: 'amber' });
+    } else {
+      toast.add({ title: 'Invoice email sent', color: 'green' });
+    }
   } catch (e: any) {
     toast.add({
       title: 'Failed to send email',

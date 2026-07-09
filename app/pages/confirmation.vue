@@ -431,11 +431,22 @@ const sendPaymentNotification = async (paymentData) => {
 
 		if (response.error) throw new Error(response.error);
 
-		toast.add({
-			title: 'Notification Sent',
-			description: 'Payment confirmation email sent successfully',
-			type: 'success',
-		});
+		// If the money gate held the receipt email, don't claim it was sent — the
+		// payment itself still succeeded (gate is default-off, so held is false
+		// until it's turned on).
+		if (response?.body?.held) {
+			toast.add({
+				title: 'Payment confirmed',
+				description: 'Your payment was received. A receipt will follow shortly.',
+				type: 'success',
+			});
+		} else {
+			toast.add({
+				title: 'Notification Sent',
+				description: 'Payment confirmation email sent successfully',
+				type: 'success',
+			});
+		}
 	} catch (error) {
 		console.error('Payment notification error:', error);
 		toast.add({
