@@ -38,7 +38,7 @@
 		<section class="theme-switcher__section">
 			<header class="theme-switcher__header">
 				<h3 class="theme-switcher__title">Color scheme</h3>
-				<p class="theme-switcher__subtitle">Pick the palette that feels like home.</p>
+				<p class="theme-switcher__subtitle">Sets the surface tone across Earnest — light, warm paper, or a custom accent.</p>
 			</header>
 
 			<div class="theme-switcher__grid theme-switcher__grid--swatch">
@@ -78,7 +78,7 @@
 					:name="showAdvancedColors ? 'lucide:chevron-down' : 'lucide:chevron-right'"
 					class="size-3.5"
 				/>
-				Custom color
+				Custom accent color
 			</button>
 
 			<transition name="slide">
@@ -276,7 +276,7 @@ function getStylePreviewClass(styleId: string): string {
 @reference "~/assets/css/tailwind.css";
 
 .theme-switcher {
-	@apply grid gap-8 w-full;
+	@apply grid gap-6 w-full;
 }
 
 .theme-switcher__section {
@@ -304,7 +304,11 @@ function getStylePreviewClass(styleId: string): string {
 }
 
 .theme-switcher__grid--swatch {
-	grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+	/* Both scheme groups have exactly 2 items — fixed 2-up, capped width so
+	   they fill nicely on mobile but don't balloon on wide screens (the 16:7
+	   paint made 1fr cards huge before). */
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	max-width: 24rem;
 }
 
 .theme-switcher__grid--timeline {
