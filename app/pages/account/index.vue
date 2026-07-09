@@ -46,7 +46,7 @@
 					<ArcadeIntroModal ref="arcadeIntro" />
 				</section>
 
-				<section v-else-if="section === 'appearance'" class="w-full">
+				<section v-else-if="section === 'appearance'" class="w-full max-w-2xl">
 					<h2 class="account-page__heading">Appearance</h2>
 
 					<!-- Dark mode (top-of-section quick toggle).
@@ -102,7 +102,9 @@
 						/>
 					</div>
 
-					<!-- Theme + Typography (full width, modernized grid) -->
+					<!-- Surface (Glass/Ink) + Typography — personal prefs. The brand
+					     ACCENT palette is an org-level setting (Organization → Brand),
+					     so the per-user Mono/Chromatic hue picker stays hidden here. -->
 					<ThemeSwitcher />
 
 					<!-- Layout — apps mode + rail position. Same surface as theme

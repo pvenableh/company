@@ -29,6 +29,11 @@ const props = withDefaults(
 const { railShowLabels, setRailShowLabels } = useAppsMode();
 const { palette, setPalette, glassChrome, setGlassChrome, paletteTint, setPaletteTint } = useAppPalette();
 
+// The brand palette is an ORG setting — only owners/admins may change it (the
+// write re-skins every teammate + the client portal). Members still see their
+// personal glass/tint chrome toggles above; the palette picker is hidden for them.
+const { isOrgAdminOrAbove } = useOrgRole();
+
 // The rail is locked to the bottom (the position picker has been retired), so
 // the label toggle — which only applies to a horizontal rail — is always shown.
 const labelsToggleVisible = true;
@@ -110,10 +115,11 @@ const isCompact = computed(() => props.density === 'compact');
       />
     </div>
 
-    <!-- ── Section: Palette ──────────────────────────────────────── -->
-    <template v-if="APP_PALETTE_IDS.length > 1">
+    <!-- ── Section: Brand palette (org-wide — owners/admins only) ──── -->
+    <template v-if="APP_PALETTE_IDS.length > 1 && isOrgAdminOrAbove">
       <div class="rail-panel__divider" aria-hidden="true" />
-      <div class="rail-panel__heading">App palette</div>
+      <div class="rail-panel__heading">Brand palette</div>
+      <div class="rail-panel__hint">Applies to everyone in your organization and the client portal.</div>
       <div class="rail-panel__palettes">
         <button
           v-for="id in APP_PALETTE_IDS"
@@ -150,6 +156,8 @@ const isCompact = computed(() => props.density === 'compact');
 }
 .rail-panel--compact .rail-panel__heading { @apply text-[10px] px-2 py-1.5; }
 .rail-panel--comfortable .rail-panel__heading { @apply text-[11px] pt-1 pb-2.5; }
+.rail-panel__hint { @apply text-[11px] text-muted-foreground px-2 pb-2 -mt-1 leading-snug; }
+.rail-panel--compact .rail-panel__hint { @apply text-[10px]; }
 
 .rail-panel__list { @apply flex flex-col; }
 .rail-panel--compact .rail-panel__list { gap: 2px; }
