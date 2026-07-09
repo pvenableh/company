@@ -137,6 +137,33 @@ async function sendForSignature() {
   }
 }
 
+// Deterministic contract→invoice rail. Queues a create_invoice AI action
+// pre-filled from this signed contract (client + total value) — nothing is
+// billed until the user approves the proposal in the AI Activity queue, so the
+// audit trail + undo are preserved.
+const billingContract = ref(false);
+const billedActionId = ref<string | null>(null);
+async function handleBillContract() {
+  if (!contract.value?.id || billingContract.value) return;
+  billingContract.value = true;
+  try {
+    const res = await $fetch<{ actionId: string | null; status: string; summary: string }>(
+      `/api/contracts/${contract.value.id}/bill`,
+      { method: 'POST' },
+    );
+    billedActionId.value = res.actionId;
+    toast.add({
+      title: 'Invoice drafted',
+      description: 'Waiting for your approval in AI Activity — nothing is billed yet.',
+      color: 'green',
+    });
+  } catch (err: any) {
+    toast.add({ title: 'Could not draft invoice', description: err.data?.message || err.message, color: 'red' });
+  } finally {
+    billingContract.value = false;
+  }
+}
+
 const seller = computed(() => {
   const o: any = contract.value?.organization;
   if (!o) return null;
@@ -386,12 +413,33 @@ if (!props.compact) {
         v-if="contract.contract_status === 'signed'"
         class="ios-card p-4 mb-4 border-l-4 border-l-green-500"
       >
-        <p class="text-[10px] uppercase tracking-wider text-success dark:text-success">Signed</p>
-        <p class="text-sm t-text mt-0.5">
-          {{ contract.signed_by_name }} <span class="text-muted-foreground">&lt;{{ contract.signed_by_email }}&gt;</span>
-        </p>
-        <p class="text-xs text-muted-foreground">
-          {{ contract.signed_at ? new Date(contract.signed_at).toLocaleString() : '' }}
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-[10px] uppercase tracking-wider text-success dark:text-success">Signed</p>
+            <p class="text-sm t-text mt-0.5">
+              {{ contract.signed_by_name }} <span class="text-muted-foreground">&lt;{{ contract.signed_by_email }}&gt;</span>
+            </p>
+            <p class="text-xs text-muted-foreground">
+              {{ contract.signed_at ? new Date(contract.signed_at).toLocaleString() : '' }}
+            </p>
+          </div>
+          <!-- Deterministic next step: draft an invoice from this contract. -->
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0"
+            :disabled="billingContract"
+            @click="handleBillContract"
+          >
+            <UIcon
+              :name="billingContract ? 'lucide:loader-2' : 'lucide:receipt'"
+              class="w-3.5 h-3.5"
+              :class="billingContract ? 'animate-spin' : ''"
+            />
+            <span class="hidden sm:inline">Bill this contract</span>
+          </button>
+        </div>
+        <p v-if="billedActionId" class="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+          <UIcon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-success" />
+          Invoice drafted — approve it in AI Activity to send.
         </p>
       </div>
 
