@@ -270,7 +270,6 @@ if (!props.compact) {
           </p>
         </div>
         <div class="flex items-center gap-1.5 flex-wrap">
-          <AppsCreateWithEarnest entity-type="proposal" label="Turn into contract" />
           <div class="inline-flex items-center rounded-lg border border-border bg-background p-0.5 text-xs">
             <button
               class="h-6 px-2.5 rounded-md transition-colors"

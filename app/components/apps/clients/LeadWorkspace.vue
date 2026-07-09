@@ -119,6 +119,15 @@ async function generateDraft() {
 	}
 }
 
+// One "New" menu for the Documents tab — collapses the three per-section
+// create buttons (AI-draft proposal / blank proposal / blank contract) into a
+// single entry point.
+const leadDocActions = computed(() => [
+	{ label: 'AI-draft a proposal', icon: 'lucide:sparkles', click: () => { void generateDraft(); } },
+	{ label: 'New proposal', icon: 'lucide:file-plus', click: () => { showCreateProposalModal.value = true; } },
+	{ label: 'New contract', icon: 'lucide:file-signature', click: () => { showCreateContractModal.value = true; } },
+]);
+
 // Activity form
 const showActivityForm = ref(false);
 const newActivity = reactive({
@@ -518,6 +527,25 @@ function openContactPivot() {
 
 				<!-- Documents tab body -->
 				<div v-if="view === 'documents'" class="ios-card p-4 sm:p-6 space-y-6">
+					<!-- Single entry point for all lead documents — collapses the three
+					     per-section create buttons (AI-draft proposal / blank proposal /
+					     contract) into one "New" menu. -->
+					<div class="flex items-center justify-between">
+						<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+							Documents
+						</h4>
+						<UDropdown :items="leadDocActions">
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+								:disabled="drafting"
+							>
+								<Icon :name="drafting ? 'lucide:loader-2' : 'lucide:plus'" class="w-3 h-3" :class="drafting ? 'animate-spin' : ''" />
+								New
+								<Icon name="lucide:chevron-down" class="w-3 h-3 opacity-70" />
+							</button>
+						</UDropdown>
+					</div>
 					<section>
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
@@ -526,34 +554,6 @@ function openContactPivot() {
 									Proposals
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ docsProposalCount }}</span>
-							</div>
-							<div class="flex items-center gap-1.5">
-								<TooltipProvider :delay-duration="200">
-									<Tooltip>
-										<TooltipTrigger as-child>
-											<UiActionButton
-												icon="earnest"
-												variant="primary"
-												:loading="drafting"
-												size="xs"
-												@click="generateDraft"
-											>
-												AI Draft
-											</UiActionButton>
-										</TooltipTrigger>
-										<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
-											Generates a tailored proposal draft from this lead's context. Opens the new proposal in a slide-over for review.
-										</TooltipContent>
-									</Tooltip>
-								</TooltipProvider>
-								<button
-									type="button"
-									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="showCreateProposalModal = true"
-								>
-									<Icon name="lucide:plus" class="w-3 h-3" />
-									New Proposal
-								</button>
 							</div>
 						</div>
 						<MoneyProposalsList
@@ -572,14 +572,6 @@ function openContactPivot() {
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ docsContractCount }}</span>
 							</div>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateContractModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Contract
-							</button>
 						</div>
 						<MoneyContractsList
 							ref="docsContractsRef"
