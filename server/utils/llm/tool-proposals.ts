@@ -55,7 +55,7 @@ async function resolveUserNames(userIds: string[]): Promise<Record<string, strin
 }
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
-export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket', 'create_content_plan']);
+export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket', 'create_content_plan', 'draft_social_posts', 'create_campaign']);
 
 /** Normalize AI line items into clean {description, rate, quantity, product?} rows. */
 function normalizeLineItems(raw: any): Array<Record<string, any>> {
@@ -146,6 +146,10 @@ export async function proposeToolCall(
       return await proposeCreateTicket(input, ctx);
     case 'create_content_plan':
       return await proposeCreateContentPlan(input, ctx);
+    case 'draft_social_posts':
+      return await proposeDraftSocialPosts(input, ctx);
+    case 'create_campaign':
+      return await proposeCreateCampaign(input, ctx);
     default:
       return { success: false, summary: '', error: `Unknown proposal tool: ${toolName}` };
   }
@@ -208,6 +212,134 @@ async function proposeCreateContentPlan(
     sessionId: ctx.sessionId ?? null,
   });
   if (actionId == null) return { success: false, summary: '', error: 'Could not queue the content plan for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — nothing has been created yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+// ── draft_social_posts ────────────────────────────────────────────────────────
+// Approval-gated + DRAFT-ONLY: a batch of social posts. On approval the executor
+// writes each as a social_posts row in status:'draft' / approval_state:'draft' —
+// NEVER scheduled or published, so the social publishing kill-switch is moot
+// (it only governs the external publish path). entity_type/id point at the client
+// (if linked) so the drafts surface on that client's activity.
+async function proposeDraftSocialPosts(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
+  const isProjectFocus = ctx.entityType === 'project' || ctx.entityType === 'projects';
+  const clientId = input.client_id ?? (isClientFocus ? ctx.entityId : null);
+  const projectId = input.project_id ?? (isProjectFocus ? ctx.entityId : null);
+  const contentPlanId = input.content_plan_id != null && Number.isFinite(Number(input.content_plan_id))
+    ? Number(input.content_plan_id)
+    : null;
+
+  const KNOWN_PLATFORMS = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads'];
+  const KNOWN_POST_TYPES = ['image', 'video', 'carousel', 'reel', 'story', 'text', 'article'];
+
+  const posts = (Array.isArray(input.posts) ? input.posts : [])
+    .map((p: any) => {
+      const caption = (p?.caption ?? '').toString().trim();
+      if (!caption) return null;
+      const platforms = (Array.isArray(p?.platforms) ? p.platforms : [])
+        .map((x: any) => String(x).trim().toLowerCase())
+        .filter((x: string) => KNOWN_PLATFORMS.includes(x));
+      return {
+        caption,
+        platforms: platforms.length ? platforms : ['instagram'],
+        post_type: KNOWN_POST_TYPES.includes(p?.post_type) ? String(p.post_type) : 'image',
+        cta_url: p?.cta_url ? String(p.cta_url) : null,
+        cta_label: p?.cta_label ? String(p.cta_label) : null,
+      };
+    })
+    .filter(Boolean);
+
+  if (!posts.length) return { success: false, summary: '', error: 'No valid posts to draft — each post needs a caption.' };
+
+  const payload: Record<string, any> = {
+    posts,
+    client_id: clientId ?? null,
+    project_id: projectId ?? null,
+    content_plan_id: contentPlanId,
+  };
+
+  const rowTitle = `Draft ${posts.length} social post${posts.length !== 1 ? 's' : ''}`;
+  const preview = {
+    kind: 'draft_social_posts' as const,
+    count: posts.length,
+    posts: posts.map((p: any) => ({
+      caption: p.caption.length > 140 ? `${p.caption.slice(0, 140)}…` : p.caption,
+      platforms: p.platforms,
+      post_type: p.post_type,
+    })),
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'draft_social_posts',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: clientId ? 'clients' : (projectId ? 'projects' : 'social_posts'),
+    entityId: clientId ?? projectId ?? null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the drafts for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. They're waiting in your AI Activity queue for approval — nothing has been drafted, scheduled, or posted yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+// ── create_campaign ───────────────────────────────────────────────────────────
+// Approval-gated: a DRAFT marketing_campaigns row. Mirrors the write in
+// server/api/marketing/campaigns/index.post.ts (marketing_campaigns has no
+// row-level perms → the executor writes with the admin client). status:'draft',
+// type:'campaign', org-set. Nothing is launched or sent.
+async function proposeCreateCampaign(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const title = (input.title ?? '').toString().trim();
+  if (!title) return { success: false, summary: '', error: 'A campaign needs a title.' };
+
+  const payload: Record<string, any> = {
+    title,
+    goal: input.goal ? String(input.goal) : null,
+    start_date: input.start_date ? String(input.start_date) : null,
+    end_date: input.end_date ? String(input.end_date) : null,
+  };
+
+  const rowTitle = `Create campaign "${title}"`;
+  const preview = {
+    kind: 'create_campaign' as const,
+    title,
+    goal: payload.goal,
+    start_date: payload.start_date,
+    end_date: payload.end_date,
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'create_campaign',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: 'marketing_campaigns',
+    entityId: null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the campaign for approval. Please try again.' };
 
   return {
     success: true,

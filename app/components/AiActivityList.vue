@@ -268,6 +268,8 @@ const ACTION_LABELS: Record<string, string> = {
   create_ticket: 'Create ticket',
   create_invoice: 'Create invoice',
   create_content_plan: 'Create content plan',
+  draft_social_posts: 'Draft social posts',
+  create_campaign: 'Create campaign',
   update_field: 'Updated a field',
   other: 'Action',
 };

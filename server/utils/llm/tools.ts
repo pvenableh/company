@@ -345,6 +345,60 @@ export const CREATE_CONTENT_PLAN_TOOL: ToolDefinition = {
   },
 };
 
+export const DRAFT_SOCIAL_POSTS_TOOL: ToolDefinition = {
+  name: 'draft_social_posts',
+  description:
+    'Drafts one or more social media posts as DRAFTS. APPROVAL-GATED and DRAFT-ONLY: it does NOT publish or schedule anything; it queues the drafts for the user to review, edit, and approve in the AI Activity queue, after which they land as editable drafts in Studio (never live). Describe the result as proposed drafts awaiting review, never as posted, scheduled, or published. Use when the user asks to "draft a few posts", "write this week\'s captions", "draft social content for this launch", or "give me some post ideas for Instagram". Write real, on-brand captions — do not use placeholder text. Only pass client_id / project_id / content_plan_id if the EXACT id appears verbatim in the context — never invent one; if the chat is focused on a client or project, the server links it automatically. Nothing is ever posted or scheduled from here.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      posts: {
+        type: 'array',
+        description: 'The posts to draft. Each is a distinct draft post.',
+        items: {
+          type: 'object',
+          properties: {
+            caption: { type: 'string', description: 'The post caption / copy. Required. Write a real, publish-ready caption.' },
+            platforms: {
+              type: 'array',
+              items: { type: 'string', enum: ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads'] },
+              description: 'Which platforms this draft targets. Defaults to instagram if omitted.',
+            },
+            post_type: {
+              type: 'string',
+              enum: ['image', 'video', 'carousel', 'reel', 'story', 'text', 'article'],
+              description: 'Optional post format. Defaults to image.',
+            },
+            cta_url: { type: 'string', description: 'Optional call-to-action URL.' },
+            cta_label: { type: 'string', description: 'Optional call-to-action label (e.g. "Book now").' },
+          },
+          required: ['caption'],
+        },
+      },
+      client_id: { type: 'string', description: 'Optional client UUID to attach the drafts to. Pass ONLY a UUID present verbatim in the context; omit to use the focused client.' },
+      project_id: { type: 'string', description: 'Optional project UUID to attach the drafts to. Pass ONLY a UUID present verbatim in the context; omit to use the focused project.' },
+      content_plan_id: { type: 'number', description: 'Optional content_plan id (number) to file the drafts under. Pass ONLY an id present verbatim in the context.' },
+    },
+    required: ['posts'],
+  },
+};
+
+export const CREATE_CAMPAIGN_TOOL: ToolDefinition = {
+  name: 'create_campaign',
+  description:
+    'Creates a DRAFT marketing campaign — a container for a coordinated marketing effort with a goal and an optional plan. APPROVAL-GATED: it does NOT create anything immediately; it queues the campaign for the user to review and approve in the AI Activity queue. Describe it as a proposal awaiting approval, never as launched or live. Use when the user asks to "spin up a campaign", "start a marketing campaign for this launch", or "set up a campaign to promote X". Nothing is sent or launched — this is an editable draft campaign.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'The campaign title (e.g. "Spring Launch Push"). Required.' },
+      goal: { type: 'string', description: 'Optional one-line goal / objective for the campaign.' },
+      start_date: { type: 'string', description: 'Optional start date in YYYY-MM-DD format.' },
+      end_date: { type: 'string', description: 'Optional end date in YYYY-MM-DD format.' },
+    },
+    required: ['title'],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
   RESCHEDULE_PROJECT_TOOL,
@@ -355,6 +409,8 @@ export const MUTATION_TOOLS: ToolDefinition[] = [
   CREATE_TICKET_TOOL,
   CREATE_INVOICE_TOOL,
   CREATE_CONTENT_PLAN_TOOL,
+  DRAFT_SOCIAL_POSTS_TOOL,
+  CREATE_CAMPAIGN_TOOL,
   GENERATE_DOCUMENTS_TOOL,
   SEND_EMAIL_TOOL,
 ];

@@ -686,6 +686,107 @@ const createContentPlanExecutor: AiActionExecutor = async ({ action, organizatio
   return { contentPlanId: planId, title, plan_type: fields.plan_type };
 };
 
+// ── draft_social_posts ─────────────────────────────────────────────────────────
+// Approval-gated DRAFT posts. Writes each social_posts row in post_status:'draft'
+// / approval_state:'draft' — NEVER scheduled or published, so the publishing
+// kill-switch never applies (it only gates the external publish endpoints + cron).
+// Org-set; client/target_client/project/content_plan links org-verified fail-soft.
+const draftSocialPostsExecutor: AiActionExecutor = async ({ action, organizationId, userId }) => {
+  const payload = action?.payload || {};
+  const rawPosts = Array.isArray(payload.posts) ? payload.posts : [];
+  if (!rawPosts.length) throw new Error('draft_social_posts payload has no posts');
+
+  const directus = getServerDirectus();
+
+  // Org-verify the shared links once (they apply to every post in the batch).
+  let clientId: string | null = null;
+  if (payload.client_id) {
+    const orgId = await loadOrgId(directus, 'clients', payload.client_id, 'organization');
+    if (orgId === organizationId) clientId = String(payload.client_id);
+  }
+  let projectId: string | null = null;
+  if (payload.project_id) {
+    const orgId = await loadOrgId(directus, 'projects', payload.project_id, 'organization');
+    if (orgId === organizationId) projectId = String(payload.project_id);
+  }
+  let contentPlanId: number | null = null;
+  if (payload.content_plan_id != null && Number.isFinite(Number(payload.content_plan_id))) {
+    const orgId = await loadOrgId(directus, 'content_plans', Number(payload.content_plan_id), 'organization');
+    if (orgId === organizationId) contentPlanId = Number(payload.content_plan_id);
+  }
+
+  const KNOWN_PLATFORMS = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads'];
+  const KNOWN_POST_TYPES = ['image', 'video', 'carousel', 'reel', 'story', 'text', 'article'];
+  const nowIso = new Date().toISOString();
+
+  const created: string[] = [];
+  for (const p of rawPosts) {
+    const caption = (p?.caption ?? '').toString().trim();
+    if (!caption) continue;
+    const platforms = (Array.isArray(p?.platforms) ? p.platforms : [])
+      .map((x: any) => String(x).trim().toLowerCase())
+      .filter((x: string) => KNOWN_PLATFORMS.includes(x));
+
+    const fields: Record<string, any> = {
+      organization: organizationId,
+      caption,
+      media_urls: [],
+      media_types: [],
+      // Draft targets store as { platform } — no account is bound until the
+      // planner picks one; drafts never reach the publish path anyway.
+      platforms: (platforms.length ? platforms : ['instagram']).map((platform: string) => ({ platform })),
+      post_type: KNOWN_POST_TYPES.includes(p?.post_type) ? String(p.post_type) : 'image',
+      scheduled_at: nowIso,
+      post_status: 'draft',
+      approval_state: 'draft',
+      created_by: userId,
+    };
+    if (p?.cta_url) fields.cta_url = String(p.cta_url);
+    if (p?.cta_label) fields.cta_label = String(p.cta_label);
+    if (clientId) fields.client = clientId;
+    if (clientId) fields.target_client = clientId;
+    if (projectId) fields.project = projectId;
+    if (contentPlanId != null) fields.content_plan = contentPlanId;
+
+    const row = (await directus.request(
+      createItem('social_posts' as any, fields, { fields: ['id'] as any }),
+    )) as any;
+    if (row?.id) created.push(String(row.id));
+  }
+
+  if (!created.length) throw new Error('draft_social_posts: no posts were created');
+  return { postIds: created, postsCreated: created.length };
+};
+
+// ── create_campaign ────────────────────────────────────────────────────────────
+// Approval-gated DRAFT campaign. Mirrors server/api/marketing/campaigns/index.post.ts
+// (marketing_campaigns has no row-level perms → write with the admin client).
+// status:'draft', type:'campaign', org-set. Nothing is launched or sent.
+const createCampaignExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const title = (payload.title ?? '').toString().trim();
+  if (!title) throw new Error('create_campaign: title is required');
+
+  const directus = getServerDirectus();
+  const fields: Record<string, any> = {
+    organization: organizationId,
+    title,
+    status: 'draft',
+    type: 'campaign',
+  };
+  if (payload.goal) fields.goal = String(payload.goal);
+  if (payload.start_date) fields.start_date = String(payload.start_date);
+  if (payload.end_date) fields.end_date = String(payload.end_date);
+
+  const campaign = (await directus.request(
+    createItem('marketing_campaigns' as any, fields, { fields: ['id'] as any }),
+  )) as any;
+  const campaignId = campaign?.id != null ? String(campaign.id) : null;
+  if (!campaignId) throw new Error('create_campaign: campaign creation returned no id');
+
+  return { campaignId, title };
+};
+
 // ── create_invoice ─────────────────────────────────────────────────────────────
 // Approval-gated: a real invoice + line items. The server generates the invoice
 // code (INV-{ORG}-{CLIENT}-{YEAR}-{NNNN}, mirroring useInvoices.generateInvoiceCode)
@@ -862,6 +963,8 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   add_event: addEventExecutor,
   create_ticket: createTicketExecutor,
   create_content_plan: createContentPlanExecutor,
+  draft_social_posts: draftSocialPostsExecutor,
+  create_campaign: createCampaignExecutor,
   create_invoice: createInvoiceExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),

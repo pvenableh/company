@@ -148,6 +148,8 @@ const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> =
 		{ label: 'Create a project', prompt: 'Create a new project for this client with a short timeline of phases and a few tasks under each.' },
 		{ label: 'Draft a proposal & contract', prompt: 'Draft a proposal and a contract for this client based on what you know about them.' },
 		{ label: 'Create an invoice', prompt: 'Create an invoice for this client for recent work.' },
+		{ label: 'Draft social posts', prompt: 'Draft a few social posts for this client — real, on-brand captions I can review and edit.' },
+		{ label: 'Start a campaign', prompt: 'Spin up a draft marketing campaign for this client with a clear goal.' },
 		{ label: 'Add a task', prompt: 'Add a follow-up task for this client.' },
 	],
 	project: [
@@ -169,6 +171,11 @@ const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> =
 	content_plan: [
 		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan for this — objective, a few themes, and a short strategy.' },
 		{ label: 'Plan next month', prompt: 'Create a monthly content plan for next month with a handful of content themes.' },
+		{ label: 'Draft social posts', prompt: 'Draft a handful of social posts for this plan — real, on-brand captions I can review and edit.' },
+	],
+	campaign: [
+		{ label: 'Draft social posts', prompt: 'Draft a few social posts for this campaign — real, on-brand captions I can review and edit.' },
+		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan to support this campaign — objective, a few themes, and a short strategy.' },
 	],
 };
 const entityActions = computed(() => {
