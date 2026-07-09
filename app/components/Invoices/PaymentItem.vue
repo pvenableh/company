@@ -14,6 +14,33 @@ const { getStatusColorName: getStatusColor } = useStatusStyle();
 // Manual rows have no Stripe identifiers
 const isManual = computed(() => !props.payment?.payment_intent && !props.payment?.charge_id);
 
+// Refund states written by server/utils/apply-refund-adjustment.ts:
+//  - 'refund'             → the negative-amount adjustment row it creates
+//  - 'refunded' /
+//    'partially_refunded' → the original payment row it flips
+const REFUND_LABELS = {
+	refund: 'Refund',
+	refunded: 'Refunded',
+	partially_refunded: 'Partially refunded',
+};
+
+// The negative adjustment row itself (no payment_method → header would read "Payment")
+const isRefundRow = computed(() => props.payment?.stripe_status === 'refund');
+
+// Friendly label for the status badge; falls back to the raw Stripe status for
+// non-refund states (succeeded, processing, …) so their display is unchanged.
+const statusLabel = computed(() => {
+	const s = props.payment?.stripe_status;
+	return (s && REFUND_LABELS[s]) || s;
+});
+
+// Amounts are dollar strings; refund adjustment rows are stored negative
+// (e.g. "-50.00") and must render as "−$50.00", not "$-50.00".
+const displayAmount = computed(() => {
+	const raw = String(props.payment?.amount ?? '0').trim();
+	return raw.startsWith('-') ? `−$${raw.slice(1)}` : `$${raw}`;
+});
+
 const methodIcon = computed(() => {
 	const m = (props.payment?.payment_method || '').toLowerCase();
 	if (m === 'check') return 'i-heroicons-document-check';
@@ -46,7 +73,7 @@ const methodLabel = computed(() => {
 				<div class="flex items-center gap-2">
 					<UIcon :name="methodIcon" class="w-5 h-5" />
 					<span class="text-sm font-medium">
-						{{ methodLabel }} on {{ formatDate(payment.date_received || payment.date_created) }}
+						{{ isRefundRow ? 'Refund' : methodLabel }} on {{ formatDate(payment.date_received || payment.date_created) }}
 					</span>
 				</div>
 				<div v-if="payment.reference" class="text-xs text-gray-500 mt-1">Reference: {{ payment.reference }}</div>
@@ -57,7 +84,7 @@ const methodLabel = computed(() => {
 				:color="getStatusColor(payment.stripe_status)"
 				:variant="payment.stripe_status === 'succeeded' ? 'solid' : 'soft'"
 			>
-				{{ payment.stripe_status }}
+				{{ statusLabel }}
 			</UBadge>
 			<UBadge
 				v-else
@@ -70,7 +97,7 @@ const methodLabel = computed(() => {
 
 		<!-- Payment Amount + Receipt -->
 		<div class="flex justify-between items-center">
-			<div class="text-lg font-medium">${{ payment.amount }}</div>
+			<div class="text-lg font-medium" :class="{ 'text-muted-foreground': isRefundRow }">{{ displayAmount }}</div>
 			<div class="flex gap-2">
 				<UButton
 					v-if="payment.receipt_url"
