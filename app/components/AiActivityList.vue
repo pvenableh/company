@@ -371,6 +371,42 @@ function ticketPreview(a: any): { priority: string | null; tasks: string[] } | n
   return { priority: p.priority || null, tasks: Array.isArray(p.tasks) ? p.tasks : [] };
 }
 
+// Content-plan preview (create_content_plan) — objective + themes, before approval.
+function contentPlanPreview(a: any): { objective: string | null; strategy: string | null; themes: string[]; planType: string | null; targetMonth: string | null } | null {
+  const p = a?.preview;
+  if (!p || p.kind !== 'create_content_plan') return null;
+  return {
+    objective: p.objective || null,
+    strategy: p.strategy || null,
+    themes: Array.isArray(p.themes) ? p.themes : [],
+    planType: p.plan_type || null,
+    targetMonth: p.target_month || null,
+  };
+}
+
+// Draft social posts preview (draft_social_posts) — the captions + targets one
+// Approve will create as DRAFTS. Nothing is scheduled or posted.
+function socialPostsPreview(a: any): { count: number; posts: Array<{ caption: string; platforms: string[]; post_type: string }> } | null {
+  const p = a?.preview;
+  if (!p || p.kind !== 'draft_social_posts') return null;
+  const posts = Array.isArray(p.posts) ? p.posts : [];
+  return {
+    count: Number(p.count) || posts.length,
+    posts: posts.map((x: any) => ({
+      caption: String(x?.caption ?? ''),
+      platforms: Array.isArray(x?.platforms) ? x.platforms : [],
+      post_type: String(x?.post_type ?? 'image'),
+    })),
+  };
+}
+
+// Campaign preview (create_campaign) — goal + dates, before approval.
+function campaignPreview(a: any): { goal: string | null; startDate: string | null; endDate: string | null } | null {
+  const p = a?.preview;
+  if (!p || p.kind !== 'create_campaign') return null;
+  return { goal: p.goal || null, startDate: p.start_date || null, endDate: p.end_date || null };
+}
+
 // Real artifacts this action produced, as clickable links into the slide-over stack.
 function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
   const links: Array<{ label: string; open: () => void }> = [];
@@ -580,6 +616,51 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 <span class="text-foreground break-words">{{ t }}</span>
               </div>
               <div v-if="!ticketPreview(a)!.tasks.length && !ticketPreview(a)!.priority" class="text-[11px] text-muted-foreground">Ticket only — no tasks.</div>
+            </div>
+
+            <!-- Content-plan preview (create_content_plan): objective + themes. -->
+            <div v-if="contentPlanPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1.5">
+              <div v-if="contentPlanPreview(a)!.objective" class="text-[11px] text-foreground break-words">{{ contentPlanPreview(a)!.objective }}</div>
+              <div v-if="contentPlanPreview(a)!.themes.length" class="flex flex-wrap gap-1">
+                <span
+                  v-for="(t, i) in contentPlanPreview(a)!.themes"
+                  :key="i"
+                  class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                >{{ t }}</span>
+              </div>
+              <div v-if="contentPlanPreview(a)!.targetMonth || contentPlanPreview(a)!.planType" class="text-[10px] text-muted-foreground">
+                <span v-if="contentPlanPreview(a)!.targetMonth">{{ contentPlanPreview(a)!.targetMonth }}</span>
+                <span v-if="contentPlanPreview(a)!.targetMonth && contentPlanPreview(a)!.planType"> · </span>
+                <span v-if="contentPlanPreview(a)!.planType" class="capitalize">{{ contentPlanPreview(a)!.planType!.replace(/_/g, ' ') }}</span>
+              </div>
+              <div class="text-[10px] text-muted-foreground italic">Draft — nothing is scheduled or posted.</div>
+            </div>
+
+            <!-- Draft social posts preview (draft_social_posts): captions + targets. -->
+            <div v-if="socialPostsPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1.5">
+              <div v-for="(post, i) in socialPostsPreview(a)!.posts" :key="i" class="space-y-0.5">
+                <p class="text-[11px] text-foreground break-words">{{ post.caption }}</p>
+                <div class="flex items-center gap-1">
+                  <span
+                    v-for="(pl, j) in post.platforms"
+                    :key="j"
+                    class="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground capitalize"
+                  >{{ pl }}</span>
+                  <span class="text-[10px] text-muted-foreground capitalize">· {{ post.post_type }}</span>
+                </div>
+              </div>
+              <div class="text-[10px] text-muted-foreground italic">{{ socialPostsPreview(a)!.count }} draft{{ socialPostsPreview(a)!.count === 1 ? '' : 's' }} — never posted or scheduled.</div>
+            </div>
+
+            <!-- Campaign preview (create_campaign): goal + dates. -->
+            <div v-if="campaignPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1">
+              <div v-if="campaignPreview(a)!.goal" class="text-[11px] text-foreground break-words">{{ campaignPreview(a)!.goal }}</div>
+              <div v-if="campaignPreview(a)!.startDate || campaignPreview(a)!.endDate" class="text-[10px] text-muted-foreground">
+                <span v-if="campaignPreview(a)!.startDate">{{ campaignPreview(a)!.startDate }}</span>
+                <span v-if="campaignPreview(a)!.startDate && campaignPreview(a)!.endDate"> → </span>
+                <span v-if="campaignPreview(a)!.endDate">{{ campaignPreview(a)!.endDate }}</span>
+              </div>
+              <div class="text-[10px] text-muted-foreground italic">Draft campaign — nothing is launched.</div>
             </div>
 
             <!-- HITL controls: only pending actions are actionable. Editable

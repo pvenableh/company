@@ -173,7 +173,7 @@ const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> =
 		{ label: 'Plan next month', prompt: 'Create a monthly content plan for next month with a handful of content themes.' },
 		{ label: 'Draft social posts', prompt: 'Draft a handful of social posts for this plan — real, on-brand captions I can review and edit.' },
 	],
-	campaign: [
+	marketing_campaign: [
 		{ label: 'Draft social posts', prompt: 'Draft a few social posts for this campaign — real, on-brand captions I can review and edit.' },
 		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan to support this campaign — objective, a few themes, and a short strategy.' },
 	],
