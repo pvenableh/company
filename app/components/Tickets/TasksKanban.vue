@@ -33,10 +33,10 @@ const columns: { key: Column; label: string; dotColor: string; badgeClass: strin
 	{ key: 'done', label: 'Done', dotColor: 'bg-success', badgeClass: 'bg-success/15 text-success' },
 ];
 
-// UX column → tasks.status enum written on drop. 'active' is what
-// toggleTaskStatus uses when reopening, so the two stay consistent.
+// UX column → tasks.status enum written on drop. 'new' is the canonical
+// To Do value (matches the server + toggleTaskStatus reopen), so the two stay consistent.
 const COLUMN_TO_STATUS: Record<Column, string> = {
-	todo: 'active',
+	todo: 'new',
 	in_progress: 'in_progress',
 	done: 'completed',
 };

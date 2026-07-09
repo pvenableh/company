@@ -726,7 +726,7 @@ const fetchActivity = async (reset = false) => {
 					task: {
 						id: task.id,
 						description: sanitizeHtml(task.description),
-						status: 'active', // New tasks are always active
+						status: 'new', // New tasks are created with the canonical To Do status 'new'
 					},
 				});
 

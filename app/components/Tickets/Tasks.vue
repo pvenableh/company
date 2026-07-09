@@ -127,7 +127,7 @@ async function addTask() {
 		const newTaskId = await taskItems.create({
 			description: newTask.value,
 			ticket_id: props.ticketId,
-			status: 'active',
+			status: 'new',
 			sort: localTasks.value.length,
 		});
 
@@ -160,7 +160,7 @@ const launchConfetti = () => {
 };
 
 async function toggleTask(task) {
-	const newStatus = task.status === 'completed' ? 'active' : 'completed';
+	const newStatus = task.status === 'completed' ? 'new' : 'completed';
 	const oldStatus = task.status;
 
 	// Optimistic update BEFORE API call for instant UI feedback

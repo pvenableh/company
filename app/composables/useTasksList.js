@@ -282,7 +282,7 @@ export function useTasksList({
 		console.log('Toggling task status:', taskId);
 
 		try {
-			const newStatus = task.status === 'completed' ? 'active' : 'completed';
+			const newStatus = task.status === 'completed' ? 'new' : 'completed';
 			console.log('New status will be:', newStatus);
 
 			await taskItemsApi.update(taskId, {
@@ -328,7 +328,7 @@ export function useTasksList({
 			console.error('Error toggling task status:', err);
 
 			if (task) {
-				task.status = task.status === 'completed' ? 'active' : 'completed';
+				task.status = task.status === 'completed' ? 'new' : 'completed';
 			}
 
 			if (import.meta.client) {
