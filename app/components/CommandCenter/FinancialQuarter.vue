@@ -65,11 +65,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 	office: 'Office', contractor: 'Contractors', hosting: 'Hosting', insurance: 'Insurance',
 	legal: 'Legal', other: 'Other',
 };
-const CATEGORY_COLORS: Record<string, string> = {
-	software: '#6366f1', hardware: '#8b5cf6', travel: '#f59e0b', marketing: '#3b82f6',
-	office: '#64748b', contractor: '#ef4444', hosting: '#06b6d4', insurance: '#10b981',
-	legal: '#f97316', other: '#9ca3af',
-};
+// Categorical expense colours come from the palette-driven tag ramp
+// (--tag-1…8, re-skinned live by applyPaletteToDocument) instead of
+// hardcoded hex, so the breakdown follows the active theme/palette.
+// Assigned by sorted render order below, so the largest categories always
+// land on distinct slots (the ramp has 8 — see TAG_RAMP_LENGTH).
+const tagColor = (i: number) => `hsl(var(--tag-${(i % 8) + 1}))`;
 const editingGoals = ref(false);
 const goalInputs = ref<number[]>([0, 0, 0, 0]);
 const showHelp = ref(false);
@@ -206,10 +207,11 @@ const loadFinancials = async () => {
 				category: cat,
 				label: CATEGORY_LABELS[cat] || cat,
 				amount,
-				color: CATEGORY_COLORS[cat] || '#9ca3af',
+				color: '',
 				percent: catTotal > 0 ? (amount / catTotal) * 100 : 0,
 			}))
-			.sort((a, b) => b.amount - a.amount);
+			.sort((a, b) => b.amount - a.amount)
+			.map((item, i) => ({ ...item, color: tagColor(i) }));
 	} catch (e) {
 		console.warn('[Financials] Could not load data:', e);
 	} finally {
@@ -258,7 +260,7 @@ const getProgressPercent = (actual: number, goal: number) => {
 const getProgressColor = (actual: number, goal: number) => {
 	const pct = getProgressPercent(actual, goal);
 	if (pct >= 100) return 'bg-success';
-	if (pct >= 75) return 'bg-blue-500';
+	if (pct >= 75) return 'bg-info';
 	if (pct >= 50) return 'bg-warning';
 	return 'bg-destructive';
 };
@@ -352,7 +354,7 @@ onMounted(() => {
 			<div class="flex items-center gap-2">
 				<button
 					@click="showHelp = !showHelp"
-					class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+					class="text-xs text-muted-foreground hover:text-foreground transition-colors"
 					title="How are financials calculated?"
 				>
 					<UIcon name="i-heroicons-question-mark-circle" class="w-4 h-4" />
@@ -375,8 +377,8 @@ onMounted(() => {
 		</div>
 
 		<!-- Goal Editor -->
-		<div v-if="editingGoals" class="p-4 bg-blue-50/50 dark:bg-blue-900/10 border-b border-border/30">
-			<p class="text-xs text-gray-500 mb-3">Set quarterly revenue goals:</p>
+		<div v-if="editingGoals" class="p-4 bg-info/5 border-b border-border/30">
+			<p class="text-xs text-muted-foreground mb-3">Set quarterly revenue goals:</p>
 			<div class="grid grid-cols-4 gap-3">
 				<div v-for="(_, idx) in goalInputs" :key="idx">
 					<label class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Q{{ idx + 1 }}</label>
@@ -385,24 +387,24 @@ onMounted(() => {
 						type="number"
 						min="0"
 						step="1000"
-						class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
+						class="w-full text-sm border border-input rounded-md px-2 py-1 bg-transparent text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
 						placeholder="0"
 					/>
 				</div>
 			</div>
 			<button
 				@click="saveGoals"
-				class="mt-3 text-xs bg-primary text-white px-4 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
+				class="mt-3 text-xs bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
 			>
 				Save Goals
 			</button>
 		</div>
 
 		<!-- How It Works -->
-		<div v-if="showHelp" class="p-4 bg-gray-50/80 dark:bg-gray-700/30 border-b border-border/30 text-xs text-gray-600 dark:text-gray-400 space-y-2">
-			<p class="font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide text-[10px] mb-2">How financials are calculated</p>
+		<div v-if="showHelp" class="p-4 bg-muted/50 border-b border-border/30 text-xs text-muted-foreground space-y-2">
+			<p class="font-semibold text-foreground uppercase tracking-wide text-[10px] mb-2">How financials are calculated</p>
 			<ul class="space-y-1.5 list-none">
-				<li><span class="font-medium text-gray-700 dark:text-gray-300">Total Billed</span> &mdash; The sum of all invoice amounts for the selected year.</li>
+				<li><span class="font-medium text-foreground">Total Billed</span> &mdash; The sum of all invoice amounts for the selected year.</li>
 				<li><span class="font-medium text-success">Collected</span> &mdash; Invoices with status "paid." This is actual revenue received.</li>
 				<li><span class="font-medium text-warning">Outstanding</span> &mdash; Total Billed minus Collected.</li>
 				<li><span class="font-medium text-destructive">Expenses</span> &mdash; Total expenses recorded for the period.</li>
@@ -411,7 +413,7 @@ onMounted(() => {
 		</div>
 
 		<div v-if="isLoading" class="p-8 flex items-center justify-center">
-			<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
+			<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
 		</div>
 
 		<div v-else-if="yearlyActual === 0 && yearlyExpenses === 0" class="p-8 text-center">
@@ -430,25 +432,25 @@ onMounted(() => {
 		<div v-else class="p-4">
 			<!-- Yearly Summary (full width) -->
 			<div class="grid grid-cols-5 gap-3 mb-6 text-center">
-				<div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-					<p class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(yearlyActual) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-gray-500">Total Billed</p>
+				<div class="bg-muted/50 rounded-lg p-3">
+					<p class="text-lg font-bold text-foreground">{{ formatCurrency(yearlyActual) }}</p>
+					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Total Billed</p>
 				</div>
 				<div class="bg-success/10 dark:bg-success/20 rounded-lg p-3">
 					<p class="text-lg font-bold text-success">{{ formatCurrency(yearlyPaid) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-gray-500">Collected</p>
+					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Collected</p>
 				</div>
 				<div class="bg-warning/10 dark:bg-warning/20 rounded-lg p-3">
 					<p class="text-lg font-bold text-warning">{{ formatCurrency(yearlyPending) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-gray-500">Outstanding</p>
+					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Outstanding</p>
 				</div>
 				<div class="bg-destructive/10 dark:bg-destructive/20 rounded-lg p-3">
 					<p class="text-lg font-bold text-destructive">{{ formatCurrency(yearlyExpenses) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-gray-500">Expenses</p>
+					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Expenses</p>
 				</div>
 				<div class="rounded-lg p-3" :class="yearlyNet >= 0 ? 'bg-success/10 dark:bg-success/20' : 'bg-destructive/10 dark:bg-destructive/20'">
 					<p class="text-lg font-bold" :class="yearlyNet >= 0 ? 'text-success' : 'text-destructive'">{{ formatCurrency(yearlyNet) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-gray-500">Net Income</p>
+					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Net Income</p>
 				</div>
 			</div>
 
@@ -457,7 +459,7 @@ onMounted(() => {
 			<div>
 			<!-- Monthly Income vs Expenses Chart -->
 			<div v-if="monthlyData.length > 0" class="mb-6">
-				<p class="text-[10px] text-gray-500 uppercase tracking-wider mb-3 font-semibold">Monthly Income vs Expenses</p>
+				<p class="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Monthly Income vs Expenses</p>
 				<div class="flex items-end gap-1" style="height: 80px">
 					<div
 						v-for="m in monthlyData"
@@ -471,35 +473,35 @@ onMounted(() => {
 								:title="`Income: ${formatCurrency(m.income)}`"
 							/>
 							<div
-								class="flex-1 rounded-t-[2px] bg-slate-700/50"
+								class="flex-1 rounded-t-[2px] bg-destructive/50"
 								:style="{ height: `${Math.max((m.expenses / maxMonthValue) * 60, 1)}px` }"
 								:title="`Expenses: ${formatCurrency(m.expenses)}`"
 							/>
 						</div>
-						<span class="text-[8px] text-gray-400">{{ m.month }}</span>
+						<span class="text-[8px] text-muted-foreground">{{ m.month }}</span>
 					</div>
 				</div>
 				<div class="flex items-center gap-4 mt-2 justify-end">
-					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-success/60"></span><span class="text-[9px] text-gray-400">Income</span></div>
-					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-slate-700/50"></span><span class="text-[9px] text-gray-400">Expenses</span></div>
+					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-success/60"></span><span class="text-[9px] text-muted-foreground">Income</span></div>
+					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-destructive/50"></span><span class="text-[9px] text-muted-foreground">Expenses</span></div>
 				</div>
 			</div>
 
 			<!-- Projection (current year only) -->
-			<div v-if="projection" class="mb-6 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
-				<p class="text-[10px] font-semibold uppercase tracking-wider text-blue-500 mb-2">Year-End Projection</p>
+			<div v-if="projection" class="mb-6 p-3 bg-info/5 rounded-lg border border-info/20">
+				<p class="text-[10px] font-semibold uppercase tracking-wider text-info mb-2">Year-End Projection</p>
 				<div class="grid grid-cols-3 gap-3 text-center">
 					<div>
 						<p class="text-sm font-bold text-success">{{ formatCurrency(projection.projectedIncome) }}</p>
-						<p class="text-[10px] text-gray-500">Projected Income</p>
+						<p class="text-[10px] text-muted-foreground">Projected Income</p>
 					</div>
 					<div>
 						<p class="text-sm font-bold text-destructive">{{ formatCurrency(projection.projectedExpenses) }}</p>
-						<p class="text-[10px] text-gray-500">Projected Expenses</p>
+						<p class="text-[10px] text-muted-foreground">Projected Expenses</p>
 					</div>
 					<div>
 						<p class="text-sm font-bold" :class="projection.projectedNet >= 0 ? 'text-success' : 'text-destructive'">{{ formatCurrency(projection.projectedNet) }}</p>
-						<p class="text-[10px] text-gray-500">Projected Net</p>
+						<p class="text-[10px] text-muted-foreground">Projected Net</p>
 					</div>
 				</div>
 			</div>
@@ -511,23 +513,23 @@ onMounted(() => {
 				<div
 					v-for="q in quarters"
 					:key="q.label"
-					class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3"
+					class="bg-muted/50 rounded-lg p-3"
 				>
 					<div class="flex items-center justify-between mb-2">
 						<div class="flex items-center gap-2">
-							<span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ q.label }}</span>
-							<span class="text-[10px] text-gray-400">{{ q.invoiceCount }} invoices</span>
+							<span class="text-sm font-bold text-foreground">{{ q.label }}</span>
+							<span class="text-[10px] text-muted-foreground">{{ q.invoiceCount }} invoices</span>
 						</div>
 						<div class="text-right">
-							<p class="text-sm font-bold text-gray-900 dark:text-white">{{ formatCurrency(q.actual) }}</p>
-							<p v-if="q.goal" class="text-[10px] text-gray-400">
+							<p class="text-sm font-bold text-foreground">{{ formatCurrency(q.actual) }}</p>
+							<p v-if="q.goal" class="text-[10px] text-muted-foreground">
 								Goal: {{ formatCurrency(q.goal) }}
 							</p>
 						</div>
 					</div>
 
 					<!-- Progress bar -->
-					<div v-if="q.goal" class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-2">
+					<div v-if="q.goal" class="w-full bg-muted rounded-full h-2 mb-2">
 						<div
 							:class="getProgressColor(q.paid, q.goal)"
 							class="h-2 rounded-full transition-all duration-500"
@@ -546,15 +548,15 @@ onMounted(() => {
 					<div class="flex items-center gap-4 text-[10px] flex-wrap">
 						<div class="flex items-center gap-1">
 							<span class="w-2 h-2 rounded-full bg-success"></span>
-							<span class="text-gray-500">Paid: {{ formatCurrency(q.paid) }} ({{ q.paidCount }})</span>
+							<span class="text-muted-foreground">Paid: {{ formatCurrency(q.paid) }} ({{ q.paidCount }})</span>
 						</div>
 						<div class="flex items-center gap-1">
 							<span class="w-2 h-2 rounded-full bg-warning"></span>
-							<span class="text-gray-500">Pending: {{ formatCurrency(q.pending) }}</span>
+							<span class="text-muted-foreground">Pending: {{ formatCurrency(q.pending) }}</span>
 						</div>
 						<div class="flex items-center gap-1">
 							<span class="w-2 h-2 rounded-full bg-destructive"></span>
-							<span class="text-gray-500">Expenses: {{ formatCurrency(q.expenses) }}</span>
+							<span class="text-muted-foreground">Expenses: {{ formatCurrency(q.expenses) }}</span>
 						</div>
 						<div class="flex items-center gap-1 ml-auto">
 							<span class="font-bold" :class="q.net >= 0 ? 'text-success' : 'text-destructive'">
@@ -563,7 +565,7 @@ onMounted(() => {
 						</div>
 						<div v-if="q.goal" class="ml-auto">
 							<span
-								:class="q.paid >= q.goal ? 'text-success' : 'text-gray-400'"
+								:class="q.paid >= q.goal ? 'text-success' : 'text-muted-foreground'"
 								class="font-bold"
 							>
 								{{ getProgressPercent(q.paid, q.goal) }}%
@@ -574,9 +576,9 @@ onMounted(() => {
 			</div>
 
 			<!-- Expense Category Breakdown -->
-			<div v-if="expenseCategories.length > 0" class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+			<div v-if="expenseCategories.length > 0" class="mt-6 pt-4 border-t border-border">
 				<div class="flex items-center justify-between mb-3">
-					<p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Expenses by Category</p>
+					<p class="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Expenses by Category</p>
 					<p class="text-xs font-semibold text-foreground">{{ formatCurrency(yearlyExpenses) }}</p>
 				</div>
 
@@ -596,7 +598,7 @@ onMounted(() => {
 					<div v-for="cat in expenseCategories" :key="cat.category" class="flex items-center gap-3">
 						<span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: cat.color }" />
 						<span class="text-xs text-foreground/80 flex-1">{{ cat.label }}</span>
-						<div class="w-20 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+						<div class="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
 							<div class="h-full rounded-full transition-all" :style="{ width: `${(cat.amount / maxCatAmount) * 100}%`, backgroundColor: cat.color }" />
 						</div>
 						<span class="text-xs font-medium text-foreground tabular-nums w-16 text-right">{{ formatCurrency(cat.amount) }}</span>
