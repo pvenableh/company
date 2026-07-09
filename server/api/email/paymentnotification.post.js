@@ -1,6 +1,7 @@
 import { readItem } from '@directus/sdk';
 import sgMail from '@sendgrid/mail';
 import { resolveMonitoringBcc } from '~~/server/utils/email-send';
+import { evaluateMoneyGate } from '~~/server/utils/outbound-gate';
 
 export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
@@ -103,6 +104,22 @@ export default defineEventHandler(async (event) => {
 			...(orgId ? { organization: String(orgId) } : {}),
 		},
 	};
+
+	// MONEY GATE (default-off) — when OUTBOUND_EMAIL_GATE_MONEY is enabled, only
+	// money-allow-listed orgs actually transmit; others are held as a draft.
+	const moneyGate = evaluateMoneyGate(orgId);
+	if (!moneyGate.allowed) {
+		console.log('[payment-notification] held as draft (money gate):', moneyGate.reason);
+		return {
+			statusCode: 200,
+			body: {
+				message: 'Payment notification held as draft (not sent)',
+				held: true,
+				reason: moneyGate.reason,
+				recipients: message.personalizations[0].to,
+			},
+		};
+	}
 
 	try {
 		console.log('Sending email with data:', {

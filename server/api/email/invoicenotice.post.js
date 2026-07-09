@@ -1,5 +1,6 @@
 import sgMail from '@sendgrid/mail';
 import { resolveMonitoringBcc } from '~~/server/utils/email-send';
+import { evaluateMoneyGate } from '~~/server/utils/outbound-gate';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -217,6 +218,21 @@ export default defineEventHandler(async (event) => {
 				},
 			};
 
+			// MONEY GATE (default-off) — when OUTBOUND_EMAIL_GATE_MONEY is enabled,
+			// only money-allow-listed orgs actually transmit; others are held as a
+			// draft (not sent) so client-facing money can stay drafts during rollout.
+			const moneyGate = evaluateMoneyGate(organization?.id);
+			if (!moneyGate.allowed) {
+				console.log('[invoice-notice] held as draft (money gate):', moneyGate.reason);
+				return {
+					organization: organization.name,
+					status: 'held',
+					email: primaryEmail || organization.email,
+					invoiceCount: invoices.length,
+					reason: moneyGate.reason,
+				};
+			}
+
 			try {
 				console.log('Sending invoice email with data:', {
 					recipient: organization.email,
@@ -265,11 +281,12 @@ export default defineEventHandler(async (event) => {
 		const results = await Promise.all(emailPromises);
 		const failedCount = results.filter((r) => r.status === 'failed').length;
 		const successCount = results.filter((r) => r.status === 'success').length;
+		const heldCount = results.filter((r) => r.status === 'held').length;
 
 		return {
 			statusCode: 200,
 			body: {
-				message: `Sent ${successCount} invoice emails successfully${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+				message: `Sent ${successCount} invoice emails successfully${failedCount > 0 ? `, ${failedCount} failed` : ''}${heldCount > 0 ? `, ${heldCount} held as draft` : ''}`,
 				results,
 			},
 		};

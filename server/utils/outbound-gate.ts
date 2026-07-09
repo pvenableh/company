@@ -108,3 +108,59 @@ export function outboundEmailEnabledGlobally(): boolean {
 	if (process.env.OUTBOUND_EMAIL_KILL === 'true') return false;
 	return parseList(process.env.OUTBOUND_EMAIL_ALLOWED_ORGS).length > 0;
 }
+
+export interface MoneyGateDecision {
+	/** True when money gating is OFF (default) OR the org is money-allow-listed. */
+	allowed: boolean;
+	/** True only when OUTBOUND_EMAIL_GATE_MONEY is on — i.e. the allow-list was actually consulted. */
+	gated: boolean;
+	/** Human-readable reason — always set, safe to log / show in a UI. */
+	reason: string;
+	orgId: string | null;
+}
+
+/**
+ * Gate for client-facing MONEY email (invoice notices, payment receipts).
+ *
+ * These are transactional and historically ALWAYS send — they bypass the general
+ * `evaluateOutboundGate` entirely. The rollout intent is "client-facing money
+ * stays drafts" even for orgs whose *general* email is already enabled, so money
+ * gets its OWN switch and its OWN allow-list, independent of
+ * OUTBOUND_EMAIL_ALLOWED_ORGS.
+ *
+ * DEFAULT-OFF, on purpose: when OUTBOUND_EMAIL_GATE_MONEY !== 'true' this returns
+ * `allowed:true` unconditionally, so money email sends exactly as it does today.
+ * NOTHING changes on deploy until the flag is deliberately set — enabling money
+ * gating is an explicit, reversible act (remove the env value to revert).
+ *
+ * When ON:
+ *   - OUTBOUND_EMAIL_KILL=true            → deny (shared master off-switch).
+ *   - OUTBOUND_EMAIL_ALLOWED_MONEY_ORGS   → comma-separated org ids that MAY send
+ *                                           money email. DEFAULT EMPTY = deny all
+ *                                           (every money email held as a draft).
+ */
+export function evaluateMoneyGate(orgId: string | null | undefined): MoneyGateDecision {
+	const id = orgId ? String(orgId) : null;
+
+	// Default OFF — preserve today's always-send behavior until explicitly enabled.
+	if (process.env.OUTBOUND_EMAIL_GATE_MONEY !== 'true') {
+		return { allowed: true, gated: false, orgId: id, reason: 'money gating off (OUTBOUND_EMAIL_GATE_MONEY unset) — sent as normal' };
+	}
+
+	if (process.env.OUTBOUND_EMAIL_KILL === 'true') {
+		return { allowed: false, gated: true, orgId: id, reason: 'outbound email disabled (OUTBOUND_EMAIL_KILL=true) — held as draft' };
+	}
+	if (!id) {
+		return { allowed: false, gated: true, orgId: id, reason: 'no organization on the money send — cannot gate, held as draft' };
+	}
+	const allowedMoneyOrgs = parseList(process.env.OUTBOUND_EMAIL_ALLOWED_MONEY_ORGS);
+	if (!allowedMoneyOrgs.includes(id)) {
+		return {
+			allowed: false,
+			gated: true,
+			orgId: id,
+			reason: `org ${id} is not on the money allow-list (OUTBOUND_EMAIL_ALLOWED_MONEY_ORGS) — held as draft`,
+		};
+	}
+	return { allowed: true, gated: true, orgId: id, reason: `allowed: org ${id} is on the money allow-list` };
+}
