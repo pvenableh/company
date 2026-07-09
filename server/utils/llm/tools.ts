@@ -317,6 +317,34 @@ export const CREATE_TICKET_TOOL: ToolDefinition = {
   },
 };
 
+export const CREATE_CONTENT_PLAN_TOOL: ToolDefinition = {
+  name: 'create_content_plan',
+  description:
+    'Creates a DRAFT content plan — the container that groups a month (or a campaign/launch) of social posts around an objective, themes, and a strategy. APPROVAL-GATED: it does NOT create anything immediately; it queues the plan for the user to review and approve in the AI Activity queue. Describe it as a proposal awaiting approval, never as published or live. Use when the user asks to "put together a content plan", "plan next month\'s content", "draft a social strategy for this client", or "spin up a launch plan". Only pass client_id / project_id if the EXACT UUID appears verbatim in the context — never invent one; if the chat is focused on a client or project, the server links it automatically. Nothing is scheduled or posted — this is an editable draft.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'The plan title (e.g. "March 2026 — Awareness Push"). If omitted, a sensible default is used.' },
+      objective: { type: 'string', description: 'Optional one-line goal for the plan (what it should achieve).' },
+      strategy: { type: 'string', description: 'Optional short strategy / approach paragraph.' },
+      themes: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional list of content themes / pillars for the plan.',
+      },
+      plan_type: {
+        type: 'string',
+        enum: ['monthly_cadence', 'campaign', 'launch', 'custom'],
+        description: 'Optional plan type. Defaults to monthly_cadence.',
+      },
+      target_month: { type: 'string', description: 'Optional target month as the first day in YYYY-MM-DD format (e.g. 2026-03-01).' },
+      client_id: { type: 'string', description: 'Optional client UUID to target the plan at. Pass ONLY a UUID present verbatim in the context; omit to use the focused client.' },
+      project_id: { type: 'string', description: 'Optional project UUID to attach the plan to. Pass ONLY a UUID present verbatim in the context; omit to use the focused project.' },
+    },
+    required: [],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
   RESCHEDULE_PROJECT_TOOL,
@@ -326,6 +354,7 @@ export const MUTATION_TOOLS: ToolDefinition[] = [
   ADD_EVENT_TOOL,
   CREATE_TICKET_TOOL,
   CREATE_INVOICE_TOOL,
+  CREATE_CONTENT_PLAN_TOOL,
   GENERATE_DOCUMENTS_TOOL,
   SEND_EMAIL_TOOL,
 ];

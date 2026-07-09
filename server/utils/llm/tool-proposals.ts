@@ -55,7 +55,7 @@ async function resolveUserNames(userIds: string[]): Promise<Record<string, strin
 }
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
-export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket']);
+export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket', 'create_content_plan']);
 
 /** Normalize AI line items into clean {description, rate, quantity, product?} rows. */
 function normalizeLineItems(raw: any): Array<Record<string, any>> {
@@ -144,9 +144,76 @@ export async function proposeToolCall(
       return await proposeCreateInvoice(input, ctx);
     case 'create_ticket':
       return await proposeCreateTicket(input, ctx);
+    case 'create_content_plan':
+      return await proposeCreateContentPlan(input, ctx);
     default:
       return { success: false, summary: '', error: `Unknown proposal tool: ${toolName}` };
   }
+}
+
+// ── create_content_plan ──────────────────────────────────────────────────────
+// Approval-gated: a DRAFT content plan (the container that groups a month /
+// campaign of social posts). The executor writes the content_plans row in
+// state:'draft' on approval. Nothing is scheduled or published. entity_type/id
+// point at the client (if linked) so the row surfaces on that client's activity.
+async function proposeCreateContentPlan(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const isClientFocus = ctx.entityType === 'client' || ctx.entityType === 'clients';
+  const isProjectFocus = ctx.entityType === 'project' || ctx.entityType === 'projects';
+  const clientId = input.client_id ?? (isClientFocus ? ctx.entityId : null);
+  const projectId = input.project_id ?? (isProjectFocus ? ctx.entityId : null);
+
+  const title = (input.title ?? '').toString().trim() || 'Content plan';
+  const planType = ['monthly_cadence', 'campaign', 'launch', 'custom'].includes(input.plan_type)
+    ? String(input.plan_type)
+    : 'monthly_cadence';
+  const themes = Array.isArray(input.themes)
+    ? input.themes.map((t: any) => String(t).trim()).filter(Boolean)
+    : [];
+
+  const payload: Record<string, any> = {
+    title,
+    objective: input.objective ? String(input.objective) : null,
+    strategy: input.strategy ? String(input.strategy) : null,
+    themes,
+    plan_type: planType,
+    target_month: input.target_month ? String(input.target_month) : null,
+    client_id: clientId ?? null,
+    project_id: projectId ?? null,
+  };
+
+  const rowTitle = `Create content plan "${title}"${themes.length ? ` (${themes.length} theme${themes.length !== 1 ? 's' : ''})` : ''}`;
+  const preview = {
+    kind: 'create_content_plan' as const,
+    title,
+    objective: payload.objective,
+    strategy: payload.strategy,
+    themes,
+    plan_type: planType,
+    target_month: payload.target_month,
+  };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'create_content_plan',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: clientId ? 'clients' : (projectId ? 'projects' : 'content_plans'),
+    entityId: clientId ?? projectId ?? null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the content plan for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — nothing has been created yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
 }
 
 // ── create_ticket ──────────────────────────────────────────────────────────

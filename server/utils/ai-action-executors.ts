@@ -643,6 +643,49 @@ const createTicketExecutor: AiActionExecutor = async ({ action, organizationId }
   return { ticketId, tasksCreated };
 };
 
+// ── create_content_plan ───────────────────────────────────────────────────────
+// Approval-gated DRAFT content plan (the container for a month/campaign of social
+// posts). Org-set; target_client/project links org-verified fail-soft. Writes in
+// state:'draft' — nothing is scheduled or published. Mirrors createContentPlan()
+// in server/utils/content-plans.ts but writes with the admin client, like the
+// other executors.
+const createContentPlanExecutor: AiActionExecutor = async ({ action, organizationId }) => {
+  const payload = action?.payload || {};
+  const title = (payload.title ?? '').toString().trim() || 'Content plan';
+
+  const directus = getServerDirectus();
+
+  const validPlanTypes = ['monthly_cadence', 'campaign', 'launch', 'custom'];
+  const fields: Record<string, any> = {
+    organization: organizationId,
+    title,
+    state: 'draft',
+    plan_type: validPlanTypes.includes(payload.plan_type) ? String(payload.plan_type) : 'monthly_cadence',
+  };
+  if (payload.objective) fields.objective = String(payload.objective);
+  if (payload.strategy) fields.strategy = String(payload.strategy);
+  if (Array.isArray(payload.themes) && payload.themes.length) {
+    fields.themes = payload.themes.map((t: any) => String(t)).filter(Boolean);
+  }
+  if (payload.target_month) fields.target_month = String(payload.target_month);
+  if (payload.client_id) {
+    const orgId = await loadOrgId(directus, 'clients', payload.client_id, 'organization');
+    if (orgId === organizationId) fields.target_client = payload.client_id;
+  }
+  if (payload.project_id) {
+    const orgId = await loadOrgId(directus, 'projects', payload.project_id, 'organization');
+    if (orgId === organizationId) fields.project = payload.project_id;
+  }
+
+  const plan = (await directus.request(
+    createItem('content_plans' as any, fields, { fields: ['id'] as any }),
+  )) as any;
+  const planId = plan?.id != null ? String(plan.id) : null;
+  if (!planId) throw new Error('create_content_plan: plan creation returned no id');
+
+  return { contentPlanId: planId, title, plan_type: fields.plan_type };
+};
+
 // ── create_invoice ─────────────────────────────────────────────────────────────
 // Approval-gated: a real invoice + line items. The server generates the invoice
 // code (INV-{ORG}-{CLIENT}-{YEAR}-{NNNN}, mirroring useInvoices.generateInvoiceCode)
@@ -818,6 +861,7 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   create_project: createProjectExecutor,
   add_event: addEventExecutor,
   create_ticket: createTicketExecutor,
+  create_content_plan: createContentPlanExecutor,
   create_invoice: createInvoiceExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),

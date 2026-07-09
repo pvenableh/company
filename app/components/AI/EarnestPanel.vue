@@ -166,6 +166,10 @@ const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> =
 		{ label: 'Extend the due date', prompt: 'Push this invoice\'s due date out by two weeks.' },
 		{ label: 'Update status', prompt: 'Change this invoice\'s status.' },
 	],
+	content_plan: [
+		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan for this — objective, a few themes, and a short strategy.' },
+		{ label: 'Plan next month', prompt: 'Create a monthly content plan for next month with a handful of content themes.' },
+	],
 };
 const entityActions = computed(() => {
 	const t = aware.entityType.value;
