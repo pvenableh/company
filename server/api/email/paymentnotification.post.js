@@ -2,6 +2,7 @@ import { readItem } from '@directus/sdk';
 import sgMail from '@sendgrid/mail';
 import { resolveMonitoringBcc } from '~~/server/utils/email-send';
 import { evaluateMoneyGate } from '~~/server/utils/outbound-gate';
+import { persistHeldEmail } from '~~/server/utils/held-email';
 
 export default defineEventHandler(async (event) => {
 	const body = await readBody(event);
@@ -110,6 +111,18 @@ export default defineEventHandler(async (event) => {
 	const moneyGate = evaluateMoneyGate(orgId);
 	if (!moneyGate.allowed) {
 		console.log('[payment-notification] held as draft (money gate):', moneyGate.reason);
+		// Persist to the draft outbox so it can be reviewed / flushed later.
+		const draftId = await persistHeldEmail({
+			organization: orgId,
+			channel: 'payment_notification',
+			to: message.personalizations[0].to?.[0]?.email ?? null,
+			subject: message.subject,
+			amount: body.amount,
+			reason: moneyGate.reason,
+			message,
+			sourceCollection: 'invoices',
+			sourceId: body.id ?? null,
+		});
 		return {
 			statusCode: 200,
 			body: {
@@ -117,6 +130,7 @@ export default defineEventHandler(async (event) => {
 				held: true,
 				reason: moneyGate.reason,
 				recipients: message.personalizations[0].to,
+				draftId,
 			},
 		};
 	}

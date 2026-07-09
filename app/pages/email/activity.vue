@@ -20,6 +20,8 @@ const { selectedOrg } = useOrganization();
 
 const events = ref<any[]>([]);
 const campaigns = ref<any[]>([]);
+const drafts = ref<any[]>([]);
+const draftBusy = ref<string[]>([]);
 const loading = ref(true);
 const range = ref<7 | 30 | 90>(30);
 
@@ -53,10 +55,10 @@ async function load() {
 	}
 	loading.value = true;
 
-	// Fetch delivery events and campaign roll-up INDEPENDENTLY — a permission
-	// gap on the marketing `emails` collection must not blank the delivery
-	// monitor (and vice-versa). Each settles on its own.
-	const [evsRes, campsRes] = await Promise.allSettled([
+	// Fetch delivery events, campaign roll-up, and held money-email drafts
+	// INDEPENDENTLY — a permission gap on any one collection must not blank the
+	// others. Each settles on its own.
+	const [evsRes, campsRes, draftsRes] = await Promise.allSettled([
 		// email_events + emails both lack an authenticated row-level read perm —
 		// route through the org-scoped server endpoints (admin token +
 		// requireOrgMembership) so neither collection is queried directly.
@@ -66,12 +68,18 @@ async function load() {
 		$fetch<{ campaigns: any[] }>('/api/email/campaigns', {
 			query: { org: selectedOrg.value, days: range.value, limit: 50 },
 		}).then((r) => r.campaigns || []),
+		// held_emails — money email held by the gate, awaiting review/flush.
+		$fetch<{ drafts: any[] }>('/api/email/held', {
+			query: { org: selectedOrg.value, status: 'held' },
+		}).then((r) => r.drafts || []),
 	]);
 
 	if (evsRes.status === 'fulfilled') events.value = (evsRes.value as any[]) || [];
 	else { console.error('[email/activity] events load failed:', evsRes.reason); events.value = []; }
 	if (campsRes.status === 'fulfilled') campaigns.value = (campsRes.value as any[]) || [];
 	else { console.warn('[email/activity] campaigns load failed (non-fatal):', campsRes.reason); campaigns.value = []; }
+	if (draftsRes.status === 'fulfilled') drafts.value = (draftsRes.value as any[]) || [];
+	else { console.warn('[email/activity] held drafts load failed (non-fatal):', draftsRes.reason); drafts.value = []; }
 
 	loading.value = false;
 }
@@ -221,6 +229,52 @@ function eventColor(ev: string | null | undefined) {
 		default:            return 'bg-muted text-muted-foreground';
 	}
 }
+
+// ── Held money-email drafts ──
+const DRAFT_CHANNEL_LABELS: Record<string, string> = {
+	invoice_notice: 'Invoice notice',
+	payment_notification: 'Payment receipt',
+};
+function draftChannelLabel(ch: string | null | undefined) {
+	return (ch && DRAFT_CHANNEL_LABELS[ch]) || 'Money email';
+}
+function fmtAmount(a: string | number | null | undefined) {
+	if (a == null || a === '') return null;
+	const n = typeof a === 'number' ? a : parseFloat(a);
+	if (Number.isNaN(n)) return null;
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+}
+const isDraftBusy = (id: string) => draftBusy.value.includes(id);
+
+async function flushDraft(id: string) {
+	if (isDraftBusy(id)) return;
+	draftBusy.value = [...draftBusy.value, id];
+	try {
+		await $fetch(`/api/email/held/${id}/send`, { method: 'POST' });
+		drafts.value = drafts.value.filter((d) => d.id !== id);
+		useToast().add({ title: 'Draft sent', color: 'success', duration: 2500 });
+		// Refresh so the newly-sent email shows up once SendGrid events land.
+		load();
+	} catch (e: any) {
+		useToast().add({ title: 'Send failed', description: e?.data?.message || e?.message || 'Could not send draft', color: 'red' });
+	} finally {
+		draftBusy.value = draftBusy.value.filter((x) => x !== id);
+	}
+}
+
+async function discardDraft(id: string) {
+	if (isDraftBusy(id)) return;
+	draftBusy.value = [...draftBusy.value, id];
+	try {
+		await $fetch(`/api/email/held/${id}/discard`, { method: 'POST' });
+		drafts.value = drafts.value.filter((d) => d.id !== id);
+		useToast().add({ title: 'Draft discarded', color: 'info', duration: 2000 });
+	} catch (e: any) {
+		useToast().add({ title: 'Discard failed', description: e?.data?.message || e?.message || 'Could not discard draft', color: 'red' });
+	} finally {
+		draftBusy.value = draftBusy.value.filter((x) => x !== id);
+	}
+}
 </script>
 
 <template>
@@ -307,6 +361,46 @@ function eventColor(ev: string | null | undefined) {
 		<div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			<!-- Left column: campaigns + transactional (spans 2 cols) -->
 			<div class="lg:col-span-2 space-y-6">
+			<!-- Held money-email drafts — invoice/receipt email the money gate
+			     held, awaiting a human to review + flush or discard. -->
+			<div v-if="scope !== 'campaign' && drafts.length" class="ios-card p-5 border border-amber-500/40 bg-amber-500/[0.04]">
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
+						<Icon name="lucide:mail-warning" class="w-4 h-4" />
+						Held Money Email
+					</h3>
+					<span class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ drafts.length }} draft{{ drafts.length === 1 ? '' : 's' }} — not sent</span>
+				</div>
+				<div class="space-y-1.5">
+					<div
+						v-for="d in drafts"
+						:key="d.id"
+						class="flex items-start gap-3 py-2 border-b border-border/30 last:border-b-0"
+					>
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium truncate">
+								{{ draftChannelLabel(d.channel) }}
+								<span v-if="fmtAmount(d.amount)" class="text-muted-foreground font-normal"> · {{ fmtAmount(d.amount) }}</span>
+							</p>
+							<p v-if="d.subject" class="text-[11px] text-muted-foreground truncate mt-0.5">{{ d.subject }}</p>
+							<p class="text-[10px] text-muted-foreground mt-1 truncate">
+								<span class="font-mono">{{ d.to_email || '—' }}</span>
+								<span v-if="d.date_created"> · {{ fmtTime(d.date_created) }}</span>
+							</p>
+						</div>
+						<div class="flex items-center gap-2 shrink-0">
+							<Button size="sm" :disabled="isDraftBusy(d.id)" @click="flushDraft(d.id)">
+								<Icon v-if="isDraftBusy(d.id)" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+								<span v-else>Send</span>
+							</Button>
+							<Button size="sm" variant="outline" :disabled="isDraftBusy(d.id)" @click="discardDraft(d.id)">
+								Discard
+							</Button>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Campaign roll-up -->
 			<div v-if="scope !== 'transactional'" class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">

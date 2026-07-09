@@ -1,6 +1,7 @@
 import sgMail from '@sendgrid/mail';
 import { resolveMonitoringBcc } from '~~/server/utils/email-send';
 import { evaluateMoneyGate } from '~~/server/utils/outbound-gate';
+import { persistHeldEmail } from '~~/server/utils/held-email';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -224,12 +225,25 @@ export default defineEventHandler(async (event) => {
 			const moneyGate = evaluateMoneyGate(organization?.id);
 			if (!moneyGate.allowed) {
 				console.log('[invoice-notice] held as draft (money gate):', moneyGate.reason);
+				// Persist to the draft outbox so it can be reviewed / flushed later.
+				const draftId = await persistHeldEmail({
+					organization: organization?.id,
+					channel: 'invoice_notice',
+					to: primaryEmail || organization.email,
+					subject: message.subject,
+					amount: totalAmount,
+					reason: moneyGate.reason,
+					message,
+					sourceCollection: 'invoices',
+					sourceId: firstInvoice?.id ?? null,
+				});
 				return {
 					organization: organization.name,
 					status: 'held',
 					email: primaryEmail || organization.email,
 					invoiceCount: invoices.length,
 					reason: moneyGate.reason,
+					draftId,
 				};
 			}
 

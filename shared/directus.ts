@@ -2400,6 +2400,37 @@ export interface GoalSnapshot {
 	date_created?: string | null;
 }
 
+export interface HeldEmail {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @description Owning org (null if the source invoice could not be resolved). */
+	organization?: Organization | string | null;
+	/** @description Which money email this draft is. */
+	channel?: 'invoice_notice' | 'payment_notification';
+	/** @description Primary recipient (TO). */
+	to_email?: string | null;
+	/** @description Email subject line. */
+	subject?: string | null;
+	/** @description Money amount for display (dollars). */
+	amount?: number | null;
+	/** @description Why it was held (money-gate reason). */
+	reason?: string | null;
+	/** @description held → sent/discarded. */
+	status?: 'held' | 'sent' | 'discarded';
+	/** @description When a human flushed the draft. */
+	sent_at?: string | null;
+	/** @description The user who sent the draft. */
+	sent_by?: DirectusUser | string | null;
+	/** @description Full SendGrid message object — re-sent byte-for-byte on flush. */
+	payload?: Record<string, any> | null;
+	/** @description Source doc collection (invoices). */
+	source_collection?: string | null;
+	/** @description Source doc PK (invoice id). */
+	source_id?: string | null;
+}
+
 export interface Hero {
 	/** @primaryKey */
 	id: number;
@@ -3097,6 +3128,8 @@ export interface Organization {
 	email_reply_to?: string | null;
 	/** @description Physical mailing address rendered in the marketing-email footer (CAN-SPAM requirement). Transactional emails never show it. Free-form text — line breaks preserved. */
 	mailing_address?: string | null;
+	/** @description Optional monitoring BCC. When set, every email sent for this org is also BCC'd here. Leave blank to use only the global BCC. */
+	email_bcc?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -5093,6 +5126,8 @@ export interface DirectusUser {
 	timezone?: string | null;
 	/** @description Earnest Score / arcade first-visit intro dismissal. Null = show; any timestamp = already dismissed. */
 	app_pref_arcade_intro_dismissed_at?: string | null;
+	/** @description Per-category notification opt-outs: { [category]: boolean }. Missing key = opt-in. `_all: false` mutes everything. */
+	notification_preferences?: Record<string, any> | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
@@ -5379,6 +5414,7 @@ export interface Schema {
 	gbp_posts: GbpPost[];
 	goals: Goal[];
 	goal_snapshots: GoalSnapshot[];
+	held_emails: HeldEmail[];
 	heros: Hero[];
 	home: Home;
 	home_files: HomeFile[];
@@ -5634,6 +5670,7 @@ export enum CollectionNames {
 	gbp_posts = 'gbp_posts',
 	goals = 'goals',
 	goal_snapshots = 'goal_snapshots',
+	held_emails = 'held_emails',
 	heros = 'heros',
 	home = 'home',
 	home_files = 'home_files',
