@@ -457,6 +457,108 @@ async function seedInvoice(
 }
 
 /**
+ * Seed a spread of invoices + received payments so the Money app's cash-flow
+ * charts read richly instead of flat: outstanding invoices across EVERY
+ * AR-aging bucket (not-yet-due → 90+), a couple paid-this-month invoices, and
+ * ~a month of received payments (varied methods) for the cash-inflow river.
+ * Upserts by stable key (invoice_code / payment_intent) and re-anchors dates
+ * on every run, matching the rest of this seed.
+ */
+async function seedMoneyTransactions(
+	orgId: string,
+	clientIds: Record<string, string>,
+): Promise<void> {
+	const today = new Date();
+	const at = (days: number) => {
+		const d = new Date(today);
+		d.setDate(d.getDate() + days);
+		d.setHours(12, 0, 0, 0);
+		return d;
+	};
+	const isoDate = (days: number) => at(days).toISOString().slice(0, 10);
+	const isoTs = (days: number) => at(days).toISOString();
+	const year = today.getFullYear();
+
+	const clients = Object.values(clientIds).filter(Boolean) as string[];
+	if (!clients.length) return;
+	const clientAt = (i: number) => clients[i % clients.length]!;
+
+	const upsert = async (
+		collection: string,
+		filter: Record<string, any>,
+		payload: Record<string, any>,
+		label: string,
+	) => {
+		const existing = await findOne<any>(collection, filter);
+		if (existing) {
+			const res = await directusRequest(`/items/${collection}/${existing.id}`, 'PATCH', payload);
+			console.log(res.ok ? `  [ok]   ${label} (patched id=${existing.id})` : `  [fail] ${label}: ${res.error}`);
+			return existing;
+		}
+		const res = await directusRequest<any>(`/items/${collection}`, 'POST', payload);
+		console.log(res.ok ? `  [ok]   ${label} (id=${(res.data as any)?.id})` : `  [fail] ${label}: ${res.error}`);
+		return res.ok ? (res.data as any) : null;
+	};
+
+	// Outstanding invoices — status 'pending' counts as outstanding; the AR-aging
+	// bucket is decided by how far past `due_date` we are. One per bucket.
+	const outstanding = [
+		{ n: '0050', amount: 9800, inv: -6, due: 14, note: 'Retainer — next month' }, // not yet due
+		{ n: '0051', amount: 4200, inv: -22, due: -8, note: 'Landing page build' }, // 1–30
+		{ n: '0052', amount: 12500, inv: -34, due: -20, note: 'Brand refresh — phase 2' }, // 1–30
+		{ n: '0053', amount: 7600, inv: -60, due: -46, note: 'Campaign creative' }, // 31–60
+		{ n: '0054', amount: 15300, inv: -95, due: -80, note: 'Website redesign deposit' }, // 61–90
+		{ n: '0055', amount: 6400, inv: -128, due: -104, note: 'Photo art direction' }, // 90+
+	];
+	for (let i = 0; i < outstanding.length; i++) {
+		const o = outstanding[i]!;
+		const code = `INV-${DEMO_ORG_CODE}-HEL-${year}-${o.n}`;
+		await upsert(
+			'invoices',
+			{ _and: [{ bill_to: { _eq: orgId } }, { invoice_code: { _eq: code } }] },
+			{ bill_to: orgId, client: clientAt(i), invoice_code: code, status: 'pending', invoice_date: isoDate(o.inv), due_date: isoDate(o.due), total_amount: o.amount, note: o.note },
+			`outstanding invoice ${code}`,
+		);
+	}
+
+	// Paid-this-month invoices — feed the "Paid this month" KPI.
+	const paid = [
+		{ n: '0056', amount: 8900, inv: -2, note: 'Social content — this month' },
+		{ n: '0057', amount: 5400, inv: -6, note: 'Consulting — this month' },
+	];
+	for (let i = 0; i < paid.length; i++) {
+		const p = paid[i]!;
+		const code = `INV-${DEMO_ORG_CODE}-HEL-${year}-${p.n}`;
+		await upsert(
+			'invoices',
+			{ _and: [{ bill_to: { _eq: orgId } }, { invoice_code: { _eq: code } }] },
+			{ bill_to: orgId, client: clientAt(i), invoice_code: code, status: 'paid', invoice_date: isoDate(p.inv), due_date: isoDate(p.inv + 14), total_amount: p.amount, note: p.note },
+			`paid invoice ${code}`,
+		);
+	}
+
+	// Received payments — the cash-inflow river (last ~30 days). Varied methods
+	// give the leaves their colours (card=violet, ach=blue, manual=teal).
+	const methods = ['card', 'ach', 'manual'];
+	const pays = [
+		{ amt: 3200, day: -28 }, { amt: 1800, day: -26 }, { amt: 6400, day: -23 },
+		{ amt: 900, day: -20 }, { amt: 4200, day: -18 }, { amt: 2750, day: -15 },
+		{ amt: 5100, day: -13 }, { amt: 1450, day: -11 }, { amt: 3900, day: -9 },
+		{ amt: 2200, day: -6 }, { amt: 7600, day: -4 }, { amt: 1200, day: -1 },
+	];
+	for (let i = 0; i < pays.length; i++) {
+		const p = pays[i]!;
+		const pi = `demo_seed_pay_${String(i + 1).padStart(2, '0')}`;
+		await upsert(
+			'payments_received',
+			{ _and: [{ organization: { _eq: orgId } }, { payment_intent: { _eq: pi } }] },
+			{ organization: orgId, payment_intent: pi, amount: p.amt, status: 'paid', payment_method: methods[i % methods.length], date_received: isoTs(p.day), note: 'Received payment' },
+			`payment ${pi}`,
+		);
+	}
+}
+
+/**
  * Upsert one marketing_campaigns row. PATCH on re-run so plan_data refreshes
  * when the seed file changes — find/create-only would freeze old content.
  */
@@ -995,6 +1097,7 @@ async function main() {
 	console.log('\n--- product + invoice ---');
 	const productId = await seedProduct();
 	await seedInvoice(org.id, clientIds, productId);
+	await seedMoneyTransactions(org.id, clientIds);
 
 	console.log('\n--- quick tasks ---');
 	await seedQuickTasks(org.id, user.id, projectIds, clientIds);

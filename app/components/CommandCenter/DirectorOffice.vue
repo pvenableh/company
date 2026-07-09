@@ -469,9 +469,9 @@ function openRecent(m: RecentMeeting) {
 }
 
 const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
-const netClass = (n: number) => (Number(n) >= 0 ? 'text-green-600' : 'text-red-600');
+const netClass = (n: number) => (Number(n) >= 0 ? 'text-success' : 'text-destructive');
 function ratingClass(r: string): string {
-  return { A: 'bg-green-500/15 text-green-600', B: 'bg-green-500/10 text-green-600', C: 'bg-amber-500/15 text-amber-600', D: 'bg-red-500/10 text-red-600', F: 'bg-red-500/20 text-red-600' }[r] || 'bg-muted text-muted-foreground';
+  return { A: 'bg-success/15 text-success', B: 'bg-success/10 text-success', C: 'bg-warning/15 text-warning', D: 'bg-destructive/10 text-destructive', F: 'bg-destructive/20 text-destructive' }[r] || 'bg-muted text-muted-foreground';
 }
 
 const scopeLabel = computed(() => {
@@ -499,9 +499,9 @@ const rollup = computed(() => {
 
 function priorityClass(p: Priority): string {
   return {
-    urgent: 'text-red-600 bg-red-500/10',
-    high: 'text-amber-600 bg-amber-500/10',
-    medium: 'text-blue-600 bg-blue-500/10',
+    urgent: 'text-destructive bg-destructive/10',
+    high: 'text-warning bg-warning/10',
+    medium: 'text-info bg-info/10',
     low: 'text-muted-foreground bg-muted',
   }[p];
 }
@@ -804,7 +804,7 @@ function iconForSubject(g: AgendaGroup): string {
 
 // Priority → dot tint, for a small status pip alongside the label.
 function priorityDot(p: Priority): string {
-  return { urgent: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-blue-500', low: 'bg-muted-foreground/50' }[p];
+  return { urgent: 'bg-destructive', high: 'bg-warning', medium: 'bg-info', low: 'bg-muted-foreground/50' }[p];
 }
 
 function onClose() {
@@ -858,10 +858,10 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 </button>
               </template>
               <template v-else>
-                <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">
+                <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
                   <span class="relative flex w-1.5 h-1.5">
-                    <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
-                    <span class="relative inline-flex rounded-full w-1.5 h-1.5 bg-red-500" />
+                    <span class="absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75 animate-ping" />
+                    <span class="relative inline-flex rounded-full w-1.5 h-1.5 bg-destructive" />
                   </span>
                   Live
                 </span>
@@ -888,7 +888,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                 </button>
                 <button
                   type="button"
-                  class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-red-600 hover:border-red-500/40 transition-colors"
+                  class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
                   :title="liveIsHost ? 'End the meeting for everyone' : 'Leave the meeting'"
                   @click="onLeaveMeeting"
                 >
@@ -936,7 +936,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   v-if="liveIsHost"
                   type="button"
                   class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full transition-colors"
-                  :class="liveSession?.viewOnly ? 'bg-amber-500/15 text-amber-600' : 'text-muted-foreground hover:text-foreground'"
+                  :class="liveSession?.viewOnly ? 'bg-warning/15 text-warning' : 'text-muted-foreground hover:text-foreground'"
                   :title="liveSession?.viewOnly ? 'View-only is on — only you (presenter) can approve. Click to unlock.' : 'Lock participation — only the presenter can approve'"
                   @click="setViewOnly(!liveSession?.viewOnly)"
                 >
@@ -972,7 +972,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
               </span>
               <p class="text-sm text-muted-foreground">Convening the board — reviewing the business…</p>
             </div>
-            <div v-else-if="agendaError" class="flex items-center gap-2 text-sm text-red-600 py-4">
+            <div v-else-if="agendaError" class="flex items-center gap-2 text-sm text-destructive py-4">
               <UIcon name="i-lucide-alert-triangle" class="w-4 h-4 shrink-0" /> {{ agendaError }}
             </div>
 
@@ -980,12 +980,12 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
               <!-- Empty agenda -->
               <div v-if="agenda.groups.length === 0" class="text-center py-10">
                 <div class="relative mx-auto mb-3 w-16 h-16">
-                  <svg class="w-full h-full text-green-500" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                  <svg class="w-full h-full text-success" viewBox="0 0 64 64" fill="none" aria-hidden="true">
                     <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2" stroke-opacity="0.25" />
                     <circle cx="32" cy="32" r="19" fill="currentColor" fill-opacity="0.12" />
                     <path d="M23 32.5l6 6 12-13" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
-                  <UIcon name="i-lucide-sparkles" class="absolute -top-1 -right-1 w-4 h-4 text-amber-400" />
+                  <UIcon name="i-lucide-sparkles" class="absolute -top-1 -right-1 w-4 h-4 text-warning" />
                   <UIcon name="i-lucide-sparkle" class="absolute bottom-0 -left-1 w-3 h-3 text-primary/60" />
                 </div>
                 <p class="text-sm font-medium text-foreground">All clear — nothing pressing on the agenda.</p>
@@ -1371,7 +1371,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                     </div>
                     <div class="rounded-lg bg-muted/40 p-2">
                       <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Overdue AR</p>
-                      <p class="text-sm font-semibold" :class="clientRating.health.overdueAR > 0 ? 'text-red-600' : ''">{{ fmtMoney(clientRating.health.overdueAR) }}</p>
+                      <p class="text-sm font-semibold" :class="clientRating.health.overdueAR > 0 ? 'text-destructive' : ''">{{ fmtMoney(clientRating.health.overdueAR) }}</p>
                       <p class="text-[10px] text-muted-foreground">{{ clientRating.health.staleDays != null ? clientRating.health.staleDays + 'd since touch' : 'no activity' }}</p>
                     </div>
                   </div>
@@ -1394,7 +1394,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                   <div class="rounded-xl bg-muted/40 p-2.5">
                     <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding AR</p>
                     <p class="text-sm font-semibold">{{ fmtMoney(finance.outstanding.total) }}</p>
-                    <p v-if="finance.outstanding.overdueTotal > 0" class="text-[10px] text-red-600">{{ fmtMoney(finance.outstanding.overdueTotal) }} overdue</p>
+                    <p v-if="finance.outstanding.overdueTotal > 0" class="text-[10px] text-destructive">{{ fmtMoney(finance.outstanding.overdueTotal) }} overdue</p>
                   </div>
                   <div class="col-span-2 sm:col-span-4 rounded-xl bg-primary/5 border border-primary/20 p-2.5">
                     <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Projected next {{ finance.projection.horizonMonths }} months (run-rate)</p>
@@ -1435,7 +1435,7 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                     <div class="flex items-start gap-2.5">
                       <span
                         class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0"
-                        :class="step.status === 'executed' ? 'bg-green-500/15 text-green-600' : step.status === 'failed' ? 'bg-red-500/15 text-red-600' : 'bg-primary/10 text-primary'"
+                        :class="step.status === 'executed' ? 'bg-success/15 text-success' : step.status === 'failed' ? 'bg-destructive/15 text-destructive' : 'bg-primary/10 text-primary'"
                       >
                         <UIcon v-if="step.status === 'executed'" name="i-lucide-check" class="w-3 h-3" />
                         <UIcon v-else-if="step.status === 'failed'" name="i-lucide-x" class="w-3 h-3" />
@@ -1462,9 +1462,9 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
                         </p>
 
                         <!-- Status line -->
-                        <p v-if="step.status === 'executed'" class="mt-1 text-xs text-green-600">Approved · done</p>
+                        <p v-if="step.status === 'executed'" class="mt-1 text-xs text-success">Approved · done</p>
                         <p v-else-if="step.status === 'rejected'" class="mt-1 text-xs text-muted-foreground">Skipped</p>
-                        <p v-else-if="step.status === 'failed'" class="mt-1 text-xs text-red-600">Failed — try it manually</p>
+                        <p v-else-if="step.status === 'failed'" class="mt-1 text-xs text-destructive">Failed — try it manually</p>
 
                         <!-- Actions — hidden for view-only observers -->
                         <div v-else-if="!liveActive || liveCanDecide" class="mt-2 flex items-center gap-2">

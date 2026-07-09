@@ -91,7 +91,7 @@ export interface AppAccent {
 type AppMeta = Pick<AppAccent, 'id' | 'name' | 'shortName' | 'icon' | 'to' | 'notificationCategories'>;
 
 const APP_META: Record<AppId, AppMeta> = {
-	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'lucide:layout-dashboard',    to: '/' },
+	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Dashboard', icon: 'lucide:layout-dashboard',    to: '/' },
 	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'lucide:users',               to: '/apps/clients' },
 	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
 		notificationCategories: ['tickets', 'tasks', 'projects'] },

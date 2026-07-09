@@ -805,7 +805,7 @@ const fetchClientMemberships = async () => {
 const clientStatusClass = (status) => {
 	if (status === 'active') return 'bg-success/15 text-success dark:text-success';
 	if (status === 'pending') return 'bg-warning/15 text-warning dark:text-warning';
-	return 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+	return 'bg-muted text-muted-foreground';
 };
 
 const formatRelative = (iso) => {
@@ -1045,7 +1045,7 @@ watch(searchEmail, (val) => {
 		<div class="w-full">
 			<!-- Loading state (wait for both org initialization and page data) -->
 			<div v-if="isLoading || (!orgIsInitialized && orgInitLoading)" class="flex justify-center items-center min-h-[300px]">
-				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
+				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-muted-foreground" />
 			</div>
 
 			<!-- No organization selected (only show after init completes) -->
@@ -1092,7 +1092,7 @@ watch(searchEmail, (val) => {
 					<div class="flex-shrink-0 relative group">
 						<div
 							v-if="getIconUrl"
-							class="w-24 h-24 rounded-full shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center bg-white dark:bg-gray-800"
+							class="w-24 h-24 rounded-full shadow-md border border-border overflow-hidden flex items-center justify-center bg-card"
 						>
 							<img
 								:src="getIconUrl"
@@ -1102,9 +1102,9 @@ watch(searchEmail, (val) => {
 						</div>
 						<div
 							v-else
-							class="w-24 h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700"
+							class="w-24 h-24 flex items-center justify-center bg-muted rounded-full shadow-md border border-border"
 						>
-							<UIcon name="i-heroicons-building-office" class="w-12 h-12 text-gray-400" />
+							<UIcon name="i-heroicons-building-office" class="w-12 h-12 text-muted-foreground" />
 						</div>
 						<button
 							v-if="canManageOrg"
@@ -1130,7 +1130,7 @@ watch(searchEmail, (val) => {
 					<div class="flex-grow">
 						<h1 class="text-2xl md:text-3xl font-bold mb-2">{{ org.name }}</h1>
 
-						<div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-gray-600 dark:text-gray-300">
+						<div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-muted-foreground">
 							<div v-if="org.industry?.name" class="flex items-center">
 								<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 mr-1" />
 								<span>{{ org.industry.name }}</span>
@@ -1141,11 +1141,11 @@ watch(searchEmail, (val) => {
 							</div>
 						</div>
 
-						<p v-if="org.notes" class="text-gray-700 dark:text-gray-300 mb-4">
+						<p v-if="org.notes" class="text-foreground mb-4">
 							{{ org.notes }}
 						</p>
 
-						<div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
+						<div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
 							<a
 								v-if="org.website"
 								:href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
@@ -1329,7 +1329,7 @@ watch(searchEmail, (val) => {
 										<div class="flex justify-between items-center">
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand Color</span>
 											<div v-if="org.brand_color" class="flex items-center gap-1.5">
-												<div class="w-4 h-4 rounded-full border border-gray-200" :style="{ backgroundColor: org.brand_color }"></div>
+												<div class="w-4 h-4 rounded-full border border-border" :style="{ backgroundColor: org.brand_color }"></div>
 												<span>{{ org.brand_color }}</span>
 											</div>
 											<span v-else>—</span>
@@ -1366,7 +1366,7 @@ watch(searchEmail, (val) => {
 											<p v-if="slugPreview" class="mt-1.5 text-[11px] text-muted-foreground break-all">
 												{{ bookingUrlBase.replace(/^https?:\/\//, '') }}/book/<span class="font-semibold text-foreground">{{ slugPreview }}</span>/…
 											</p>
-											<p v-if="slugChanged && org.slug" class="mt-1 text-[11px] text-amber-600 dark:text-amber-500">
+											<p v-if="slugChanged && org.slug" class="mt-1 text-[11px] text-warning">
 												Changing this breaks any booking links that use the old slug ({{ org.slug }}).
 											</p>
 										</UFormGroup>
@@ -1390,7 +1390,7 @@ watch(searchEmail, (val) => {
 												<input
 													type="color"
 													v-model="infoForm.brand_color"
-													class="w-8 h-8 rounded-full cursor-pointer border border-gray-200"
+													class="w-8 h-8 rounded-full cursor-pointer border border-border"
 												/>
 												<UInput v-model="infoForm.brand_color" placeholder="#000000" class="flex-1" />
 											</div>
@@ -1398,7 +1398,7 @@ watch(searchEmail, (val) => {
 										<UFormGroup label="Active">
 											<div class="flex items-center gap-3">
 												<UToggle v-model="infoForm.active" />
-												<span class="text-xs text-gray-500">
+												<span class="text-xs text-muted-foreground">
 													{{ infoForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
 												</span>
 											</div>
@@ -1637,7 +1637,7 @@ watch(searchEmail, (val) => {
 									</div>
 
 									<!-- Live preview -->
-									<div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+									<div class="mt-4 pt-4 border-t border-border">
 										<div class="flex items-center justify-between mb-2">
 											<span class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Live preview</span>
 											<select
@@ -1647,7 +1647,7 @@ watch(searchEmail, (val) => {
 												<option v-for="t in emailPreviewTemplates" :key="t.value" :value="t.value">{{ t.label }}</option>
 											</select>
 										</div>
-										<div class="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 bg-white">
+										<div class="rounded-lg overflow-hidden border border-border bg-white">
 											<iframe
 												v-if="emailPreviewUrl"
 												:src="emailPreviewUrl"
@@ -1820,8 +1820,8 @@ watch(searchEmail, (val) => {
 							</div>
 
 							<div v-else class="text-center py-12">
-								<UIcon name="i-heroicons-users" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-								<p class="text-gray-500 mb-4">No members found for this organization.</p>
+								<UIcon name="i-heroicons-users" class="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+								<p class="text-muted-foreground mb-4">No members found for this organization.</p>
 								<UButton
 									v-if="canManageOrg"
 									color="primary"
@@ -1852,12 +1852,12 @@ watch(searchEmail, (val) => {
 							</div>
 
 							<div v-if="clientMembershipsLoading" class="flex justify-center py-12">
-								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
+								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
 							</div>
 
 							<div v-else-if="!clientMemberships.length" class="text-center py-12">
-								<UIcon name="i-heroicons-key" class="w-10 h-10 text-gray-300 mx-auto mb-3" />
-								<p class="text-gray-500 mb-1">No client portal users yet.</p>
+								<UIcon name="i-heroicons-key" class="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+								<p class="text-muted-foreground mb-1">No client portal users yet.</p>
 								<p class="text-xs text-muted-foreground">Invite a client user from a client's detail page.</p>
 							</div>
 
@@ -1953,7 +1953,7 @@ watch(searchEmail, (val) => {
 						<div class="mt-6">
 							<!-- Add loading indicator for teams -->
 							<div v-if="teamsLoading" class="flex justify-center py-8">
-								<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
+								<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-muted-foreground" />
 							</div>
 
 							<TeamsManageTeams

@@ -130,6 +130,83 @@ interface CaptureContext {
 const SHOTS: Shot[] = [
 	// ── Solo (Member role) ──
 	{
+		// The Director's Office slide presentation — convene the board, pick a
+		// subject (Earnest drafts a plan via AI), switch to the Slides deck, and
+		// advance past the cover so a content slide is in frame. Best-effort:
+		// every step is wrapped so a slow/absent plan still captures whatever
+		// rendered rather than throwing the whole shot away.
+		slug: 'director-presentation',
+		viewport: 'hero',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/director`,
+		waitFor: async (page) => {
+			try {
+				await page.locator('button:has-text("Convene")').first().click({ timeout: 8000 });
+				// Wait for the boardroom "table" of advisors (agenda board packet,
+				// loaded from notices — no plan-AI needed) to settle.
+				await page.waitForSelector('button[class*="-translate-x-1/2"]', { timeout: 20000 });
+				await page.waitForTimeout(2500);
+			} catch (err) {
+				console.warn(`    director-presentation: ${(err as Error).message} — capturing current state`);
+			}
+		},
+	},
+	{
+		// The Director's Office AI slide deck — convene, draft a plan for a
+		// subject that has concrete proposed steps, flip to the Slides deck,
+		// advance past the cover. Needs the demo user to have AI-token budget
+		// (both demo orgs were exhausted 2026-07-09 → "Could not draft a plan").
+		// Agency (org-wide) has the richest data → the most concrete plan.
+		slug: 'director-slides',
+		viewport: 'hero',
+		persona: 'agency',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/director`,
+		waitFor: async (page) => {
+			try {
+				await page.locator('button:has-text("Convene")').first().click({ timeout: 8000 });
+				await page.waitForSelector('button[class*="-translate-x-1/2"]', { timeout: 20000 });
+				await page.waitForTimeout(800);
+				const slidesToggle = page.locator('button:has-text("Slides")').first();
+				const emptyState = page.getByText('No concrete steps').first();
+				let opened = false;
+				// One subject at a time; let each draft fully settle (Slides toggle
+				// = has steps, empty state = skip on). Thrashing between subjects
+				// mid-draft never lets the AI finish.
+				for (const subject of ['MONEY', 'LEADS', 'PROPOSALS', 'PROJECTS']) {
+					const clicked = await page.evaluate((label) => {
+						const seats = Array.from(document.querySelectorAll('button[class*="-translate-x-1/2"]')) as HTMLElement[];
+						const seat = seats.find((b) => (b.textContent || '').toUpperCase().includes(label));
+						if (seat) { seat.click(); return true; }
+						return false;
+					}, subject);
+					if (!clicked) continue;
+					const start = Date.now();
+					let settled = '';
+					while (Date.now() - start < 75000) {
+						if (await slidesToggle.isVisible().catch(() => false)) { settled = 'toggle'; break; }
+						if (await emptyState.isVisible().catch(() => false)) { settled = 'empty'; break; }
+						await page.waitForTimeout(1500);
+					}
+					if (settled === 'toggle') { opened = true; break; }
+				}
+				if (opened) {
+					await slidesToggle.click({ timeout: 5000 });
+					await page.waitForSelector('.director-deck', { timeout: 15000 });
+					await page.waitForTimeout(1200);
+					// Present full screen (native, or CSS faux-full fallback) so the
+					// deck fills the frame without the boardroom table above it.
+					await page.locator('button[aria-label="Present full screen"]').first().click({ timeout: 5000 }).catch(() => {});
+					await page.waitForTimeout(1500);
+					// Advance off the cover to a content slide.
+					await page.keyboard.press('ArrowRight');
+					await page.waitForTimeout(1500);
+				}
+			} catch (err) {
+				console.warn(`    director-slides: ${(err as Error).message} — capturing current state`);
+			}
+		},
+	},
+	{
 		slug: 'command-center',
 		viewport: 'hero',
 		persona: 'solo',
@@ -708,10 +785,15 @@ async function main(): Promise<void> {
 		}
 		return ctx;
 	}
+	// Optional slug allow-list — `ONLY=director-presentation,leads-pipeline`
+	// captures just those shots (handy for iterating on one without re-running
+	// the whole set or re-hitting the prod login rate-limiter).
+	const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',').map((s) => s.trim()).filter(Boolean)) : null;
 	try {
 		// Capture sequentially — demo data is shared, so we keep the app's
 		// server load predictable and make errors easier to diagnose.
 		for (const shot of SHOTS) {
+			if (ONLY && !ONLY.has(shot.slug)) continue;
 			if (shot.persona === 'agency' && !AGENCY_AVAILABLE) {
 				console.log(`  ⊘ ${shot.slug} (skipped — no DEMO_AGENCY_USER_PASSWORD)`);
 				continue;

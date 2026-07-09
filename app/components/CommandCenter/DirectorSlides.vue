@@ -287,7 +287,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
     </div>
 
     <!-- Slide stage -->
-    <div class="director-deck__stage relative px-6 sm:px-9 py-6 flex flex-col justify-center">
+    <div class="director-deck__stage relative px-8 sm:px-14 lg:px-20 py-7 flex flex-col justify-center">
       <Transition :name="dir === 1 ? 'deck-fwd' : 'deck-back'" mode="out-in">
         <!-- COVER -->
         <div :key="`cover-${index}`" v-if="current?.kind === 'cover'" class="text-center space-y-4">
@@ -296,7 +296,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           </div>
           <div>
             <p class="text-[11px] uppercase tracking-[0.22em] text-indigo-300 mb-1">Reviewing {{ scopeLabel }}</p>
-            <h2 class="text-3xl sm:text-4xl font-semibold text-white leading-tight">{{ subjectTitle }}</h2>
+            <h2 class="text-4xl sm:text-5xl font-semibold tracking-tight text-white leading-[1.05]">{{ subjectTitle }}</h2>
           </div>
           <p class="text-sm text-white/55 max-w-md mx-auto">
             Earnest AI reviewed the business and prepared the following. Nothing runs until you approve it — step through and decide.
@@ -306,7 +306,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- TAKEAWAYS — the succinct TL;DR overview -->
         <div :key="`take-${index}`" v-else-if="current?.kind === 'takeaways'" class="space-y-4">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Key takeaways</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Key takeaways</p>
           <ul class="space-y-3.5">
             <li v-for="(p, i) in (points || [])" :key="i" class="flex items-start gap-3 text-[17px] sm:text-lg leading-snug text-white/90">
               <span class="mt-2 w-1.5 h-1.5 rounded-full bg-indigo-300 shrink-0" />
@@ -317,13 +317,13 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- THOUGHT — one subject / paragraph of the briefing per slide -->
         <div :key="`thought-${index}`" v-else-if="current?.kind === 'thought'" class="space-y-3">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">{{ current.heading || 'The briefing' }}</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">{{ current.heading || 'The briefing' }}</p>
           <div class="director-deck__scroll text-[17px] sm:text-lg leading-relaxed text-white/90 whitespace-pre-line">{{ current.body }}</div>
         </div>
 
         <!-- CLIENT RATING -->
         <div :key="`rate-${index}`" v-else-if="current?.kind === 'rating' && clientRating" class="space-y-5">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Account rating</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Account rating</p>
           <div class="flex items-center gap-4">
             <span class="w-16 h-16 rounded-full ring-2 flex items-center justify-center text-3xl font-bold bg-white/5" :class="ratingRing(clientRating.rating)">{{ clientRating.rating }}</span>
             <div>
@@ -352,7 +352,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- MONEY METRICS -->
         <div :key="`met-${index}`" v-else-if="current?.kind === 'metrics' && finance" class="space-y-5">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">By the numbers</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">By the numbers</p>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
               <p class="text-[10px] uppercase tracking-wider text-white/40">Income / mo</p>
@@ -383,7 +383,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- OPPORTUNITY -->
         <div :key="`opp-${index}`" v-else-if="current?.kind === 'opportunity' && opportunity" class="space-y-4">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Where the money is</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Where the money is</p>
           <div v-if="opportunity.topClients?.length" class="rounded-xl bg-white/5 ring-1 ring-white/10 p-3.5">
             <p class="text-[10px] uppercase tracking-wider text-white/40 mb-1">Top clients</p>
             <p class="text-[15px] text-white/85">{{ opportunity.topClients.slice(0, 3).map((c: any) => `${c.name} · ${fmtMoney(c.revenue)}`).join('  —  ') }}</p>
@@ -401,7 +401,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         <!-- ACTION -->
         <div :key="`act-${index}`" v-else-if="current?.kind === 'action'" class="space-y-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Proposed action {{ current.n }} of {{ steps.length }}</p>
+            <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Proposed action {{ current.n }} of {{ steps.length }}</p>
             <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white/70">
               <UIcon :name="iconForType(current.step.action_type)" class="w-3 h-3" />
               {{ labelForType(current.step.action_type) }}
@@ -475,7 +475,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- SUMMARY -->
         <div :key="`sum-${index}`" v-else-if="current?.kind === 'summary'" class="text-center space-y-4">
-          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Meeting minutes</p>
+          <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Meeting minutes</p>
           <div class="flex items-center justify-center gap-6">
             <div><p class="text-3xl font-semibold text-emerald-300">{{ rollup.done }}</p><p class="text-[11px] uppercase tracking-wider text-white/40">Approved</p></div>
             <div><p class="text-3xl font-semibold text-white/70">{{ rollup.skipped }}</p><p class="text-[11px] uppercase tracking-wider text-white/40">Skipped</p></div>
