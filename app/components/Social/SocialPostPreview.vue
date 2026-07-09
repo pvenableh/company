@@ -1,4 +1,13 @@
 <template>
+  <!--
+    COLOR-TOKEN CARVE-OUT (intentional — do NOT tokenize the preview cards):
+    the LinkedIn/Facebook/Instagram/Threads/TikTok cards below are faithful
+    replicas of each platform's real chrome (white cards, the IG pink→yellow
+    brand-ring gradient, black TikTok, FB blue). Their raw gray/brand classes
+    must stay FIXED so a preview always looks like the real platform and does
+    NOT re-skin with the user's Earnest palette. The component's own chrome
+    (the platform tabs above) is already tokenized; only the mocks are exempt.
+  -->
   <div>
     <!-- Tabs -->
     <div class="flex flex-wrap gap-1.5 mb-4">

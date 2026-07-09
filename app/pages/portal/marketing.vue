@@ -18,21 +18,26 @@ const showDetail = ref(false);
 const touches = ref<any[]>([]);
 const loadingTouches = ref(false);
 
+// Status colors route through the canonical useStatusStyle buckets so a
+// palette switch re-skins every badge/dot and the semantics stay consistent
+// with the rest of the app (e.g. 'sent' reads scheduled-blue, never done-green).
+const { getStatusBadgeClasses, getStatusDotClass } = useStatusStyle();
+
 const statusConfig: Record<string, { label: string; classes: string; icon: string }> = {
-	draft:         { label: 'Draft',         classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: 'lucide:file' },
-	scheduled:     { label: 'Scheduled',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: 'lucide:clock' },
-	partial_sent:  { label: 'In Progress',   classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning', icon: 'lucide:send' },
-	completed:     { label: 'Completed',     classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success', icon: 'lucide:check-circle-2' },
-	cancelled:     { label: 'Cancelled',     classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500', icon: 'lucide:x-circle' },
-	archived:      { label: 'Archived',      classes: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600', icon: 'lucide:archive' },
+	draft:         { label: 'Draft',         classes: getStatusBadgeClasses('draft'),        icon: 'lucide:file' },
+	scheduled:     { label: 'Scheduled',     classes: getStatusBadgeClasses('scheduled'),    icon: 'lucide:clock' },
+	partial_sent:  { label: 'In Progress',   classes: getStatusBadgeClasses('partial_sent'), icon: 'lucide:send' },
+	completed:     { label: 'Completed',     classes: getStatusBadgeClasses('completed'),    icon: 'lucide:check-circle-2' },
+	cancelled:     { label: 'Cancelled',     classes: getStatusBadgeClasses('cancelled'),    icon: 'lucide:x-circle' },
+	archived:      { label: 'Archived',      classes: getStatusBadgeClasses('archived'),     icon: 'lucide:archive' },
 };
 
 const touchStatusConfig: Record<string, { label: string; dot: string }> = {
-	pending:   { label: 'Pending',   dot: 'bg-gray-400' },
-	scheduled: { label: 'Scheduled', dot: 'bg-blue-500' },
-	sent:      { label: 'Sent',      dot: 'bg-success' },
-	cancelled: { label: 'Cancelled', dot: 'bg-gray-400' },
-	failed:    { label: 'Failed',    dot: 'bg-destructive' },
+	pending:   { label: 'Pending',   dot: getStatusDotClass('pending') },
+	scheduled: { label: 'Scheduled', dot: getStatusDotClass('scheduled') },
+	sent:      { label: 'Sent',      dot: getStatusDotClass('sent') },
+	cancelled: { label: 'Cancelled', dot: getStatusDotClass('cancelled') },
+	failed:    { label: 'Failed',    dot: getStatusDotClass('failed') },
 };
 
 async function loadCampaigns() {

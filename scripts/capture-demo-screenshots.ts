@@ -159,7 +159,7 @@ const SHOTS: Shot[] = [
 		// Agency (org-wide) has the richest data → the most concrete plan.
 		slug: 'director-slides',
 		viewport: 'hero',
-		persona: 'agency',
+		persona: 'solo',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/director`,
 		waitFor: async (page) => {
 			try {
@@ -196,10 +196,16 @@ const SHOTS: Shot[] = [
 					// Present full screen (native, or CSS faux-full fallback) so the
 					// deck fills the frame without the boardroom table above it.
 					await page.locator('button[aria-label="Present full screen"]').first().click({ timeout: 5000 }).catch(() => {});
-					await page.waitForTimeout(1500);
-					// Advance off the cover to a content slide.
-					await page.keyboard.press('ArrowRight');
-					await page.waitForTimeout(1500);
+					await page.waitForTimeout(1200);
+					// Advance to the graphic "By the numbers" metrics slide — the
+					// redesigned deck's nicest visual. Falls back to the last slide.
+					const metricsSlide = page.getByText('By the numbers').first();
+					for (let i = 0; i < 12; i++) {
+						if (await metricsSlide.isVisible().catch(() => false)) break;
+						await page.keyboard.press('ArrowRight');
+						await page.waitForTimeout(700);
+					}
+					await page.waitForTimeout(900);
 				}
 			} catch (err) {
 				console.warn(`    director-slides: ${(err as Error).message} — capturing current state`);
@@ -316,6 +322,12 @@ const SHOTS: Shot[] = [
 		// older empty proposal that may exist in the demo org.
 		resolveUrl: async (ctx) =>
 			`${ctx.baseUrl}/proposals/${await firstItemId(ctx.page, 'proposals', ctx.baseUrl, undefined, ['-date_created'])}`,
+		// The composer loads behind a spinner (animate-spin), which the global
+		// skeleton wait doesn't catch — let it clear and the blocks render.
+		waitFor: async (page) => {
+			await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 12000 }).catch(() => {});
+			await page.waitForTimeout(1800);
+		},
 	},
 	{
 		slug: 'proposals-preview',
@@ -383,9 +395,10 @@ const SHOTS: Shot[] = [
 		// AI Actions is the same contextual sidebar surface as ai-sidebar, but
 		// scoped to a project so the marketing copy ("Reschedule a project —
 		// every linked event and task shifts automatically") matches the shot.
-		// Apps-shell project workspace (was classic /projects/[id]).
+		// Target the earliest project (the seeded "Helios West Hotel Launch") —
+		// the unsorted-first project can be a stale row whose workspace 500s.
 		resolveUrl: async (ctx) =>
-			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl, undefined, ['date_created'])}`,
 		waitFor: async (page) => {
 			const trigger = page.getByRole('button', { name: /ask earnest/i });
 			try {
@@ -440,16 +453,20 @@ const SHOTS: Shot[] = [
 		slug: 'project-workspace',
 		viewport: 'inline',
 		persona: 'solo',
-		// ProjectWorkspace 8-tab parity surface at /apps/work/projects/[id],
-		// default Activity tab. Complements the classic `project-timeline`
-		// shot (which still shows the Gantt at /projects/[id]).
+		// ProjectWorkspace 8-tab parity surface at /apps/work/projects/[id].
+		// The seed creates "Helios West Hotel Launch" first, so the earliest
+		// project by date_created is the one with the full seeded task board.
+		// (The demo user is 403'd from filtering projects by name via the items
+		// resolver, so sort by creation order instead.) Open `?tab=tasks`.
 		resolveUrl: async (ctx) =>
-			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl)}`,
-		// The Activity tab loads via a spinner (animate-spin), which the global
-		// skeleton (animate-pulse) wait doesn't catch — let it clear first.
+			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl, undefined, ['date_created'])}?tab=tasks`,
+		// The tab body loads via a spinner (animate-spin), which the global
+		// skeleton wait doesn't catch. Then force the kanban Board view (the
+		// cookie default is List) so the To Do / In Progress / Done columns show.
 		waitFor: async (page) => {
 			await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 8000 }).catch(() => {});
-			await page.waitForTimeout(1200);
+			await page.locator('button:has-text("Board")').first().click({ timeout: 4000 }).catch(() => {});
+			await page.waitForTimeout(1600);
 		},
 	},
 	{

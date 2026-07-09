@@ -1132,12 +1132,12 @@ const scopeLabel = computed(() => {
             </div>
             <div>
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Open Rate</p>
-              <p class="text-2xl font-bold text-sky-600 dark:text-sky-400 tabular-nums">{{ emailEngagement.openRate }}%</p>
+              <p class="text-2xl font-bold text-tag-3 tabular-nums">{{ emailEngagement.openRate }}%</p>
               <p class="text-[10px] text-muted-foreground mt-0.5">{{ emailEngagement.uniqueOpens }} unique</p>
             </div>
             <div>
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Click Rate</p>
-              <p class="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{{ emailEngagement.clickRate }}%</p>
+              <p class="text-2xl font-bold text-tag-2 tabular-nums">{{ emailEngagement.clickRate }}%</p>
               <p class="text-[10px] text-muted-foreground mt-0.5">{{ emailEngagement.uniqueClicks }} unique</p>
             </div>
             <div>
@@ -1255,7 +1255,7 @@ const scopeLabel = computed(() => {
                     {{ formatNumber(row.delivered) }}
                   </td>
                   <td class="py-2.5 px-3 text-right tabular-nums">
-                    <span class="font-semibold text-sky-600 dark:text-sky-400">{{ row.openRate }}%</span>
+                    <span class="font-semibold text-tag-3">{{ row.openRate }}%</span>
                     <span
                       v-if="emailCampaignAverages.openRate && row.openRate - emailCampaignAverages.openRate !== 0"
                       class="ml-1 text-[10px] tabular-nums"
@@ -1265,7 +1265,7 @@ const scopeLabel = computed(() => {
                     </span>
                   </td>
                   <td class="py-2.5 px-3 text-right tabular-nums">
-                    <span class="font-semibold text-violet-600 dark:text-violet-400">{{ row.clickRate }}%</span>
+                    <span class="font-semibold text-tag-2">{{ row.clickRate }}%</span>
                     <span
                       v-if="emailCampaignAverages.clickRate && row.clickRate - emailCampaignAverages.clickRate !== 0"
                       class="ml-1 text-[10px] tabular-nums"
@@ -1341,12 +1341,12 @@ const scopeLabel = computed(() => {
             <div class="flex items-start justify-between mb-3">
               <div
                 class="w-9 h-9 rounded-xl flex items-center justify-center"
-                :class="tpl.type === 'newsletter' ? 'bg-primary/5' : 'bg-blue-500/5'"
+                :class="tpl.type === 'newsletter' ? 'bg-primary/5' : 'bg-tag-3/5'"
               >
                 <Icon
                   :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'"
                   class="w-4 h-4"
-                  :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-blue-500/60'"
+                  :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-tag-3/60'"
                 />
               </div>
               <span
@@ -1379,11 +1379,11 @@ const scopeLabel = computed(() => {
           <!-- Onboarding banner (no accounts connected) -->
           <div
             v-if="!socialLoading && socialAccounts.length === 0"
-            class="mb-5 p-5 bg-gradient-to-r from-pink-50 to-violet-50 dark:from-pink-900/20 dark:to-violet-900/20 rounded-2xl border border-pink-100 dark:border-pink-800/30"
+            class="mb-5 p-5 bg-gradient-to-r from-tag-1/10 to-tag-2/10 dark:from-tag-1/20 dark:to-tag-2/20 rounded-2xl border border-tag-1/20 dark:border-tag-1/30"
           >
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-              <div class="p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-sm shrink-0">
-                <Icon name="lucide:share-2" class="w-7 h-7 text-pink-500" />
+              <div class="p-2.5 bg-card rounded-xl shadow-sm shrink-0">
+                <Icon name="lucide:share-2" class="w-7 h-7 text-tag-1" />
               </div>
               <div class="flex-1">
                 <h2 class="font-semibold text-foreground mb-0.5">Get started with Social Media</h2>
@@ -1398,15 +1398,15 @@ const scopeLabel = computed(() => {
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div class="flex items-start gap-2 text-muted-foreground">
-                <Icon name="lucide:plug" class="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
+                <Icon name="lucide:plug" class="w-4 h-4 text-tag-1 shrink-0 mt-0.5" />
                 <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
               </div>
               <div class="flex items-start gap-2 text-muted-foreground">
-                <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                <Icon name="lucide:sparkles" class="w-4 h-4 text-tag-2 shrink-0 mt-0.5" />
                 <span><strong class="text-foreground">Generate</strong> posts with Earnest tailored to your brand and audience</span>
               </div>
               <div class="flex items-start gap-2 text-muted-foreground">
-                <Icon name="lucide:calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <Icon name="lucide:calendar-clock" class="w-4 h-4 text-tag-3 shrink-0 mt-0.5" />
                 <span><strong class="text-foreground">Schedule</strong> content across platforms from one calendar</span>
               </div>
             </div>
@@ -1415,8 +1415,8 @@ const scopeLabel = computed(() => {
           <!-- 4-stat KPI strip -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <div class="ios-card p-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Icon name="lucide:calendar-clock" class="w-5 h-5 text-blue-500" />
+              <div class="w-10 h-10 rounded-xl bg-status-scheduled/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:calendar-clock" class="w-5 h-5 text-status-scheduled" />
               </div>
               <div>
                 <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Scheduled</p>
@@ -1433,8 +1433,8 @@ const scopeLabel = computed(() => {
               </div>
             </div>
             <div class="ios-card p-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-                <Icon name="lucide:trending-up" class="w-5 h-5 text-purple-500" />
+              <div class="w-10 h-10 rounded-xl bg-tag-2/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:trending-up" class="w-5 h-5 text-tag-2" />
               </div>
               <div>
                 <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Engagement</p>
@@ -1442,8 +1442,8 @@ const scopeLabel = computed(() => {
               </div>
             </div>
             <div class="ios-card p-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
-                <Icon name="lucide:users" class="w-5 h-5 text-pink-500" />
+              <div class="w-10 h-10 rounded-xl bg-tag-1/10 flex items-center justify-center shrink-0">
+                <Icon name="lucide:users" class="w-5 h-5 text-tag-1" />
               </div>
               <div>
                 <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Followers</p>
@@ -1587,8 +1587,8 @@ const scopeLabel = computed(() => {
                 @click="openMailingListSlideOver(list, $event)"
               >
                 <div class="flex items-center gap-3 mb-2">
-                  <div class="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Icon name="lucide:users" class="w-4 h-4 text-blue-500/70" />
+                  <div class="w-9 h-9 rounded-xl bg-tag-3/10 flex items-center justify-center">
+                    <Icon name="lucide:users" class="w-4 h-4 text-tag-3/70" />
                   </div>
                   <div class="flex-1 min-w-0">
                     <h4 class="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">

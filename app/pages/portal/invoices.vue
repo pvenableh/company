@@ -30,12 +30,15 @@ async function loadInvoices() {
 	}
 }
 
+// Colors route through canonical useStatusStyle buckets (palette-driven,
+// consistent app-wide).
+const { getStatusBadgeClasses } = useStatusStyle();
 const statusConfig: Record<string, { label: string; classes: string }> = {
-	pending:    { label: 'Pending',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-	processing: { label: 'Processing', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-	paid:       { label: 'Paid',       classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success' },
-	overdue:    { label: 'Overdue',    classes: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive' },
-	archived:   { label: 'Archived',   classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' },
+	pending:    { label: 'Pending',    classes: getStatusBadgeClasses('pending') },
+	processing: { label: 'Processing', classes: getStatusBadgeClasses('processing') },
+	paid:       { label: 'Paid',       classes: getStatusBadgeClasses('paid') },
+	overdue:    { label: 'Overdue',    classes: getStatusBadgeClasses('overdue') },
+	archived:   { label: 'Archived',   classes: getStatusBadgeClasses('archived') },
 };
 
 function formatCurrency(amount: number) {

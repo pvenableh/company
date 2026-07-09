@@ -215,7 +215,7 @@ function openCompose() {
 
       <div class="hidden lg:flex items-center gap-4 text-sm">
         <span class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-blue-500" />
+          <span class="w-2 h-2 rounded-full bg-status-scheduled" />
           {{ monthStats.scheduled }} scheduled
         </span>
         <span class="flex items-center gap-1.5">
@@ -234,7 +234,7 @@ function openCompose() {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <UButton variant="ghost" icon="i-lucide-chevron-left" size="sm" @click="previousMonth" />
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white min-w-[180px] text-center">
+            <h2 class="text-lg font-semibold text-foreground min-w-[180px] text-center">
               {{ df.format(currentMonth) }}
             </h2>
             <UButton variant="ghost" icon="i-lucide-chevron-right" size="sm" @click="nextMonth" />
@@ -243,11 +243,11 @@ function openCompose() {
         </div>
       </template>
 
-      <div class="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+      <div class="grid grid-cols-7 border-b border-border">
         <div
           v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']"
           :key="day"
-          class="py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
+          class="py-2 text-center text-xs font-medium text-muted-foreground uppercase"
         >
           {{ day }}
         </div>
@@ -257,21 +257,21 @@ function openCompose() {
         <div
           v-for="(day, index) in calendarDays"
           :key="index"
-          class="min-h-[120px] border-b border-r border-gray-100 dark:border-gray-800 p-1"
+          class="min-h-[120px] border-b border-r border-border p-1"
           :class="[
-            !day && 'bg-gray-50 dark:bg-gray-900/50',
-            day && isToday(day) && 'bg-blue-50/50 dark:bg-blue-900/10',
+            !day && 'bg-muted/50',
+            day && isToday(day) && 'bg-info/10',
           ]"
         >
           <template v-if="day">
             <div class="flex items-center justify-between px-1 mb-1">
               <span
                 class="text-sm font-medium"
-                :class="isToday(day) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'"
+                :class="isToday(day) ? 'text-info' : 'text-foreground'"
               >
                 {{ format(day, 'd') }}
               </span>
-              <span v-if="getPostsForDay(day).length > 3" class="text-xs text-gray-400">
+              <span v-if="getPostsForDay(day).length > 3" class="text-xs text-muted-foreground">
                 +{{ getPostsForDay(day).length - 3 }}
               </span>
             </div>
@@ -306,7 +306,7 @@ function openCompose() {
           <UBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
             {{ selectedPost.status }}
           </UBadge>
-          <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="text-sm text-muted-foreground">
             {{ format(parseISO(selectedPost.scheduled_at), 'MMM d, yyyy • h:mm a') }}
           </span>
         </div>
@@ -321,17 +321,17 @@ function openCompose() {
           />
         </div>
 
-        <p class="text-gray-900 dark:text-white whitespace-pre-wrap mb-4">
+        <p class="text-foreground whitespace-pre-wrap mb-4">
           {{ selectedPost.caption }}
         </p>
 
         <div class="mb-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Posting to</p>
+          <p class="text-xs font-medium text-muted-foreground uppercase mb-2">Posting to</p>
           <div class="flex flex-wrap gap-2">
             <div
               v-for="target in selectedPost.platforms"
               :key="target.account_id"
-              class="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs"
+              class="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-full text-xs"
             >
               <UIcon :name="platformIcons(target.platform)" class="w-3 h-3" />
               {{ target.account_name }}
@@ -340,7 +340,7 @@ function openCompose() {
         </div>
 
         <div v-if="selectedPost.publish_results?.length" class="mb-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Results</p>
+          <p class="text-xs font-medium text-muted-foreground uppercase mb-2">Results</p>
           <div class="space-y-2">
             <div
               v-for="result in selectedPost.publish_results"

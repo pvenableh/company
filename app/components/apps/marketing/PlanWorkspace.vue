@@ -129,13 +129,9 @@ const derivedTitle = computed(() => {
 });
 
 // ── State badge tones ─────────────────────────────────────────────
+const { getStatusBorderedBadgeClasses } = useStatusStyle();
 function stateTone(s: ContentPlanState | undefined): string {
-  switch (s) {
-    case 'approved': return 'bg-success/12 text-success border-success/30';
-    case 'in_review': return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
-    case 'archived': return 'bg-muted/60 text-muted-foreground border-border';
-    default: return 'bg-muted/60 text-muted-foreground border-border';
-  }
+  return getStatusBorderedBadgeClasses(s || 'draft');
 }
 
 function stateLabel(s: ContentPlanState | undefined): string {
@@ -355,14 +351,7 @@ async function copyReviewUrl() {
 
 // ── Post row helpers ──────────────────────────────────────────────
 function postTone(p: SocialPost): string {
-  const s = p.approval_state || 'draft';
-  switch (s) {
-    case 'approved': case 'published': return 'bg-success/12 text-success border-success/30';
-    case 'in_review': return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
-    case 'requested_changes': case 'rejected': return 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
-    case 'scheduled': return 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30';
-    default: return 'bg-muted/60 text-muted-foreground border-border';
-  }
+  return getStatusBorderedBadgeClasses(p.approval_state || 'draft');
 }
 
 function postStateLabel(p: SocialPost): string {
@@ -817,7 +806,7 @@ onMounted(() => {
 
 .plan-theme__x {
   @apply inline-flex items-center justify-center
-    text-muted-foreground hover:text-rose-500;
+    text-muted-foreground hover:text-destructive;
 }
 
 .plan-theme__input {

@@ -21,11 +21,5 @@ export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
   expired: 'Expired',
 };
 
-export const CONTRACT_STATUS_COLORS: Record<ContractStatus, string> = {
-  draft: '#6B7280',
-  sent: '#3B82F6',
-  signed: '#10B981',
-  declined: '#EF4444',
-  cancelled: '#6B7280',
-  expired: '#F59E0B',
-};
+// Status colors are no longer hardcoded here — they route through the
+// palette-driven canonical buckets in `useStatusStyle()` (getStatusBadgeClasses).

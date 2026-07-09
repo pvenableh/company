@@ -19,7 +19,7 @@
   link there.
 -->
 <script setup lang="ts">
-import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_COLORS } from '~~/shared/proposals-enhanced';
+import { PROPOSAL_STATUS_LABELS } from '~~/shared/proposals-enhanced';
 import type { ProposalStatus } from '~~/shared/proposals-enhanced';
 import { useDebounceFn } from '@vueuse/core';
 
@@ -123,9 +123,8 @@ onMounted(fetchData);
 
 defineExpose({ refresh: fetchData });
 
-function statusColor(s: string | null | undefined): string {
-	return PROPOSAL_STATUS_COLORS[s as ProposalStatus] || '#6B7280';
-}
+// Status color routes through the canonical palette-driven buckets.
+const { getStatusBadgeClasses } = useStatusStyle();
 function statusLabel(s: string | null | undefined): string {
 	return PROPOSAL_STATUS_LABELS[s as ProposalStatus] || (s ?? '—');
 }
@@ -212,7 +211,7 @@ function openPanel(id: string, ev?: MouseEvent) {
 				<span
 					v-if="p.proposal_status"
 					class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
-					:style="{ color: statusColor(p.proposal_status), backgroundColor: statusColor(p.proposal_status) + '18' }"
+					:class="getStatusBadgeClasses(p.proposal_status)"
 				>{{ statusLabel(p.proposal_status) }}</span>
 				<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
 			</button>

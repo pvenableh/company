@@ -10,7 +10,7 @@
 			<span
 				v-if="contract.contract_status"
 				class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-				:style="{ color: statusColor, backgroundColor: statusColor + '15' }"
+				:class="getStatusBadgeClasses(contract.contract_status)"
 			>
 				{{ statusLabel }}
 			</span>
@@ -31,11 +31,12 @@
 </template>
 
 <script setup lang="ts">
-import { CONTRACT_STATUS_LABELS, CONTRACT_STATUS_COLORS } from '~~/shared/contracts';
+import { CONTRACT_STATUS_LABELS } from '~~/shared/contracts';
 
 const props = defineProps<{ contract: any }>();
 defineEmits<{ click: [contract: any] }>();
 
+// Status color routes through the canonical palette-driven buckets.
+const { getStatusBadgeClasses } = useStatusStyle();
 const statusLabel = computed(() => CONTRACT_STATUS_LABELS[props.contract.contract_status as keyof typeof CONTRACT_STATUS_LABELS] || props.contract.contract_status);
-const statusColor = computed(() => CONTRACT_STATUS_COLORS[props.contract.contract_status as keyof typeof CONTRACT_STATUS_COLORS] || '#6B7280');
 </script>

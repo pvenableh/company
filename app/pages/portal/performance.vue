@@ -71,12 +71,15 @@ async function loadCampaigns() {
 	}
 }
 
+// Colors route through canonical useStatusStyle buckets (palette-driven,
+// consistent app-wide).
+const { getStatusBadgeClasses } = useStatusStyle();
 const campaignStatusConfig: Record<string, { label: string; classes: string; icon: string }> = {
-	draft:        { label: 'Draft',       classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: 'lucide:file' },
-	scheduled:    { label: 'Scheduled',   classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: 'lucide:clock' },
-	partial_sent: { label: 'In Progress', classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning', icon: 'lucide:send' },
-	completed:    { label: 'Completed',   classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success', icon: 'lucide:check-circle-2' },
-	cancelled:    { label: 'Cancelled',   classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500', icon: 'lucide:x-circle' },
+	draft:        { label: 'Draft',       classes: getStatusBadgeClasses('draft'),        icon: 'lucide:file' },
+	scheduled:    { label: 'Scheduled',   classes: getStatusBadgeClasses('scheduled'),    icon: 'lucide:clock' },
+	partial_sent: { label: 'In Progress', classes: getStatusBadgeClasses('partial_sent'), icon: 'lucide:send' },
+	completed:    { label: 'Completed',   classes: getStatusBadgeClasses('completed'),    icon: 'lucide:check-circle-2' },
+	cancelled:    { label: 'Cancelled',   classes: getStatusBadgeClasses('cancelled'),    icon: 'lucide:x-circle' },
 };
 
 const clientName = computed(() => {
@@ -138,8 +141,8 @@ watch(() => selectedOrg.value, async () => {
 					</div>
 					<div class="ios-card p-5">
 						<div class="flex items-center gap-3">
-							<div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/10">
-								<Icon name="lucide:eye" class="w-5 h-5 text-blue-500" />
+							<div class="flex items-center justify-center w-10 h-10 rounded-full bg-info/10">
+								<Icon name="lucide:eye" class="w-5 h-5 text-info" />
 							</div>
 							<div>
 								<p class="text-2xl font-semibold tabular-nums">{{ formatNumber(overview.reach) }}</p>
@@ -232,7 +235,7 @@ watch(() => selectedOrg.value, async () => {
 									<span class="text-sm font-medium truncate">{{ c.title }}</span>
 									<span
 										class="text-xs px-2 py-0.5 rounded-full shrink-0"
-										:class="campaignStatusConfig[c.status]?.classes ?? 'bg-gray-100 text-gray-500'"
+										:class="campaignStatusConfig[c.status]?.classes ?? getStatusBadgeClasses(c.status)"
 									>
 										{{ campaignStatusConfig[c.status]?.label ?? c.status }}
 									</span>

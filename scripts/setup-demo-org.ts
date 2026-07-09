@@ -809,6 +809,30 @@ async function seedQuickTasks(
 		// Center Priority Actions engine doesn't surface already-done items)
 		{ title: 'Confirm Atlas intro time on Calendly', schedule: 'today', priority: 'medium', status: 'completed', category: 'quick' },
 		{ title: 'Sign Helios MSA renewal', schedule: 'this_week', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio' },
+
+		// — Helios launch board — a full spread across To Do / In Progress / Done
+		//   so the project Tasks tab reads as a busy, real workspace. All future/
+		//   completed due dates so none flood Command Center Priority Actions.
+		{ title: 'Build the responsive launch landing page', description: 'Hero, rooms, booking widget, and the story section — mobile-first.', schedule: 'this_week', priority: 'high', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 4, assignToSelf: true },
+		{ title: 'Retouch the hero photography set', description: 'Lobby, pool, and suite — colour-match to the new palette.', schedule: 'this_week', priority: 'medium', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 3, assignToSelf: true },
+		{ title: 'Draft the brand voice guidelines', schedule: 'this_week', priority: 'medium', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 6, assignToSelf: true },
+		{ title: 'Animate the logo reveal for social', schedule: 'this_week', priority: 'low', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 7, assignToSelf: true },
+		{ title: 'Configure the booking widget + seasonal rates', schedule: 'this_week', priority: 'high', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 5, assignToSelf: true },
+		{ title: 'Review the menu typography proofs', schedule: 'this_week', priority: 'low', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 2, assignToSelf: true },
+
+		{ title: 'Finalize lobby wayfinding signage specs', schedule: 'this_week', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 8, assignToSelf: true },
+		{ title: 'Source a print vendor for the guidelines', schedule: 'later', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 10, assignToSelf: true },
+		{ title: 'Design the email announcement template', schedule: 'this_week', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 9, assignToSelf: true },
+		{ title: 'Write the opening-week press release', schedule: 'later', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 12, assignToSelf: true },
+		{ title: 'Book the launch-event photographer', schedule: 'later', priority: 'low', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 14, assignToSelf: true },
+		{ title: 'Build the social launch content calendar', schedule: 'this_week', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 11, assignToSelf: true },
+		{ title: 'Order branded welcome amenities', schedule: 'later', priority: 'low', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 13, assignToSelf: true },
+
+		{ title: 'Deliver the final logo lockups', schedule: 'today', priority: 'high', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
+		{ title: 'Approve the colour palette with Sonia', schedule: 'today', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
+		{ title: 'Complete the competitor brand audit', schedule: 'this_week', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
+		{ title: 'Ship moodboard v2 for sign-off', schedule: 'this_week', priority: 'low', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
+		{ title: 'Run the kickoff workshop with the Helios team', schedule: 'this_week', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
 	];
 
 	const todayIso = (offset = 0) => {

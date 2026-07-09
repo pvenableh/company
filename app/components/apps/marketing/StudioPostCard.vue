@@ -19,21 +19,9 @@ defineProps<{
 
 defineEmits<{ (e: 'click', post: SocialPost): void }>();
 
+const { getStatusBorderedBadgeClasses } = useStatusStyle();
 function stateTone(s: ApprovalState | undefined): string {
-  switch (s) {
-    case 'approved':
-    case 'published':
-      return 'bg-success/12 text-success border-success/30';
-    case 'in_review':
-      return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
-    case 'requested_changes':
-    case 'rejected':
-      return 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
-    case 'scheduled':
-      return 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30';
-    default:
-      return 'bg-muted/60 text-muted-foreground border-border';
-  }
+  return getStatusBorderedBadgeClasses(s);
 }
 
 function stateLabel(s: ApprovalState | undefined): string {

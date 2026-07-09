@@ -18,7 +18,7 @@
   /contracts/[id].
 -->
 <script setup lang="ts">
-import { CONTRACT_STATUS_LABELS, CONTRACT_STATUS_COLORS } from '~~/shared/contracts';
+import { CONTRACT_STATUS_LABELS } from '~~/shared/contracts';
 import type { ContractStatus } from '~~/shared/contracts';
 import { useDebounceFn } from '@vueuse/core';
 
@@ -131,9 +131,8 @@ onMounted(fetchData);
 
 defineExpose({ refresh: fetchData });
 
-function statusColor(s: string | null | undefined): string {
-	return CONTRACT_STATUS_COLORS[s as ContractStatus] || '#6B7280';
-}
+// Status color routes through the canonical palette-driven buckets.
+const { getStatusBadgeClasses } = useStatusStyle();
 function statusLabel(s: string | null | undefined): string {
 	return CONTRACT_STATUS_LABELS[s as ContractStatus] || (s ?? '—');
 }
@@ -220,7 +219,7 @@ function openPanel(id: string | number, ev?: MouseEvent) {
 				<span
 					v-if="c.contract_status"
 					class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
-					:style="{ color: statusColor(c.contract_status), backgroundColor: statusColor(c.contract_status) + '18' }"
+					:class="getStatusBadgeClasses(c.contract_status)"
 				>{{ statusLabel(c.contract_status) }}</span>
 				<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
 			</button>

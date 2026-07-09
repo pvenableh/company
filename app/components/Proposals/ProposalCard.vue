@@ -10,7 +10,7 @@
 			<span
 				v-if="proposal.proposal_status"
 				class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-				:style="{ color: statusColor, backgroundColor: statusColor + '15' }"
+				:class="getStatusBadgeClasses(proposal.proposal_status)"
 			>
 				{{ statusLabel }}
 			</span>
@@ -28,11 +28,12 @@
 </template>
 
 <script setup lang="ts">
-import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_COLORS } from '~~/shared/proposals-enhanced';
+import { PROPOSAL_STATUS_LABELS } from '~~/shared/proposals-enhanced';
 
 const props = defineProps<{ proposal: any }>();
 defineEmits<{ click: [proposal: any] }>();
 
+// Status color routes through the canonical palette-driven buckets.
+const { getStatusBadgeClasses } = useStatusStyle();
 const statusLabel = computed(() => PROPOSAL_STATUS_LABELS[props.proposal.proposal_status as keyof typeof PROPOSAL_STATUS_LABELS] || props.proposal.proposal_status);
-const statusColor = computed(() => PROPOSAL_STATUS_COLORS[props.proposal.proposal_status as keyof typeof PROPOSAL_STATUS_COLORS] || '#6B7280');
 </script>

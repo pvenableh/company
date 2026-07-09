@@ -575,22 +575,9 @@ const stateCounts = computed<Record<ApprovalState | 'all', number>>(() => {
 });
 
 // ── State badge ───────────────────────────────────────────────────
+const { getStatusBorderedBadgeClasses } = useStatusStyle();
 function stateTone(s: ApprovalState | undefined): string {
-  switch (s) {
-    case 'approved':
-    case 'published':
-      return 'bg-success/12 text-success border-success/30';
-    case 'in_review':
-      return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
-    case 'requested_changes':
-      return 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
-    case 'rejected':
-      return 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
-    case 'scheduled':
-      return 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30';
-    default:
-      return 'bg-muted/60 text-muted-foreground border-border';
-  }
+  return getStatusBorderedBadgeClasses(s);
 }
 
 function stateLabel(s: ApprovalState | undefined): string {
@@ -1278,7 +1265,7 @@ onMounted(() => {
               </div>
               <span
                 v-if="selectedPost.status === 'scheduled'"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-info/10 text-info border border-info/30"
               >
                 <Icon name="lucide:calendar-clock" class="w-3 h-3" />
                 {{ socialPublishingEnabled ? 'Scheduled' : 'Planned' }}
@@ -1303,7 +1290,7 @@ onMounted(() => {
 
             <div
               v-if="showScheduleHint"
-              class="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+              class="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
             >
               {{ socialPublishingEnabled
                 ? 'Approved. Schedule a publish time to push live.'
@@ -1312,7 +1299,7 @@ onMounted(() => {
 
             <div
               v-if="showPickPlatformsHint"
-              class="rounded border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 flex items-center justify-between gap-2"
+              class="rounded border border-info/30 bg-info/10 px-3 py-2 text-xs text-info flex items-center justify-between gap-2"
             >
               <span>No platforms picked yet — this stays a Studio draft until you wire one.</span>
               <NuxtLink
@@ -1524,9 +1511,9 @@ onMounted(() => {
 }
 
 .studio-stat--draft .studio-stat__value { @apply text-muted-foreground; }
-.studio-stat--review .studio-stat__value { @apply text-amber-600 dark:text-amber-400; }
+.studio-stat--review .studio-stat__value { @apply text-warning; }
 .studio-stat--approved .studio-stat__value { @apply text-success; }
-.studio-stat--published .studio-stat__value { @apply text-sky-600 dark:text-sky-400; }
+.studio-stat--published .studio-stat__value { @apply text-info; }
 
 .studio-empty {
   @apply flex flex-col items-center justify-center py-24 gap-4;
@@ -1660,7 +1647,7 @@ onMounted(() => {
 }
 
 .studio-image-preview__btn--danger {
-  @apply hover:bg-rose-500/70;
+  @apply hover:bg-destructive/90;
 }
 
 /* ── P3.4 compose-chooser popover ───────────────────────────────────── */

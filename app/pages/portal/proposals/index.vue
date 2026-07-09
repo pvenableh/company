@@ -15,12 +15,15 @@ const loading = ref(true);
 const proposals = ref<any[]>([]);
 const actingId = ref<string | null>(null);
 
+// Colors route through canonical useStatusStyle buckets (palette-driven,
+// consistent app-wide — 'sent' blue, 'viewed' active-teal, 'declined' destructive).
+const { getStatusBadgeClasses } = useStatusStyle();
 const statusConfig: Record<string, { label: string; classes: string }> = {
-	draft:    { label: 'Draft',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-	sent:     { label: 'Sent',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-	viewed:   { label: 'Viewed',   classes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-	accepted: { label: 'Accepted', classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success' },
-	declined: { label: 'Declined', classes: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive' },
+	draft:    { label: 'Draft',    classes: getStatusBadgeClasses('draft') },
+	sent:     { label: 'Sent',     classes: getStatusBadgeClasses('sent') },
+	viewed:   { label: 'Viewed',   classes: getStatusBadgeClasses('viewed') },
+	accepted: { label: 'Accepted', classes: getStatusBadgeClasses('accepted') },
+	declined: { label: 'Declined', classes: getStatusBadgeClasses('declined') },
 };
 
 async function loadProposals() {

@@ -21,11 +21,5 @@ export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
   expired: 'Expired',
 };
 
-export const PROPOSAL_STATUS_COLORS: Record<ProposalStatus, string> = {
-  draft: '#6B7280',
-  sent: '#3B82F6',
-  viewed: '#8B5CF6',
-  accepted: '#10B981',
-  rejected: '#EF4444',
-  expired: '#F59E0B',
-};
+// Status colors are no longer hardcoded here — they route through the
+// palette-driven canonical buckets in `useStatusStyle()` (getStatusBadgeClasses).

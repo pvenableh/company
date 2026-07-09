@@ -10,12 +10,14 @@ export function useStatusStyle() {
   // Normalization strips spaces/underscores/hyphens and lowercases, so
   // "In Progress", "in_progress", "in-progress" all match "inprogress".
   const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed', 'won', 'signed', 'accepted', 'admitted', 'resolved', 'completedearly', 'completedlate'];
-  const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow', 'lost', 'expired', 'revoked', 'bounced', 'error', 'pastdue'];
-  const ACTIVE = ['active', 'inprogress', 'open', 'ontrack'];
+  const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow', 'lost', 'expired', 'revoked', 'bounced', 'error', 'pastdue', 'requestedchanges', 'declined', 'void'];
+  // 'viewed' = client opened it (engaged, live signal); reads as active/teal.
+  const ACTIVE = ['active', 'inprogress', 'open', 'ontrack', 'viewed'];
   // 'sent'/'submitted' = handed off, awaiting response (payment/signature/reply).
   // Kept OUT of SUCCESS so a sent-but-unpaid invoice never reads as paid-green.
   const SCHEDULED = ['scheduled', 'submitted', 'sent'];
-  const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect', 'sending', 'invited', 'trialing', 'atrisk'];
+  // 'inreview'/'partialsent' = mid-flight, action pending → warning/amber.
+  const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect', 'sending', 'invited', 'trialing', 'atrisk', 'inreview', 'partialsent'];
   const MUTED = ['archived', 'closed', 'inactive', 'refunded', 'unsubscribed'];
 
   /** Opacity value for bars, cards, and visual weight (Clean Gantt pattern) */
@@ -61,6 +63,31 @@ export function useStatusStyle() {
     if (o <= 0.3) return 'cg-status-completed';
     if (o <= 0.6) return 'cg-status-scheduled';
     return 'cg-status-active';
+  }
+
+  /** Solid bg class (no text) for status dot indicators. Palette-driven. */
+  function getStatusDotClass(status?: string | null): string {
+    const s = normalize(status);
+    if (SUCCESS.includes(s)) return 'bg-success';
+    if (DESTRUCTIVE.includes(s)) return 'bg-destructive';
+    if (ACTIVE.includes(s)) return 'bg-status-active';
+    if (SCHEDULED.includes(s)) return 'bg-status-scheduled';
+    if (PENDING.includes(s)) return 'bg-warning';
+    if (MUTED.includes(s)) return 'bg-muted-foreground';
+    return 'bg-muted-foreground';
+  }
+
+  /** Bordered tinted badge (bg/10 + text + border/30) — for approval-state
+   *  chips (Studio plan/post surfaces). Palette-driven semantic tokens. */
+  function getStatusBorderedBadgeClasses(status?: string | null): string {
+    const s = normalize(status);
+    if (SUCCESS.includes(s)) return 'bg-success/10 text-success border-success/30';
+    if (DESTRUCTIVE.includes(s)) return 'bg-destructive/10 text-destructive border-destructive/30';
+    if (ACTIVE.includes(s)) return 'bg-status-active/10 text-status-active border-status-active/30';
+    if (SCHEDULED.includes(s)) return 'bg-status-scheduled/10 text-status-scheduled border-status-scheduled/30';
+    if (PENDING.includes(s)) return 'bg-warning/10 text-warning border-warning/30';
+    if (MUTED.includes(s)) return 'bg-muted/60 text-muted-foreground border-border';
+    return 'bg-muted/60 text-muted-foreground border-border';
   }
 
   /** Solid bg + white text class for prominent status pills */
@@ -161,6 +188,7 @@ export function useStatusStyle() {
 
   return {
     getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusPillClass, getStatusOpacityClass,
+    getStatusDotClass, getStatusBorderedBadgeClasses,
     getStatusColorName,
     getPriorityBadgeClass, getPriorityBadgeClasses,
     getPriorityBg, getPriorityAccent, getPriorityIconClass,

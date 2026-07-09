@@ -49,27 +49,27 @@ const collectionLabels = {
 const collectionIcons = themedCollectionIcons;
 
 const collectionColors = {
-	projects: 'text-blue-500',
+	projects: 'text-tag-1',
 	tickets: 'text-warning',
 	invoices: 'text-success',
-	emails: 'text-pink-500',
+	emails: 'text-tag-2',
 	cd_contacts: 'text-info',
 	cd_activities: 'text-info',
-	contacts: 'text-indigo-500',
+	contacts: 'text-tag-3',
 	clients: 'text-warning',
-	tasks: 'text-violet-500',
+	tasks: 'text-tag-4',
 };
 
 const collectionTagColors = {
-	projects: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+	projects: 'bg-tag-1/10 text-tag-1 dark:bg-tag-1/30 dark:text-tag-1',
 	tickets: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
 	invoices: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
-	emails: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+	emails: 'bg-tag-2/10 text-tag-2 dark:bg-tag-2/30 dark:text-tag-2',
 	cd_contacts: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
 	cd_activities: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
-	contacts: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+	contacts: 'bg-tag-3/10 text-tag-3 dark:bg-tag-3/30 dark:text-tag-3',
 	clients: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
-	tasks: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+	tasks: 'bg-tag-4/10 text-tag-4 dark:bg-tag-4/30 dark:text-tag-4',
 };
 
 const actionLabels = {
@@ -724,8 +724,8 @@ watch(selectedOrg, () => {
 								:class="{
 									'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive': item.itemData.rating === 'hot',
 									'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': item.itemData.rating === 'warm',
-									'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': item.itemData.rating === 'nurture',
-									'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': item.itemData.rating === 'cold',
+									'bg-info/10 text-info dark:bg-info/30 dark:text-info': item.itemData.rating === 'nurture',
+									'bg-muted text-muted-foreground': item.itemData.rating === 'cold',
 								}"
 							>
 								{{ item.itemData.rating }}
@@ -751,7 +751,7 @@ watch(selectedOrg, () => {
 						<!-- Contact details -->
 						<template v-if="item.collection === 'contacts' && item.itemData">
 							<span v-if="item.itemData.company" class="text-[10px] text-muted-foreground">{{ item.itemData.company }}</span>
-							<span v-if="item.itemData.category" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+							<span v-if="item.itemData.category" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-tag-3/10 text-tag-3 dark:bg-tag-3/30 dark:text-tag-3">
 								{{ item.itemData.category }}
 							</span>
 						</template>

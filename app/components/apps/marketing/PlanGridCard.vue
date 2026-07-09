@@ -41,13 +41,9 @@ const ordered = computed(() => {
   return list;
 });
 
+const { getStatusBorderedBadgeClasses } = useStatusStyle();
 function stateTone(s: ContentPlanState | undefined): string {
-  switch (s) {
-    case 'approved': return 'bg-success/12 text-success border-success/30';
-    case 'in_review': return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
-    case 'archived': return 'bg-muted/60 text-muted-foreground border-border';
-    default: return 'bg-muted/60 text-muted-foreground border-border';
-  }
+  return getStatusBorderedBadgeClasses(s || 'draft');
 }
 
 function stateLabel(s: ContentPlanState | undefined): string {

@@ -21,12 +21,15 @@ const signTarget = ref<any | null>(null);
 const signing = ref(false);
 const signForm = reactive({ name: '', email: '', affirm: false });
 
+// Colors route through canonical useStatusStyle buckets (palette-driven,
+// consistent app-wide — 'sent' reads scheduled-blue, 'void'/'expired' destructive).
+const { getStatusBadgeClasses } = useStatusStyle();
 const statusConfig: Record<string, { label: string; classes: string; icon: string }> = {
-	draft:   { label: 'Draft',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',      icon: 'lucide:file' },
-	sent:    { label: 'Sent',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',   icon: 'lucide:send' },
-	signed:  { label: 'Signed',   classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success', icon: 'lucide:check-circle-2' },
-	void:    { label: 'Void',     classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',      icon: 'lucide:x-circle' },
-	expired: { label: 'Expired',  classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning', icon: 'lucide:clock' },
+	draft:   { label: 'Draft',    classes: getStatusBadgeClasses('draft'),   icon: 'lucide:file' },
+	sent:    { label: 'Sent',     classes: getStatusBadgeClasses('sent'),    icon: 'lucide:send' },
+	signed:  { label: 'Signed',   classes: getStatusBadgeClasses('signed'),  icon: 'lucide:check-circle-2' },
+	void:    { label: 'Void',     classes: getStatusBadgeClasses('void'),    icon: 'lucide:x-circle' },
+	expired: { label: 'Expired',  classes: getStatusBadgeClasses('expired'), icon: 'lucide:clock' },
 };
 
 async function loadContracts() {
