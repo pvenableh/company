@@ -327,17 +327,11 @@ const ticketItems = props.portal ? usePortalItems('tickets') : useDirectusItems(
 const commentItems = useDirectusItems('comments');
 const projectItems = props.portal ? usePortalItems('projects') : useDirectusItems('projects');
 const { registerRefreshCallback } = useTicketsStore();
-const { isAppsMode } = useAppsMode();
 const ticketSlide = useAppSlideOver('ticket');
 
-// Apps-mode archived-ticket row clicks open the slide-over so the user
-// stays on the board. Classic mode keeps the nav-to-/tickets/[id] flow.
+// Archived-ticket row clicks open the slide-over so the user stays on the board.
 function openArchivedTicket(id) {
-	if (isAppsMode.value && id) {
-		ticketSlide.open(String(id));
-		return;
-	}
-	navigateTo(`/tickets/${id}`);
+	if (id) ticketSlide.open(String(id));
 }
 const { user } = useDirectusAuth();
 const { triggerHaptic } = useHaptic();

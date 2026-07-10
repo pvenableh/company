@@ -13,11 +13,9 @@ useHead({ title: 'Ticket Details | Earnest' });
 // lands here — click-through is implicit acknowledgement.
 useMarkItemRead('tickets', () => params.id);
 
-// Back target must stay inside the active shell. In the apps layout the
-// board lives at /apps/work?floor=tickets — sending users to the classic
-// /tickets route there drops them out of the apps shell entirely.
-const { isAppsMode } = useAppsMode();
-const backTo = computed(() => (isAppsMode.value ? '/apps/work?floor=tickets' : '/tickets'));
+// Back target stays inside the apps shell — the board lives at
+// /apps/work?floor=tickets.
+const backTo = '/apps/work?floor=tickets';
 
 const ticketFields = [
 	'id',

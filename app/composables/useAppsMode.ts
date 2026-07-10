@@ -1,11 +1,8 @@
 /**
- * Apps Layout — the app's only shell (the classic layout has been removed).
- *
- * `mode`/`isAppsMode` are retained as constants (`'apps'` / `true`) so the ~30
- * existing consumers don't need to churn; their classic branches are now dead
- * but harmless. `setMode` is a no-op stub kept for API compatibility. The live
- * concern here is rail state (`app_rail_position` on the Directus user row +
- * label visibility), which is independent of the classic/apps split and stays.
+ * Apps Layout rail state — the app's only shell is the apps layout (the classic
+ * layout has been removed), so this composable no longer carries a mode flag.
+ * What survives is rail state (`app_rail_position` on the Directus user row +
+ * label visibility), which the AppRail / dock / shell read to place the nav.
  *
  * Small + medium screens (< lg, 1024px) force `railPosition = 'bottom'`
  * regardless of stored preference, so users always have thumb-reachable nav on
@@ -13,7 +10,6 @@
  */
 import { getCurrentInstance, onMounted, shallowRef, type Ref } from 'vue';
 
-export type AppsLayoutMode = 'apps';
 export type RailPosition = 'left' | 'top' | 'right' | 'bottom';
 
 const RAIL_POSITIONS: RailPosition[] = ['left', 'top', 'right', 'bottom'];
@@ -89,10 +85,6 @@ export function useAppsMode() {
 		});
 	}
 
-	// Classic layout is gone — the app is always the apps shell.
-	const mode = computed<AppsLayoutMode>(() => 'apps');
-	const isAppsMode = computed(() => true);
-
 	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
 		return normalizePosition((user.value as any)?.app_rail_position);
@@ -104,10 +96,6 @@ export function useAppsMode() {
 	// `app_rail_position`. `storedRailPosition` is kept available for a future
 	// re-enable, but is intentionally NOT consulted for the live position.
 	const railPosition = computed<RailPosition>(() => 'bottom');
-
-	// No-op: the classic/apps toggle was removed with the classic layout. Kept
-	// for API compatibility so any lingering caller resolves cleanly.
-	async function setMode(_next: AppsLayoutMode): Promise<void> {}
 
 	async function setRailPosition(next: RailPosition): Promise<void> {
 		if (!RAIL_POSITIONS.includes(next)) return;
@@ -136,12 +124,9 @@ export function useAppsMode() {
 	}
 
 	return {
-		mode,
-		isAppsMode,
 		railPosition,
 		storedRailPosition,
 		railShowLabels,
-		setMode,
 		setRailPosition,
 		setRailShowLabels,
 	};

@@ -9,10 +9,6 @@ const config = useRuntimeConfig();
 // apps-layout middleware (setPageLayout('apps')), so `/` shares the SAME
 // persistent layout instance as every /apps/* route — page transitions fire
 // when navigating here.
-const { isAppsMode } = useAppsMode();
-
-// ── Widget gating (legacy hat hooks; useHatLayout is now a no-op shim) ──
-const { showWidget, hatModules } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze, loadModule } = useAIProductivityEngine();
@@ -45,15 +41,8 @@ onUnmounted(() => {
 const { enabledModules } = useAIPreferences();
 const { selectedPersona } = useAIPersona();
 
-// Active engine modules = user-enabled ∩ hat-allowed. Hat-aware gating means
-// e.g. the Accountant hat only triggers tickets/tasks/invoices/deals/goals on
-// cold mount instead of all 11 analyzers.
-const activeEngineModules = computed<Set<string>>(() => {
-	const userEnabled = enabledModules.value;
-	const hatAllowed = hatModules.value;
-	if (!hatAllowed) return new Set(userEnabled);
-	return new Set([...userEnabled].filter((m) => hatAllowed.includes(m)));
-});
+// Active engine modules = whatever the user has enabled.
+const activeEngineModules = computed<Set<string>>(() => new Set(enabledModules.value));
 
 // Update greeting when persona changes
 watch(selectedPersona, () => {
@@ -308,21 +297,21 @@ const runAnalysis = (): Promise<void> => {
 	return analysisInflight;
 };
 
-// Lazy module loaders for the three deferred widgets. The corresponding hat
-// `HAT_MODULES` entries omit these so cold mount stays cheap; once the
+// Lazy module loaders for the three deferred widgets. These modules are left
+// out of the cold-mount analyze() set so first paint stays cheap; once the
 // `<DeferUntilVisible @enter>` fires, we top up suggestions/metrics with the
 // modules each widget actually exercises.
 //
 // `_lazyEntered` remembers which deferred slots have already become visible
-// in this session so that a hat switch (which clears `_moduleResults` and
-// re-runs `analyze()`) re-merges those modules' suggestions instead of
+// in this session so that a re-run of `analyze()` (which clears
+// `_moduleResults`) re-merges those modules' suggestions instead of
 // dropping them — DeferUntilVisible's observer stops after first hit, so
 // `@enter` never fires twice for the same instance.
 const _lazyEntered = reactive({ chatDesk: false, financial: false });
 const onChatDeskEnter = () => {
 	_lazyEntered.chatDesk = true;
-	if (showWidget('realtime-chat')) loadModule('channels');
-	if (showWidget('card-desk')) loadModule('carddesk');
+	loadModule('channels');
+	loadModule('carddesk');
 };
 const onFinancialEnter = () => {
 	_lazyEntered.financial = true;
@@ -331,10 +320,10 @@ const onFinancialEnter = () => {
 };
 const replayLazyLoaders = () => {
 	if (_lazyEntered.chatDesk) {
-		if (showWidget('realtime-chat')) loadModule('channels');
-		if (showWidget('card-desk')) loadModule('carddesk');
+		loadModule('channels');
+		loadModule('carddesk');
 	}
-	if (_lazyEntered.financial && showWidget('financial-quarter')) {
+	if (_lazyEntered.financial) {
 		loadModule('invoices');
 		loadModule('deals');
 	}
@@ -385,9 +374,8 @@ watch(activeTab, (t) => {
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
 			<!-- Apps Layout per-app header — shows the dashboard accent
-			     chip + page title, matching the rest of /apps/*. Only
-			     rendered in apps mode; classic mode keeps its own chrome. -->
-			<AppHeader v-if="isAppsMode" title="Dashboard" />
+			     chip + page title, matching the rest of /apps/*. -->
+			<AppHeader title="Dashboard" />
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Lens Toggle + Assistant Button -->
 				<div class="flex items-end justify-between gap-3 pt-6 sm:pt-8">
@@ -618,7 +606,7 @@ watch(activeTab, (t) => {
 						</div>
 
 						<!-- Other Suggestions (lower priority) — personal AI nudges, lives in YOU -->
-						<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
+						<div v-if="otherSuggestions.length > 0" class="ios-card p-5">
 							<div class="flex items-center justify-between mb-4">
 								<div class="flex items-center gap-2">
 									<EarnestIcon class="w-5 h-5 text-primary" />
@@ -656,7 +644,7 @@ watch(activeTab, (t) => {
 					<div class="space-y-4 flex flex-col">
 						<!-- Quick Tasks — lifted up beside Priority Actions; the Earnest Score
 						     card drops below (order-last) to de-emphasise gamification. -->
-						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
+						<CommandCenterQuickTasksWidget />
 
 						<!-- Earnest Score (lifted to top of column since CRM Health left) -->
 						<EarnestScoreWidget
@@ -741,18 +729,18 @@ watch(activeTab, (t) => {
 
 					<!-- Active client + project carousels — quick access to the
 					     most-recently-active rows. Cards open the corresponding
-					     slide-over panel in apps mode. -->
-					<ClientOnly v-if="showWidget('active-clients')">
+					     slide-over panel. -->
+					<ClientOnly>
 						<CommandCenterActiveClientCarousel />
 					</ClientOnly>
-					<ClientOnly v-if="showWidget('active-projects')">
+					<ClientOnly>
 						<CommandCenterActiveProjectCarousel />
 					</ClientOnly>
 
 					<!-- Today's Briefs + CRM Pulse share one row on large screens. -->
 					<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 					<!-- Today's Briefs (org-wide project digests) -->
-					<ClientOnly v-if="showWidget('project-digests')">
+					<ClientOnly>
 						<CommandCenterProjectDigestsWidget />
 					</ClientOnly>
 
@@ -761,7 +749,6 @@ watch(activeTab, (t) => {
 					     /contacts Insights tab (one destination per noun). This
 					     gives quick reference here without dominating the band. -->
 					<NuxtLink
-						v-if="showWidget('crm-health')"
 						to="/contacts?view=insights"
 						class="glass-surface glass-surface--hoverable p-4 flex items-center gap-4 group"
 					>
@@ -817,21 +804,20 @@ watch(activeTab, (t) => {
 					</div>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
-				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />
+				<CommandCenterMarketingPulseWidget v-if="marketingPulse.hasRichData.value" />
 
 					<!-- Marketing actions — compact (only when no social/email data) -->
-					<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
+					<CommandCenterMarketingActionsWidget v-if="!marketingPulse.hasRichData.value" />
 
 					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->
-					<DeferUntilVisible v-if="showWidget('goals') && goalsEnabled" min-height="120px">
+					<DeferUntilVisible v-if="goalsEnabled" min-height="120px">
 						<GoalsSummaryWidget />
 					</DeferUntilVisible>
 
 					<!-- Financial Analysis (full width) — deferred until scrolled near.
-					     `invoices` / `deals` are dropped from accountant's default
-					     module set and lazy-loaded here when the slot enters view. -->
+					     `invoices` / `deals` are lazy-loaded here when the slot
+					     enters view. -->
 					<DeferUntilVisible
-						v-if="showWidget('financial-quarter')"
 						min-height="320px"
 						@enter="onFinancialEnter"
 					>
@@ -841,7 +827,6 @@ watch(activeTab, (t) => {
 
 				<!-- ─── REFERENCE band ─── -->
 				<section
-					v-if="showWidget('realtime-chat') || showWidget('card-desk')"
 					style="order: 3"
 					class="space-y-2"
 				>
@@ -854,10 +839,10 @@ watch(activeTab, (t) => {
 						<div class="pt-4">
 							<DeferUntilVisible min-height="500px" @enter="onChatDeskEnter">
 								<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-									<div v-if="showWidget('realtime-chat')" class="self-start">
+									<div class="self-start">
 										<CommandCenterChannelsCard />
 									</div>
-									<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
+									<CommandCenterCardDeskPipeline />
 								</div>
 							</DeferUntilVisible>
 						</div>

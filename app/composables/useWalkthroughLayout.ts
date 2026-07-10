@@ -1,14 +1,16 @@
 /**
- * Detect which top-level shell the user is in so the walkthrough can show
- * shell-appropriate tours. Source of truth is the route path — every shell
- * has a unique prefix:
+ * Detect which route family the user is in so the walkthrough can show
+ * route-appropriate tours. Source of truth is the route path:
  *   /portal/*  → portal
  *   /apps/*    → apps
- *   anything else (signed-in staff) → classic
+ *   anything else (signed-in staff on a legacy, non-/apps route) → classic
  *
- * This avoids reaching into `useAppsMode()` (which only flips when the user
- * toggles their layout pref) — what matters for tours is the route they
- * actually opened, not the preference they have stored.
+ * NOTE: since the classic *layout* was removed, every staff route renders in
+ * the apps shell. The `'classic'` key is now a misnomer — it no longer means
+ * "classic layout," it distinguishes the legacy staff routes (/projects/[id],
+ * /invoices, …) from the first-class `/apps/*` routes so tours can target one
+ * surface or the other. Kept as-is because 8 tours in `walkthrough-tours.ts`
+ * are still tagged `layouts: ['classic']`; renaming it means retagging them.
  */
 import type { LayoutKey } from '~/composables/useWalkthrough';
 

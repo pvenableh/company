@@ -10,15 +10,12 @@
 definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Lead | Earnest' });
 
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
-
 const route = useRoute();
 const leadId = computed(() => String(route.params.id));
 </script>
 
 <template>
-  <NuxtLayout :name="layout">
+  <NuxtLayout name="apps">
     <LayoutPageContainer>
       <AppsClientsLeadWorkspace :lead-id="leadId" />
     </LayoutPageContainer>

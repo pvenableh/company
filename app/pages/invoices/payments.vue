@@ -4,11 +4,6 @@ import { Button } from '~/components/ui/button';
 definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Payments | Earnest' });
 
-// Apps-mode users get the apps shell so this legacy route isn't orphaned
-// from the AppRail. Classic mode keeps the original sidebar.
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
-
 const { canAccess } = useOrgRole();
 const paymentsReceivedItems = useDirectusItems('payments_received');
 
@@ -50,7 +45,7 @@ const totalReceived = computed(() => {
 </script>
 
 <template>
-	<NuxtLayout :name="layout">
+	<NuxtLayout name="apps">
 	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">

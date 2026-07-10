@@ -9,15 +9,12 @@
 definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Mailing List | Earnest' });
 
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
-
 const route = useRoute();
 const listId = computed(() => route.params.id as string);
 </script>
 
 <template>
-  <NuxtLayout :name="layout">
+  <NuxtLayout name="apps">
     <LayoutPageContainer>
       <AppsListsMailingListWorkspace :list-id="listId" />
     </LayoutPageContainer>

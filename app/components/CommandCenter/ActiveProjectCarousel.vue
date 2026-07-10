@@ -6,15 +6,12 @@
   ('Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'On Hold');
   we show the three "moving" states.
 
-  Card click opens the ProjectDetailPanel slide-over in apps mode, or
-  navigates to /apps/work/projects/[id] in classic mode.
+  Card click opens the ProjectDetailPanel slide-over.
 -->
 <script setup lang="ts">
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
-const { isAppsMode } = useAppsMode();
 const projectSlide = useAppSlideOver('work-project');
-const router = useRouter();
 const items = useDirectusItems('projects');
 
 const projects = ref<any[]>([]);
@@ -62,11 +59,7 @@ async function load() {
 watch([selectedOrg, selectedClient], load, { immediate: true });
 
 function openProject(id: string) {
-	if (isAppsMode.value) {
-		projectSlide.open(id);
-	} else {
-		router.push(`/apps/work/projects/${id}`);
-	}
+	projectSlide.open(id);
 }
 
 function statusChip(s: string | null | undefined) {

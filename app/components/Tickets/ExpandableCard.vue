@@ -22,7 +22,6 @@
 const ticketItems = useDirectusItems('tickets');
 const toast = useToast();
 const { triggerRefresh } = useTicketsStore();
-const { isAppsMode } = useAppsMode();
 const ticketSlide = useAppSlideOver('ticket');
 
 const props = defineProps({
@@ -59,9 +58,8 @@ const handleEdit = (ticket) => {
 		emit('view', ticket);
 		return;
 	}
-	// Apps mode → push the quick-look slide-over so the board stays behind
-	// (iOS push/pop feel). Classic mode keeps the inline edit modal.
-	if (isAppsMode.value && ticket?.id) {
+	// Push the quick-look slide-over so the board stays behind (iOS push/pop feel).
+	if (ticket?.id) {
 		ticketSlide.open(String(ticket.id));
 		return;
 	}

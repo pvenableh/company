@@ -10,17 +10,12 @@
 definePageMeta({ layout: false, middleware: ['auth'] });
 useHead({ title: 'Invoice Detail | Earnest' });
 
-// Apps-mode users get the apps shell so this legacy route isn't orphaned
-// from the AppRail. Classic mode keeps the original sidebar.
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
-
 const route = useRoute();
 const invoiceId = computed(() => route.params.id as string);
 </script>
 
 <template>
-  <NuxtLayout :name="layout">
+  <NuxtLayout name="apps">
     <LayoutPageContainer>
       <AppsMoneyInvoiceWorkspace :invoice-id="invoiceId" />
     </LayoutPageContainer>

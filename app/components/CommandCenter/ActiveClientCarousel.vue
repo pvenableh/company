@@ -5,15 +5,12 @@
   the current org. Sorts by the denormalized `clients.last_activity_at`
   (bumped by /api/clients/bump-activity + setup-client-activity.ts).
 
-  Card click opens the ClientDetailPanel slide-over in apps mode, or
-  navigates to /apps/clients/[id] in classic mode.
+  Card click opens the ClientDetailPanel slide-over.
 -->
 <script setup lang="ts">
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
-const { isAppsMode } = useAppsMode();
 const clientSlide = useAppSlideOver('client');
-const router = useRouter();
 const items = useDirectusItems('clients');
 
 const clients = ref<any[]>([]);
@@ -55,11 +52,7 @@ watch(selectedOrg, load, { immediate: true });
 const { getUrl: getFileUrl } = useDirectusFiles();
 
 function openClient(id: string) {
-	if (isAppsMode.value) {
-		clientSlide.open(id);
-	} else {
-		router.push(`/apps/clients/${id}`);
-	}
+	clientSlide.open(id);
 }
 
 function relTime(iso: string | null | undefined) {

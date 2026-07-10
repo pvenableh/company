@@ -378,12 +378,9 @@ const DEFAULT_BOTTOM_OFFSET = '1.5rem';
 // height (~38px chip + ~12px padding) + breathing gap (~0.5rem) ≈ 5rem.
 const RAIL_CLEARED_BOTTOM_OFFSET = '5rem';
 
-const { isAppsMode, railPosition } = useAppsMode();
+const { railPosition } = useAppsMode();
 const bottomOffset = computed(() => {
-	if (
-		isAppsMode.value
-		&& (railPosition.value === 'bottom' || railPosition.value === 'floating')
-	) {
+	if (railPosition.value === 'bottom' || railPosition.value === 'floating') {
 		return RAIL_CLEARED_BOTTOM_OFFSET;
 	}
 	return DEFAULT_BOTTOM_OFFSET;
