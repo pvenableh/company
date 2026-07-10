@@ -154,7 +154,7 @@ if (props.ticket.category === 'Completed') {
 			/>
 
 			<!-- <div class="ticket-card__description" v-html="ticket.description"></div> -->
-			<h3 class="w-full uppercase mt-2 pb-0 mb-1 tracking-wide font-bold text-[8px] border-b">Description:</h3>
+			<h3 class="w-full uppercase mt-2 pb-0 mb-1 tracking-wide font-bold text-[10px] border-b">Description:</h3>
 			<LazyFormTiptap
 				v-model="state.description"
 				class="w-full ticket-card__description"

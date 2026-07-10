@@ -239,15 +239,15 @@
 									<template v-if="item.source === 'event'">
 										<span
 											v-if="item._raw.approval === 'Need Approval'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-warning bg-warning/10"
+											class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-warning bg-warning/10"
 										>Needs Approval</span>
 										<span
 											v-else-if="item._raw.approval === 'Approved'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10"
+											class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10"
 										>Approved</span>
 									</template>
 									<span
-										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
+										class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
 										:class="meetingStatusColor(item.status)"
 									>{{ item.status }}</span>
 									<UIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
@@ -445,7 +445,7 @@
 				<div>
 					<h4 class="text-base font-semibold text-foreground">{{ selectedMeeting.title }}</h4>
 					<span
-						class="inline-block mt-1 text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
+						class="inline-block mt-1 text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
 						:class="meetingStatusColor(selectedMeeting.status)"
 					>{{ selectedMeeting.status }}</span>
 				</div>

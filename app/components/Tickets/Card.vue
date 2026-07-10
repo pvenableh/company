@@ -24,7 +24,7 @@
 					<div class="flex items-center gap-2 mt-1.5 flex-wrap">
 						<span
 							v-if="element?.priority && element.priority !== 'medium'"
-							class="text-[8px] uppercase font-bold tracking-wider"
+							class="text-[10px] uppercase font-bold tracking-wider"
 							:class="priorityTextClass"
 						>
 							{{ element.priority }}

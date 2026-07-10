@@ -310,7 +310,7 @@ watch(() => totalCount.value, scrollToNow);
 							>
 								<span
 									v-if="slot.isFirstOfMonth"
-									class="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground/80 leading-none"
+									class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 leading-none"
 								>
 									{{ format(slot.date, 'MMM') }}
 								</span>

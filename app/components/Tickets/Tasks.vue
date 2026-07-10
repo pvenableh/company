@@ -472,7 +472,7 @@ onUnmounted(() => {
 
 						<div
 							v-if="task.status === 'completed'"
-							class="text-[8px] text-muted-foreground mt-0.5 uppercase absolute left-0 -bottom-[10px]"
+							class="text-[10px] text-muted-foreground mt-0.5 uppercase absolute left-0 -bottom-[10px]"
 						>
 							Completed {{ formatCompletionDate(task.date_updated) }} by
 							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}

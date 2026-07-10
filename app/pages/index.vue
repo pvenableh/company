@@ -581,13 +581,13 @@ watch(activeTab, (t) => {
 											     app's palette accent. -->
 											<span
 												v-if="appTagByCategory[action.category]"
-												class="hidden sm:inline-flex items-center text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md whitespace-nowrap"
+												class="hidden sm:inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md whitespace-nowrap"
 												:style="appTagByCategory[action.category].style"
 											>
 												{{ appTagByCategory[action.category].label }}
 											</span>
 											<span
-												class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+												class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
 												:class="priorityChipClasses(action.priority)"
 											>
 												{{ action.priority }}

@@ -1250,10 +1250,10 @@ const sendInviteMeeting = computed(() => {
 										v-if="contact.client && typeof contact.client === 'object' && contact.client.name"
 										class="flex items-center gap-1.5 mt-0.5 min-w-0"
 									>
-										<span class="text-[8px] font-semibold uppercase tracking-[0.08em] text-primary/70 truncate">{{ contact.client.name }}</span>
+										<span class="text-[10px] font-semibold uppercase tracking-[0.08em] text-primary/70 truncate">{{ contact.client.name }}</span>
 										<span
 											v-if="meetingClientId && contact.client.id === meetingClientId"
-											class="text-[7px] font-bold uppercase tracking-[0.1em] px-1 py-0.5 rounded bg-warning/15 text-warning flex-shrink-0"
+											class="text-[9px] font-bold uppercase tracking-[0.1em] px-1 py-0.5 rounded bg-warning/15 text-warning flex-shrink-0"
 										>Client</span>
 									</div>
 								</div>

@@ -171,7 +171,7 @@
 							:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
 							v-html="task.title"
 						/>
-						<span v-if="!task.completed && task.schedule" class="text-[8px] text-muted-foreground uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 bg-muted/40 rounded">
+						<span v-if="!task.completed && task.schedule" class="text-[10px] text-muted-foreground uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 bg-muted/40 rounded">
 							{{ scheduleLabel(task.schedule) }}
 						</span>
 						<button

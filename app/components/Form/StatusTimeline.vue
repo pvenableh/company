@@ -38,7 +38,7 @@
 
 				<!-- Status label -->
 				<span
-					class="absolute text-[8px] top-full uppercase mt-2 w-[60px] text-center whitespace-normal"
+					class="absolute text-[10px] top-full uppercase mt-2 w-[60px] text-center whitespace-normal"
 					:style="{ left: '-22px' }"
 				>
 					{{ status.name || status }}

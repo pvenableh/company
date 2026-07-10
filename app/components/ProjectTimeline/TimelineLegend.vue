@@ -29,7 +29,7 @@ const { getStatusBadgeClasses } = useStatusStyle();
           {{ project.title }}
         </span>
         <span
-          class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
+          class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
           :class="getStatusBadgeClasses(project.status)"
         >
           {{ project.status }}

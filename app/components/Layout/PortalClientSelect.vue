@@ -233,7 +233,7 @@ onMounted(() => {
 							</div>
 							<div class="flex-1 min-w-0">
 								<span class="text-[9px] uppercase leading-3 font-medium block truncate">{{ root.name }}</span>
-								<span v-if="root.id !== activeRoot?.id" class="text-[8px] text-muted-foreground/70 normal-case">
+								<span v-if="root.id !== activeRoot?.id" class="text-[10px] text-muted-foreground/70 normal-case">
 									Switch to this client
 								</span>
 							</div>

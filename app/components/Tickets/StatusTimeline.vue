@@ -35,7 +35,7 @@ const props = defineProps({
 					v-if="currentStatus === status"
 				></div>
 
-				<span class="absolute text-[8px] top-full uppercase mt-2 w-[50px] text-center">
+				<span class="absolute text-[10px] top-full uppercase mt-2 w-[50px] text-center">
 					{{ status }}
 				</span>
 			</div>

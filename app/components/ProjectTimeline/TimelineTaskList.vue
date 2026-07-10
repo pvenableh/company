@@ -93,7 +93,7 @@ function formatDueDate(dateStr: string | null) {
           <!-- Priority pill -->
           <span
             v-if="task.priority"
-            class="inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold"
+            class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold"
             :class="getPriorityClasses(task.priority)"
           >
             {{ task.priority }}

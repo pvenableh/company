@@ -380,7 +380,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 										</div>
 										<span
 											v-if="evt.approval === 'Approved'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10 shrink-0"
+											class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10 shrink-0"
 										>
 											Approved
 										</span>

@@ -100,7 +100,7 @@
 				/>
 				<span
 					v-if="task.priority !== 'medium' && !task.completed"
-					class="text-[8px] uppercase font-semibold"
+					class="text-[10px] uppercase font-semibold"
 					:class="{
 						'text-destructive': task.priority === 'high' || task.priority === 'urgent',
 						'text-blue-400': task.priority === 'low',

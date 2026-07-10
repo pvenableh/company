@@ -138,7 +138,7 @@
 								v-html="task.description"
 							></div>
 
-							<div class="text-[8px] text-muted-foreground uppercase mt-1 flex items-center flex-wrap">
+							<div class="text-[10px] text-muted-foreground uppercase mt-1 flex items-center flex-wrap">
 								<span class="mr-2 inline-flex items-center">
 									<UIcon name="i-heroicons-document-text" class="w-3 h-3 mr-1" />
 									<UButton
@@ -159,14 +159,14 @@
 									</span>
 								</span>
 
-								<UBadge size="xs" :color="getStatusColor(task.ticketContext.status)" class="uppercase !text-[7px]">
+								<UBadge size="xs" :color="getStatusColor(task.ticketContext.status)" class="uppercase !text-[9px]">
 									{{ task.ticketContext.status }}
 								</UBadge>
 							</div>
 
 							<div
 								v-if="task.status === 'completed' && task.date_updated"
-								class="text-[8px] text-muted-foreground mt-0.5 uppercase"
+								class="text-[10px] text-muted-foreground mt-0.5 uppercase"
 							>
 								Completed {{ formatCompletionDate(task.date_updated) }}
 								{{ task.user_updated ? `by ${task.user_updated.first_name}` : '' }}

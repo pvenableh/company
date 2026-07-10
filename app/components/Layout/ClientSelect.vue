@@ -172,7 +172,7 @@ onUnmounted(() => {
 								</Avatar>
 							</div>
 							<span class="text-[9px] uppercase leading-3 flex-1">{{ option.name }}</span>
-							<span class="text-[7px] text-[var(--cyan)] uppercase">Internal</span>
+							<span class="text-[9px] text-[var(--cyan)] uppercase">Internal</span>
 						</template>
 
 						<!-- Client options -->

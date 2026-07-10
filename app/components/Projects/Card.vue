@@ -97,7 +97,7 @@ const clientLabel = computed(
 					<div class="flex items-center gap-2 mt-1.5 flex-wrap">
 						<span
 							v-if="project?.service?.name"
-							class="text-[8px] uppercase font-bold tracking-wider flex items-center gap-1"
+							class="text-[10px] uppercase font-bold tracking-wider flex items-center gap-1"
 							:style="{ color: project?.service?.color || 'var(--muted-foreground)' }"
 						>
 							<span

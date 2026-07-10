@@ -110,7 +110,7 @@ const sellerLogoUrl = computed(() => {
 						</div>
 					</div>
 					<div v-if="item.description" class="mt-2">
-						<h5 class="uppercase text-[8px] opacity-25">Description:</h5>
+						<h5 class="uppercase text-[10px] opacity-25">Description:</h5>
 						<div
 							v-if="item.description"
 							class="text-[12px] max-w-md line-item__description"

@@ -649,7 +649,7 @@ const TaskRow = defineComponent({
 						props.task.priority !== 'medium'
 							? h('span', {
 								class: [
-									'text-[8px] uppercase tracking-wider font-semibold',
+									'text-[10px] uppercase tracking-wider font-semibold',
 									props.task.priority === 'high' ? 'text-destructive' : 'text-blue-400',
 								].join(' '),
 							}, props.task.priority)
@@ -672,7 +672,7 @@ const TaskRow = defineComponent({
 				// Schedule quick-change button
 				h('div', { class: 'relative' }, [
 					h('button', {
-						class: 'opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-primary text-[8px] uppercase tracking-wider',
+						class: 'opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-primary text-[10px] uppercase tracking-wider',
 						onClick: () => { showScheduleMenu.value = !showScheduleMenu.value; },
 					}, [
 						h(resolveComponent('UIcon'), { name: 'i-heroicons-calendar', class: 'w-3.5 h-3.5' }),

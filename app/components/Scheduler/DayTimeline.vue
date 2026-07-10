@@ -230,14 +230,14 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 		<div class="px-4 pt-1 pb-2.5 border-b border-border/30">
 			<div class="h-[26px]">
 				<span
-					class="inline-block text-[7px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full leading-none transition-all duration-200"
+					class="inline-block text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full leading-none transition-all duration-200"
 					:class="relativeDay ? [relativeDayColor, 'opacity-100 translate-y-0'] : 'opacity-0 -translate-y-1'"
 				>{{ relativeDay || '&nbsp;' }}</span>
 			</div>
 			<div class="flex items-center justify-between">
 				<div>
 					<h3 class="text-[11px] font-semibold text-foreground leading-none">{{ dayName }}</h3>
-					<p class="text-[8px] font-medium uppercase tracking-wide text-muted-foreground leading-none mt-1">{{ dateLabel }}</p>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground leading-none mt-1">{{ dateLabel }}</p>
 				</div>
 				<div class="flex items-center gap-1.5 -mt-[10px]">
 					<button

@@ -71,7 +71,7 @@
 				<!-- Priority -->
 				<span
 					v-if="task.priority && task.priority !== 'medium' && task.status !== 'completed'"
-					class="text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+					class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-md shrink-0"
 					:class="{
 						'text-destructive bg-destructive/10': task.priority === 'high',
 						'text-blue-400 bg-blue-500/10': task.priority === 'low',
@@ -82,7 +82,7 @@
 
 				<!-- Status pill -->
 				<span
-					class="text-[8px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
+					class="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
 					:class="getStatusBadgeClasses(task.status || 'new')"
 				>
 					{{ task.status === 'completed' ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do' }}
