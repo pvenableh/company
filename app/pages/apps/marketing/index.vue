@@ -384,6 +384,24 @@ function onCampaignLeafSelect(item: { _raw: any }) {
   openCampaignSlideOver(item._raw);
 }
 
+// List / River either-or (mirrors the Money payments floor) so the campaign
+// river never competes with a flat list. Default 'list' — the scannable view.
+const campaignsView = ref<'list' | 'river'>('list');
+
+// Sort campaigns newest-start-first for the list view (river is time-positioned
+// already). Undated campaigns sink to the bottom.
+const campaignsListSorted = computed(() =>
+  [...filteredCampaigns.value].sort((a: any, b: any) => {
+    const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
+    const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
+    return tb - ta;
+  }),
+);
+
+const campaignStatusLabels: Record<string, string> = {
+  active: 'Active', paused: 'Paused', completed: 'Completed', draft: 'Draft',
+};
+
 // ── Campaign slide-over (URL-bound via useAppSlideOver) ─────────────────────
 // Quick-edit lives in `components/apps/panels/CampaignPanel.vue`, rendered
 // by the shell-level <AppsAppSlideOverStack>. The panel bumps a shared
@@ -1036,9 +1054,17 @@ const scopeLabel = computed(() => {
             :items="campaignStatusItems"
             class="w-fit"
           />
-          <span class="text-xs text-muted-foreground ml-auto">
-            {{ scopeLabel }}
-          </span>
+          <div class="ml-auto flex items-center gap-3">
+            <!-- List / River — either-or so the campaign river never competes
+                 with a flat list; River is an opt-in visual view. -->
+            <div v-if="filteredCampaigns.length" class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium">
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'list'">List</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'river' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'river'">River</button>
+            </div>
+            <span class="text-xs text-muted-foreground">
+              {{ scopeLabel }}
+            </span>
+          </div>
         </div>
 
         <div v-if="campaignsLoading && !campaignsList.length" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -1060,7 +1086,8 @@ const scopeLabel = computed(() => {
           </Button>
         </div>
 
-        <div v-else class="glass-surface p-4 sm:p-5">
+        <!-- River view — time-positioned rhythm of campaigns. -->
+        <div v-else-if="campaignsView === 'river'" class="glass-surface p-4 sm:p-5">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
               <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -1087,6 +1114,32 @@ const scopeLabel = computed(() => {
             empty-subtitle="Plan one with the Campaign Planner to see it ripple in."
             @select="onCampaignLeafSelect"
           />
+        </div>
+
+        <!-- List view (default) — scannable rows; click opens the campaign panel. -->
+        <div v-else class="ios-card overflow-hidden divide-y divide-border/40">
+          <button
+            v-for="c in campaignsListSorted"
+            :key="c.id"
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors group"
+            @click="openCampaignSlideOver(c)"
+          >
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              :style="{ background: `hsl(${campaignHue(c.status || 'draft')} ${campaignSat(c.status || 'draft')}% 50%)` }"
+            />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">{{ c.title || 'Untitled campaign' }}</p>
+              <p class="text-[11px] text-muted-foreground truncate">
+                {{ campaignStatusLabels[c.status] || 'Draft' }}<template v-if="c.type"> · {{ c.type }}</template>
+              </p>
+            </div>
+            <span class="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+              {{ c.start_date ? fmtSentAt(c.start_date) : 'No date' }}
+            </span>
+            <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+          </button>
         </div>
       </template>
 
