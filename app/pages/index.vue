@@ -356,17 +356,6 @@ const goTo = (route: string) => {
 	router.push(route);
 };
 
-// ── Tabs: Command Center / Timeline / Statistics ──
-const activeTab = ref<'commander' | 'statistics'>('commander');
-
-// Mount Statistics tab content only after the user clicks it once.
-// Both tabs use v-show so the DOM persists across toggles, but we gate
-// the Statistics panel behind v-if to skip its 500-invoice fetch +
-// LazyTicketsDashboard fan-out on cold mount of /.
-const statisticsLoaded = ref(false);
-watch(activeTab, (t) => {
-	if (t === 'statistics') statisticsLoaded.value = true;
-});
 </script>
 
 <template>
@@ -416,38 +405,8 @@ watch(activeTab, (t) => {
 					</div>
 				</div>
 
-				<!-- Tab Switcher -->
-				<div class="flex gap-1 p-1 bg-muted/40 rounded-xl w-full sm:w-fit">
-					<button
-						@click="activeTab = 'commander'"
-						class="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-						:class="activeTab === 'commander'
-							? 'bg-background text-foreground shadow-sm'
-							: 'text-muted-foreground hover:text-foreground'"
-					>
-						<span class="flex items-center justify-center gap-1.5">
-							<UIcon name="i-heroicons-command-line" class="w-3.5 h-3.5" />
-							<span class="hidden sm:inline">Command Center</span>
-							<span class="sm:hidden">Command</span>
-						</span>
-					</button>
-	<button
-						@click="activeTab = 'statistics'"
-						class="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-						:class="activeTab === 'statistics'
-							? 'bg-background text-foreground shadow-sm'
-							: 'text-muted-foreground hover:text-foreground'"
-					>
-						<span class="flex items-center justify-center gap-1.5">
-							<UIcon name="i-heroicons-squares-2x2" class="w-3.5 h-3.5" />
-							<span class="hidden sm:inline">Statistics</span>
-							<span class="sm:hidden">Stats</span>
-						</span>
-					</button>
-				</div>
-
-				<!-- ═══ Command Center Tab ═══ -->
-				<div v-show="activeTab === 'commander'" class="space-y-6">
+				<!-- ═══ Command Center ═══ -->
+				<div class="space-y-6">
 
 				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
@@ -851,7 +810,7 @@ watch(activeTab, (t) => {
 
 				</div><!-- /three-band wrapper -->
 
-				</div><!-- /Commander tab -->
+				</div><!-- /Command Center -->
 
 	<!-- ═══ Activity Feed (hidden — kept for future use) ═══ -->
 				<!--
@@ -874,10 +833,6 @@ watch(activeTab, (t) => {
 				</div>
 				-->
 
-				<!-- ═══ Statistics Tab ═══ -->
-				<div v-if="statisticsLoaded" v-show="activeTab === 'statistics'" class="space-y-6">
-					<LazyDashboardStatisticsEmbed />
-				</div>
 			</div>
 
 			<!-- AI Tray -->
