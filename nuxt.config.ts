@@ -287,6 +287,9 @@ export default defineNuxtConfig({
 		// Notification webhook secret
 		notificationWebhookSecret: process.env.NOTIFICATION_WEBHOOK_SECRET || '',
 
+		// Early-access welcome-email webhook secret (Directus Flow → /api/early-access/welcome)
+		earlyAccessWebhookSecret: process.env.EARLY_ACCESS_WEBHOOK_SECRET || '',
+
 		// Web Push (VAPID)
 		vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
 		vapidSubject: process.env.VAPID_SUBJECT || 'mailto:hello@earnest.guru',

@@ -18,6 +18,7 @@ import type { OrgBrandRef } from '~~/server/utils/email-shell';
 
 export const TRANSACTIONAL_TEMPLATES = [
 	'welcome',
+	'early-access-welcome',
 	'invite',
 	'notification',
 	'password-reset',
@@ -77,6 +78,14 @@ function sampleVars(name: TemplateName): Record<string, any> {
 				orgName: 'Northwind Studio',
 				planLabel: 'Studio',
 				ctaUrl: 'https://app.earnest.guru/',
+			};
+		case 'early-access-welcome':
+			return {
+				subject: "You're on the Earnest early-access list",
+				preheader: "Thanks for requesting early access — here's what happens next.",
+				firstName: 'Alex',
+				name: 'Alex Rivera',
+				ctaUrl: 'https://app.earnest.guru/try-demo',
 			};
 		case 'invite':
 			return {

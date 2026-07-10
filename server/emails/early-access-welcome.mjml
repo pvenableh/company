@@ -1,0 +1,52 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  EARLY-ACCESS WELCOME  ·  DROP-IN DESIGN ZONE
+  ══════════════════════════════════════════════════════════════════════════
+  This file is the *body* of the early-access welcome email. It is injected
+  between the branded Earnest header and footer (see server/emails/_layout.mjml),
+  so you only author the content sections here — no <mjml>/<mj-head>/<mj-body>.
+
+  To drop in a design from an MJML editor (mjml.io, Stripo, etc.): copy just the
+  <mj-section>…</mj-section> blocks from the generator's <mj-body> and paste them
+  below, replacing everything between the two rulers. Keep the Handlebars tokens
+  so the email stays personalised.
+
+  Available variables:
+    {{firstName}}  – recipient's first name (may be empty)
+    {{name}}       – recipient's full name (may be empty)
+    {{ctaUrl}}     – link to the app / next step
+    {{year}}       – current year (footer uses it too)
+  Brand tokens (logo, colors, address) are supplied by the shell automatically.
+
+  HTML comments like this one are stripped from the sent email, so leave notes freely.
+  ══════════════════════════════════════════════════════════════════════════
+-->
+
+<!-- ▼▼▼  YOUR DESIGN STARTS HERE  ▼▼▼ -->
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 8px 0">
+      {{#if firstName}}You're on the list, {{firstName}}.{{else}}You're on the early-access list.{{/if}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{#if firstName}}Hi {{firstName}},{{else}}Hi there,{{/if}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Thanks for requesting early access to <strong>Earnest</strong> — the calm,
+      AI-native workspace for running your business. We're inviting new users in
+      small batches while we finish production, and you're in the queue.
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      <strong>What happens next:</strong> we'll email you a personal invite with a
+      link to set up your workspace. In the meantime you can explore a live demo —
+      no account needed.
+    </mj-text>
+    <mj-button href="{{ctaUrl}}" padding="16px 0 8px 0">
+      Explore the demo
+    </mj-button>
+    <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
+      Questions, or want to jump the line? Just reply to this email — a real person reads it.
+    </mj-text>
+  </mj-column>
+</mj-section>
+<!-- ▲▲▲  YOUR DESIGN ENDS HERE  ▲▲▲ -->

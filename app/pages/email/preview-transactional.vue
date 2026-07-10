@@ -50,6 +50,7 @@ useHead({ title: 'Email preview | Earnest' });
 
 const templates = [
 	'welcome',
+	'early-access-welcome',
 	'invite',
 	'notification',
 	'password-reset',

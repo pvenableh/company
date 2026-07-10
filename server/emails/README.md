@@ -122,6 +122,24 @@ declares the `*.mjml` module type for TypeScript.
 > you add a template, add its `import` + `TEMPLATES` entry in
 > `email-templates.ts` (a fs fallback covers ad-hoc names in dev only).
 
+## Early-access welcome email
+
+`early-access-welcome.mjml` is a **drop-in design zone** — its body is injected
+between the branded header/footer, so you author only `<mj-section>` blocks. To
+use an MJML-editor design, paste the `<mj-section>…</mj-section>` blocks from the
+generator's `<mj-body>` between the two rulers in that file and keep the
+`{{firstName}}` / `{{ctaUrl}}` tokens. Preview it at `/email/preview-transactional`.
+
+**Trigger wiring** (send on early-access signup):
+1. Set `EARLY_ACCESS_WEBHOOK_SECRET` in the deployment env.
+2. In the Directus early-access Flow (`08912f2e-d3a7-4ea6-b21e-9bdb79feee64`),
+   add a **Webhook / Request URL** op after the create-item op:
+   `POST https://app.earnest.guru/api/early-access/welcome` with body
+   `{ "email": "{{$trigger.body.email}}", "name": "{{$trigger.body.name}}", "secret": "<EARLY_ACCESS_WEBHOOK_SECRET>" }`.
+
+The endpoint (`server/api/early-access/welcome.post.ts`) fails closed if the
+secret is unset or wrong, then renders + sends via `sendEarlyAccessWelcomeEmail`.
+
 ## Notes
 
 - `server/utils/email-shell.ts` (the older inline-HTML shell) is retained only

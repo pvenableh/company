@@ -31,6 +31,7 @@ import layoutMjml from '../emails/_layout.mjml';
 import headerMjml from '../emails/_header.mjml';
 import footerMjml from '../emails/_footer.mjml';
 import welcomeMjml from '../emails/welcome.mjml';
+import earlyAccessWelcomeMjml from '../emails/early-access-welcome.mjml';
 import inviteMjml from '../emails/invite.mjml';
 import notificationMjml from '../emails/notification.mjml';
 import passwordResetMjml from '../emails/password-reset.mjml';
@@ -47,6 +48,7 @@ const TEMPLATES: Record<string, string> = {
 	_header: headerMjml,
 	_footer: footerMjml,
 	welcome: welcomeMjml,
+	'early-access-welcome': earlyAccessWelcomeMjml,
 	invite: inviteMjml,
 	notification: notificationMjml,
 	'password-reset': passwordResetMjml,
