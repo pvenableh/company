@@ -263,11 +263,19 @@ const restoreChannel = async (ch) => {
 	}
 };
 
+// Channel names are slugs: lowercase, hyphenated, alphanumeric only.
+const toSlug = (s) =>
+	String(s || '')
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+
 const createChannel = async () => {
 	if (!newChannelName.value || newChannelName.value.length < 3) return;
 	creating.value = true;
 	try {
-		const data = { name: slugify(newChannelName.value), organization: selectedOrg.value || undefined, status: 'published' };
+		const data = { name: toSlug(newChannelName.value), organization: selectedOrg.value || undefined, status: 'published' };
 		if (selectedClient.value && selectedClient.value !== 'org') data.client = selectedClient.value;
 		if (newChannelCategory.value?.trim()) data.category = newChannelCategory.value.trim();
 		const created = await channelItems.create(data);

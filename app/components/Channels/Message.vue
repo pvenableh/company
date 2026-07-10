@@ -104,7 +104,9 @@ const sendReply = async () => {
 			method: 'POST',
 			body: {
 				text: replyText.value,
-				channel: props.message.channel,
+				// `channel` may be an expanded object ({id,name}) or a bare id
+				// depending on the parent view's field selection; the API wants the id.
+				channel: props.message.channel?.id ?? props.message.channel,
 				parent_id: props.message.id,
 				status: 'published',
 			},
