@@ -8,6 +8,13 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	// True when the viewer manages this message's channel (org owner/admin,
+	// channel creator, or channel moderator). Unlocks hide/remove of OTHERS'
+	// messages via the admin-token moderate route. Phase F.
+	canModerate: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 import {
@@ -59,6 +66,9 @@ const {
 
 const replyCount = computed(() => replies.value?.length || 0);
 const isOwnMessage = computed(() => props.message.user_created?.id === user.value?.id);
+// Can moderate this message: the viewer manages the channel (Phase F prop) OR
+// is an org admin (covers legacy usages where canModerate isn't passed).
+const canModerateMsg = computed(() => props.canModerate || isOrgAdminOrAbove.value);
 const msgRef = ref(null);
 
 // Click outside to cancel edit/reply
@@ -141,11 +151,16 @@ const cancelEdit = () => {
 
 const deleteMessage = async () => {
 	try {
-		if (isOrgAdminOrAbove.value) {
-			// Admin: hard delete the message and orphan replies
+		if (!isOwnMessage.value && canModerateMsg.value) {
+			// Moderating someone ELSE's message — messages.delete is own-only at
+			// the perm layer, so this routes through the admin-token moderate route
+			// (validates channel ownership/moderator/admin server-side). Phase F.
+			await $fetch(`/api/messages/${props.message.id}/moderate`, { method: 'POST', body: { action: 'remove' } });
+		} else if (isOrgAdminOrAbove.value) {
+			// Admin deleting their own message: hard delete.
 			await messageItems.remove(props.message.id);
 		} else {
-			// Non-admin: soft delete — archive so it's hidden but preserved
+			// Non-admin deleting own: soft delete — archive so it's hidden but preserved
 			await messageItems.update(props.message.id, {
 				status: 'archived',
 				text: '<p><em>This message was deleted.</em></p>',
@@ -198,6 +213,12 @@ const submitReport = async () => {
 			item: props.message.id,
 			sender: user.value.id,
 		});
+		// Record it in the channel's moderation audit log (Phase F). Best-effort —
+		// the report is already delivered via the notification above.
+		await $fetch(`/api/messages/${props.message.id}/report`, {
+			method: 'POST',
+			body: { reason: reportReason.value, details: reportDetails.value || '' },
+		}).catch((e) => console.warn('report audit log failed:', e));
 		const { toast } = await import('vue-sonner');
 		toast.success('Report submitted. An admin will review it.');
 		showReportDialog.value = false;
@@ -214,7 +235,9 @@ const submitReport = async () => {
 
 const hideMessage = async () => {
 	try {
-		await messageItems.update(props.message.id, { status: 'archived' });
+		// Hide (soft) via the admin-token moderate route so channel owners/
+		// moderators — not just org admins — can moderate their own channel.
+		await $fetch(`/api/messages/${props.message.id}/moderate`, { method: 'POST', body: { action: 'hide' } });
 		const { toast } = await import('vue-sonner');
 		toast.success('Message hidden');
 	} catch (error) {
@@ -269,10 +292,14 @@ const handleKeyboard = (event) => {
 								<DropdownMenuItem v-if="isOwnMessage" class="text-xs cursor-pointer text-destructive" @click="confirmingDelete = true">
 									<Icon name="lucide:trash-2" class="w-3.5 h-3.5 mr-2" /> {{ isOrgAdminOrAbove ? 'Delete permanently' : 'Delete' }}
 								</DropdownMenuItem>
-								<DropdownMenuItem v-if="isOrgAdminOrAbove" class="text-xs cursor-pointer" @click="hideMessage">
+								<!-- Moderation of OTHERS' messages: channel owner/moderator or org admin -->
+								<DropdownMenuItem v-if="!isOwnMessage && canModerateMsg" class="text-xs cursor-pointer" @click="hideMessage">
 									<Icon name="lucide:eye-off" class="w-3.5 h-3.5 mr-2" /> Hide
 								</DropdownMenuItem>
-								<DropdownMenuSeparator v-if="isOwnMessage || isOrgAdminOrAbove" />
+								<DropdownMenuItem v-if="!isOwnMessage && canModerateMsg" class="text-xs cursor-pointer text-destructive" @click="confirmingDelete = true">
+									<Icon name="lucide:trash-2" class="w-3.5 h-3.5 mr-2" /> Remove
+								</DropdownMenuItem>
+								<DropdownMenuSeparator v-if="isOwnMessage || canModerateMsg" />
 								<DropdownMenuItem v-if="!isOwnMessage" class="text-xs cursor-pointer" @click="showReportDialog = true">
 									<Icon name="lucide:flag" class="w-3.5 h-3.5 mr-2" /> Report
 								</DropdownMenuItem>

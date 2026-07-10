@@ -1219,6 +1219,8 @@ export interface CdContact {
 	website?: string | null;
 	/** @description Additional phone numbers beyond the primary phone: [{label,value}] */
 	phones?: Record<string, any> | null;
+	/** @description Free-text objective for this contact — the specific win you're chasing (e.g. "Sign a small-business design package"). Shown on cards + detail; feeds AI next-step suggestions. */
+	objective?: string | null;
 	/** @description Touchpoints / interaction log for this contact (cd_activities). */
 	activities?: CdActivity[] | string[];
 }
@@ -1446,6 +1448,30 @@ export interface ChannelMember {
 	joined_at?: string | null;
 	/** @description Suppress unread badge for this channel */
 	muted?: boolean | null;
+	/** @description NON-null = explicit access grant (ACL). null = cursor-only auto-join row. moderator also unlocks message moderation in this channel. */
+	role?: 'member' | 'moderator' | null;
+}
+
+export interface ChannelModerationLog {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	channel: Channel | string;
+	/** @required */
+	organization: Organization | string;
+	/** @description Who took the action (null for anon/system) */
+	moderator?: DirectusUser | string | null;
+	/** @required */
+	action: 'hide' | 'remove' | 'report';
+	/** @description Report reason / moderator note */
+	reason?: string | null;
+	/** @description Target message id (plain — the row may be hard-deleted) */
+	message_id?: string | null;
+	/** @description Snapshot: who wrote the moderated message */
+	message_author?: DirectusUser | string | null;
+	/** @description Snapshot: stripped text of the moderated message */
+	message_snippet?: string | null;
+	date_created?: string | null;
 }
 
 export interface Channel {
@@ -1466,7 +1492,11 @@ export interface Channel {
 	client?: Client | string | null;
 	/** @description One-level folder for org-level channels (Announcements, Eng, …). Ignored for client/project channels. */
 	category?: string | null;
+	/** @description Who can read this channel. Organization = every org member; Restricted = only listed members + org owner/admin. */
+	audience?: 'organization' | 'restricted';
 	messages?: Message[] | string[];
+	/** @description Membership/ACL rows (channel_members). Used by the audience read filter in patch-channel-audience-perms.ts. */
+	members?: ChannelMember[] | string[];
 }
 
 export interface ClientPortalUser {
@@ -5402,6 +5432,7 @@ export interface Schema {
 	cd_tasks: CdTask[];
 	cd_xp_state: CdXpState[];
 	channel_members: ChannelMember[];
+	channel_moderation_log: ChannelModerationLog[];
 	channels: Channel[];
 	client_portal_users: ClientPortalUser[];
 	clients: Client[];
@@ -5659,6 +5690,7 @@ export enum CollectionNames {
 	cd_tasks = 'cd_tasks',
 	cd_xp_state = 'cd_xp_state',
 	channel_members = 'channel_members',
+	channel_moderation_log = 'channel_moderation_log',
 	channels = 'channels',
 	client_portal_users = 'client_portal_users',
 	clients = 'clients',

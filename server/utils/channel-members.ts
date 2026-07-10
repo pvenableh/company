@@ -9,6 +9,97 @@
 import { readItem, readItems, createItem, updateItem } from '@directus/sdk';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 
+const stripHtml = (html: string) => (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 280);
+
+/**
+ * Append a Phase F moderation-audit row (hide/remove/report). Best-effort —
+ * never throws into the caller (auditing must not block the action).
+ */
+export async function logModerationEvent(
+  directus: any,
+  ev: {
+    channel: string;
+    organization: string | null;
+    moderator: string | null;
+    action: 'hide' | 'remove' | 'report';
+    reason?: string | null;
+    message_id?: string | null;
+    message_author?: string | null;
+    message_snippet?: string | null;
+  },
+): Promise<void> {
+  try {
+    await directus.request(
+      createItem('channel_moderation_log', {
+        channel: ev.channel,
+        organization: ev.organization,
+        moderator: ev.moderator,
+        action: ev.action,
+        reason: ev.reason ?? null,
+        message_id: ev.message_id ?? null,
+        message_author: ev.message_author ?? null,
+        message_snippet: ev.message_snippet ? stripHtml(ev.message_snippet) : null,
+      }),
+    );
+  } catch (e) {
+    console.warn('[moderation-log] failed to record event:', e);
+  }
+}
+
+/**
+ * Resolve the user ids implied by a Team or Client "audience shortcut", scoped
+ * to `organization` (a restricted channel must not admit outsiders). Returns a
+ * deduped id list. Team → its junction members; Client → its active client-role
+ * org_memberships. Phase F fast-follow.
+ */
+export async function resolveAudienceMembers(
+  directus: any,
+  organization: string,
+  opts: { team?: string | null; client?: string | null },
+): Promise<string[]> {
+  const ids = new Set<string>();
+
+  if (opts.team) {
+    const rows = await directus.request(
+      readItems('junction_directus_users_teams', {
+        filter: { teams_id: { _eq: opts.team } },
+        fields: ['directus_users_id'],
+        limit: -1,
+      }),
+    ) as Array<{ directus_users_id: any }>;
+    for (const r of rows) {
+      const uid = typeof r.directus_users_id === 'object' ? r.directus_users_id?.id : r.directus_users_id;
+      if (uid) ids.add(uid);
+    }
+  }
+
+  if (opts.client) {
+    const rows = await directus.request(
+      readItems('org_memberships', {
+        filter: { _and: [
+          { organization: { _eq: organization } },
+          { client: { _eq: opts.client } },
+          { status: { _eq: 'active' } },
+        ] },
+        fields: ['user'],
+        limit: -1,
+      }),
+    ) as Array<{ user: any }>;
+    for (const r of rows) {
+      const uid = typeof r.user === 'object' ? r.user?.id : r.user;
+      if (uid) ids.add(uid);
+    }
+  }
+
+  // Keep only users who actually belong to the org.
+  const out: string[] = [];
+  for (const uid of ids) {
+    const orgIds = await getUserOrgIds(uid);
+    if (orgIds.includes(organization)) out.push(uid);
+  }
+  return out;
+}
+
 /**
  * Resolve a channel's organization and assert the caller is an active member.
  * Returns the acting userId + the channel's org id.
@@ -33,7 +124,7 @@ export async function findMembership(directus: any, channelId: string, userId: s
   const rows = await directus.request(
     readItems('channel_members', {
       filter: { _and: [{ channel: { _eq: channelId } }, { user: { _eq: userId } }] },
-      fields: ['id', 'channel', 'user', 'organization', 'last_read_at', 'last_read_message', 'joined_at', 'muted'],
+      fields: ['id', 'channel', 'user', 'organization', 'last_read_at', 'last_read_message', 'joined_at', 'muted', 'role'],
       limit: 1,
     }),
   ) as any[];
@@ -68,6 +159,52 @@ export async function upsertMembership(
       ...patch,
     }),
   );
+}
+
+/**
+ * The caller's active org-role slug in `orgId` ('owner'|'admin'|'manager'|
+ * 'member'|'client'), or null if not an active member.
+ */
+export async function getOrgRoleSlug(directus: any, userId: string, orgId: string): Promise<string | null> {
+  const rows = await directus.request(
+    readItems('org_memberships', {
+      filter: { _and: [{ user: { _eq: userId } }, { organization: { _eq: orgId } }, { status: { _eq: 'active' } }] },
+      fields: ['role.slug'],
+      limit: 1,
+    }),
+  ) as Array<{ role?: { slug?: string } | null }>;
+  return rows?.[0]?.role?.slug ?? null;
+}
+
+/**
+ * Assert the caller may MANAGE a channel — its audience, membership roster, and
+ * message moderation. Allowed for: an org owner/admin of the channel's org, the
+ * channel's creator (`user_created`), or a channel moderator (a channel_members
+ * row with role='moderator'). Returns the acting user + the resolved channel.
+ * Mirrors the app-side gate; enforced here because moderation runs on the admin
+ * token (channel_members has no row-level client perms).
+ */
+export async function requireChannelManager(
+  event: any,
+  channelId: string,
+): Promise<{ userId: string; organization: string; channel: any }> {
+  const { userId, organization } = await requireChannelAccess(event, channelId);
+  const directus = getTypedDirectus();
+
+  const channel = await directus.request(
+    readItem('channels', channelId, { fields: ['id', 'organization', 'audience', 'user_created', 'name'] }),
+  ) as any;
+
+  const creatorId = typeof channel?.user_created === 'object' ? channel.user_created?.id : channel?.user_created;
+  if (creatorId && creatorId === userId) return { userId, organization, channel };
+
+  const slug = await getOrgRoleSlug(directus, userId, organization);
+  if (slug === 'owner' || slug === 'admin') return { userId, organization, channel };
+
+  const membership = await findMembership(directus, channelId, userId);
+  if (membership?.role === 'moderator') return { userId, organization, channel };
+
+  throw createError({ statusCode: 403, message: 'You do not manage this channel' });
 }
 
 /** Active org ids the caller belongs to. */
