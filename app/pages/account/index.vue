@@ -109,41 +109,16 @@
 					     so the per-user Mono/Chromatic hue picker stays hidden here. -->
 					<ThemeSwitcher />
 
-					<!-- Layout — apps mode + rail position. Same surface as theme
-					     because the two interact (palette only visibly applies in
-					     apps mode) and the user thinks of them as one bucket: how
-					     the app looks. -->
+					<!-- Layout — rail position + design options (labels, glass chrome,
+					     palette tint, app palette picker). Grouped with theme because
+					     the user thinks of them as one bucket: how the app looks.
+					     Client-only: palette + glass state is localStorage-backed and
+					     would hydrate-mismatch if rendered on the server. -->
 					<h3 class="account-page__subheading">Layout</h3>
-					<div class="ios-card p-5 space-y-6 max-w-xl">
-						<div
-							class="flex items-start justify-between gap-4 cursor-pointer"
-							@click="appsModeSaving || handleToggleAppsMode(!appsModeChecked)"
-						>
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium">Apps Layout</p>
-								<p class="text-xs text-muted-foreground mt-1">
-									App-by-app shell for Clients, Work, Money, Marketing, and
-									Organization. Your classic sidebar stays available — toggle
-									back any time.
-								</p>
-							</div>
-							<Switch
-								:model-value="appsModeChecked"
-								:disabled="appsModeSaving"
-								@click.stop="appsModeSaving || handleToggleAppsMode(!appsModeChecked)"
-							/>
-						</div>
-
-						<!-- Design options — labels, glass chrome, palette tint, and
-						     the app palette picker. Restored here after the header menu
-						     that used to hold them was retired in the chrome refactor.
-						     Client-only: palette + glass state is localStorage-backed and
-						     would hydrate-mismatch if rendered on the server. -->
-						<div v-if="appsModeChecked" class="pt-2 border-t border-border/40">
-							<ClientOnly>
-								<LayoutAppRailSettingsPanel />
-							</ClientOnly>
-						</div>
+					<div class="ios-card p-5 max-w-xl">
+						<ClientOnly>
+							<LayoutAppRailSettingsPanel />
+						</ClientOnly>
 					</div>
 				</section>
 
@@ -330,7 +305,6 @@ import { Switch } from '@/components/ui/switch';
 
 type SectionKey = 'profile' | 'goals' | 'password' | 'score' | 'appearance' | 'notifications' | 'about';
 
-const { isAppsMode, setMode } = useAppsMode();
 const route = useRoute();
 const router = useRouter();
 
@@ -417,27 +391,6 @@ async function requestDesktopPermission() {
 async function handleSavePrefs() {
 	await savePreferences(notifPrefs.value);
 	toast.success('Notification preferences saved');
-}
-
-// ── Apps Layout ─────────────────────────────────────────────────────────────
-const appsModeChecked = computed(() => isAppsMode.value);
-const appsModeSaving = ref(false);
-
-async function handleToggleAppsMode(next: boolean) {
-	appsModeSaving.value = true;
-	try {
-		await setMode(next ? 'apps' : 'classic');
-		toast.success(next ? 'Apps Layout enabled' : 'Apps Layout disabled');
-		// /account is hardcoded to the apps layout, so toggling off here
-		// wouldn't change anything visible. Hand the user to the classic
-		// dashboard (or back to the apps clients hub) so they can actually
-		// see the layout they just picked.
-		await router.push(next ? '/apps/clients' : '/');
-	} catch {
-		toast.error("Couldn't save layout preference");
-	} finally {
-		appsModeSaving.value = false;
-	}
 }
 
 // ── About / version ─────────────────────────────────────────────────────────

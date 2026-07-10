@@ -1,39 +1,5 @@
 <template>
 	<div class="theme-switcher">
-		<!-- ── Layout (Spaces/Focus mode) ──────────────────────────
-		     Hidden in the canonical Appearance pane — layout is now
-		     handled by the Default ↔ Apps toggle in the avatar menu /
-		     the Layout tab. Set `:show-layout-mode` to surface the
-		     legacy four-mode picker again. -->
-		<section v-if="showLayoutMode" class="theme-switcher__section">
-			<header class="theme-switcher__header">
-				<h3 class="theme-switcher__title">Layout</h3>
-				<p class="theme-switcher__subtitle">Choose how you navigate Earnest.</p>
-			</header>
-
-			<div class="theme-switcher__grid theme-switcher__grid--mode">
-				<button
-					v-for="mode in visibleModes"
-					:key="mode.id"
-					type="button"
-					class="theme-card theme-card--mode"
-					:class="{ 'theme-card--active': currentMode === mode.id }"
-					@click="setMode(mode.id)"
-				>
-					<span class="theme-card__icon">
-						<Icon :name="mode.icon" class="size-5" />
-					</span>
-					<span class="theme-card__body">
-						<span class="theme-card__name">{{ mode.name }}</span>
-						<span class="theme-card__hint">{{ mode.description }}</span>
-					</span>
-					<span v-if="currentMode === mode.id" class="theme-card__check" aria-hidden="true">
-						<Icon name="lucide:check" class="size-3" />
-					</span>
-				</button>
-			</div>
-		</section>
-
 		<!-- ── Color scheme ───────────────────────────────────────── -->
 		<section class="theme-switcher__section">
 			<header class="theme-switcher__header">
@@ -232,19 +198,15 @@ withDefaults(
 		/** Show the Timeline Icons section. Hidden by default — surface this when the
 		 * timeline iconography needs to be exposed (off for the Appearance pane today). */
 		showTimeline?: boolean
-		/** Show the legacy four-mode layout picker (Spaces / Focus / Tabs / Home).
-		 * Hidden by default — layout is now controlled by the Default ↔ Apps toggle. */
-		showLayoutMode?: boolean
 		/** Show the custom-color (mono/chromatic) disclosure + hue picker. Hidden
 		 * by default — legacy power-user surface. */
 		showCustomColor?: boolean
 	}>(),
-	{ showTimeline: false, showLayoutMode: false, showCustomColor: false },
+	{ showTimeline: false, showCustomColor: false },
 );
 
 const { themes, styles, monoPresets, currentTheme, currentStyle, monoHue, setTheme, setStyle, setMonoHue } = useTheme();
 const { themes: timelineThemes, currentThemeId: currentTimelineThemeId, setTheme: setTimelineTheme } = useTimelineTheme();
-const { visibleModes, currentMode, setMode } = useLayoutMode();
 
 const showAdvancedColors = ref(false);
 

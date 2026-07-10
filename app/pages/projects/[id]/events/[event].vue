@@ -7,20 +7,15 @@
   slide-over via `useAppSlideOver('project-event').open(id)`.
 -->
 <script setup>
-definePageMeta({ layout: false, middleware: ['auth'] });
+definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Project Event | Earnest' });
-
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 const route = useRoute();
 const eventId = computed(() => String(route.params.event));
 </script>
 
 <template>
-  <NuxtLayout :name="layout">
-    <LayoutPageContainer>
-      <AppsWorkEventWorkspace :event-id="eventId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsWorkEventWorkspace :event-id="eventId" />
+  </LayoutPageContainer>
 </template>

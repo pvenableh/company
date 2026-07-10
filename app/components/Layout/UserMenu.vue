@@ -29,7 +29,6 @@ const route = useRoute();
 const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
-const { isAppsMode, setMode } = useAppsMode();
 const { open: openMyCard } = useMyCard();
 const { socialPublishingEnabled } = useSocialPublishing();
 
@@ -112,12 +111,6 @@ const fullName = computed(() => {
 
 const email = computed(() => (user.value as Record<string, any> | null)?.email ?? '');
 
-async function toggleLayoutMode() {
-	const next = isAppsMode.value ? 'classic' : 'apps';
-	void setMode(next).catch(() => {});
-	await router.push(next === 'apps' ? '/apps/clients' : '/');
-}
-
 function goTo(path: string) {
 	router.push(path);
 }
@@ -178,7 +171,7 @@ function handleLogout() {
 				<Icon name="lucide:credit-card" class="size-4 mr-2 shrink-0" />
 				<span>Subscription</span>
 			</DropdownMenuItem>
-			<DropdownMenuItem @select="goTo(isAppsMode ? '/apps/organization' : '/organization')">
+			<DropdownMenuItem @select="goTo('/apps/organization')">
 				<Icon name="lucide:building-2" class="size-4 mr-2 shrink-0" />
 				<span>Organization</span>
 			</DropdownMenuItem>
@@ -253,26 +246,6 @@ function handleLogout() {
 				<span
 					class="user-menu__switch"
 					:class="isDark ? 'user-menu__switch--on' : 'user-menu__switch--off'"
-					aria-hidden="true"
-				>
-					<span class="user-menu__switch-knob" />
-				</span>
-			</DropdownMenuItem>
-
-			<DropdownMenuItem
-				class="flex items-center justify-between cursor-pointer"
-				@select="(e: Event) => { e.preventDefault(); toggleLayoutMode(); }"
-			>
-				<span class="inline-flex items-center">
-					<Icon
-						:name="isAppsMode ? 'lucide:sidebar' : 'lucide:layout-grid'"
-						class="size-4 mr-2 shrink-0"
-					/>
-					<span>{{ isAppsMode ? 'Using Apps Layout' : 'Use Apps Layout' }}</span>
-				</span>
-				<span
-					class="user-menu__switch"
-					:class="isAppsMode ? 'user-menu__switch--on' : 'user-menu__switch--off'"
 					aria-hidden="true"
 				>
 					<span class="user-menu__switch-knob" />

@@ -6,12 +6,10 @@ import 'vue-sonner/style.css';
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
-// Initialize universal theme system + layout mode
+// Initialize universal theme system
 const { initTheme } = useTheme();
-const { initLayoutMode } = useLayoutMode();
 onMounted(() => {
 	initTheme();
-	initLayoutMode();
 });
 
 // Inline head script: apply theme BEFORE first paint to prevent flash of wrong theme.

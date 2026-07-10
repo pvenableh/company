@@ -5,12 +5,10 @@ useHead({ title: 'Home | Earnest' });
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 
-// ── Layout mode ──
-const { currentMode } = useLayoutMode();
-// Apps mode users land here as their Dashboard surface. The apps shell is
-// applied by the global apps-layout middleware (setPageLayout('apps')), so
-// `/` shares the SAME persistent layout instance as every /apps/* route —
-// page transitions fire when navigating here. Classic mode keeps 'default'.
+// This is the Dashboard surface. The apps shell is applied by the global
+// apps-layout middleware (setPageLayout('apps')), so `/` shares the SAME
+// persistent layout instance as every /apps/* route — page transitions fire
+// when navigating here.
 const { isAppsMode } = useAppsMode();
 
 // ── Widget gating (legacy hat hooks; useHatLayout is now a no-op shim) ──
@@ -383,10 +381,7 @@ watch(activeTab, (t) => {
 </script>
 
 <template>
-	<!-- Focus mode: streamlined Spark/Superhuman-style inbox -->
-	<LayoutFocusInbox v-if="currentMode === 'focus'" />
-
-	<div v-else class="min-h-screen t-bg t-text">
+	<div class="min-h-screen t-bg t-text">
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
 			<!-- Apps Layout per-app header — shows the dashboard accent

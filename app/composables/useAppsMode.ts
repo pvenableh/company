@@ -1,27 +1,19 @@
 /**
- * Apps Layout — per-user shell selector.
+ * Apps Layout — the app's only shell (the classic layout has been removed).
  *
- * Mirrors `useLayoutMode`'s shape but persists to the Directus user row
- * (`directus_users.layout_mode` + `app_rail_position`), not localStorage.
- *
- *   - 'classic' → default.vue + sidebar (legacy behaviour)
- *   - 'apps'    → apps.vue + AppRail + per-app shell
- *
- * Pages opt into the apps shell via `definePageMeta({ layout: 'apps' })`.
- *
- * State strategy: module-level refs are the client-side source of truth
- * to keep the toggle reactive. The session-cookie user payload doesn't
- * include these new fields (only id/email/name/avatar/role), so we
- * hydrate once from /api/directus/users/me on first read.
+ * `mode`/`isAppsMode` are retained as constants (`'apps'` / `true`) so the ~30
+ * existing consumers don't need to churn; their classic branches are now dead
+ * but harmless. `setMode` is a no-op stub kept for API compatibility. The live
+ * concern here is rail state (`app_rail_position` on the Directus user row +
+ * label visibility), which is independent of the classic/apps split and stays.
  *
  * Small + medium screens (< lg, 1024px) force `railPosition = 'bottom'`
- * regardless of stored preference, so users always have thumb-reachable
- * nav on phones and tablets. The stored value is preserved and re-engages
- * on wider viewports.
+ * regardless of stored preference, so users always have thumb-reachable nav on
+ * phones and tablets. The stored value is preserved for a future re-enable.
  */
 import { getCurrentInstance, onMounted, shallowRef, type Ref } from 'vue';
 
-export type AppsLayoutMode = 'classic' | 'apps';
+export type AppsLayoutMode = 'apps';
 export type RailPosition = 'left' | 'top' | 'right' | 'bottom';
 
 const RAIL_POSITIONS: RailPosition[] = ['left', 'top', 'right', 'bottom'];
@@ -34,7 +26,6 @@ function normalizePosition(raw: unknown): RailPosition {
 	return raw && RAIL_POSITIONS.includes(raw as RailPosition) ? (raw as RailPosition) : 'left';
 }
 
-const localMode = ref<AppsLayoutMode | null>(null);
 const localRailPosition = ref<RailPosition | null>(null);
 let hydrationPromise: Promise<void> | null = null;
 
@@ -59,22 +50,18 @@ function ensureMqlListener() {
 	});
 }
 
+// The session-cookie user payload doesn't include `app_rail_position`, so
+// hydrate it once from /api/directus/users/me on first read.
 async function hydrateFromServer() {
 	if (hydrationPromise) return hydrationPromise;
 	hydrationPromise = (async () => {
 		try {
 			const me = (await $fetch('/api/directus/users/me', {
 				method: 'GET',
-				params: { fields: 'layout_mode,app_rail_position' },
+				params: { fields: 'app_rail_position' },
 			})) as Record<string, any>;
-			const m = me?.layout_mode;
-			// Default is 'apps' — only an explicit 'classic' stored on the
-			// user opts out. Existing users with null/undefined flip into
-			// the new shell; they can toggle back via /account?section=appearance.
-			localMode.value = m === 'classic' ? 'classic' : 'apps';
 			localRailPosition.value = normalizePosition(me?.app_rail_position);
 		} catch {
-			localMode.value = 'apps';
 			localRailPosition.value = 'left';
 		}
 	})();
@@ -86,7 +73,7 @@ export function useAppsMode() {
 	const { updateMe } = useDirectusUsers();
 
 	// Start hydration on first call (client-side only — SSR uses fallback defaults).
-	if (import.meta.client && localMode.value === null && localRailPosition.value === null) {
+	if (import.meta.client && localRailPosition.value === null) {
 		hydrateFromServer();
 	}
 
@@ -102,13 +89,9 @@ export function useAppsMode() {
 		});
 	}
 
-	const mode = computed<AppsLayoutMode>(() => {
-		if (localMode.value !== null) return localMode.value;
-		const raw = (user.value as any)?.layout_mode;
-		return raw === 'classic' ? 'classic' : 'apps';
-	});
-
-	const isAppsMode = computed(() => mode.value === 'apps');
+	// Classic layout is gone — the app is always the apps shell.
+	const mode = computed<AppsLayoutMode>(() => 'apps');
+	const isAppsMode = computed(() => true);
 
 	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
@@ -122,20 +105,9 @@ export function useAppsMode() {
 	// re-enable, but is intentionally NOT consulted for the live position.
 	const railPosition = computed<RailPosition>(() => 'bottom');
 
-	async function setMode(next: AppsLayoutMode): Promise<void> {
-		if (mode.value === next) return;
-		// Flip the local override immediately so the UI reacts even if the
-		// server-side save fails (e.g. demo accounts where `layout_mode`
-		// isn't writable). The user keeps the chosen layout for the
-		// session; persistence is best-effort.
-		localMode.value = next;
-		try {
-			await updateMe({ layout_mode: next });
-		} catch (err) {
-			console.warn('[useAppsMode] layout_mode persist failed; keeping local override', err);
-			throw err;
-		}
-	}
+	// No-op: the classic/apps toggle was removed with the classic layout. Kept
+	// for API compatibility so any lingering caller resolves cleanly.
+	async function setMode(_next: AppsLayoutMode): Promise<void> {}
 
 	async function setRailPosition(next: RailPosition): Promise<void> {
 		if (!RAIL_POSITIONS.includes(next)) return;

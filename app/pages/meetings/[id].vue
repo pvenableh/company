@@ -7,20 +7,15 @@
   slide-over via `useAppSlideOver('work-meeting').open(id)`.
 -->
 <script setup>
-definePageMeta({ layout: false, middleware: ['auth'] });
+definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Meeting recap | Earnest' });
-
-const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 const route = useRoute();
 const meetingId = computed(() => String(route.params.id));
 </script>
 
 <template>
-  <NuxtLayout :name="layout">
-    <LayoutPageContainer>
-      <AppsWorkMeetingWorkspace :meeting-id="meetingId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsWorkMeetingWorkspace :meeting-id="meetingId" />
+  </LayoutPageContainer>
 </template>
