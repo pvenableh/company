@@ -240,6 +240,68 @@ watch(
 );
 onUnmounted(() => clearEntity());
 
+/* ---------------------------------------------------------------- Search (D) */
+// The roster search box does double duty: it filters channels by name (client-
+// side, via channelQuery above) AND searches message *content* across the
+// caller's org channels through /api/messages/search.
+const messageResults = ref([]);
+const searching = ref(false);
+const stripHtml = (html) => (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+let searchDebounce = null;
+watch(channelQuery, (q) => {
+	clearTimeout(searchDebounce);
+	const term = (q || '').trim();
+	if (term.length < 2) {
+		messageResults.value = [];
+		searching.value = false;
+		return;
+	}
+	searching.value = true;
+	searchDebounce = setTimeout(async () => {
+		try {
+			const res = await $fetch('/api/messages/search', { params: { q: term, limit: 20 } });
+			messageResults.value = res?.items || [];
+		} catch {
+			messageResults.value = [];
+		} finally {
+			searching.value = false;
+		}
+	}, 300);
+});
+const isSearching = computed(() => channelQuery.value.trim().length >= 2);
+
+const goToResult = (r) => {
+	const name = r?.channel?.name;
+	if (!name) return;
+	navigateTo(`${channelHref(name)}?m=${r.id}`);
+};
+
+// Jump-to-message: a ?m=<id> query scrolls to + briefly highlights that message
+// once it's actually rendered (messages load async on a fresh channel open, so
+// we wait for the target to appear rather than firing on a fixed timer).
+const highlightId = ref(null);
+let highlightClearTimer = null;
+watch(
+	() => route.query.m,
+	(m) => {
+		highlightId.value = m ? String(m) : null;
+	},
+	{ immediate: true },
+);
+watch(
+	[highlightId, orderedMessages],
+	() => {
+		const id = highlightId.value;
+		if (!id || !orderedMessages.value.some((msg) => msg.id === id)) return;
+		nextTick(() => document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+		clearTimeout(highlightClearTimer);
+		highlightClearTimer = setTimeout(() => {
+			if (highlightId.value === id) highlightId.value = null;
+		}, 2800);
+	},
+	{ immediate: true },
+);
+
 /* ------------------------------------------------------------------ Compose */
 const newMessage = ref('');
 const sending = ref(false);
@@ -381,7 +443,7 @@ const createChannel = async () => {
 					<input
 						v-model="channelQuery"
 						type="text"
-						placeholder="Filter channels"
+						placeholder="Search channels & messages"
 						class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
 					>
 				</div>
@@ -474,13 +536,34 @@ const createChannel = async () => {
 						</template>
 					</div>
 				</template>
-				<div v-else class="flex flex-col items-center justify-center text-center py-12 px-4">
+				<div v-else-if="!isSearching" class="flex flex-col items-center justify-center text-center py-12 px-4">
 					<Icon name="lucide:hash" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 					<p class="text-sm text-muted-foreground">No channels yet</p>
 					<Button v-if="isAdmin" size="sm" variant="outline" class="mt-3 gap-1.5" @click="showCreate = true">
 						<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 						New Channel
 					</Button>
+				</div>
+
+				<!-- Message content search results (D) -->
+				<div v-if="!channelsLoading && isSearching" class="mt-2">
+					<p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Messages</p>
+					<div v-if="searching && !messageResults.length" class="px-3 py-2 text-xs text-muted-foreground/60">Searching…</div>
+					<p v-else-if="!messageResults.length" class="px-3 py-2 text-xs text-muted-foreground/60">No messages found.</p>
+					<button
+						v-for="r in messageResults"
+						:key="r.id"
+						class="w-full text-left px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors"
+						@click="goToResult(r)"
+					>
+						<div class="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+							<Icon name="lucide:hash" class="w-3 h-3 shrink-0" />
+							<span class="font-medium truncate">{{ cleanName(r.channel?.name) }}</span>
+							<span v-if="r.user_created?.first_name" class="text-muted-foreground/40">·</span>
+							<span class="shrink-0 truncate">{{ r.user_created?.first_name }}</span>
+						</div>
+						<p class="text-xs text-foreground/80 line-clamp-2 mt-0.5">{{ stripHtml(r.text) }}</p>
+					</button>
 				</div>
 			</div>
 		</aside>
@@ -539,7 +622,13 @@ const createChannel = async () => {
 								<span class="text-[10px] font-semibold uppercase tracking-wider text-destructive shrink-0">New</span>
 								<div class="flex-1 h-px bg-destructive/40" />
 							</div>
-							<ChannelsMessage :message="message" />
+							<div
+								:id="`msg-${message.id}`"
+								class="rounded-lg transition-shadow"
+								:class="highlightId === message.id ? 'ring-2 ring-primary/50 bg-primary/5' : ''"
+							>
+								<ChannelsMessage :message="message" />
+							</div>
 						</template>
 					</div>
 					<div v-else class="flex flex-col items-center justify-center h-full text-center">
