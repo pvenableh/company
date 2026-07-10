@@ -37,6 +37,7 @@ export type AppId =
 	| 'dashboard'
 	| 'clients'
 	| 'work'
+	| 'channels'
 	| 'money'
 	| 'marketing'
 	| 'director'
@@ -95,6 +96,9 @@ const APP_META: Record<AppId, AppMeta> = {
 	clients:      { id: 'clients',      name: 'People',       shortName: 'People',  icon: 'lucide:users',               to: '/apps/clients' },
 	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
 		notificationCategories: ['tickets', 'tasks', 'projects'] },
+	// Comms hub. Unread badge is driven by channel_members read-state
+	// (useChannelUnread), wired in AppRail directly — not via notificationCategories.
+	channels:     { id: 'channels',     name: 'Channels',     shortName: 'Chat',    icon: 'lucide:messages-square',     to: '/apps/channels' },
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
 	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'lucide:megaphone',           to: '/apps/marketing' },
@@ -493,7 +497,7 @@ export function resolvePaletteId(raw: unknown): AppPaletteId {
 	return (APP_PALETTE_IDS as readonly string[]).includes(raw) ? (raw as AppPaletteId) : DEFAULT_APP_PALETTE;
 }
 
-export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'money', 'marketing'];
+export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'channels', 'money', 'marketing'];
 export const APP_FOOTER_ORDER: AppId[] = ['organization', 'account'];
 /**
  * Main + footer apps concatenated in visual order — this is the index
@@ -834,6 +838,7 @@ export function appIdForPath(path: string): AppId | null {
 	const CLIENT_PREFIXES = ['clients', 'contacts', 'leads', 'carddesk'];
 	if (CLIENT_PREFIXES.includes(seg[0]!)) return 'clients';
 
+	if (seg[0] === 'channels') return 'channels';
 	if (seg[0] === 'marketing' || seg[0] === 'social') return 'marketing';
 	if (seg[0] === 'organization' || seg[0] === 'team') return 'organization';
 
