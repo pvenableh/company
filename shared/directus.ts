@@ -1464,6 +1464,8 @@ export interface Channel {
 	ticket?: Ticket | string | null;
 	/** @description The client this channel belongs to */
 	client?: Client | string | null;
+	/** @description One-level folder for org-level channels (Announcements, Eng, …). Ignored for client/project channels. */
+	category?: string | null;
 	messages?: Message[] | string[];
 }
 

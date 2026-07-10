@@ -19,7 +19,7 @@ definePageMeta({ middleware: ['auth'], layout: 'apps' });
 
 const route = useRoute();
 const { selectedOrg, organizationOptions } = useOrganization();
-const { selectedClient } = useClients();
+const { selectedClient, clientList } = useClients();
 const { canAccess } = useOrgRole();
 const { setEntity, clearEntity, sidebarOpen } = useEntityPageContext();
 const toast = useToast();
@@ -38,7 +38,9 @@ useHead({ title: computed(() => (activeName.value ? `#${displayName.value} | Cha
 
 /* ---------------------------------------------------------------- Left pane */
 const listFilter = computed(() => {
-	const filters = [{ status: { _in: ['published', 'draft'] } }];
+	// Include archived so the roster can show a collapsed "Archived" section;
+	// archived channels are split out client-side (never grouped with active).
+	const filters = [{ status: { _in: ['published', 'draft', 'archived'] } }];
 	if (selectedOrg.value) {
 		filters.push({ organization: { _eq: selectedOrg.value } });
 	} else if (organizationOptions.value?.length) {
@@ -58,19 +60,66 @@ const {
 	updateFilter: updateChannelsFilter,
 } = useRealtimeSubscription(
 	'channels',
-	['id', 'name', 'organization.id', 'project.id', 'project.title', 'ticket.id', 'ticket.title', 'client', 'messages.id', 'messages.status'],
+	['id', 'name', 'status', 'category', 'date_created', 'organization.id', 'project.id', 'project.title', 'ticket.id', 'ticket.title', 'client', 'messages.id', 'messages.status', 'messages.date_created'],
 	listFilter.value,
 	'name',
 );
 watch(listFilter, (f) => updateChannelsFilter(f));
 
 const channelQuery = ref('');
-const sortedChannels = computed(() => {
-	const list = (channels.value || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+const showArchived = ref(false);
+
+const clientNameById = (id) => (clientList.value || []).find((c) => c.id === id)?.name || 'Client';
+
+// Recency = newest published message; fall back to the channel's own creation
+// date so brand-new empty channels still sort sensibly.
+const lastActivity = (ch) => {
+	const dates = (ch.messages || []).filter((m) => m.status === 'published' && m.date_created).map((m) => +new Date(m.date_created));
+	if (dates.length) return Math.max(...dates);
+	return ch.date_created ? +new Date(ch.date_created) : 0;
+};
+const publishedCount = (ch) => (ch.messages || []).filter((m) => m.status === 'published').length;
+
+const visibleChannels = computed(() => {
 	const q = channelQuery.value.trim().toLowerCase();
-	const filtered = q ? list.filter((c) => c.name.toLowerCase().includes(q)) : list;
-	return filtered.map((c) => ({ ...c, messageCount: c.messages?.filter((m) => m.status === 'published').length || 0 }));
+	return (channels.value || []).filter((c) => c.name && (!q || c.name.toLowerCase().includes(q)));
 });
+
+// Group active channels: org-level (category / General) first, then
+// client/project groups. Channels sort by recent activity within each group,
+// and groups by their most-recent channel.
+const groupedChannels = computed(() => {
+	const groups = new Map();
+	for (const ch of visibleChannels.value) {
+		if (ch.status === 'archived') continue;
+		let key, label, tier;
+		if (ch.client) {
+			key = `client:${ch.client}`; label = clientNameById(ch.client); tier = 1;
+		} else if (ch.project?.id) {
+			key = `project:${ch.project.id}`; label = ch.project.title || 'Project'; tier = 1;
+		} else {
+			label = ch.category || 'General'; key = `cat:${label}`; tier = 0;
+		}
+		if (!groups.has(key)) groups.set(key, { key, label, tier, recency: 0, channels: [] });
+		const g = groups.get(key);
+		const act = lastActivity(ch);
+		g.channels.push({ ...ch, messageCount: publishedCount(ch), _act: act });
+		g.recency = Math.max(g.recency, act);
+	}
+	const arr = [...groups.values()];
+	for (const g of arr) g.channels.sort((a, b) => b._act - a._act);
+	arr.sort((a, b) => a.tier - b.tier || b.recency - a.recency || a.label.localeCompare(b.label));
+	return arr;
+});
+
+const archivedChannels = computed(() =>
+	visibleChannels.value
+		.filter((c) => c.status === 'archived')
+		.map((c) => ({ ...c, messageCount: publishedCount(c) }))
+		.sort((a, b) => a.name.localeCompare(b.name)),
+);
+
+const hasAnyChannels = computed(() => groupedChannels.value.length > 0 || archivedChannels.value.length > 0);
 
 /* ------------------------------------------------ Active channel + messages */
 const activeChannelFilter = computed(() => (activeName.value ? { name: { _eq: activeName.value } } : { id: { _null: true } }));
@@ -165,6 +214,27 @@ const newChannelName = ref('');
 const creating = ref(false);
 const channelItems = useDirectusItems('channels');
 
+const archiveChannel = async (ch) => {
+	try {
+		await channelItems.update(ch.id, { status: 'archived' });
+		toast.add({ title: `Archived #${cleanName(ch.name)}`, color: 'green' });
+		if (ch.name === activeName.value) navigateTo('/apps/channels');
+	} catch (err) {
+		console.error('Error archiving channel:', err);
+		toast.add({ title: 'Failed to archive channel', color: 'red' });
+	}
+};
+
+const restoreChannel = async (ch) => {
+	try {
+		await channelItems.update(ch.id, { status: 'published' });
+		toast.add({ title: `Restored #${cleanName(ch.name)}`, color: 'green' });
+	} catch (err) {
+		console.error('Error restoring channel:', err);
+		toast.add({ title: 'Failed to restore channel', color: 'red' });
+	}
+};
+
 const createChannel = async () => {
 	if (!newChannelName.value || newChannelName.value.length < 3) return;
 	creating.value = true;
@@ -215,22 +285,65 @@ const createChannel = async () => {
 				<div v-if="channelsLoading" class="space-y-1 px-2 pt-1">
 					<div v-for="n in 6" :key="n" class="h-9 rounded-lg animate-pulse bg-muted/20" />
 				</div>
-				<template v-else-if="sortedChannels.length">
-					<NuxtLink
-						v-for="channel in sortedChannels"
-						:key="channel.id"
-						:to="channelHref(channel.name)"
-						class="group flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
-						:class="channel.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground'"
-					>
-						<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-						<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(channel.name) }}</span>
-						<span
-							v-if="channel.messageCount"
-							class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-							:class="channel.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
-						>{{ channel.messageCount }}</span>
-					</NuxtLink>
+				<template v-else-if="hasAnyChannels">
+					<!-- Active, grouped by folder (category / General, then client/project) -->
+					<div v-for="group in groupedChannels" :key="group.key" class="mb-3">
+						<p class="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/60 truncate">{{ group.label }}</p>
+						<div v-for="channel in group.channels" :key="channel.id" class="group/row relative">
+							<NuxtLink
+								:to="channelHref(channel.name)"
+								class="flex items-center gap-2 pl-3 pr-8 py-2 rounded-lg transition-colors"
+								:class="channel.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground'"
+							>
+								<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+								<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(channel.name) }}</span>
+								<span
+									v-if="channel.messageCount"
+									class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 group-hover/row:opacity-0 transition-opacity"
+									:class="channel.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
+								>{{ channel.messageCount }}</span>
+							</NuxtLink>
+							<button
+								v-if="isAdmin"
+								class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 opacity-0 group-hover/row:opacity-100 hover:bg-muted/60 hover:text-foreground transition-all"
+								title="Archive channel"
+								@click.prevent.stop="archiveChannel(channel)"
+							>
+								<Icon name="lucide:archive" class="w-3.5 h-3.5" />
+							</button>
+						</div>
+					</div>
+
+					<!-- Archived (collapsed) -->
+					<div v-if="archivedChannels.length" class="mt-1">
+						<button
+							class="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+							@click="showArchived = !showArchived"
+						>
+							<Icon :name="showArchived ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3 shrink-0" />
+							Archived ({{ archivedChannels.length }})
+						</button>
+						<template v-if="showArchived">
+							<div v-for="channel in archivedChannels" :key="channel.id" class="group/row relative">
+								<NuxtLink
+									:to="channelHref(channel.name)"
+									class="flex items-center gap-2 pl-3 pr-8 py-2 rounded-lg transition-colors opacity-60 hover:opacity-100"
+									:class="channel.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground'"
+								>
+									<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+									<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(channel.name) }}</span>
+								</NuxtLink>
+								<button
+									v-if="isAdmin"
+									class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 opacity-0 group-hover/row:opacity-100 hover:bg-muted/60 hover:text-foreground transition-all"
+									title="Restore channel"
+									@click.prevent.stop="restoreChannel(channel)"
+								>
+									<Icon name="lucide:archive-restore" class="w-3.5 h-3.5" />
+								</button>
+							</div>
+						</template>
+					</div>
 				</template>
 				<div v-else class="flex flex-col items-center justify-center text-center py-12 px-4">
 					<Icon name="lucide:hash" class="w-8 h-8 text-muted-foreground/30 mb-2" />
