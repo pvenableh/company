@@ -913,8 +913,34 @@ onMounted(async () => {
 					</div>
 				</div>
 
-				<!-- Conversion Tracking (when no contact selected) -->
+				<!-- Networking at a glance (when no contact selected) — lead with the
+				     actionable follow-up list, then the conversion metric, then activity. -->
 				<div v-else class="space-y-4">
+					<!-- Needs Follow-up — the "who to reconnect with" list leads the panel. -->
+					<div v-if="stats.needsFollowUp.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+							<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
+							Needs Follow-up
+						</h3>
+						<div class="space-y-2">
+							<button
+								v-for="contact in stats.needsFollowUp.slice(0, 6)"
+								:key="contact.id"
+								class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+								@click="openContact(contact)"
+							>
+								<div class="flex items-center gap-2 min-w-0">
+									<span
+										class="w-2 h-2 rounded-full flex-shrink-0"
+										:class="contact.rating === 'hot' ? 'bg-destructive' : 'bg-warning'"
+									/>
+									<span class="text-xs font-medium truncate">{{ contact.name }}</span>
+								</div>
+								<span class="text-[10px] text-gray-400 whitespace-nowrap ml-2">{{ contact.daysSinceContact }}d ago</span>
+							</button>
+						</div>
+					</div>
+
 					<!-- Conversion Stats -->
 					<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -942,31 +968,6 @@ onMounted(async () => {
 									:style="{ width: stats.totalContacts > 0 ? `${Math.round((stats.convertedClients / stats.totalContacts) * 100)}%` : '0%' }"
 								/>
 							</div>
-						</div>
-					</div>
-
-					<!-- Needs Follow-up -->
-					<div v-if="stats.needsFollowUp.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-							<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
-							Needs Follow-up
-						</h3>
-						<div class="space-y-2">
-							<button
-								v-for="contact in stats.needsFollowUp.slice(0, 6)"
-								:key="contact.id"
-								class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
-								@click="openContact(contact)"
-							>
-								<div class="flex items-center gap-2 min-w-0">
-									<span
-										class="w-2 h-2 rounded-full flex-shrink-0"
-										:class="contact.rating === 'hot' ? 'bg-destructive' : 'bg-warning'"
-									/>
-									<span class="text-xs font-medium truncate">{{ contact.name }}</span>
-								</div>
-								<span class="text-[10px] text-gray-400 whitespace-nowrap ml-2">{{ contact.daysSinceContact }}d ago</span>
-							</button>
 						</div>
 					</div>
 
