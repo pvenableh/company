@@ -33,7 +33,9 @@ export default defineEventHandler(async (event) => {
     }),
   ) as Array<{ channel: string; last_read_at: string | null; muted: boolean }>;
 
-  const channels: Record<string, number> = {};
+  // Per channel: { count, lastReadAt } — lastReadAt anchors the message pane's
+  // "new messages" divider; count drives the roster + AppRail badges.
+  const channels: Record<string, { count: number; lastReadAt: string | null }> = {};
   let total = 0;
 
   await Promise.all(
@@ -53,7 +55,7 @@ export default defineEventHandler(async (event) => {
       ) as Array<{ count: string | number }>;
 
       const count = Number(res?.[0]?.count ?? 0) || 0;
-      channels[m.channel] = count;
+      channels[m.channel] = { count, lastReadAt: m.last_read_at };
       if (!m.muted) total += count;
     }),
   );

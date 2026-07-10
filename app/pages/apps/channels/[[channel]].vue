@@ -186,6 +186,50 @@ const topLevelMessages = computed(() => {
 	return messages.value.filter((m) => !m.parent_id || !ids.has(m.parent_id));
 });
 
+// Render oldest → newest (subscription is -date_created) so the pane reads
+// naturally and the "new messages" divider anchors correctly.
+const orderedMessages = computed(() =>
+	[...topLevelMessages.value].sort((a, b) => new Date(a.date_created) - new Date(b.date_created)),
+);
+const newestMessageId = computed(() => orderedMessages.value[orderedMessages.value.length - 1]?.id || null);
+
+/* ------------------------------------------------------- Unread / read-state */
+const unread = useChannelUnread();
+const unreadCountFor = (id) => unread.countFor(id);
+// Divider anchor: the read cursor captured when the channel opened (before we
+// mark it read), so the "New" line stays put while you read.
+const dividerAt = ref(null);
+const firstUnreadId = computed(() => {
+	if (!dividerAt.value) return null;
+	const cut = +new Date(dividerAt.value);
+	return orderedMessages.value.find((m) => +new Date(m.date_created) > cut)?.id || null;
+});
+
+async function openActiveChannel(id) {
+	if (!id) {
+		dividerAt.value = null;
+		return;
+	}
+	await unread.refresh(); // capture the true pre-read cursor
+	dividerAt.value = unread.lastReadAtFor(id);
+	unread.markRead(id, newestMessageId.value);
+}
+watch(activeChannelId, (id) => openActiveChannel(id));
+// Keep the open channel read as new messages arrive; refresh badges whenever
+// activity changes anywhere (the roster subscription reloads per-channel msgs).
+watch(newestMessageId, (id) => {
+	if (id && activeChannelId.value) unread.markRead(activeChannelId.value, id);
+});
+let unreadDebounce = null;
+watch(channels, () => {
+	clearTimeout(unreadDebounce);
+	unreadDebounce = setTimeout(() => unread.refresh(), 500);
+});
+onMounted(() => {
+	unread.refresh();
+	if (activeChannelId.value) openActiveChannel(activeChannelId.value);
+});
+
 // Keep the Ask-Earnest sidebar anchored to the open channel.
 watch(
 	[activeChannelId, activeName],
@@ -367,12 +411,14 @@ const createChannel = async () => {
 									]"
 								>
 									<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-									<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(row.ch.name) }}</span>
 									<span
-										v-if="row.ch.messageCount"
-										class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 group-hover/row:opacity-0 transition-opacity"
-										:class="row.ch.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
-									>{{ row.ch.messageCount }}</span>
+										class="flex-1 min-w-0 text-sm truncate"
+										:class="unreadCountFor(row.ch.id) && row.ch.name !== activeName ? 'font-semibold text-foreground' : 'font-medium'"
+									>{{ cleanName(row.ch.name) }}</span>
+									<span
+										v-if="unreadCountFor(row.ch.id) && row.ch.name !== activeName"
+										class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 bg-primary text-primary-foreground group-hover/row:opacity-0 transition-opacity"
+									>{{ unreadCountFor(row.ch.id) }}</span>
 								</NuxtLink>
 								<div
 									v-if="isAdmin"
@@ -486,8 +532,15 @@ const createChannel = async () => {
 							</div>
 						</div>
 					</div>
-					<div v-else-if="topLevelMessages.length" class="space-y-3">
-						<ChannelsMessage v-for="message in topLevelMessages" :key="message.id" :message="message" />
+					<div v-else-if="orderedMessages.length" class="space-y-3">
+						<template v-for="message in orderedMessages" :key="message.id">
+							<div v-if="message.id === firstUnreadId" class="flex items-center gap-2 py-1">
+								<div class="flex-1 h-px bg-destructive/40" />
+								<span class="text-[10px] font-semibold uppercase tracking-wider text-destructive shrink-0">New</span>
+								<div class="flex-1 h-px bg-destructive/40" />
+							</div>
+							<ChannelsMessage :message="message" />
+						</template>
 					</div>
 					<div v-else class="flex flex-col items-center justify-center h-full text-center">
 						<div class="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">

@@ -35,7 +35,20 @@ const { railPosition, railShowLabels } = useAppsMode();
 const { accents, chipMode } = useAppAccent();
 const { countFor } = useUnreadByCategory();
 
+// Channels unread is read-state driven (channel_members), not notification
+// categories — keep it fresh here so the rail badge updates app-wide.
+const channelUnread = useChannelUnread();
+let channelUnreadTimer: ReturnType<typeof setInterval> | null = null;
+onMounted(() => {
+	channelUnread.refresh();
+	channelUnreadTimer = setInterval(() => channelUnread.refresh(), 45_000);
+});
+onBeforeUnmount(() => {
+	if (channelUnreadTimer) clearInterval(channelUnreadTimer);
+});
+
 function badgeFor(app: AppAccent): number {
+	if (app.id === 'channels') return channelUnread.total.value;
 	if (!app.notificationCategories?.length) return 0;
 	return app.notificationCategories.reduce((sum, cat) => sum + countFor(cat), 0);
 }
