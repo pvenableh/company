@@ -22,6 +22,7 @@
 					<UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />
 					{{ metrics.failedPosts }} failed
 				</span>
+				<UiViewLink to="/apps/marketing" size="sm">View marketing</UiViewLink>
 			</div>
 		</div>
 

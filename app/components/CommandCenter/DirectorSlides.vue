@@ -637,6 +637,25 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
   flex: 1;
   min-height: 0;
   justify-content: center;
+  /* Cap the reading measure so text doesn't stretch edge-to-edge on a large
+     monitor — fullscreen escapes the max-w-3xl ancestor that keeps the embedded
+     deck comfortable, so we re-establish a centred column here. */
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
+}
+/* On large displays give the deck a touch more room and scale the long-form
+   body up so it reads well from across the room. */
+@media (min-width: 1536px) {
+  .director-deck:fullscreen .director-deck__stage,
+  .director-deck--faux-full .director-deck__stage {
+    max-width: 72rem;
+  }
+  .director-deck:fullscreen .director-deck__scroll,
+  .director-deck--faux-full .director-deck__scroll {
+    font-size: 1.375rem;
+    line-height: 1.65;
+  }
 }
 .director-deck:fullscreen .director-deck__scroll,
 .director-deck--faux-full .director-deck__scroll {

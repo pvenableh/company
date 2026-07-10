@@ -8,6 +8,8 @@
 			/>
 
 			<div class="account-page__panel">
+				<Transition :name="floorTransition" mode="out-in">
+				<div :key="section">
 				<section v-if="section === 'profile'">
 					<AccountProfile />
 				</section>
@@ -315,6 +317,8 @@
 						while, “Check now” confirms whether a newer release is live.
 					</p>
 				</section>
+				</div>
+				</Transition>
 			</div>
 		</LayoutPageContainer>
 	</div>
@@ -357,6 +361,9 @@ const initialSection: SectionKey = (() => {
 		: 'profile';
 })();
 const section = ref<SectionKey>(initialSection);
+
+// Interior section content slides left/right to match the main app transition.
+const floorTransition = useDirectionalFloorTransition(SECTION_KEYS, section);
 
 // Arcade / Earnest Score explainer — auto-opens on first visit to the score
 // section (see ArcadeIntroModal), re-openable from the "i" badge in the heading.

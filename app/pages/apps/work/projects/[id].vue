@@ -31,7 +31,7 @@ const PROJECT_STATUSES = [
 
 const initialTab: ProjectTabKey = (() => {
   const v = route.query.tab;
-  return typeof v === 'string' && (VALID_TABS as string[]).includes(v) ? (v as ProjectTabKey) : 'activity';
+  return typeof v === 'string' && (VALID_TABS as string[]).includes(v) ? (v as ProjectTabKey) : 'overview';
 })();
 
 const project = ref<any | null>(null);
@@ -51,7 +51,7 @@ function onWorkspaceLoaded(p: any) {
 }
 
 function onTabChange(next: ProjectTabKey) {
-  router.replace({ query: { ...route.query, tab: next === 'activity' ? undefined : next } });
+  router.replace({ query: { ...route.query, tab: next === 'overview' ? undefined : next } });
 }
 
 function onProjectUpdated() {

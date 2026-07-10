@@ -63,6 +63,9 @@ const initialFloor: FloorKey = (() => {
 })();
 const floor = ref<FloorKey>(initialFloor);
 
+// Interior floor content slides left/right to match the main app transition.
+const floorTransition = useDirectionalFloorTransition(FLOOR_KEYS, floor);
+
 watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'pulse' ? undefined : next } });
 });
@@ -856,6 +859,8 @@ const scopeLabel = computed(() => {
       <AppIntroCard app-id="marketing" />
       <GoalsRelatedGoalsCard :categories="['growth']" title="Goals in this lens" />
 
+      <Transition :name="floorTransition" mode="out-in">
+      <div :key="floor">
       <!-- ── Pulse floor ──────────────────────────────────────────────── -->
       <template v-if="floor === 'pulse'">
         <div v-if="pulseLoading && !pulseHealth" class="flex items-center justify-center py-24 gap-3">
@@ -1413,7 +1418,7 @@ const scopeLabel = computed(() => {
           </div>
 
           <!-- 4-stat KPI strip -->
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <div class="grid grid-cols-2 gap-3 mb-5">
             <div class="ios-card p-4 flex items-center gap-3">
               <div class="w-10 h-10 rounded-xl bg-status-scheduled/10 flex items-center justify-center shrink-0">
                 <Icon name="lucide:calendar-clock" class="w-5 h-5 text-status-scheduled" />
@@ -1430,24 +1435,6 @@ const scopeLabel = computed(() => {
               <div>
                 <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Published Today</p>
                 <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.publishedToday }}</p>
-              </div>
-            </div>
-            <div class="ios-card p-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-tag-2/10 flex items-center justify-center shrink-0">
-                <Icon name="lucide:trending-up" class="w-5 h-5 text-tag-2" />
-              </div>
-              <div>
-                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Engagement</p>
-                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">{{ socialStats.engagementAvg }}%</p>
-              </div>
-            </div>
-            <div class="ios-card p-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-tag-1/10 flex items-center justify-center shrink-0">
-                <Icon name="lucide:users" class="w-5 h-5 text-tag-1" />
-              </div>
-              <div>
-                <p class="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Followers</p>
-                <p class="text-xl font-bold text-foreground leading-none mt-1.5 tabular-nums">+{{ socialStats.followerGrowth }}</p>
               </div>
             </div>
           </div>
@@ -1663,6 +1650,8 @@ const scopeLabel = computed(() => {
           </div>
         </template>
       </template>
+      </div>
+      </Transition>
     </LayoutPageContainer>
 
     <!-- New mailing list modal (Audience floor) -->

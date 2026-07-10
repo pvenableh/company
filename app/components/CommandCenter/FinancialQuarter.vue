@@ -352,6 +352,7 @@ onMounted(() => {
 				<h3 class="text-sm font-semibold uppercase tracking-wide">Financial Analysis</h3>
 			</div>
 			<div class="flex items-center gap-2">
+				<UiViewLink to="/apps/money" size="sm">View money</UiViewLink>
 				<button
 					@click="showHelp = !showHelp"
 					class="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -430,30 +431,6 @@ onMounted(() => {
 		</div>
 
 		<div v-else class="p-4">
-			<!-- Yearly Summary (full width) -->
-			<div class="grid grid-cols-5 gap-3 mb-6 text-center">
-				<div class="bg-muted/50 rounded-lg p-3">
-					<p class="text-lg font-bold text-foreground">{{ formatCurrency(yearlyActual) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Total Billed</p>
-				</div>
-				<div class="bg-success/10 dark:bg-success/20 rounded-lg p-3">
-					<p class="text-lg font-bold text-success">{{ formatCurrency(yearlyPaid) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Collected</p>
-				</div>
-				<div class="bg-warning/10 dark:bg-warning/20 rounded-lg p-3">
-					<p class="text-lg font-bold text-warning">{{ formatCurrency(yearlyPending) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Outstanding</p>
-				</div>
-				<div class="bg-destructive/10 dark:bg-destructive/20 rounded-lg p-3">
-					<p class="text-lg font-bold text-destructive">{{ formatCurrency(yearlyExpenses) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Expenses</p>
-				</div>
-				<div class="rounded-lg p-3" :class="yearlyNet >= 0 ? 'bg-success/10 dark:bg-success/20' : 'bg-destructive/10 dark:bg-destructive/20'">
-					<p class="text-lg font-bold" :class="yearlyNet >= 0 ? 'text-success' : 'text-destructive'">{{ formatCurrency(yearlyNet) }}</p>
-					<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Net Income</p>
-				</div>
-			</div>
-
 			<!-- Two-column layout: Chart+Projection | Quarters+Expenses -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<div>
@@ -484,25 +461,6 @@ onMounted(() => {
 				<div class="flex items-center gap-4 mt-2 justify-end">
 					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-success/60"></span><span class="text-[9px] text-muted-foreground">Income</span></div>
 					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-destructive/50"></span><span class="text-[9px] text-muted-foreground">Expenses</span></div>
-				</div>
-			</div>
-
-			<!-- Projection (current year only) -->
-			<div v-if="projection" class="mb-6 p-3 bg-info/5 rounded-lg border border-info/20">
-				<p class="text-[10px] font-semibold uppercase tracking-wider text-info mb-2">Year-End Projection</p>
-				<div class="grid grid-cols-3 gap-3 text-center">
-					<div>
-						<p class="text-sm font-bold text-success">{{ formatCurrency(projection.projectedIncome) }}</p>
-						<p class="text-[10px] text-muted-foreground">Projected Income</p>
-					</div>
-					<div>
-						<p class="text-sm font-bold text-destructive">{{ formatCurrency(projection.projectedExpenses) }}</p>
-						<p class="text-[10px] text-muted-foreground">Projected Expenses</p>
-					</div>
-					<div>
-						<p class="text-sm font-bold" :class="projection.projectedNet >= 0 ? 'text-success' : 'text-destructive'">{{ formatCurrency(projection.projectedNet) }}</p>
-						<p class="text-[10px] text-muted-foreground">Projected Net</p>
-					</div>
 				</div>
 			</div>
 
@@ -575,36 +533,6 @@ onMounted(() => {
 				</div>
 			</div>
 
-			<!-- Expense Category Breakdown -->
-			<div v-if="expenseCategories.length > 0" class="mt-6 pt-4 border-t border-border">
-				<div class="flex items-center justify-between mb-3">
-					<p class="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Expenses by Category</p>
-					<p class="text-xs font-semibold text-foreground">{{ formatCurrency(yearlyExpenses) }}</p>
-				</div>
-
-				<!-- Stacked bar -->
-				<div class="flex h-2.5 rounded-full overflow-hidden mb-4">
-					<div
-						v-for="cat in expenseCategories"
-						:key="cat.category"
-						class="transition-all"
-						:style="{ width: `${cat.percent}%`, backgroundColor: cat.color }"
-						:title="`${cat.label}: ${formatCurrency(cat.amount)}`"
-					/>
-				</div>
-
-				<!-- Category list -->
-				<div class="space-y-2">
-					<div v-for="cat in expenseCategories" :key="cat.category" class="flex items-center gap-3">
-						<span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: cat.color }" />
-						<span class="text-xs text-foreground/80 flex-1">{{ cat.label }}</span>
-						<div class="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
-							<div class="h-full rounded-full transition-all" :style="{ width: `${(cat.amount / maxCatAmount) * 100}%`, backgroundColor: cat.color }" />
-						</div>
-						<span class="text-xs font-medium text-foreground tabular-nums w-16 text-right">{{ formatCurrency(cat.amount) }}</span>
-					</div>
-				</div>
-			</div>
 			</div><!-- /right column -->
 			</div><!-- /two-column grid -->
 		</div>

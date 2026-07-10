@@ -80,7 +80,7 @@ const project = ref<any | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const activeTab = ref<ProjectTabKey>(props.initialTab || 'activity');
+const activeTab = ref<ProjectTabKey>(props.initialTab || 'overview');
 
 // ── Overview tab (inline-editable) ──────────────────────────────────────────
 // Core project fields, editable in place via <AppsInlineDetailsEditor> so a
@@ -174,6 +174,47 @@ const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
 	contacts: projectContactCount.value,
 	files: files.value.length,
 }));
+
+// Overview "at a glance" — read-first health so the landing tab leads with
+// signal (status, timeline, client, value) instead of a raw edit form. Uses
+// only fields already on the project record so it's accurate on first paint.
+const overviewGlance = computed(() => {
+	const p = (project.value || {}) as any;
+	const status = p.status === 'completed' ? 'Completed' : (p.status || '—');
+	const closed = p.status === 'completed' || p.status === 'Archived';
+	const attention: Array<{ label: string; tone?: 'warn' | 'danger' }> = [];
+
+	let timeline = 'No due date';
+	let timelineTone: 'default' | 'warn' | 'danger' = 'default';
+	if (p.due_date) {
+		const due = new Date(p.due_date); due.setHours(0, 0, 0, 0);
+		const today = new Date(); today.setHours(0, 0, 0, 0);
+		const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+		if (days < 0) {
+			timeline = `${Math.abs(days)}d overdue`;
+			if (!closed) { timelineTone = 'danger'; attention.push({ label: `Overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`, tone: 'danger' }); }
+		} else if (days === 0) {
+			timeline = 'Due today';
+			if (!closed) timelineTone = 'warn';
+		} else {
+			timeline = `${days}d left`;
+		}
+	}
+
+	const value = p.contract_value != null && p.contract_value !== ''
+		? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(p.contract_value))
+		: '—';
+
+	return {
+		metrics: [
+			{ label: 'Status', value: status },
+			{ label: 'Timeline', value: timeline, tone: timelineTone },
+			{ label: 'Client', value: p.client?.name || '—' },
+			{ label: 'Value', value },
+		],
+		attention,
+	};
+});
 
 const projectTeamMembers = computed(() => {
 	return ((project.value as any)?.assigned_to || [])
@@ -479,6 +520,7 @@ function onContactAttachedToProject() {
 // Cross-panel push for contact rows. NuxtLink would route the page; in the
 // slide-over stack we push a Contact panel instead so the user keeps their
 // project context on screen.
+const { push: pushPanel } = useAppSlideOverStack();
 const contactSlide = useAppSlideOver('contact');
 function openContactSlideOver(id: string) {
 	contactSlide.open(id);
@@ -760,6 +802,7 @@ watch(() => props.projectId, () => {
 			<div class="ios-card p-4 sm:p-6">
 				<!-- Overview — inline-editable core project fields. -->
 				<div v-if="activeTab === 'overview'">
+					<AppsAtAGlance :metrics="overviewGlance.metrics" :attention="overviewGlance.attention" />
 					<AppsInlineDetailsEditor
 						v-if="project.id"
 						collection="projects"
@@ -934,11 +977,10 @@ watch(() => props.projectId, () => {
 						No meetings linked to this project yet.
 					</div>
 					<div v-else class="space-y-2">
-						<NuxtLink
+						<button type="button" @click="pushPanel('work-meeting', m.id)"
 							v-for="m in meetings"
 							:key="m.id"
-							:to="`/meetings/${m.id}`"
-							class="ios-card block px-4 py-3 hover:bg-muted/30 transition-colors"
+							class="w-full text-left ios-card block px-4 py-3 hover:bg-muted/30 transition-colors"
 						>
 							<div class="flex items-start gap-3">
 								<div class="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
@@ -972,7 +1014,7 @@ watch(() => props.projectId, () => {
 									</div>
 								</div>
 							</div>
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -1013,11 +1055,10 @@ watch(() => props.projectId, () => {
 						No invoices on this project yet.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="pushPanel('invoice', inv.id)"
 							v-for="inv in invoices"
 							:key="inv.id"
-							:to="`/invoices/${inv.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1030,7 +1071,7 @@ watch(() => props.projectId, () => {
 								class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 capitalize bg-muted/40"
 							>{{ inv.status }}</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 

@@ -614,60 +614,10 @@ const formatCurrency = (amount) => {
 				</div>
 			</div>
 
-			<!-- AI Notices -->
-			<ClientOnly>
-				<AIProactiveNotices v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
-			</ClientOnly>
-
 			<!-- Edit Project Modal -->
 			<ClientOnly>
 				<ProjectsFormModal v-model="showEditModal" :project="project" @updated="refreshProject" @deleted="handleDeleted" />
 			</ClientOnly>
-
-			<!-- Stats Row -->
-			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-8">
-				<UiStatCard label="Tickets" :value="stats.openTickets" :detail="`${stats.ticketCount} total`" />
-
-				<div class="cg-card-compact">
-					<p class="cg-text-label mb-1">Tasks</p>
-					<p class="cg-text-stat text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
-					<div class="mt-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
-						<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
-					</div>
-				</div>
-
-				<UiStatCard label="Events" :value="stats.eventCount">
-					<template #detail>
-						<span v-if="stats.pendingApprovals > 0" class="text-warning font-medium">{{ stats.pendingApprovals }} pending</span>
-						<span v-else>phases</span>
-					</template>
-				</UiStatCard>
-
-				<ProjectsRetainerHoursCard
-					v-if="project?.billing_type === 'hourly_retainer'"
-					:project="project"
-				/>
-				<UiStatCard
-					v-else
-					label="Billed"
-					:value="formatCurrency(stats.invoiceTotal)"
-					:detail="`${formatCurrency(stats.paidTotal)} paid`"
-				/>
-
-				<div class="cg-card-compact">
-					<p class="cg-text-label mb-1">Timeline</p>
-					<p v-if="daysRemaining !== null" class="cg-text-stat text-foreground" :class="{ 'text-destructive': daysRemaining < 0 }">
-						{{ daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining }}
-					</p>
-					<p v-else class="cg-text-stat text-muted-foreground/40">—</p>
-					<p class="cg-text-child text-muted-foreground mt-0.5">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'overdue' : 'days left') : 'no date' }}</p>
-				</div>
-			</div>
-
-			<!-- Team Management -->
-			<div v-if="project?.id" class="mb-6">
-				<ProjectsTeamManager :project-id="String(project.id)" @updated="refreshProject" />
-			</div>
 
 			<!-- Tabs -->
 			<UTabs
@@ -675,6 +625,60 @@ const formatCurrency = (amount) => {
 				class="w-full"
 			>
 				<template #overview="{ item }">
+					<!-- At-a-glance context lives inside Overview so it clears away
+					     the moment you move to another tab — keeping each view focused. -->
+					<div class="space-y-6 mb-6">
+						<!-- AI Notices -->
+						<ClientOnly>
+							<AIProactiveNotices v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
+						</ClientOnly>
+
+						<!-- Stats Row -->
+						<div class="grid grid-cols-5 gap-2 md:gap-3">
+							<UiStatCard label="Tickets" :value="stats.openTickets" :detail="`${stats.ticketCount} total`" />
+
+							<div class="cg-card-compact">
+								<p class="cg-text-label mb-1">Tasks</p>
+								<p class="cg-text-stat text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
+								<div class="mt-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+									<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
+								</div>
+							</div>
+
+							<UiStatCard label="Events" :value="stats.eventCount">
+								<template #detail>
+									<span v-if="stats.pendingApprovals > 0" class="text-warning font-medium">{{ stats.pendingApprovals }} pending</span>
+									<span v-else>phases</span>
+								</template>
+							</UiStatCard>
+
+							<ProjectsRetainerHoursCard
+								v-if="project?.billing_type === 'hourly_retainer'"
+								:project="project"
+							/>
+							<UiStatCard
+								v-else
+								label="Billed"
+								:value="formatCurrency(stats.invoiceTotal)"
+								:detail="`${formatCurrency(stats.paidTotal)} paid`"
+							/>
+
+							<div class="cg-card-compact">
+								<p class="cg-text-label mb-1">Timeline</p>
+								<p v-if="daysRemaining !== null" class="cg-text-stat text-foreground" :class="{ 'text-destructive': daysRemaining < 0 }">
+									{{ daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining }}
+								</p>
+								<p v-else class="cg-text-stat text-muted-foreground/40">—</p>
+								<p class="cg-text-child text-muted-foreground mt-0.5">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'overdue' : 'days left') : 'no date' }}</p>
+							</div>
+						</div>
+
+						<!-- Team Management -->
+						<div v-if="project?.id">
+							<ProjectsTeamManager :project-id="String(project.id)" @updated="refreshProject" />
+						</div>
+					</div>
+
 					<ProjectsOverview :project="project" @eventCreated="refreshProject" />
 				</template>
 				<template #conversations="{ item }">

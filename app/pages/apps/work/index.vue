@@ -32,6 +32,14 @@ const router = useRouter();
 const route = useRoute();
 const config = useRuntimeConfig();
 
+// New Project — create inline via the shared modal so the flow stays in the
+// apps layout instead of hopping to the legacy /projects?new=1 page.
+const showNewProject = ref(false);
+function onProjectCreated() {
+  showNewProject.value = false;
+  fetchProjects();
+}
+
 // ── Floor strip ─────────────────────────────────────────────────────────────
 type FloorKey = 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'time' | 'insights';
 const FLOOR_KEYS: FloorKey[] = ['projects', 'tasks', 'tickets', 'meetings', 'calendar', 'time', 'insights'];
@@ -393,16 +401,10 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
           </Button>
         </UDropdown>
         <!-- TODO(ios-sweep): lift New Project to a bottom sheet (NewProjectSheet) -->
-        <NuxtLink
-          v-if="floor === 'projects'"
-          to="/projects?new=1"
-          class="inline-flex"
-        >
-          <Button size="sm">
-            <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-            New Project
-          </Button>
-        </NuxtLink>
+        <Button v-if="floor === 'projects'" size="sm" @click="showNewProject = true">
+          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+          New Project
+        </Button>
       </template>
     </AppHeader>
 
@@ -436,7 +438,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
               v-model="projectsSearch"
               type="search"
               placeholder="Search projects..."
-              class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+              class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
               @input="debouncedFetchProjects"
             />
             <UTabs
@@ -514,7 +516,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
             v-model="meetingsSearch"
             type="search"
             placeholder="Search meetings, projects, clients…"
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
           />
         </div>
 
@@ -605,6 +607,8 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
         <WorkInsightsView :snapshot="insightsSnapshot" :loading="insightsLoading" />
       </template>
     </LayoutPageContainer>
+
+    <ProjectsFormModal v-model="showNewProject" @created="onProjectCreated" />
   </div>
 </template>
 

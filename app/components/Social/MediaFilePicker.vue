@@ -43,7 +43,7 @@
               v-model="search"
               type="search"
               placeholder="Filter..."
-              class="w-32 rounded-md border bg-background px-2 py-1 text-xs"
+              class="w-32 rounded-full border bg-background px-2 py-1 text-xs"
             />
             <label
               class="flex items-center gap-1 px-2 py-1 rounded-md border text-xs text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-colors"

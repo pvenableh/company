@@ -60,6 +60,34 @@
 				</div>
 			</div>
 
+			<!-- Needs Attention -->
+			<div v-if="needsAttention.length" class="ios-card p-5">
+				<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
+					Needs Attention
+					<span class="text-warning ml-1">({{ needsAttention.length }})</span>
+				</h3>
+				<div class="space-y-0.5">
+					<NuxtLink
+						v-for="item in needsAttention"
+						:key="item.id"
+						:to="item.route"
+						class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors"
+					>
+						<div class="flex items-center gap-3 min-w-0 flex-1">
+							<span
+								class="w-2 h-2 rounded-full shrink-0"
+								:class="item.urgency === 'high' ? 'bg-destructive' : 'bg-warning'"
+							/>
+							<div class="min-w-0">
+								<p class="text-sm font-medium truncate">{{ item.title }}</p>
+								<p class="text-[11px] text-muted-foreground">{{ item.reason }}</p>
+							</div>
+						</div>
+						<span class="text-xs font-medium text-primary shrink-0 ml-3">{{ item.action }}</span>
+					</NuxtLink>
+				</div>
+			</div>
+
 			<!-- Project Status Donut + Ticket Priority -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
 				<div class="ios-card p-5">
@@ -109,33 +137,6 @@
 				</div>
 			</div>
 
-			<!-- Needs Attention -->
-			<div v-if="needsAttention.length" class="ios-card p-5">
-				<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
-					Needs Attention
-					<span class="text-warning ml-1">({{ needsAttention.length }})</span>
-				</h3>
-				<div class="space-y-0.5">
-					<NuxtLink
-						v-for="item in needsAttention"
-						:key="item.id"
-						:to="item.route"
-						class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors"
-					>
-						<div class="flex items-center gap-3 min-w-0 flex-1">
-							<span
-								class="w-2 h-2 rounded-full shrink-0"
-								:class="item.urgency === 'high' ? 'bg-destructive' : 'bg-warning'"
-							/>
-							<div class="min-w-0">
-								<p class="text-sm font-medium truncate">{{ item.title }}</p>
-								<p class="text-[11px] text-muted-foreground">{{ item.reason }}</p>
-							</div>
-						</div>
-						<span class="text-xs font-medium text-primary shrink-0 ml-3">{{ item.action }}</span>
-					</NuxtLink>
-				</div>
-			</div>
 		</template>
 	</div>
 </template>

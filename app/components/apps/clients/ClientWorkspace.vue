@@ -192,7 +192,7 @@ function skeletonRows(n: number, fallback = 4, max = 8): number[] {
 
 const { inheritedContacts, inheritedConnections, load: loadInherited } = useClientInheritedContacts();
 
-const activeTab = ref<ClientTabKey>(props.initialTab || 'activity');
+const activeTab = ref<ClientTabKey>(props.initialTab || 'overview');
 
 // Tab-activation loader. Shared by the active-tab watcher AND the
 // hover-prefetch handler from <ClientTabsBar>, so a hover and a click
@@ -457,6 +457,16 @@ const tabCounts = computed(() => ({
 	messages: channelsLoaded.value ? relatedChannels.value.length : channelCount.value,
 }));
 
+// Overview "at a glance" — lead the client landing with health (rating +
+// workload) instead of an empty edit form. projectCount/invoiceCount are
+// primed on mount, so these read accurately on first paint.
+const clientGlance = computed(() => ({
+	metrics: [
+		{ label: 'Projects', value: tabCounts.value.projects ?? 0 },
+		{ label: 'Invoices', value: tabCounts.value.invoices ?? 0 },
+	] as Array<{ label: string; value: string | number; tone?: 'default' | 'good' | 'warn' | 'danger' }>,
+}));
+
 function fmtCurrency(n: number | string | null | undefined): string {
 	const num = Number(n);
 	if (!Number.isFinite(num)) return '—';
@@ -570,8 +580,22 @@ const activityRiverItems = computed(() => {
 			_raw: r,
 		}));
 });
+// Activity rows come back from the server with legacy hrefs (/tickets/:id,
+// /projects/:id, …). Keep users inside the apps layout: route to the /apps
+// page where one exists, otherwise open the matching slide-over.
+function openActivityHref(href?: string | null) {
+	if (!href) return;
+	let m: RegExpMatchArray | null;
+	if ((m = href.match(/^\/projects\/([^/?#]+)/))) return navigateTo(`/apps/work/projects/${m[1]}`);
+	if ((m = href.match(/^\/tickets\/([^/?#]+)/))) return pushPanel('ticket', m[1]);
+	if ((m = href.match(/^\/meetings\/([^/?#]+)/))) return pushPanel('work-meeting', m[1]);
+	if ((m = href.match(/^\/invoices\/([^/?#]+)/))) return pushPanel('invoice', m[1]);
+	if ((m = href.match(/^\/tasks\?id=([^&]+)/))) return pushPanel('task', decodeURIComponent(m[1]));
+	if ((m = href.match(/^\/contacts\/([^/?#]+)/))) return openContactSlideOver(m[1]);
+	return navigateTo(href);
+}
 function onActivityLeafSelect(item: { _raw: ActivityRow }) {
-	if (item._raw.href) navigateTo(item._raw.href);
+	openActivityHref(item._raw.href);
 }
 
 // ── Inline create modals ───────────────────────────────────────────────────
@@ -803,6 +827,14 @@ watch(() => props.clientId, () => {
 				     location, brand direction, goals, target audience, notes.
 				     Autosaves each field; no need to leave the slide-over. -->
 				<div v-if="activeTab === 'overview'">
+					<AppsAtAGlance :metrics="clientGlance.metrics">
+						<template #lead>
+							<div>
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Rating</p>
+								<ClientsClientRatingBadge :client-id="clientId" />
+							</div>
+						</template>
+					</AppsAtAGlance>
 					<AppsInlineDetailsEditor
 						collection="clients"
 						:item-id="String(client.id)"
@@ -863,11 +895,12 @@ watch(() => props.clientId, () => {
 						</div>
 						<div class="space-y-px">
 						<component
-							:is="row.href ? 'NuxtLink' : 'div'"
+							:is="row.href ? 'button' : 'div'"
 							v-for="row in activityRows"
 							:key="row.id"
-							:to="row.href || undefined"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							:type="row.href ? 'button' : undefined"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							@click="row.href && openActivityHref(row.href)"
 						>
 							<Icon :name="row.icon" class="w-4 h-4 text-muted-foreground shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1079,7 +1112,7 @@ watch(() => props.clientId, () => {
 							@drop="(p) => onContactDroppedOnProject(project.id, p)"
 						>
 							<NuxtLink
-								:to="`/projects/${project.id}`"
+								:to="`/apps/work/projects/${project.id}`"
 								class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 								:class="project.status === 'completed' || project.status === 'archived' ? 'opacity-60' : ''"
 							>
@@ -1213,28 +1246,26 @@ watch(() => props.clientId, () => {
 								<span class="text-[10px] text-muted-foreground">{{ ticketsByStatus[status].length }}</span>
 							</div>
 							<div class="flex-1 p-2 space-y-2 min-h-[160px]">
-								<NuxtLink
+								<button type="button" @click="pushPanel('ticket', t.id)"
 									v-for="t in ticketsByStatus[status]"
 									:key="t.id"
-									:to="`/tickets/${t.id}`"
-									class="block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
+									class="w-full text-left block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
 								>
 									<p class="text-xs font-medium truncate">{{ t.title || 'Ticket' }}</p>
 									<div class="flex items-center justify-between mt-1">
 										<span v-if="t.priority" class="text-[10px] text-muted-foreground capitalize">{{ t.priority }}</span>
 										<span v-if="t.due_date" class="text-[10px] text-muted-foreground">{{ fmtDate(t.due_date) }}</span>
 									</div>
-								</NuxtLink>
+								</button>
 							</div>
 						</div>
 					</div>
 
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="pushPanel('ticket', t.id)"
 							v-for="t in relatedTickets"
 							:key="t.id"
-							:to="`/tickets/${t.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<Icon name="lucide:ticket" class="w-4 h-4 text-muted-foreground shrink-0" />
 							<p class="flex-1 text-sm font-medium truncate">{{ t.title || 'Ticket' }}</p>
@@ -1245,7 +1276,7 @@ watch(() => props.clientId, () => {
 								:class="getStatusBadgeClasses(t.status)"
 							>{{ t.status }}</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -1321,28 +1352,26 @@ watch(() => props.clientId, () => {
 								<span class="text-[10px] text-muted-foreground">{{ tasksByStatus[status].length }}</span>
 							</div>
 							<div class="flex-1 p-2 space-y-2 min-h-[160px]">
-								<NuxtLink
+								<button type="button" @click="pushPanel('task', t.id)"
 									v-for="t in tasksByStatus[status]"
 									:key="t.id"
-									:to="`/tasks?id=${t.id}`"
-									class="block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
+									class="w-full text-left block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
 								>
 									<p class="text-xs font-medium truncate">{{ t.title || 'Task' }}</p>
 									<div class="flex items-center justify-between mt-1">
 										<span v-if="t.priority" class="text-[10px] text-muted-foreground capitalize">{{ t.priority }}</span>
 										<span v-if="t.due_date" class="text-[10px] text-muted-foreground">{{ fmtDate(t.due_date) }}</span>
 									</div>
-								</NuxtLink>
+								</button>
 							</div>
 						</div>
 					</div>
 
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="pushPanel('task', t.id)"
 							v-for="t in relatedTasks"
 							:key="t.id"
-							:to="`/tasks?id=${t.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<Icon name="lucide:check-square" class="w-4 h-4 text-muted-foreground shrink-0" />
 							<p class="flex-1 text-sm font-medium truncate">{{ t.title || 'Task' }}</p>
@@ -1353,7 +1382,7 @@ watch(() => props.clientId, () => {
 								:class="getStatusBadgeClasses(t.status)"
 							>{{ taskStatusLabel(t.status) }}</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -1379,11 +1408,10 @@ watch(() => props.clientId, () => {
 						No meetings tied to this client yet.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="pushPanel('work-meeting', m.id)"
 							v-for="m in relatedMeetings"
 							:key="m.id"
-							:to="`/meetings/${m.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<Icon name="lucide:video" class="w-4 h-4 text-muted-foreground shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1396,7 +1424,7 @@ watch(() => props.clientId, () => {
 								{{ m.actual_start || m.scheduled_start ? new Date(m.actual_start || m.scheduled_start).toLocaleDateString() : '—' }}
 							</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -1494,11 +1522,10 @@ watch(() => props.clientId, () => {
 						No invoices yet for this client.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="pushPanel('invoice', inv.id)"
 							v-for="inv in relatedInvoices"
 							:key="inv.id"
-							:to="`/invoices/${inv.id}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1512,7 +1539,7 @@ watch(() => props.clientId, () => {
 								:class="getStatusBadgeClasses(inv.status)"
 							>{{ inv.status }}</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -1522,11 +1549,10 @@ watch(() => props.clientId, () => {
 						No partners or connectors linked to this client.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<button type="button" @click="openContactSlideOver(conn.contact?.id || '')"
 							v-for="conn in directConnections"
 							:key="`direct-${conn.id}`"
-							:to="`/contacts/${conn.contact?.id || ''}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1543,12 +1569,11 @@ watch(() => props.clientId, () => {
 								{{ conn.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
 							</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
-						<NuxtLink
+						</button>
+						<button type="button" @click="openContactSlideOver(conn.contact?.id || '')"
 							v-for="({ connection: conn, inheritedFromName }) in inheritedConnections"
 							:key="`inherited-${conn.id}`"
-							:to="`/contacts/${conn.contact?.id || ''}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group opacity-75"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group opacity-75"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
 							<div class="flex-1 min-w-0 flex items-center gap-2">
@@ -1562,7 +1587,7 @@ watch(() => props.clientId, () => {
 								via {{ inheritedFromName }}
 							</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 

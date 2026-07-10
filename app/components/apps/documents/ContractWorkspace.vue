@@ -557,9 +557,9 @@ if (!props.compact) {
               {{ contract.proposal.title || 'View proposal' }} &rarr;
             </button>
             <!-- allow-legacy-link — full-page mode lives outside the apps slide-over stack -->
-            <NuxtLink v-else :to="`/proposals/${contract.proposal.id}`" class="text-sm text-primary hover:underline">
+            <button type="button" @click="slideOverStack.push('proposal', contract.proposal.id)" v-else class="text-sm text-primary hover:underline">
               {{ contract.proposal.title || 'View proposal' }} &rarr;
-            </NuxtLink>
+            </button>
           </div>
         </div>
 

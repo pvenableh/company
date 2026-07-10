@@ -38,7 +38,6 @@ function prefetch(key: ProjectTabKey) {
 
 const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'overview', label: 'Overview', icon: 'lucide:info' },
-	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 	{ key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
 	{ key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
 	{ key: 'channels', label: 'Channels', icon: 'lucide:message-square' },
@@ -47,6 +46,8 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
 	{ key: 'files', label: 'Files', icon: 'lucide:folder' },
+	// Activity lives last — the deepest history, not the landing view.
+	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 ];
 </script>
 

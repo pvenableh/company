@@ -63,6 +63,11 @@ const initialFloor: FloorKey = (() => {
 })();
 const floor = ref<FloorKey>(initialFloor);
 
+// Interior floor content slides left/right to match the main app transition.
+const floorTransition = useDirectionalFloorTransition(FLOOR_KEYS, floor);
+// Payments: river vs table are an either-or (never shown together).
+const paymentsView = ref<'list' | 'river'>('list');
+
 watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'cashflow' ? undefined : next } });
 });
@@ -543,6 +548,8 @@ const headerAction = computed(() => {
       <AppIntroCard app-id="money" />
       <GoalsRelatedGoalsCard :categories="['revenue', 'retention']" title="Goals in this lens" />
 
+      <Transition :name="floorTransition" mode="out-in">
+      <div :key="floor">
       <!-- ── Cash flow floor ──────────────────────────────────────────── -->
       <template v-if="floor === 'cashflow'">
         <div v-if="cashflowLoading && !cashflowInvoices.length" class="flex items-center justify-center py-24 gap-3">
@@ -746,7 +753,7 @@ const headerAction = computed(() => {
             v-model="invoicesSearch"
             type="search"
             placeholder="Search invoices…"
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
             @input="debouncedFetchInvoices"
           />
           <UTabs
@@ -881,6 +888,15 @@ const headerAction = computed(() => {
             </div>
           </div>
 
+          <!-- List / River — either-or so the payment river never competes with
+               the table; River is an opt-in visual view. -->
+          <div v-if="paymentsList.length" class="flex items-center justify-end mb-3">
+            <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium">
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'list'">List</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'river' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'river'">River</button>
+            </div>
+          </div>
+
           <div v-if="!paymentsList.length" class="flex flex-col items-center justify-center py-24 gap-4">
             <Icon name="lucide:credit-card" class="w-12 h-12 text-muted-foreground/40" />
             <p class="text-sm text-muted-foreground">No payments received yet.</p>
@@ -889,7 +905,7 @@ const headerAction = computed(() => {
           <!-- Cash-inflow river — 30-day rhythm of payments received, leaves
                sized only by visibility (every drop matters). Method drives
                hue. Click a leaf → linked invoice slide-over. -->
-          <div v-if="paymentsList.length" class="glass-surface p-4 sm:p-5 mb-5">
+          <div v-if="paymentsList.length && paymentsView === 'river'" class="glass-surface p-4 sm:p-5 mb-5">
             <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
                 <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -918,7 +934,7 @@ const headerAction = computed(() => {
             />
           </div>
 
-          <div v-if="paymentsList.length" class="ios-card overflow-hidden">
+          <div v-if="paymentsList.length && paymentsView === 'list'" class="ios-card overflow-hidden">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-border/50">
@@ -993,7 +1009,7 @@ const headerAction = computed(() => {
               v-model="expensesSearch"
               type="search"
               placeholder="Search expenses…"
-              class="flex-1 min-w-[180px] rounded-md border bg-background px-3 py-2 text-sm"
+              class="flex-1 min-w-[180px] rounded-full border bg-background px-3 py-2 text-sm"
             />
             <select
               v-model="expensesCategory"
@@ -1100,6 +1116,8 @@ const headerAction = computed(() => {
       <template v-else-if="floor === 'insights'">
         <MoneyInsightsView :snapshot="moneyInsightsSnapshot" :loading="moneyInsightsLoading" />
       </template>
+      </div>
+      </Transition>
 
       <!-- Documents create modals — owned at the page level so the header
            "+ New Proposal/Contract" CTA can trigger them. -->

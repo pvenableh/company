@@ -636,7 +636,7 @@ watch(view, (next) => {
             v-model="clientSearch"
             type="search"
             placeholder="Search clients..."
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
             @input="debouncedFetchClients"
           />
         </div>
@@ -828,7 +828,7 @@ watch(view, (next) => {
             v-model="contactSearch"
             type="search"
             placeholder="Search name, email, company..."
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
             @input="debouncedFetchContacts"
           />
           <select
@@ -879,10 +879,6 @@ watch(view, (next) => {
            toggle + filters. /leads/[id] and /leads/automations stay as their
            own routes; this tab is just the list. -->
       <template v-else-if="view === 'leads'">
-        <p class="text-sm text-muted-foreground mb-4">
-          {{ leadStats.total }} total lead{{ leadStats.total === 1 ? '' : 's' }}
-        </p>
-        <LeadsLeadStats :stats="leadStats" class="mb-6" />
 
         <!-- Board | Grid toggle (universal pill style) -->
         <div class="mb-6 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">

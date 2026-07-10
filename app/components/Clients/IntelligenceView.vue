@@ -66,6 +66,42 @@
 		</div>
 
 		<template v-else-if="data">
+			<!-- Cold Contacts -->
+			<div v-if="data.coldContacts?.length" class="ios-card p-5">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+						Cold Contacts
+						<span class="text-warning ml-1">({{ data.coldContacts.length }})</span>
+					</h3>
+					<span class="text-[10px] text-muted-foreground">30+ days since touch</span>
+				</div>
+				<div class="space-y-0.5">
+					<NuxtLink
+						v-for="c in data.coldContacts"
+						:key="c.id"
+						:to="`/contacts/${c.id}`"
+						class="flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors group"
+					>
+						<span
+							class="w-2 h-2 rounded-full shrink-0"
+							:class="c.daysSinceContact >= 90 ? 'bg-destructive' : 'bg-warning'"
+						/>
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2">
+								<p class="text-sm font-medium truncate">{{ c.name }}</p>
+								<span v-if="c.company" class="text-[10px] text-muted-foreground truncate">· {{ c.company }}</span>
+								<span class="text-[10px] text-muted-foreground capitalize">· {{ c.category }}</span>
+							</div>
+							<p class="text-[11px] text-muted-foreground">{{ c.lastChannel }}</p>
+						</div>
+						<span class="text-[11px] font-medium shrink-0" :class="c.daysSinceContact >= 90 ? 'text-destructive' : 'text-warning'">
+							{{ c.daysSinceContact }}d
+						</span>
+						<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+					</NuxtLink>
+				</div>
+			</div>
+
 			<!-- Row 1: Conversion by Source + Pipeline Stage Aging -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
 				<!-- Conversion by Source -->
@@ -199,41 +235,6 @@
 				</div>
 			</div>
 
-			<!-- Cold Contacts -->
-			<div v-if="data.coldContacts?.length" class="ios-card p-5">
-				<div class="flex items-center justify-between mb-3">
-					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-						Cold Contacts
-						<span class="text-warning ml-1">({{ data.coldContacts.length }})</span>
-					</h3>
-					<span class="text-[10px] text-muted-foreground">30+ days since touch</span>
-				</div>
-				<div class="space-y-0.5">
-					<NuxtLink
-						v-for="c in data.coldContacts"
-						:key="c.id"
-						:to="`/contacts/${c.id}`"
-						class="flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors group"
-					>
-						<span
-							class="w-2 h-2 rounded-full shrink-0"
-							:class="c.daysSinceContact >= 90 ? 'bg-destructive' : 'bg-warning'"
-						/>
-						<div class="flex-1 min-w-0">
-							<div class="flex items-center gap-2">
-								<p class="text-sm font-medium truncate">{{ c.name }}</p>
-								<span v-if="c.company" class="text-[10px] text-muted-foreground truncate">· {{ c.company }}</span>
-								<span class="text-[10px] text-muted-foreground capitalize">· {{ c.category }}</span>
-							</div>
-							<p class="text-[11px] text-muted-foreground">{{ c.lastChannel }}</p>
-						</div>
-						<span class="text-[11px] font-medium shrink-0" :class="c.daysSinceContact >= 90 ? 'text-destructive' : 'text-warning'">
-							{{ c.daysSinceContact }}d
-						</span>
-						<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-					</NuxtLink>
-				</div>
-			</div>
 		</template>
 	</div>
 </template>

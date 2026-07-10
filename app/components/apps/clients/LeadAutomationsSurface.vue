@@ -171,7 +171,7 @@ defineExpose({ openNew });
 		<div v-if="!compact" class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">
 				<NuxtLink
-					to="/leads"
+					to="/apps/clients?view=leads"
 					class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<Icon name="lucide:chevron-left" class="w-4 h-4" />

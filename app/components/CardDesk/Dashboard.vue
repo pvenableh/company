@@ -386,34 +386,6 @@ onMounted(async () => {
 		     on platforms that can't install (e.g. desktop Firefox). -->
 		<CardDeskInstallPromo />
 
-		<!-- Stats Overview -->
-		<div v-if="!isLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalContacts }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Total Active</div>
-			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-destructive">{{ stats.hotContacts }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Hot</div>
-			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-warning">{{ stats.warmContacts }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Warm</div>
-			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-success">{{ stats.nurtureContacts }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Nurture</div>
-			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-blue-400">{{ stats.coldContacts }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Cold</div>
-			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-				<div class="text-2xl font-bold text-success">{{ stats.convertedClients }}</div>
-				<div class="text-xs text-gray-500 uppercase mt-1">Clients</div>
-			</div>
-		</div>
-
 		<!-- XP Bar -->
 		<div v-if="stats.xp.totalXp > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 mb-6">
 			<div class="flex items-center gap-4">

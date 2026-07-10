@@ -382,7 +382,7 @@ onMounted(async () => {
         v-model="search"
         type="search"
         placeholder="Search files & folders..."
-        class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+        class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
       />
       <div class="flex items-center rounded-md border bg-background">
         <button

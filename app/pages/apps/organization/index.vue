@@ -45,6 +45,9 @@ const initialFloor: FloorKey = (() => {
 })();
 const floor = ref<FloorKey>(initialFloor);
 
+// Interior floor content slides left/right to match the main app transition.
+const floorTransition = useDirectionalFloorTransition(FLOOR_KEYS, floor);
+
 watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'overview' ? undefined : next } });
 });
@@ -645,6 +648,8 @@ function onClientInvited() {
         </Button>
       </div>
 
+      <Transition :name="floorTransition" mode="out-in">
+      <div :key="floor">
       <!-- ── Overview floor ───────────────────────────────────────────── -->
       <template v-if="floor === 'overview'">
         <div v-if="!org" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -879,7 +884,7 @@ function onClientInvited() {
                 <div class="hidden sm:block min-w-0">
                   <NuxtLink
                     v-if="m.client?.id"
-                    :to="`/clients/${m.client.id}`"
+                    :to="`/apps/clients/${m.client.id}`"
                     class="text-sm text-primary hover:underline truncate block"
                   >
                     {{ m.client.name }}
@@ -939,11 +944,10 @@ function onClientInvited() {
             </Button>
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <NuxtLink
+            <button type="button" @click="teamsSlide.open(t.id)"
               v-for="t in visibleTeams"
               :key="t.id"
-              :to="`/teams/${t.id}`"
-              class="ios-card p-4 hover:bg-muted/30 transition-colors"
+              class="w-full text-left ios-card p-4 hover:bg-muted/30 transition-colors"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
@@ -955,7 +959,7 @@ function onClientInvited() {
               <div class="mt-3 text-[11px] text-muted-foreground">
                 {{ (t.users?.length || 0) }} {{ (t.users?.length || 0) === 1 ? 'member' : 'members' }}
               </div>
-            </NuxtLink>
+            </button>
           </div>
         </div>
       </template>
@@ -1026,24 +1030,9 @@ function onClientInvited() {
               </span>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p class="text-muted-foreground text-xs">Plan</p>
-                <p class="font-medium">{{ planName }}</p>
-              </div>
-              <div>
-                <p class="text-muted-foreground text-xs">Price</p>
-                <p class="font-medium">{{ planPrice || '—' }}</p>
-              </div>
-              <div>
-                <p class="text-muted-foreground text-xs">Status</p>
-                <p class="font-medium capitalize">{{ (subscriptionData as any)?.subscription?.status || '—' }}</p>
-              </div>
-              <div>
-                <p class="text-muted-foreground text-xs">Next billing</p>
-                <p class="font-medium">{{ periodEnd ? periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}</p>
-              </div>
-            </div>
+            <p v-if="periodEnd" class="text-xs text-muted-foreground">
+              Next billing {{ periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+            </p>
           </div>
 
           <!-- Stripe Connect billing surface (native) — when KYC active -->
@@ -1282,6 +1271,8 @@ function onClientInvited() {
           </div>
         </div>
       </template>
+      </div>
+      </Transition>
     </LayoutPageContainer>
 
     <!-- Modals — reused from the classic page -->

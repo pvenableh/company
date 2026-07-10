@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: 'auth' });
+definePageMeta({ middleware: 'auth' });
 useHead({ title: 'Home | Earnest' });
 
 const { user } = useDirectusAuth();
@@ -7,11 +7,11 @@ const config = useRuntimeConfig();
 
 // ── Layout mode ──
 const { currentMode } = useLayoutMode();
-// Apps mode users land here as their Dashboard surface — wrap content in
-// the apps shell so the rail/chrome stays visible. Classic mode keeps the
-// default sidebar.
+// Apps mode users land here as their Dashboard surface. The apps shell is
+// applied by the global apps-layout middleware (setPageLayout('apps')), so
+// `/` shares the SAME persistent layout instance as every /apps/* route —
+// page transitions fire when navigating here. Classic mode keeps 'default'.
 const { isAppsMode } = useAppsMode();
-const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 // ── Widget gating (legacy hat hooks; useHatLayout is now a no-op shim) ──
 const { showWidget, hatModules } = useHatLayout();
@@ -380,7 +380,6 @@ watch(activeTab, (t) => {
 </script>
 
 <template>
-	<NuxtLayout :name="layout">
 	<!-- Focus mode: streamlined Spark/Superhuman-style inbox -->
 	<LayoutFocusInbox v-if="currentMode === 'focus'" />
 
@@ -466,18 +465,6 @@ watch(activeTab, (t) => {
 
 				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
-					<!-- Earnest Score pill -->
-					<UTooltip :text="`Level ${earnestState.level} — ${earnestState.levelTitle} (${earnestState.totalEP.toLocaleString()} EP)`">
-						<div
-							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 ring-1 ring-primary/30"
-							:class="getScoreTier(earnestState.currentScore).bg + '/10'"
-						>
-							<EarnestIcon class="w-3.5 h-3.5 text-primary" />
-							<span class="text-[11px] font-bold tabular-nums" :class="getScoreTier(earnestState.currentScore).color">{{ earnestState.currentScore }}</span>
-							<span class="text-[10px] text-muted-foreground">/100</span>
-						</div>
-					</UTooltip>
-					<div class="w-px h-5 bg-border/60 shrink-0"></div>
 					<!-- Badges -->
 					<UTooltip
 						v-for="badge in earnestState.badges"
@@ -632,15 +619,18 @@ watch(activeTab, (t) => {
 							</div>
 						</div>
 
-						<!-- Quick Tasks Widget (full width under Priority Actions) -->
-						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
 					</div>
 
 					<!-- Right Column: Earnest Score + My Goals (1/3 width). CRM Health
 					     relocated to US band so this column is now purely personal. -->
 					<div class="space-y-4 flex flex-col">
+						<!-- Quick Tasks — lifted up beside Priority Actions; the Earnest Score
+						     card drops below (order-last) to de-emphasise gamification. -->
+						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
+
 						<!-- Earnest Score (lifted to top of column since CRM Health left) -->
 						<EarnestScoreWidget
+							class="order-last"
 							:current-score="earnestState.currentScore"
 							:level="earnestState.level"
 							:level-title="earnestState.levelTitle"
@@ -655,7 +645,7 @@ watch(activeTab, (t) => {
 						/>
 
 						<!-- 30-day Earnest Score trend sparkline -->
-						<div class="ios-card rounded-2xl border border-border bg-card p-4">
+						<div class="ios-card rounded-2xl border border-border bg-card p-4 order-last">
 							<EarnestTrendChart :history="earnestState.history" />
 						</div>
 
@@ -830,32 +820,6 @@ watch(activeTab, (t) => {
 					<!-- Marketing actions — compact (only when no social/email data) -->
 					<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
 
-					<!-- Org/Team Goals chip strip — links to filtered /goals -->
-					<div v-if="orgTeamGoalCount > 0" class="ios-card p-4 flex flex-wrap items-center gap-3">
-						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
-							<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Shared Goals</h3>
-						</div>
-						<NuxtLink
-							to="/goals?scope=team"
-							class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/40 hover:bg-muted/70 text-[11px] font-medium transition-colors"
-						>
-							Team
-							<span class="text-muted-foreground tabular-nums">{{ (goalsByScope.team || []).length }}</span>
-						</NuxtLink>
-						<NuxtLink
-							to="/goals?scope=organization"
-							class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/40 hover:bg-muted/70 text-[11px] font-medium transition-colors"
-						>
-							Organization
-							<span class="text-muted-foreground tabular-nums">{{ (goalsByScope.organization || []).length }}</span>
-						</NuxtLink>
-						<NuxtLink to="/goals" class="ml-auto inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
-							View all
-							<Icon name="lucide:chevron-right" class="w-3 h-3" />
-						</NuxtLink>
-					</div>
-
 					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->
 					<DeferUntilVisible v-if="showWidget('goals')" min-height="120px">
 						<GoalsSummaryWidget />
@@ -938,7 +902,6 @@ watch(activeTab, (t) => {
 			<GoalsWeeklyCheckinModal v-model="checkinOpen" />
 		</div>
 	</div>
-	</NuxtLayout>
 </template>
 
 <style>

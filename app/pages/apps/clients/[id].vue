@@ -19,7 +19,7 @@ const VALID_TABS: TabKey[] = ['activity', 'contacts', 'projects', 'documents', '
 
 const initialTab: TabKey = (() => {
   const v = route.query.tab;
-  return typeof v === 'string' && VALID_TABS.includes(v as TabKey) ? (v as TabKey) : 'activity';
+  return typeof v === 'string' && VALID_TABS.includes(v as TabKey) ? (v as TabKey) : 'overview';
 })();
 
 const client = ref<Client | null>(null);
@@ -34,7 +34,7 @@ function onWorkspaceLoaded(c: Client) {
 }
 
 function onTabChange(next: TabKey) {
-  router.replace({ query: { ...route.query, tab: next === 'activity' ? undefined : next } });
+  router.replace({ query: { ...route.query, tab: next === 'overview' ? undefined : next } });
 }
 
 function onClientUpdated(updated: Client) {
