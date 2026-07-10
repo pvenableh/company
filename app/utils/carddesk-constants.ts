@@ -57,3 +57,25 @@ export const CD_RATINGS = [
 	{ key: 'nurture', label: 'Nurture' },
 	{ key: 'cold', label: 'Cold' },
 ] as const;
+
+// Industry dropdown options for a cd_contact — kept in sync with the source
+// app's INDUSTRIES (useConstants.ts). The Directus field is a free-text varchar
+// with allowOther, so these are UI suggestions, not an enforced enum.
+export const CD_INDUSTRIES = [
+	'Technology',
+	'Finance',
+	'Venture Capital',
+	'Consulting',
+	'Legal',
+	'Real Estate',
+	'Construction & Development',
+	'Healthcare',
+	'Fitness & Wellness',
+	'Marketing',
+	'Media & Entertainment',
+	'Fashion & Beauty',
+	'Art & Design',
+	'Hospitality',
+	'Sports',
+	'Other',
+] as const;

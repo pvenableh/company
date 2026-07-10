@@ -599,6 +599,7 @@ async function buildCdContactContext(directus: any, cdContactId: string, now: Da
         'id', 'name', 'first_name', 'last_name', 'title', 'company', 'email',
         'phone', 'industry', 'met_at', 'rating', 'hibernated', 'is_client',
         'client_at', 'notes', 'promoted_contact', 'date_created',
+        'opportunity_goal', 'objective',
       ],
       limit: 1,
     }),
@@ -651,6 +652,8 @@ async function buildCdContactContext(directus: any, cdContactId: string, now: Da
   if (contact.email) lines.push(`Email: ${contact.email}`);
   if (contact.phone) lines.push(`Phone: ${contact.phone}`);
   if (contact.industry) lines.push(`Industry: ${contact.industry}`);
+  if (contact.opportunity_goal) lines.push(`Pursuing as: ${contact.opportunity_goal} (${contact.opportunity_goal === 'partner' ? 'referral/collaboration partner' : 'paying client'})`);
+  if (contact.objective) lines.push(`Objective (the specific win to drive toward): ${contact.objective}`);
   if (contact.met_at) lines.push(`Met at: ${contact.met_at}`);
   if (contact.is_client) {
     lines.push(`Status: Client${contact.client_at ? ` since ${String(contact.client_at).split('T')[0]}` : ''}`);
@@ -706,7 +709,7 @@ async function buildCdContactContext(directus: any, cdContactId: string, now: Da
   }
 
   lines.push('');
-  lines.push('Focus your reasoning on this networking contact. Recommend outreach and follow-up next steps based on rating, activity recency, and open tasks. When citing data, include the [Source: X] tag.');
+  lines.push('Focus your reasoning on this networking contact. Recommend outreach and follow-up next steps that drive toward the stated objective (if any), based on rating, activity recency, and open tasks — build on existing plans/tasks rather than re-proposing steps already queued. When citing data, include the [Source: X] tag.');
 
   return truncate(lines.join('\n'));
 }
