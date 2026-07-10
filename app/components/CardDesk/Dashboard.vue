@@ -19,6 +19,7 @@ const {
 	updateContact,
 	setIsClient,
 	addActivity,
+	fetchActivePlanContactIds,
 } = useCardDesk();
 
 // Slide-over push for promoted-contact "View →" — keeps users inside the
@@ -56,6 +57,10 @@ const searchQuery = ref('');
 const currentPage = ref(1);
 const contacts = ref<any[]>([]);
 const contactsLoading = ref(false);
+
+// Contacts that have at least one active plan — drives the "plan" badge on
+// the list rows. Refreshed alongside the contact list.
+const planContactIds = ref<Set<string>>(new Set());
 
 // Activity detail
 const selectedContact = ref<any>(null);
@@ -149,7 +154,12 @@ const loadContacts = async () => {
 		if (searchQuery.value.trim()) {
 			opts.search = searchQuery.value.trim();
 		}
-		contacts.value = await fetchContacts(opts);
+		const [list, planIds] = await Promise.all([
+			fetchContacts(opts),
+			fetchActivePlanContactIds(),
+		]);
+		contacts.value = list;
+		planContactIds.value = planIds;
 	} catch (e) {
 		console.warn('[CardDeskDashboard] Failed to load contacts:', e);
 	} finally {
@@ -226,6 +236,26 @@ const changeRating = (rating: string) => {
 	if (!selectedContact.value) return;
 	const next = selectedContact.value.rating === rating ? null : rating;
 	applyPatch({ rating: next });
+};
+
+// Industry — free-text varchar (allowOther), so CD_INDUSTRIES is just the
+// suggestion list; an empty selection clears it.
+const changeIndustry = (value: string) => {
+	applyPatch({ industry: value || null });
+};
+
+// Free-text objective — the specific win to chase with this contact. Inline
+// quick-edit; capped at 80 chars to match the source app + DB column.
+const objectiveEditing = ref(false);
+const objectiveDraft = ref('');
+const startObjectiveEdit = () => {
+	objectiveDraft.value = selectedContact.value?.objective || '';
+	objectiveEditing.value = true;
+};
+const saveObjective = () => {
+	const v = objectiveDraft.value.trim().slice(0, 80);
+	applyPatch({ objective: v || null });
+	objectiveEditing.value = false;
 };
 
 const toggleHibernated = () => {
@@ -489,7 +519,22 @@ onMounted(async () => {
 									<span v-if="contact.title && contact.company"> · </span>
 									<span v-if="contact.title" class="truncate">{{ contact.title }}</span>
 								</div>
+								<!-- Objective — the specific win to chase; truncated on the row. -->
+								<div v-if="contact.objective" class="flex items-center gap-1 text-[11px] text-success font-medium mt-0.5 min-w-0">
+									<Icon name="lucide:target" class="size-3 shrink-0" />
+									<span class="truncate">{{ contact.objective }}</span>
+								</div>
 							</div>
+
+							<!-- Active-plan badge -->
+							<span
+								v-if="planContactIds.has(contact.id)"
+								class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 inline-flex items-center gap-1 bg-primary/10 text-primary"
+								title="Has an active plan"
+							>
+								<Icon name="lucide:list-checks" class="size-3" />
+								Plan
+							</span>
 
 							<!-- Rating Badge -->
 							<span
@@ -569,9 +614,18 @@ onMounted(async () => {
 								<UIcon name="i-heroicons-phone" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.phone }}</span>
 							</div>
-							<div v-if="selectedContact.industry" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-tag" class="w-3.5 h-3.5" />
-								<span>{{ selectedContact.industry }}</span>
+							<!-- Industry — editable inline from the header (free-text varchar). -->
+							<div class="flex items-center gap-2">
+								<UIcon name="i-heroicons-tag" class="w-3.5 h-3.5 shrink-0" />
+								<select
+									:value="selectedContact.industry || ''"
+									:disabled="savingPatch"
+									class="max-w-[190px] -my-0.5 cursor-pointer rounded-md border border-border bg-transparent px-1.5 py-0.5 text-xs text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40 dark:text-gray-400"
+									@change="changeIndustry(($event.target as HTMLSelectElement).value)"
+								>
+									<option value="">Set industry…</option>
+									<option v-for="ind in CD_INDUSTRIES" :key="ind" :value="ind">{{ ind }}</option>
+								</select>
 							</div>
 							<div v-if="selectedContact.met_at" class="flex items-center gap-2">
 								<UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5" />
@@ -587,6 +641,42 @@ onMounted(async () => {
 							<span v-if="selectedContact.hibernated" class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
 								Hibernated
 							</span>
+						</div>
+
+						<!-- Objective — the specific win to chase; inline quick-edit -->
+						<div class="mt-3">
+							<button
+								v-if="!objectiveEditing"
+								type="button"
+								class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs text-left transition-colors"
+								:class="selectedContact.objective
+									? 'border-success/30 bg-success/5 text-foreground hover:bg-success/10'
+									: 'border-dashed border-border text-muted-foreground hover:bg-muted/50'"
+								@click="startObjectiveEdit"
+							>
+								<Icon name="lucide:target" class="size-3.5 shrink-0 text-success" />
+								<span v-if="selectedContact.objective" class="flex-1 min-w-0 truncate font-medium">{{ selectedContact.objective }}</span>
+								<span v-else class="flex-1 min-w-0">Set an objective — the win to drive toward</span>
+								<Icon name="lucide:pencil" class="size-3 shrink-0 opacity-60" />
+							</button>
+							<div v-else class="space-y-1.5">
+								<input
+									v-model="objectiveDraft"
+									type="text"
+									maxlength="80"
+									placeholder="e.g. Sign a small-business design package"
+									class="w-full text-xs rounded-lg border border-border bg-card px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+									@keyup.enter="saveObjective"
+									@keyup.esc="objectiveEditing = false"
+								>
+								<div class="flex items-center justify-between">
+									<span class="text-[10px] text-muted-foreground">{{ objectiveDraft.length }}/80</span>
+									<div class="flex items-center gap-1.5">
+										<button type="button" class="text-[11px] px-2 py-1 rounded-md text-muted-foreground hover:bg-muted/50" @click="objectiveEditing = false">Cancel</button>
+										<button type="button" :disabled="savingPatch" class="text-[11px] px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium disabled:opacity-40" @click="saveObjective">Save</button>
+									</div>
+								</div>
+							</div>
 						</div>
 
 						<!-- Promote-to-Earnest CTA / linked badge -->

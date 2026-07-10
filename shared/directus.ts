@@ -1201,6 +1201,8 @@ export interface CdContact {
 	pipeline_stage?: 'new' | 'warming' | 'opportunity' | 'client' | 'partner' | 'lost' | null;
 	/** @description Goal tag set at Opportunity stage. */
 	opportunity_goal?: 'client' | 'partner' | null;
+	/** @description Free-text objective for this contact — the specific win you're chasing (e.g. "Sign a small-business design package"). Shown on cards + detail; feeds AI next-step suggestions. */
+	objective?: string | null;
 	/** @description Graduated to a referral/collaboration partner. */
 	is_partner?: boolean | null;
 	/** @description When marked as partner. */

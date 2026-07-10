@@ -240,7 +240,7 @@ export const useCardDesk = () => {
 		}
 
 		return contactItems.list({
-			fields: ['id', 'name', 'first_name', 'last_name', 'title', 'company', 'email', 'phone', 'industry', 'met_at', 'rating', 'hibernated', 'is_client', 'client_at', 'notes', 'date_created', 'promoted_contact'],
+			fields: ['id', 'name', 'first_name', 'last_name', 'title', 'company', 'email', 'phone', 'industry', 'objective', 'met_at', 'rating', 'hibernated', 'is_client', 'client_at', 'notes', 'date_created', 'promoted_contact'],
 			filter: conditions.length > 1 ? { _and: conditions } : filter,
 			sort: ['-date_created'],
 			limit: opts?.limit || 25,
@@ -327,7 +327,7 @@ export const useCardDesk = () => {
 			return await contactItems.get(contactId, {
 				fields: [
 					'id', 'name', 'first_name', 'last_name', 'email', 'phone',
-					'company', 'title', 'industry', 'met_at', 'notes', 'rating',
+					'company', 'title', 'industry', 'objective', 'met_at', 'notes', 'rating',
 					'hibernated', 'is_client', 'client_at', 'date_created',
 				],
 			} as any);
@@ -391,6 +391,31 @@ export const useCardDesk = () => {
 		}
 	};
 
+	// Set of cd_contacts.id that have at least one ACTIVE plan — drives the
+	// "has a plan" badge on the contact list. Mirrors fetchCardDeskPromotedIds:
+	// one lightweight query reduced to a Set, graceful-403 like the plan reads.
+	const fetchActivePlanContactIds = async (): Promise<Set<string>> => {
+		const userId = authUser.value?.id;
+		if (!userId) return new Set();
+		try {
+			const rows = await planItems.list({
+				fields: ['contact'],
+				filter: {
+					_and: [
+						{ user_created: { _eq: userId } },
+						{ status: { _eq: 'active' } },
+						{ contact: { _nnull: true } },
+					],
+				},
+				limit: -1,
+			});
+			return new Set(rows.map((r: any) => r.contact).filter(Boolean));
+		} catch (e) {
+			console.warn('[CardDesk] Could not fetch active-plan index:', e);
+			return new Set();
+		}
+	};
+
 	return {
 		stats: readonly(stats),
 		isLoading: readonly(isLoading),
@@ -405,5 +430,6 @@ export const useCardDesk = () => {
 		setIsClient,
 		addActivity,
 		fetchCardDeskPromotedIds,
+		fetchActivePlanContactIds,
 	};
 };
