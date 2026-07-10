@@ -1430,6 +1430,24 @@ export interface CdXpState {
 	invites_accepted?: number | null;
 }
 
+export interface ChannelMember {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	channel: Channel | string;
+	/** @required */
+	user: DirectusUser | string;
+	/** @required */
+	organization: Organization | string;
+	/** @description Read cursor — messages after this are unread */
+	last_read_at?: string | null;
+	/** @description Anchor for the "new messages" divider */
+	last_read_message?: Message | string | null;
+	joined_at?: string | null;
+	/** @description Suppress unread badge for this channel */
+	muted?: boolean | null;
+}
+
 export interface Channel {
 	/** @primaryKey */
 	id: string;
@@ -3130,6 +3148,10 @@ export interface Organization {
 	mailing_address?: string | null;
 	/** @description Optional monitoring BCC. When set, every email sent for this org is also BCC'd here. Leave blank to use only the global BCC. */
 	email_bcc?: string | null;
+	/** @description Brand accent palette applied to every member of this org + the client portal. Drives --info/--tag/--app accent tokens. */
+	app_palette?: 'neutral' | 'seaMist' | 'aurora' | null;
+	/** @description When off, the Goals section is hidden across the org (Account → Goals nav + related-goals cards). Defaults on. */
+	goals_enabled?: boolean | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -5377,6 +5399,7 @@ export interface Schema {
 	cd_sessions: CdSession[];
 	cd_tasks: CdTask[];
 	cd_xp_state: CdXpState[];
+	channel_members: ChannelMember[];
 	channels: Channel[];
 	client_portal_users: ClientPortalUser[];
 	clients: Client[];
@@ -5633,6 +5656,7 @@ export enum CollectionNames {
 	cd_sessions = 'cd_sessions',
 	cd_tasks = 'cd_tasks',
 	cd_xp_state = 'cd_xp_state',
+	channel_members = 'channel_members',
 	channels = 'channels',
 	client_portal_users = 'client_portal_users',
 	clients = 'clients',
