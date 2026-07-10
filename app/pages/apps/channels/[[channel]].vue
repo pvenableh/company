@@ -46,11 +46,9 @@ const listFilter = computed(() => {
 	} else if (organizationOptions.value?.length) {
 		filters.push({ organization: { _in: organizationOptions.value.filter((o) => o.id).map((o) => o.id) } });
 	}
-	if (selectedClient.value && selectedClient.value !== 'org') {
-		filters.push({ client: { _eq: selectedClient.value } });
-	} else if (selectedClient.value === 'org') {
-		filters.push({ client: { _null: true } });
-	}
+	// The comms hub intentionally IGNORES the header client selector — all
+	// channels stay visible and are organized by the client→category grouping
+	// below (org-wide channels never disappear when you focus a client).
 	return { _and: filters };
 });
 
@@ -60,7 +58,7 @@ const {
 	updateFilter: updateChannelsFilter,
 } = useRealtimeSubscription(
 	'channels',
-	['id', 'name', 'status', 'category', 'date_created', 'organization.id', 'project.id', 'project.title', 'ticket.id', 'ticket.title', 'client', 'messages.id', 'messages.status', 'messages.date_created'],
+	['id', 'name', 'status', 'category', 'date_created', 'organization.id', 'project.id', 'project.title', 'project.client.id', 'project.client.name', 'ticket.id', 'ticket.title', 'client.id', 'client.name', 'messages.id', 'messages.status', 'messages.date_created'],
 	listFilter.value,
 	'name',
 );
@@ -69,7 +67,7 @@ watch(listFilter, (f) => updateChannelsFilter(f));
 const channelQuery = ref('');
 const showArchived = ref(false);
 
-const clientNameById = (id) => (clientList.value || []).find((c) => c.id === id)?.name || 'Client';
+const clientNameById = (id) => (clientList.value || []).find((c) => c.id === id)?.name || null;
 
 // Recency = newest published message; fall back to the channel's own creation
 // date so brand-new empty channels still sort sensibly.
@@ -80,35 +78,61 @@ const lastActivity = (ch) => {
 };
 const publishedCount = (ch) => (ch.messages || []).filter((m) => m.status === 'published').length;
 
+// A channel's owning client: its own `client`, else the client of its project.
+// Handles both expanded objects ({id,name}) and bare id strings.
+const effectiveClient = (ch) => {
+	const c = ch.client;
+	if (c) return typeof c === 'object' ? { id: c.id, name: c.name } : { id: c, name: null };
+	const pc = ch.project?.client;
+	if (pc) return typeof pc === 'object' ? { id: pc.id, name: pc.name } : { id: pc, name: null };
+	return null;
+};
+// Sub-group within a client: project channels use the project title; everything
+// else uses the free-text `category`. null = uncategorized → top of the client.
+const categoryOf = (ch) => (ch.project?.id ? ch.project.title || 'Project' : ch.category || null);
+
 const visibleChannels = computed(() => {
 	const q = channelQuery.value.trim().toLowerCase();
 	return (channels.value || []).filter((c) => c.name && (!q || c.name.toLowerCase().includes(q)));
 });
 
-// Group active channels: org-level (category / General) first, then
-// client/project groups. Channels sort by recent activity within each group,
-// and groups by their most-recent channel.
+// Two-level roster: client sections (or "General" for no-client channels),
+// each holding uncategorized channels at the top followed by category
+// sub-groups. Everything sorts by recent activity. Each section is flattened
+// into a `rows` list (subheader | channel) so the template renders one pass.
 const groupedChannels = computed(() => {
-	const groups = new Map();
+	const sections = new Map();
 	for (const ch of visibleChannels.value) {
 		if (ch.status === 'archived') continue;
-		let key, label, tier;
-		if (ch.client) {
-			key = `client:${ch.client}`; label = clientNameById(ch.client); tier = 1;
-		} else if (ch.project?.id) {
-			key = `project:${ch.project.id}`; label = ch.project.title || 'Project'; tier = 1;
-		} else {
-			label = ch.category || 'General'; key = `cat:${label}`; tier = 0;
-		}
-		if (!groups.has(key)) groups.set(key, { key, label, tier, recency: 0, channels: [] });
-		const g = groups.get(key);
+		const ec = effectiveClient(ch);
+		const key = ec ? `client:${ec.id}` : 'general';
+		const label = ec ? ec.name || clientNameById(ec.id) || 'Client' : 'General';
+		if (!sections.has(key)) sections.set(key, { key, label, recency: 0, top: [], cats: new Map() });
+		const sec = sections.get(key);
 		const act = lastActivity(ch);
-		g.channels.push({ ...ch, messageCount: publishedCount(ch), _act: act });
-		g.recency = Math.max(g.recency, act);
+		const item = { ...ch, messageCount: publishedCount(ch), _act: act };
+		const cat = categoryOf(ch);
+		if (!cat) {
+			sec.top.push(item);
+		} else {
+			if (!sec.cats.has(cat)) sec.cats.set(cat, { name: cat, recency: 0, channels: [] });
+			const c = sec.cats.get(cat);
+			c.channels.push(item);
+			c.recency = Math.max(c.recency, act);
+		}
+		sec.recency = Math.max(sec.recency, act);
 	}
-	const arr = [...groups.values()];
-	for (const g of arr) g.channels.sort((a, b) => b._act - a._act);
-	arr.sort((a, b) => a.tier - b.tier || b.recency - a.recency || a.label.localeCompare(b.label));
+	const arr = [...sections.values()];
+	for (const sec of arr) {
+		sec.top.sort((a, b) => b._act - a._act);
+		const cats = [...sec.cats.values()].sort((a, b) => b.recency - a.recency || a.name.localeCompare(b.name));
+		for (const c of cats) c.channels.sort((a, b) => b._act - a._act);
+		sec.rows = [
+			...sec.top.map((ch) => ({ type: 'channel', ch, indent: false })),
+			...cats.flatMap((c) => [{ type: 'subheader', name: c.name }, ...c.channels.map((ch) => ({ type: 'channel', ch, indent: true }))]),
+		];
+	}
+	arr.sort((a, b) => b.recency - a.recency || a.label.localeCompare(b.label));
 	return arr;
 });
 
@@ -286,32 +310,42 @@ const createChannel = async () => {
 					<div v-for="n in 6" :key="n" class="h-9 rounded-lg animate-pulse bg-muted/20" />
 				</div>
 				<template v-else-if="hasAnyChannels">
-					<!-- Active, grouped by folder (category / General, then client/project) -->
-					<div v-for="group in groupedChannels" :key="group.key" class="mb-3">
-						<p class="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/60 truncate">{{ group.label }}</p>
-						<div v-for="channel in group.channels" :key="channel.id" class="group/row relative">
-							<NuxtLink
-								:to="channelHref(channel.name)"
-								class="flex items-center gap-2 pl-3 pr-8 py-2 rounded-lg transition-colors"
-								:class="channel.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground'"
-							>
-								<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-								<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(channel.name) }}</span>
-								<span
-									v-if="channel.messageCount"
-									class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 group-hover/row:opacity-0 transition-opacity"
-									:class="channel.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
-								>{{ channel.messageCount }}</span>
-							</NuxtLink>
-							<button
-								v-if="isAdmin"
-								class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 opacity-0 group-hover/row:opacity-100 hover:bg-muted/60 hover:text-foreground transition-all"
-								title="Archive channel"
-								@click.prevent.stop="archiveChannel(channel)"
-							>
-								<Icon name="lucide:archive" class="w-3.5 h-3.5" />
-							</button>
-						</div>
+					<!-- Active: client sections (or General), each with uncategorized
+					     channels then category sub-groups. Flattened rows render in one pass. -->
+					<div v-for="section in groupedChannels" :key="section.key" class="mb-3">
+						<p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 truncate">{{ section.label }}</p>
+						<template v-for="(row, i) in section.rows" :key="row.type === 'channel' ? row.ch.id : `sub-${section.key}-${row.name}-${i}`">
+							<p
+								v-if="row.type === 'subheader'"
+								class="pl-6 pr-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/50 truncate"
+							>{{ row.name }}</p>
+							<div v-else class="group/row relative">
+								<NuxtLink
+									:to="channelHref(row.ch.name)"
+									class="flex items-center gap-2 pr-8 py-2 rounded-lg transition-colors"
+									:class="[
+										row.indent ? 'pl-6' : 'pl-3',
+										row.ch.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground',
+									]"
+								>
+									<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+									<span class="flex-1 min-w-0 text-sm font-medium truncate">{{ cleanName(row.ch.name) }}</span>
+									<span
+										v-if="row.ch.messageCount"
+										class="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 group-hover/row:opacity-0 transition-opacity"
+										:class="row.ch.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
+									>{{ row.ch.messageCount }}</span>
+								</NuxtLink>
+								<button
+									v-if="isAdmin"
+									class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 opacity-0 group-hover/row:opacity-100 hover:bg-muted/60 hover:text-foreground transition-all"
+									title="Archive channel"
+									@click.prevent.stop="archiveChannel(row.ch)"
+								>
+									<Icon name="lucide:archive" class="w-3.5 h-3.5" />
+								</button>
+							</div>
+						</template>
 					</div>
 
 					<!-- Archived (collapsed) -->
