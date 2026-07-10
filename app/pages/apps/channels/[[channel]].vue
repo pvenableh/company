@@ -231,8 +231,16 @@ watch(activeName, () => scrollToBottom());
 /* ------------------------------------------------------------ Create channel */
 const showCreate = ref(false);
 const newChannelName = ref('');
+const newChannelCategory = ref('');
 const creating = ref(false);
 const channelItems = useDirectusItems('channels');
+
+// Existing free-text categories in view, offered as create-time suggestions so
+// folders get reused instead of re-typed. (Project-derived folders aren't
+// listed here — those come from linking a channel to a project.)
+const existingCategories = computed(() =>
+	[...new Set((channels.value || []).map((c) => c.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+);
 
 const archiveChannel = async (ch) => {
 	try {
@@ -261,10 +269,12 @@ const createChannel = async () => {
 	try {
 		const data = { name: slugify(newChannelName.value), organization: selectedOrg.value || undefined, status: 'published' };
 		if (selectedClient.value && selectedClient.value !== 'org') data.client = selectedClient.value;
+		if (newChannelCategory.value?.trim()) data.category = newChannelCategory.value.trim();
 		const created = await channelItems.create(data);
 		toast.add({ title: 'Channel created', color: 'green' });
 		showCreate.value = false;
 		newChannelName.value = '';
+		newChannelCategory.value = '';
 		if (created?.name) navigateTo(channelHref(created.name));
 	} catch (err) {
 		console.error('Error creating channel:', err);
@@ -505,6 +515,21 @@ const createChannel = async () => {
 							@keydown.enter="createChannel"
 						>
 						<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-destructive">Must be at least 3 characters.</p>
+					</div>
+					<div class="space-y-1.5">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Folder <span class="text-muted-foreground/50 normal-case tracking-normal">(optional)</span></label>
+						<input
+							v-model="newChannelCategory"
+							type="text"
+							list="channel-categories"
+							placeholder="e.g. Announcements, Ops — type a new one or pick existing"
+							class="w-full h-10 px-4 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+							@keydown.enter="createChannel"
+						>
+						<datalist id="channel-categories">
+							<option v-for="cat in existingCategories" :key="cat" :value="cat" />
+						</datalist>
+						<p class="text-[10px] text-muted-foreground/50">Groups the channel into a folder under its client. Leave blank for none.</p>
 					</div>
 					<div class="flex justify-end">
 						<Button :disabled="creating || !newChannelName || newChannelName.length < 3" @click="createChannel">
