@@ -859,8 +859,8 @@ watch(activeTab, (t) => {
 						<div class="pt-4">
 							<DeferUntilVisible min-height="500px" @enter="onChatDeskEnter">
 								<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-									<div v-if="showWidget('realtime-chat')" class="h-[500px]">
-										<CommandCenterRealtimeChat />
+									<div v-if="showWidget('realtime-chat')" class="self-start">
+										<CommandCenterChannelsCard />
 									</div>
 									<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
 								</div>

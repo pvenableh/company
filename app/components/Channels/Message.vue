@@ -17,6 +17,11 @@ const props = defineProps({
 	},
 });
 
+// Fires after this message leaves the channel (own delete, or a moderator
+// hide/remove) so the pane can evict it and play a leave transition instead of
+// waiting on the filtered realtime subscription to drop it (project_channels_apps_home).
+const emit = defineEmits(['moderated']);
+
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -167,6 +172,7 @@ const deleteMessage = async () => {
 			});
 		}
 		confirmingDelete.value = false;
+		emit('moderated', props.message.id);
 		const { toast } = await import('vue-sonner');
 		toast.success('Message deleted');
 	} catch (error) {
@@ -238,6 +244,7 @@ const hideMessage = async () => {
 		// Hide (soft) via the admin-token moderate route so channel owners/
 		// moderators — not just org admins — can moderate their own channel.
 		await $fetch(`/api/messages/${props.message.id}/moderate`, { method: 'POST', body: { action: 'hide' } });
+		emit('moderated', props.message.id);
 		const { toast } = await import('vue-sonner');
 		toast.success('Message hidden');
 	} catch (error) {

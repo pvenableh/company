@@ -193,7 +193,120 @@ const topLevelMessages = computed(() => {
 const orderedMessages = computed(() =>
 	[...topLevelMessages.value].sort((a, b) => new Date(a.date_created) - new Date(b.date_created)),
 );
-const newestMessageId = computed(() => orderedMessages.value[orderedMessages.value.length - 1]?.id || null);
+
+/* --------------------------------------------- Enter/leave reconciler (1a/1b) */
+// The pane renders from `visibleMessages`, reconciled against the live source so
+// we can play compositor-driven enter/leave transitions (feedback_motion_stack_policy:
+// reactive class + CSS transition, NOT Vue <Transition>; setTimeout not rAF).
+// `moderatedIds` evicts a hidden/removed message the instant it's moderated —
+// the filtered WS subscription doesn't reliably drop an item leaving the filter.
+const moderatedIds = ref(new Set());
+const sourceMessages = computed(() =>
+	orderedMessages.value.filter((m) => m.status === 'published' && !moderatedIds.value.has(m.id)),
+);
+const newestMessageId = computed(() => sourceMessages.value[sourceMessages.value.length - 1]?.id || null);
+
+const visibleMessages = ref([]);
+const enteringIds = ref(new Set()); // brief from-pose right after a delta arrives
+const leavingIds = ref(new Set()); // rows mid fade + collapse-out
+const _snapshots = new Map(); // id → message, retains a leaving row's data
+let _settled = false; // gates enter anim — off during initial load / channel switch
+const _leaveTimers = new Map();
+const ENTER_MS = 180;
+const LEAVE_MS = 200;
+
+const byDate = (list) => [...list].sort((a, b) => new Date(a.date_created) - new Date(b.date_created));
+
+// Snap the pane to the current source with NO animation (initial load + switch).
+function resetVisible() {
+	for (const t of _leaveTimers.values()) clearTimeout(t);
+	_leaveTimers.clear();
+	enteringIds.value = new Set();
+	leavingIds.value = new Set();
+	_snapshots.clear();
+	for (const m of sourceMessages.value) _snapshots.set(m.id, m);
+	visibleMessages.value = byDate(sourceMessages.value);
+}
+
+function reconcile() {
+	const src = sourceMessages.value;
+	const bySrc = new Map(src.map((m) => [m.id, m]));
+	const visIds = new Set(visibleMessages.value.map((m) => m.id));
+
+	// Additions — new ids not yet visible get a one-tick from-pose, then flip.
+	for (const m of src) {
+		_snapshots.set(m.id, m);
+		if (!visIds.has(m.id) && !leavingIds.value.has(m.id)) {
+			if (_settled) {
+				const s = new Set(enteringIds.value);
+				s.add(m.id);
+				enteringIds.value = s;
+				// Macrotask (not rAF — throttled in headless) so the from-pose paints.
+				setTimeout(() => {
+					const s2 = new Set(enteringIds.value);
+					s2.delete(m.id);
+					enteringIds.value = s2;
+				}, 16);
+			}
+		}
+	}
+
+	// Removals — visible ids gone from source play the leave, then drop.
+	for (const m of visibleMessages.value) {
+		if (!bySrc.has(m.id) && !leavingIds.value.has(m.id)) {
+			const l = new Set(leavingIds.value);
+			l.add(m.id);
+			leavingIds.value = l;
+			_leaveTimers.set(
+				m.id,
+				setTimeout(() => {
+					const l2 = new Set(leavingIds.value);
+					l2.delete(m.id);
+					leavingIds.value = l2;
+					_leaveTimers.delete(m.id);
+					_snapshots.delete(m.id);
+					visibleMessages.value = visibleMessages.value.filter((x) => x.id !== m.id);
+				}, LEAVE_MS + 20),
+			);
+		}
+	}
+
+	// Rebuild: source items (fresh objects reflect content edits) plus rows still
+	// animating their leave, ordered by time.
+	const merged = [];
+	for (const m of visibleMessages.value) {
+		if (bySrc.has(m.id)) merged.push(bySrc.get(m.id));
+		else if (leavingIds.value.has(m.id)) merged.push(_snapshots.get(m.id) || m);
+	}
+	for (const m of src) if (!merged.some((x) => x.id === m.id)) merged.push(m);
+	visibleMessages.value = byDate(merged);
+}
+
+watch(sourceMessages, () => {
+	if (_settled) reconcile();
+	else resetVisible();
+});
+// Arm enter animations only after a channel's backlog has painted, so switching
+// channels / first load never stagger-animates the history.
+watch(
+	messagesLoading,
+	(loading) => {
+		if (!loading) {
+			resetVisible();
+			setTimeout(() => { _settled = true; }, 60);
+		}
+	},
+	{ immediate: true },
+);
+
+// Locally evict a moderated message (own delete or moderator hide/remove) so its
+// leave plays immediately regardless of what the realtime subscription does.
+function onModerated(id) {
+	if (!id) return;
+	const s = new Set(moderatedIds.value);
+	s.add(id);
+	moderatedIds.value = s;
+}
 
 /* ------------------------------------------------------- Unread / read-state */
 const unread = useChannelUnread();
@@ -209,7 +322,7 @@ const dividerAt = ref(null);
 const firstUnreadId = computed(() => {
 	if (!dividerAt.value) return null;
 	const cut = +new Date(dividerAt.value);
-	return orderedMessages.value.find((m) => +new Date(m.date_created) > cut)?.id || null;
+	return sourceMessages.value.find((m) => +new Date(m.date_created) > cut)?.id || null;
 });
 
 async function openActiveChannel(id) {
@@ -296,10 +409,10 @@ watch(
 	{ immediate: true },
 );
 watch(
-	[highlightId, orderedMessages],
+	[highlightId, visibleMessages],
 	() => {
 		const id = highlightId.value;
-		if (!id || !orderedMessages.value.some((msg) => msg.id === id)) return;
+		if (!id || !visibleMessages.value.some((msg) => msg.id === id)) return;
 		nextTick(() => document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
 		clearTimeout(highlightClearTimer);
 		highlightClearTimer = setTimeout(() => {
@@ -337,10 +450,16 @@ const scrollToBottom = () => {
 		if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
 	});
 };
-watch(topLevelMessages, (next, prev) => {
+watch(sourceMessages, (next, prev) => {
 	if ((next?.length || 0) > (prev?.length || 0)) scrollToBottom();
 });
-watch(activeName, () => scrollToBottom());
+// Channel switch: disarm enter animation + clear local moderation evictions so
+// the new channel's backlog paints instantly (re-armed once it finishes loading).
+watch(activeName, () => {
+	_settled = false;
+	moderatedIds.value = new Set();
+	scrollToBottom();
+});
 
 /* ---------------------------------------------------- Org members (pickers) */
 // Shared by the create dialog's people picker and the manage-members panel.
@@ -838,19 +957,32 @@ const fmtModDate = (d) => {
 							</div>
 						</div>
 					</div>
-					<div v-else-if="orderedMessages.length" class="space-y-3">
-						<template v-for="message in orderedMessages" :key="message.id">
+					<div v-else-if="visibleMessages.length" class="space-y-3">
+						<template v-for="message in visibleMessages" :key="message.id">
 							<div v-if="message.id === firstUnreadId" class="flex items-center gap-2 py-1">
 								<div class="flex-1 h-px bg-destructive/40" />
 								<span class="text-[10px] font-semibold uppercase tracking-wider text-destructive shrink-0">New</span>
 								<div class="flex-1 h-px bg-destructive/40" />
 							</div>
+							<!-- msg-slot: a grid row that collapses on leave; entering adds a
+							     one-tick fade + slide from-pose. Compositor-driven (CSS only). -->
 							<div
-								:id="`msg-${message.id}`"
-								class="rounded-lg transition-shadow"
-								:class="highlightId === message.id ? 'ring-2 ring-primary/50 bg-primary/5' : ''"
+								class="msg-slot"
+								:class="{ entering: enteringIds.has(message.id), leaving: leavingIds.has(message.id) }"
 							>
-								<ChannelsMessage :message="message" :can-moderate="canManageActive" />
+								<div class="msg-slot-inner">
+									<div
+										:id="`msg-${message.id}`"
+										class="rounded-lg transition-shadow"
+										:class="highlightId === message.id ? 'ring-2 ring-primary/50 bg-primary/5' : ''"
+									>
+										<ChannelsMessage
+											:message="message"
+											:can-moderate="canManageActive"
+											@moderated="onModerated(message.id)"
+										/>
+									</div>
+								</div>
 							</div>
 						</template>
 					</div>
@@ -1247,6 +1379,40 @@ const fmtModDate = (d) => {
 .messages-scroll::-webkit-scrollbar-track { background: transparent; }
 .messages-scroll::-webkit-scrollbar-thumb { @apply bg-transparent rounded-full; }
 .messages-scroll:hover::-webkit-scrollbar-thumb { @apply bg-border; }
+
+/* ── Message enter/leave (1a/1b) ──────────────────────────────────────────────
+   Compositor-driven via a reactive class + CSS transition (feedback_motion_stack_policy).
+   Enter: brief opacity + translateY from-pose that flips to natural — height is
+   untouched so it can't fight scrollToBottom or the "New" divider. Leave: fade +
+   grid-row collapse so the row closes deliberately rather than popping. */
+.msg-slot {
+	display: grid;
+	grid-template-rows: 1fr;
+	transition: grid-template-rows var(--leave-ms, 200ms) ease, opacity var(--leave-ms, 200ms) ease-out,
+		transform var(--enter-ms, 180ms) ease-out;
+}
+.msg-slot-inner {
+	min-height: 0;
+	overflow: hidden;
+}
+.msg-slot.entering {
+	opacity: 0;
+	transform: translateY(6px);
+}
+.msg-slot.leaving {
+	grid-template-rows: 0fr;
+	opacity: 0;
+	pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	.msg-slot {
+		transition: none;
+	}
+	.msg-slot.entering {
+		opacity: 1;
+		transform: none;
+	}
+}
 
 /* Strip Tiptap default chrome so the composer reads as a single pill bar. */
 .channel-tiptap :deep(.tiptap-wrapper) { border: none !important; }
