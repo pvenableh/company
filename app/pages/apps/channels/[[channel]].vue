@@ -146,15 +146,11 @@ const archivedChannels = computed(() =>
 const hasAnyChannels = computed(() => groupedChannels.value.length > 0 || archivedChannels.value.length > 0);
 
 /* ------------------------------------------------ Active channel + messages */
-const activeChannelFilter = computed(() => (activeName.value ? { name: { _eq: activeName.value } } : { id: { _null: true } }));
-const { data: activeChannelRows, updateFilter: updateActiveChannelFilter } = useRealtimeSubscription(
-	'channels',
-	['id', 'name', 'organization', 'project'],
-	activeChannelFilter.value,
-);
-watch(activeChannelFilter, (f) => updateActiveChannelFilter(f));
-
-const activeChannel = computed(() => activeChannelRows.value?.[0] || null);
+// Derive the active channel from the already-loaded roster (which now holds
+// every org channel — active + archived) instead of a second 'channels'
+// subscription. Two subscriptions to the same collection collided in the WS
+// manager and blanked the roster when navigating into a channel.
+const activeChannel = computed(() => (channels.value || []).find((c) => c.name === activeName.value) || null);
 const activeChannelId = computed(() => activeChannel.value?.id || null);
 
 const messageFields = [
