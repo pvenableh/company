@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -220,6 +220,9 @@ export function useOrganization() {
 					app_palette: org.app_palette ?? null,
 					brand_direction: org.brand_direction ?? null,
 					goals: org.goals ?? null,
+					// null/undefined = enabled (existing orgs pre-date this field); only
+					// an explicit `false` hides goals org-wide.
+					goals_enabled: org.goals_enabled !== false,
 					target_audience: org.target_audience ?? null,
 					location: org.location ?? null,
 					website: org.website ?? null,

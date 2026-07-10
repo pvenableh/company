@@ -101,7 +101,7 @@ function fmtDue(d: string | null | undefined) {
 				<UIcon name="i-heroicons-folder-open" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Projects</h3>
 			</div>
-			<UiViewLink to="/apps/work" variant="muted" size="sm">All projects</UiViewLink>
+			<UiViewLink to="/apps/work" size="sm">All projects</UiViewLink>
 		</div>
 
 		<!-- Loading -->

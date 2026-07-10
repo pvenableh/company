@@ -26,7 +26,39 @@ export default defineEventHandler(async (event) => {
     if (method === "PATCH") {
       const updates = await readBody(event);
       return await withAuthRetry(event, async (directus) => {
-        return await directus.request(updateMe(updates));
+        const updated = await directus.request(updateMe(updates));
+
+        // Keep the nuxt-auth-utils session user in sync with the profile edit.
+        // The header, avatar and initials read identity (name/email/avatar) from
+        // the sealed session cookie — NOT from Directus — so without this the
+        // cookie stays frozen at its login-time values and edits look "unsaved"
+        // after navigating away and back. Only touch the identity fields the
+        // session actually holds; leave `role` alone to avoid shape drift.
+        try {
+          const session = await getUserSession(event);
+          if (session?.user) {
+            // `updated` is the full user record, so these are the authoritative
+            // current values (avatar may be null when the user removed it — use
+            // it directly rather than falling back to the stale session value).
+            await setUserSession(event, {
+              ...session,
+              user: {
+                ...session.user,
+                email: updated.email ?? session.user.email,
+                first_name: updated.first_name ?? null,
+                last_name: updated.last_name ?? null,
+                avatar:
+                  typeof updated.avatar === "object"
+                    ? updated.avatar?.id ?? null
+                    : updated.avatar ?? null,
+              },
+            });
+          }
+        } catch (sessionError) {
+          console.warn("[users/me] session refresh after PATCH failed:", sessionError);
+        }
+
+        return updated;
       });
     }
 

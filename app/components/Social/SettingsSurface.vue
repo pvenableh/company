@@ -450,7 +450,16 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                 [{ label: 'Disconnect', icon: 'i-lucide-trash-2', click: () => confirmDelete(account) }],
               ]"
             >
-              <UButton variant="ghost" icon="i-lucide-more-vertical" size="sm" :loading="isBackfilling === account.id" />
+              <button
+                type="button"
+                class="shrink-0 p-1.5 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+                aria-label="Account options"
+              >
+                <UIcon
+                  :name="isBackfilling === account.id ? 'i-lucide-loader-circle' : 'i-lucide-more-vertical'"
+                  :class="['w-5 h-5', isBackfilling === account.id && 'animate-spin']"
+                />
+              </button>
             </UDropdown>
           </div>
         </div>

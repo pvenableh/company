@@ -60,9 +60,7 @@ onMounted(() => {
 					<p class="text-[10px] text-gray-400">Networking Pipeline</p>
 				</div>
 			</div>
-			<nuxt-link to="/apps/clients?view=carddesk" class="text-xs text-primary hover:underline">
-				View All &rarr;
-			</nuxt-link>
+			<UiViewLink to="/apps/clients?view=carddesk" size="sm">View all</UiViewLink>
 		</div>
 
 		<div v-if="isLoading" class="p-4 space-y-3">

@@ -464,6 +464,26 @@ onMounted(() => {
 				</div>
 			</div>
 
+			<!-- Expenses by Category — a horizontal breakdown that fills out the
+			     left column beneath the monthly chart so it balances the stack of
+			     quarter cards on the right at lg. Reuses the already-computed
+			     expenseCategories/maxCatAmount (previously unrendered). -->
+			<div v-if="expenseCategories.length > 0">
+				<p class="text-[10px] text-muted-foreground uppercase tracking-wider mb-3 font-semibold">Expenses by Category</p>
+				<div class="space-y-2">
+					<div v-for="c in expenseCategories.slice(0, 6)" :key="c.category" class="flex items-center gap-2">
+						<span class="w-20 shrink-0 text-[10px] text-muted-foreground truncate" :title="c.label">{{ c.label }}</span>
+						<div class="flex-1 h-2.5 bg-muted/40 rounded-full overflow-hidden">
+							<div
+								class="h-full rounded-full transition-all duration-500"
+								:style="{ width: `${Math.max((c.amount / maxCatAmount) * 100, 2)}%`, backgroundColor: c.color }"
+							/>
+						</div>
+						<span class="w-16 shrink-0 text-right text-[10px] font-medium text-foreground tabular-nums">{{ formatCurrency(c.amount) }}</span>
+					</div>
+				</div>
+			</div>
+
 			</div><!-- /left column -->
 			<div>
 			<!-- Quarter Breakdown -->

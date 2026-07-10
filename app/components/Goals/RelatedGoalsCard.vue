@@ -69,7 +69,9 @@ const progressColor = (pct: number) => {
 	return 'bg-destructive';
 };
 
-const visible = computed(() => !isLoading.value && matchingGoals.value.length > 0);
+// Hidden entirely when the org has turned goals off.
+const { goalsEnabled } = useGoalsEnabled();
+const visible = computed(() => goalsEnabled.value && !isLoading.value && matchingGoals.value.length > 0);
 </script>
 
 <template>

@@ -14,7 +14,7 @@
 					<AccountProfile />
 				</section>
 
-				<section v-else-if="section === 'goals'" class="w-full">
+				<section v-else-if="section === 'goals' && goalsEnabled" class="w-full">
 					<GoalsWorkspace />
 				</section>
 
@@ -340,7 +340,7 @@ definePageMeta({
 });
 useHead({ title: 'Account | Earnest' });
 
-const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
+const ALL_SECTIONS: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'profile',       label: 'Profile',       icon: 'lucide:user-round' },
 	{ key: 'goals',         label: 'Goals',         icon: 'lucide:flag' },
 	{ key: 'password',      label: 'Password',      icon: 'lucide:key-round' },
@@ -350,23 +350,37 @@ const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'about',         label: 'About',         icon: 'lucide:info' },
 ];
 
-const SECTION_KEYS: SectionKey[] = sections.map((s) => s.key);
+// Org-level goals toggle: when an org sets goals_enabled=false the Goals section
+// disappears entirely (nav + panel).
+const { goalsEnabled } = useGoalsEnabled();
+
+const sections = computed(() =>
+	goalsEnabled.value ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s.key !== 'goals'),
+);
+
+const SECTION_KEYS = computed<SectionKey[]>(() => sections.value.map((s) => s.key));
 // Legacy /account?section=layout links land on Appearance now — the
 // layout controls live as a card inside that section.
 const initialSection: SectionKey = (() => {
 	const v = route.query.section;
 	if (v === 'layout') return 'appearance';
-	return typeof v === 'string' && SECTION_KEYS.includes(v as SectionKey)
+	return typeof v === 'string' && SECTION_KEYS.value.includes(v as SectionKey)
 		? (v as SectionKey)
 		: 'profile';
 })();
 const section = ref<SectionKey>(initialSection);
 
+// If goals get disabled (org toggle, or arriving on a deep-link while disabled)
+// bounce off the now-hidden Goals section back to Profile.
+watch(goalsEnabled, (enabled) => {
+	if (!enabled && section.value === 'goals') section.value = 'profile';
+}, { immediate: true });
+
 // Interior section content slides left/right to match the main app transition.
 const floorTransition = useDirectionalFloorTransition(SECTION_KEYS, section);
 
-// Arcade / Earnest Score explainer — auto-opens on first visit to the score
-// section (see ArcadeIntroModal), re-openable from the "i" badge in the heading.
+// Arcade / Earnest Score explainer — opened on demand from the "i" badge in the
+// heading (no longer auto-opens; see ArcadeIntroModal).
 const arcadeIntro = ref<{ open: () => void } | null>(null);
 
 watch(section, (next) => {

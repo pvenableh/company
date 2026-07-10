@@ -1,62 +1,28 @@
 // nuxt.config.ts
 // Migrated to Tailwind CSS v4 + shadcn-vue + Directus with nuxt-auth-utils
 
-import { execSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
 import { version as pkgVersion } from './package.json';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Build-time app version. The number is MAJOR.MINOR.<total-commit-count>:
-//   - MAJOR.MINOR is the manual lever, read from package.json's "version"
-//     (bump it with `pnpm release:minor` / `pnpm release:major`).
-//   - PATCH is `git rev-list --count HEAD` — the total number of commits on
-//     HEAD, which climbs by itself on every push.
+// Build-time app version — the human-facing "Earnest vX.Y.Z" label.
 //
-// Why commit-count and NOT `git describe` against a `vX.Y` tag: Vercel's build
-// container clones the repo WITHOUT tags and can't fetch them (no credentials
-// for the private remote at build time), so a tag-based `git describe` always
-// failed there and fell back to the static package.json number — the version
-// was frozen at 2.0.0 on every deploy. `git rev-list --count HEAD` needs only
-// the local commit history (no tags, no network), so it resolves the same way
-// locally and on Vercel. Everything is best-effort and wrapped — a broken git
-// env can never fail the build; it just falls through to the static version.
-function tryGit(cmd: string): string | null {
-	try {
-		return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000 })
-			.toString()
-			.trim();
-	} catch {
-		return null;
-	}
-}
-
+// It is read straight from package.json's "version" and ONLY changes when
+// someone intentionally bumps it (`pnpm release:minor` / `pnpm release:major`,
+// or editing package.json). It deliberately does NOT derive a patch from the
+// git commit count anymore: that made the displayed version climb on every
+// single deploy, which read as "the version keeps changing for no reason".
+//
+// Deploy freshness (the "Update available — Refresh" toast) is a separate
+// signal driven by `buildId` = the commit SHA (see the runtimeConfig below), so
+// dropping the commit-count patch here does not affect update detection.
 function resolveAppVersion(): string {
-	// 1. Explicit override always wins (CI / manual lever / Vercel env var).
+	// Explicit override always wins (CI / manual lever / Vercel env var).
 	const envVer = process.env.NUXT_PUBLIC_APP_VERSION?.trim();
 	if (envVer) return envVer;
 
-	// MAJOR.MINOR base from package.json ("2.0.0" → major "2", minor "0").
-	const [major = '0', minor = '0'] = pkgVersion.split('.');
-
-	// 2. Deepen a shallow CI checkout so the commit count is complete. Both are
-	//    best-effort: `--unshallow` errors on an already-complete clone (ignored)
-	//    and a private-remote fetch may no-op — `rev-list` still counts whatever
-	//    history is present.
-	tryGit('git fetch --unshallow --quiet');
-	tryGit('git fetch --depth=2147483647 --quiet');
-
-	// 3. PATCH = total commit count on HEAD. No tags, no network required, so it
-	//    works identically in local dev and in the Vercel build container.
-	const count = tryGit('git rev-list --count HEAD');
-	if (count && /^\d+$/.test(count) && Number(count) > 0) {
-		return `${major}.${minor}.${count}`;
-	}
-
-	// 4. Static fallback — the number won't climb, but the buildId (commit SHA)
-	//    still drives the update toast. Warn loudly so a broken build env is
-	//    obvious in the deploy logs.
-	console.warn(`[version] git rev-list unavailable — falling back to package.json (${pkgVersion})`);
+	// Otherwise the static, intentionally-bumped package.json version.
 	return pkgVersion;
 }
 

@@ -55,6 +55,10 @@ const initialFloor: FloorKey = (() => {
 })();
 const floor = ref<FloorKey>(initialFloor);
 
+// Directional left/right slide when switching floors — matches Money/Marketing/
+// Organization apps (see useDirectionalFloorTransition).
+const floorTransition = useDirectionalFloorTransition(FLOOR_KEYS, floor);
+
 watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'projects' ? undefined : next } });
 });
@@ -414,6 +418,8 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
       <AppIntroCard app-id="work" />
       <GoalsRelatedGoalsCard :categories="['delivery']" title="Goals in this lens" />
 
+      <Transition :name="floorTransition" mode="out-in">
+      <div :key="floor">
       <!-- ── Projects floor (Timeline + Table views) ──────────────────── -->
       <template v-if="floor === 'projects'">
         <div class="flex gap-3 mb-5 flex-wrap items-center">
@@ -606,6 +612,8 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
       <template v-else-if="floor === 'insights'">
         <WorkInsightsView :snapshot="insightsSnapshot" :loading="insightsLoading" />
       </template>
+      </div>
+      </Transition>
     </LayoutPageContainer>
 
     <ProjectsFormModal v-model="showNewProject" @created="onProjectCreated" />

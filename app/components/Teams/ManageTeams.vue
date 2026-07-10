@@ -87,7 +87,13 @@
 						<span class="text-xs font-medium text-gray-500">{{ getTeamMembers(team).length }} Members</span>
 
 						<UDropdown v-if="hasTeamManagementAccess && canManageTeam(team.id)" :items="dropdownItems(team)">
-							<UButton icon="i-heroicons-ellipsis-horizontal" color="gray" variant="ghost" size="xs" />
+							<button
+								type="button"
+								class="p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+								aria-label="Team options"
+							>
+								<UIcon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
+							</button>
 						</UDropdown>
 					</div>
 

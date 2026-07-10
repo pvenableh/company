@@ -114,6 +114,9 @@ const { isMine } = useDataScope();
 const youOrder = computed(() => (isMine.value ? 1 : 2));
 const usOrder = computed(() => (isMine.value ? 2 : 1));
 
+// Org-level goals toggle — hides the dashboard's goal widgets when off.
+const { goalsEnabled } = useGoalsEnabled();
+
 // ── My Goals (scope=user) for the YOU band's right column ──
 // Shares state with the rest of useGoals consumers (e.g. GoalsSummaryWidget),
 // so this doesn't add a separate fetch. weeklyCheckinStreak (Stage 2.5)
@@ -619,6 +622,38 @@ watch(activeTab, (t) => {
 							</div>
 						</div>
 
+						<!-- Other Suggestions (lower priority) — personal AI nudges, lives in YOU -->
+						<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
+							<div class="flex items-center justify-between mb-4">
+								<div class="flex items-center gap-2">
+									<EarnestIcon class="w-5 h-5 text-primary" />
+									<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+										Suggestions
+									</h3>
+								</div>
+								<UiViewLink
+									v-if="suggestions.length > 10"
+									size="sm"
+									@click="aiTrayPrompt = ''; aiTrayOpen = true"
+								>
+									View all {{ suggestions.length }}
+								</UiViewLink>
+							</div>
+
+							<!-- Horizontal snap-scroll carousel — each card is a fixed-width
+							     snap target; the row scrolls sideways when suggestions
+							     overflow. -->
+							<div class="flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar -mx-1 px-1 pb-1 scroll-px-1">
+								<div
+									v-for="suggestion in otherSuggestions"
+									:key="suggestion.id"
+									class="snap-start shrink-0 w-[280px] sm:w-[300px]"
+								>
+									<CommandCenterSuggestionCard :suggestion="suggestion" class="h-full" />
+								</div>
+							</div>
+						</div>
+
 					</div>
 
 					<!-- Right Column: Earnest Score + My Goals (1/3 width). CRM Health
@@ -652,20 +687,20 @@ watch(activeTab, (t) => {
 						<!-- Stage 2.5: weekly check-in trigger pill. Renders only when
 						     >=1 of the user's active personal goals is stale (no snapshot
 						     in 7 days, created >=7 days ago). Quiet state = no DOM. -->
-						<GoalsCheckinTriggerPill @open="checkinOpen = true" />
+						<GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
 
 						<!-- My Goals (scope=user) — small inline mini-widget reusing
-						     useGoals state already loaded by GoalsSummaryWidget in US. -->
-						<div class="ios-card p-5">
+						     useGoals state already loaded by GoalsSummaryWidget in US.
+						     Hidden when the org has goals turned off. -->
+						<div v-if="goalsEnabled" class="ios-card p-5">
 							<div class="flex items-center justify-between mb-3">
 								<div class="flex items-center gap-2">
 									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
 									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
 								</div>
-								<NuxtLink to="/goals?scope=user" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+								<UiViewLink to="/goals?scope=user" size="sm">
 									{{ topMyGoals.length > 0 ? 'View all' : 'Set one' }}
-									<Icon name="lucide:chevron-right" class="w-3 h-3" />
-								</NuxtLink>
+								</UiViewLink>
 							</div>
 							<div v-if="topMyGoals.length === 0" class="py-3 text-center">
 								<p class="text-xs text-muted-foreground">No personal goals yet.</p>
@@ -700,39 +735,6 @@ watch(activeTab, (t) => {
 					</div>
 				</div>
 
-				<!-- Other Suggestions (lower priority) — personal AI nudges, lives in YOU -->
-				<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
-					<div class="flex items-center justify-between mb-4">
-						<div class="flex items-center gap-2">
-							<EarnestIcon class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-								Suggestions
-							</h3>
-						</div>
-						<button
-							v-if="suggestions.length > 10"
-							@click="aiTrayPrompt = ''; aiTrayOpen = true"
-							class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
-						>
-							View all {{ suggestions.length }}
-							<Icon name="lucide:chevron-right" class="w-3 h-3" />
-						</button>
-					</div>
-
-					<!-- Horizontal snap-scroll carousel — each card is a fixed-width
-					     snap target; the row scrolls sideways when suggestions
-					     overflow. -->
-					<div class="flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar -mx-1 px-1 pb-1 scroll-px-1">
-						<div
-							v-for="suggestion in otherSuggestions"
-							:key="suggestion.id"
-							class="snap-start shrink-0 w-[280px] sm:w-[300px]"
-						>
-							<CommandCenterSuggestionCard :suggestion="suggestion" class="h-full" />
-						</div>
-					</div>
-				</div>
-
 				<!-- Team Leaderboard (shown when a team is selected) -->
 				<div v-if="showLeaderboard" class="ios-card p-5">
 					<EarnestTeamLeaderboard />
@@ -752,6 +754,8 @@ watch(activeTab, (t) => {
 						<CommandCenterActiveProjectCarousel />
 					</ClientOnly>
 
+					<!-- Today's Briefs + CRM Pulse share one row on large screens. -->
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 					<!-- Today's Briefs (org-wide project digests) -->
 					<ClientOnly v-if="showWidget('project-digests')">
 						<CommandCenterProjectDigestsWidget />
@@ -807,12 +811,15 @@ watch(activeTab, (t) => {
 							</p>
 						</div>
 
-						<!-- Open insights affordance -->
-						<span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-primary opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-							Open Insights
-							<Icon name="lucide:arrow-right" class="w-3.5 h-3.5" />
+						<!-- Open insights affordance — visually mirrors <UiViewLink> (this
+						     is a decorative span, not a nested link, since the whole card
+						     is already a NuxtLink). -->
+						<span class="hidden sm:inline-flex items-center gap-0.5 text-[11px] font-medium uppercase tracking-wide text-primary opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+							Open insights
+							<UIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5" />
 						</span>
 					</NuxtLink>
+					</div>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
 				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />
@@ -821,7 +828,7 @@ watch(activeTab, (t) => {
 					<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
 
 					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->
-					<DeferUntilVisible v-if="showWidget('goals')" min-height="120px">
+					<DeferUntilVisible v-if="showWidget('goals') && goalsEnabled" min-height="120px">
 						<GoalsSummaryWidget />
 					</DeferUntilVisible>
 

@@ -24,10 +24,7 @@
 						Grouped
 					</button>
 				</div>
-				<nuxt-link to="/tasks" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
-					View all
-					<Icon name="lucide:chevron-right" class="w-3 h-3" />
-				</nuxt-link>
+				<UiViewLink to="/tasks" size="sm">View all</UiViewLink>
 			</div>
 		</div>
 

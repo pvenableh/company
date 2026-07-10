@@ -6,13 +6,14 @@
  * fully wired but with no user-facing explanation — people see "+10 EP" fly by
  * with no idea what it means. This 5-slide carousel closes that gap.
  *
- * Auto-opens the first time a user lands on /account?section=score (when
- * `directus_users.app_pref_arcade_intro_dismissed_at` is null). Re-openable
- * from the "i" badge next to the section heading via the `open()` method
- * exposed on the component instance.
+ * Opened only on demand — via the "i" badge next to the section heading, which
+ * calls the `open()` method exposed on the component instance. (It used to
+ * auto-open on first visit, but that fired on every navigation into the score
+ * section, so it's now a purely triggered action.)
  *
- * Dismissal stamp pattern mirrors the Studio intro — write any timestamp on
- * dismiss, no snooze semantics (the "i" badge is the manual re-entry point).
+ * Dismissal still stamps `directus_users.app_pref_arcade_intro_dismissed_at`
+ * mirroring the Studio intro — harmless now that open is manual, but kept so the
+ * "seen it" signal is available to other surfaces.
  *
  * Copy is accuracy-first (voice charter): every EP figure, quest target, tier
  * and level name below is pulled from the real mechanics —
@@ -129,14 +130,6 @@ function open() {
 }
 
 defineExpose({ open })
-
-onMounted(() => {
-  // Auto-open on first visit. Defer one tick so the user record is hydrated.
-  nextTick(() => {
-    const stored = (user.value as any)?.app_pref_arcade_intro_dismissed_at
-    if (!stored) isOpen.value = true
-  })
-})
 </script>
 
 <template>

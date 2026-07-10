@@ -33,6 +33,10 @@ const initialView: ViewKey = (() => {
 })();
 const view = ref<ViewKey>(initialView);
 
+// Directional left/right slide when switching views — matches Money/Marketing/
+// Organization/Work apps (see useDirectionalFloorTransition).
+const floorTransition = useDirectionalFloorTransition(VIEW_KEYS, view);
+
 watch(view, (next) => {
   router.replace({ query: { ...route.query, view: next === 'clients' ? undefined : next } });
 });
@@ -560,6 +564,8 @@ watch(view, (next) => {
       <AppIntroCard app-id="clients" />
       <GoalsRelatedGoalsCard :categories="['growth', 'retention']" title="Goals in this lens" />
 
+      <Transition :name="floorTransition" mode="out-in">
+      <div :key="view">
       <!-- ── Clients view ─────────────────────────────────────────────── -->
       <template v-if="view === 'clients'">
         <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
@@ -956,6 +962,8 @@ watch(view, (next) => {
       <template v-else-if="view === 'intelligence'">
         <ClientsIntelligenceView :data="intelligence" :loading="intelligenceLoading" />
       </template>
+      </div>
+      </Transition>
 
       <!-- Create Client modal -->
       <ClientsFormModal v-model="showCreateClientModal" @created="onClientCreated" />

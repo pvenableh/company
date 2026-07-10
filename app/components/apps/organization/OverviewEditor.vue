@@ -35,7 +35,7 @@ const ORG_DETAIL_FIELDS = [
 	'id', 'name', 'slug', 'logo', 'category', 'notes', 'website', 'phone', 'address',
 	'industry.id', 'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
-	'goals', 'target_audience', 'location', 'default_hourly_rate',
+	'goals', 'goals_enabled', 'target_audience', 'location', 'default_hourly_rate',
 ];
 
 const org = ref<any>(null);
@@ -133,6 +133,7 @@ const infoForm = ref({
 	brand_color: '',
 	industry: '' as string | number,
 	active: true,
+	goals_enabled: true,
 });
 
 watch(org, (o) => {
@@ -145,6 +146,7 @@ watch(org, (o) => {
 		brand_color: o.brand_color || '',
 		industry: (typeof o.industry === 'object' ? o.industry?.id : o.industry) || '',
 		active: o.active !== false,
+		goals_enabled: o.goals_enabled !== false,
 	};
 }, { immediate: true });
 
@@ -202,6 +204,7 @@ async function saveInfo() {
 			brand_color: infoForm.value.brand_color || null,
 			industry: infoForm.value.industry || null,
 			active: infoForm.value.active,
+			goals_enabled: infoForm.value.goals_enabled,
 		});
 		toast.add({ title: 'Saved', description: 'Organization info updated', color: 'green' });
 		await fetchOrg();
@@ -464,6 +467,15 @@ async function saveContact() {
 								<UToggle v-model="infoForm.active" />
 								<span class="text-xs text-muted-foreground">
 									{{ infoForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
+								</span>
+							</div>
+						</UFormGroup>
+
+						<UFormGroup label="Goals">
+							<div class="flex items-center gap-3">
+								<UToggle v-model="infoForm.goals_enabled" />
+								<span class="text-xs text-muted-foreground">
+									{{ infoForm.goals_enabled ? 'Goals enabled for everyone in this org' : 'Goals hidden across this org' }}
 								</span>
 							</div>
 						</UFormGroup>
