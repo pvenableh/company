@@ -4,8 +4,8 @@ definePageMeta({
 });
 useHead({ title: 'Chat | Earnest' });
 
-// Redirect chat to channels (consolidated messaging)
-await navigateTo('/channels', { replace: true, redirectCode: 301 });
+// Redirect chat to the channels comms hub (consolidated messaging)
+await navigateTo('/apps/channels', { replace: true, redirectCode: 301 });
 </script>
 
 <template>
