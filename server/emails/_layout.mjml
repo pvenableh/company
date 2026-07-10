@@ -3,12 +3,6 @@
     <mj-title>{{subject}}</mj-title>
     <mj-preview>{{preheader}}</mj-preview>
 
-    <!-- Brand faces as progressive enhancement: clients that support web fonts
-         (Apple Mail, iOS) get Gaegu (tagline) + Bodoni Moda (~Bauer Bodoni
-         wordmark); Gmail/Outlook fall back to the system stacks below. -->
-    <mj-font name="Gaegu" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400&display=swap" />
-    <mj-font name="Bodoni Moda" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,600&display=swap" />
-
     <mj-attributes>
       <mj-all font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" />
       <mj-text font-size="16px" line-height="1.6" color="#333333" />
@@ -19,38 +13,17 @@
     </mj-attributes>
 
     <mj-style>
-      /* Apple Mail / iOS (webkit clients that honor &lt;style&gt;) — stretch the
-         glass wash to fill the whole reading pane, so a short email still has a
-         full-viewport-height background instead of empty space below it. The
-         &lt;body&gt; carries the same image; height:100% + the pane's height lets it
-         fill. Gmail/Outlook strip &lt;style&gt; and fall back to the full-width
-         wrapper background (content-height only) — no downside. */
-      html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; }
-      body {
-        background-image: url("{{glassBgUrl}}") !important;
-        background-size: cover !important;
-        background-position: center top !important;
-        background-repeat: no-repeat !important;
-      }
-      /* Soft depth on the rounded card sections (also &lt;style&gt;-gated). */
-      .earnest-card-top { box-shadow: 0 -6px 22px -12px rgba(24,54,110,0.16); }
-      .earnest-card-bottom { box-shadow: 0 16px 34px -18px rgba(24,54,110,0.26); }
+      html, body { margin: 0 !important; padding: 0 !important; }
       a { color: {{brandColor}}; }
     </mj-style>
   </mj-head>
 
-  <mj-body background-color="#e6eef9" width="600px">
-    <!-- Liquid-glass page wash from the default (Neutral) app palette. The
-         blurred gradient is baked into an image (backdrop-filter can't render
-         in email); clients that block images fall back to the solid cool
-         background-color. -->
-    <mj-wrapper full-width="full-width" background-url="{{glassBgUrl}}" background-size="cover" background-position="center top" background-repeat="no-repeat" background-color="#e6eef9" padding="40px 20px 56px 20px">
+  <!-- Clean, flat, full-white email: no page wash, no floating card, no
+       borders or rounded corners. Header + content + footer stack directly on
+       white (partials injected by renderBrandedTemplate). -->
+  <mj-body background-color="#ffffff" width="600px">
+    <mj-wrapper full-width="full-width" background-color="#ffffff" padding="0">
 
-      <!-- The card is the white header + content + footer sections stacked
-           (partials injected by renderBrandedTemplate). _header rounds the top
-           corners, _footer the bottom — together a rounded card floating on the
-           glass wash. Header/footer live in _header.mjml / _footer.mjml,
-           per-email content in <name>.mjml. -->
       <!-- @HEADER -->
 
       <!-- @CONTENT -->

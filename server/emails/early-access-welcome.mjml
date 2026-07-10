@@ -6,16 +6,32 @@
   between the branded Earnest header and footer (see server/emails/_layout.mjml),
   so you only author the content sections here — no <mjml>/<mj-head>/<mj-body>.
 
-  To drop in a design from an MJML editor (mjml.io, Stripo, etc.): copy just the
-  <mj-section>…</mj-section> blocks from the generator's <mj-body> and paste them
-  below, replacing everything between the two rulers. Keep the Handlebars tokens
-  so the email stays personalised.
+  DESIGN NOTES (clean white · Director-led narrative · Neutral palette)
+  --------------------------------------------------------------------
+  • Voice mirrors the marketing sell sheets (earnest-marketing:
+    SellSheetDirector / SellSheetAutomation): lead with the Director hook
+    ("you didn't start the business to click through software"), then the two
+    pillars — CONTEXT-AWARE AUTOMATION ("reads your business before it acts")
+    and the green/amber/red model ("powerful, never surprising"). Apps are
+    demoted to a single compact chip strip.
+  • Clean, flat, full-white layout (no page wash, card, borders or rounded
+    corners — see _layout/_header/_footer). Titles are sans-serif, LIGHT weight
+    (400/500), tracked out (letter-spacing 0.5px); short copy; small tracked
+    kicker labels. Generous vertical padding between sections.
+  • Green/amber/red rows use inline coloured status dots (semantic traffic
+    lights — same green/amber/red the app uses), NOT the Neutral ramp.
+  • Assets are Directus-hosted (like the logo) so the email renders everywhere
+    with no app deploy: eaHeroUrl (Command Center), eaIcon* (app chips,
+    gradient accent disc + white lucide glyph, Neutral ramp Sky Aqua→Yale Blue).
+    Chip regen: resvg-py+Pillow venv, 108px canvas, gradient disc top=accent+30%
+    light, white glyph rasterized 174px→58px centred; then re-upload to Directus
+    and update the asset id in brandVars (email-templates.ts).
+  • Header logo is a hosted Directus asset (`earnestLogoUrl`), set for all
+    Earnest-chrome emails in _header.mjml.
 
   Available variables:
-    {{firstName}}  – recipient's first name (may be empty)
-    {{name}}       – recipient's full name (may be empty)
-    {{ctaUrl}}     – link to the app / next step
-    {{year}}       – current year (footer uses it too)
+    {{firstName}} · {{name}} · {{ctaUrl}} · {{year}} · {{eaHeroUrl}} · {{eaRailUrl}}
+    {{eaIconHome}} {{eaIconPeople}} {{eaIconWork}} {{eaIconChannels}} {{eaIconMoney}} {{eaIconMarketing}} {{eaIconAi}}
   Brand tokens (logo, colors, address) are supplied by the shell automatically.
 
   HTML comments like this one are stripped from the sent email, so leave notes freely.
@@ -23,29 +39,178 @@
 -->
 
 <!-- ▼▼▼  YOUR DESIGN STARTS HERE  ▼▼▼ -->
-<mj-section padding="8px 32px 8px 32px">
+
+<!-- ─── Intro (Director hook) ─────────────────────────────────────────── -->
+<mj-section padding="20px 32px 0 32px">
   <mj-column>
-    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 8px 0">
-      {{#if firstName}}You're on the list, {{firstName}}.{{else}}You're on the early-access list.{{/if}}
+    <mj-text letter-spacing="0.5px" font-size="34px" line-height="1.14" font-weight="400" color="#141210" padding="14px 0 14px 0">
+      You're in{{#if firstName}}, {{firstName}}{{/if}}.
     </mj-text>
-    <mj-text padding="0 0 12px 0">
-      {{#if firstName}}Hi {{firstName}},{{else}}Hi there,{{/if}}
+    <mj-text font-size="17px" line-height="1.6" color="#3f4d5c" padding="0 0 4px 0">
+      You didn't start your business to click through software. Earnest is the
+      calm, AI-native workspace where an <strong style="font-weight:600;">AI Director</strong>
+      does the digging, forms an opinion, and brings you the handful of things
+      that actually need you. Your early access is on its way.
     </mj-text>
-    <mj-text padding="0 0 12px 0">
-      Thanks for requesting early access to <strong>Earnest</strong> — the calm,
-      AI-native workspace for running your business. We're inviting new users in
-      small batches while we finish production, and you're in the queue.
+  </mj-column>
+</mj-section>
+
+<!-- ─── Hero: the Command Center / Monday brief ───────────────────────── -->
+<mj-section padding="24px 32px 6px 32px">
+  <mj-column>
+    <mj-image src="{{eaHeroUrl}}" href="{{ctaUrl}}" alt="Earnest Command Center — the decisions that need you today, already triaged"
+              width="536px" padding="0" />
+    <mj-text align="center" font-size="12px" color="#8a97a8" padding="10px 0 0 0">
+      Open to your brief — what needs you today, already triaged.
     </mj-text>
-    <mj-text padding="0 0 12px 0">
-      <strong>What happens next:</strong> we'll email you a personal invite with a
-      link to set up your workspace. In the meantime you can explore a live demo —
-      no account needed.
+  </mj-column>
+</mj-section>
+
+<mj-section padding="10px 32px 0 32px">
+  <mj-column>
+    <mj-button href="{{ctaUrl}}" padding="8px 0 4px 0">
+      Explore the demo →
+    </mj-button>
+  </mj-column>
+</mj-section>
+
+<!-- ─── Pillar 1: context-aware automation ────────────────────────────── -->
+<mj-section padding="44px 32px 2px 32px">
+  <mj-column>
+    <mj-text font-size="11px" font-weight="700" letter-spacing="0.16em" color="#8493a6" text-transform="uppercase" padding="0 0 6px 0">
+      Context-aware automation
     </mj-text>
-    <mj-button href="{{ctaUrl}}" padding="16px 0 8px 0">
-      Explore the demo
+    <mj-text letter-spacing="0.5px" font-size="22px" line-height="1.3" font-weight="400" color="#141210" padding="0 0 10px 0">
+      It reads your business before it acts.
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.6" color="#4a5568" padding="0">
+      Set each client's goals, brand voice, and audience once. Earnest carries
+      that context into everything it drafts — so the work sounds like your
+      client, never a generic template.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<!-- ─── Pillar 2: powerful, never surprising (green / amber / red) ─────── -->
+<mj-section padding="48px 32px 2px 32px">
+  <mj-column>
+    <mj-text font-size="11px" font-weight="700" letter-spacing="0.16em" color="#8493a6" text-transform="uppercase" padding="0 0 6px 0">
+      Powerful, never surprising
+    </mj-text>
+    <mj-text letter-spacing="0.5px" font-size="22px" line-height="1.3" font-weight="400" color="#141210" padding="0 0 10px 0">
+      It drafts. You approve.
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.6" color="#4a5568" padding="0">
+      Earnest's automation acts when it's sure, proposes when it matters, and
+      holds back where it counts:
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<!-- GREEN — colored left rule, indented, no dot -->
+<mj-section padding="26px 32px 0 44px">
+  <mj-column border-left="3px solid #12a150" padding="0 0 0 16px">
+    <mj-text padding="0 0 4px 0" line-height="1">
+      <span style="color:#0f8a45;font-weight:700;font-size:10px;letter-spacing:0.14em;">GREEN&nbsp;·&nbsp;JUST DOES IT</span>
+    </mj-text>
+    <mj-text letter-spacing="0.5px" font-size="19px" line-height="1.25" font-weight="500" color="#141210" padding="0 0 4px 0">
+      When it's sure, it runs on its own
+    </mj-text>
+    <mj-text font-size="14px" line-height="1.55" color="#6b7684" padding="0">
+      Grounded, reversible work — reconcile a payment, summarize a meeting —
+      with a full audit trail and one-tap undo.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<!-- AMBER — colored left rule, indented, no dot -->
+<mj-section padding="26px 32px 0 44px">
+  <mj-column border-left="3px solid #e0a010" padding="0 0 0 16px">
+    <mj-text padding="0 0 4px 0" line-height="1">
+      <span style="color:#b7791f;font-weight:700;font-size:10px;letter-spacing:0.14em;">AMBER&nbsp;·&nbsp;PROPOSES</span>
+    </mj-text>
+    <mj-text letter-spacing="0.5px" font-size="19px" line-height="1.25" font-weight="500" color="#141210" padding="0 0 4px 0">
+      When it matters, it waits for you
+    </mj-text>
+    <mj-text font-size="14px" line-height="1.55" color="#6b7684" padding="0">
+      Anything that creates real work — a proposal, an invoice, a campaign — is
+      drafted accurately and held for your yes.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<!-- RED — colored left rule, indented, no dot -->
+<mj-section padding="26px 32px 2px 44px">
+  <mj-column border-left="3px solid #d92d20" padding="0 0 0 16px">
+    <mj-text padding="0 0 4px 0" line-height="1">
+      <span style="color:#c0261b;font-weight:700;font-size:10px;letter-spacing:0.14em;">RED&nbsp;·&nbsp;NEVER AUTOMATIC</span>
+    </mj-text>
+    <mj-text letter-spacing="0.5px" font-size="19px" line-height="1.25" font-weight="500" color="#141210" padding="0 0 4px 0">
+      You always make the call
+    </mj-text>
+    <mj-text font-size="14px" line-height="1.55" color="#6b7684" padding="0">
+      Anything that reaches a client or moves money waits for a person — you
+      make the final tap.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<!-- ─── One shell (apps demoted to a compact chip strip) ──────────────── -->
+<mj-section padding="52px 32px 2px 32px">
+  <mj-column>
+    <mj-text font-size="11px" font-weight="700" letter-spacing="0.16em" color="#8493a6" text-transform="uppercase" padding="0 0 6px 0">
+      One calm shell
+    </mj-text>
+    <mj-text letter-spacing="0.5px" font-size="22px" line-height="1.3" font-weight="400" color="#141210" padding="0 0 2px 0">
+      Every part of the business, one place.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="18px 32px 8px 32px">
+  <mj-group vertical-align="top">
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconHome}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Home</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconPeople}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">People</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconWork}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Work</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconChannels}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Chat</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconMoney}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Money</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconMarketing}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Mktg</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconAi}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Earnest AI</mj-text>
+    </mj-column>
+  </mj-group>
+</mj-section>
+
+<!-- ─── Close ─────────────────────────────────────────────────────────── -->
+<mj-section padding="44px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="16px" line-height="1.6" color="#3f4d5c" padding="0 0 14px 0">
+      The demo is the whole thing, live. See how it reasons.
+    </mj-text>
+    <mj-button href="{{ctaUrl}}" padding="4px 0 8px 0">
+      Explore the demo →
     </mj-button>
     <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
-      Questions, or want to jump the line? Just reply to this email — a real person reads it.
+      Want to jump the line? Just reply — a real person reads it.
     </mj-text>
   </mj-column>
 </mj-section>

@@ -130,6 +130,26 @@ use an MJML-editor design, paste the `<mj-section>…</mj-section>` blocks from 
 generator's `<mj-body>` between the two rulers in that file and keep the
 `{{firstName}}` / `{{ctaUrl}}` tokens. Preview it at `/email/preview-transactional`.
 
+It's **editorial** and mirrors the **apps-layout** look: serif display titles
+(Bodoni Moda), short copy, and an app "index" of icon rows. Colours track the
+app's default **Neutral** palette (Sky Aqua → Yale Blue). It uses three kinds of
+generated asset, all under `public/email/` and served via brand vars in
+`email-templates.ts`:
+
+- **Product screenshots** — `hero-command-center.png` + `detail-app-rail.png`
+  (`eaHeroUrl` / `eaRailUrl`), cropped from the marketing captures in the sibling
+  `earnest-marketing` repo at `public/screenshots/latest/`.
+- **Per-app icon chips** — `icons/{home,people,work,money,marketing,ai}.png`
+  (`eaIcon*`), a gradient accent disc + white app **lucide** glyph, walking the
+  Neutral ramp. Regenerate with a `resvg-py` + Pillow venv per the recipe in the
+  template's design-notes comment.
+- **Header logo** — the Earnest wordmark lockup is a hosted Directus asset
+  (`earnestLogoUrl`), wired in `_header.mjml` for **all** Earnest-chrome emails,
+  so marketing can swap the file in Directus without a deploy.
+
+The crop recipe and chip recipe both live in the template's design-notes comment;
+re-run them if the app UI shifts.
+
 **Trigger wiring** (send on early-access signup):
 1. Set `EARLY_ACCESS_WEBHOOK_SECRET` in the deployment env.
 2. In the Directus early-access Flow (`08912f2e-d3a7-4ea6-b21e-9bdb79feee64`),

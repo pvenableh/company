@@ -63,6 +63,16 @@ interface RenderedEmail {
 const EARNEST_BRAND_COLOR = '#141210';
 const EARNEST_HOME = 'https://earnest.guru';
 
+/**
+ * The Earnest wordmark lockup used in the header of every Earnest-chrome email
+ * (serif "Earnest." + cyan period + "Do good work." tagline). A hosted Directus
+ * asset so marketing can swap the file without a deploy. Single source of truth
+ * — the MJML shell reads this same value via `brandVars.earnestLogoUrl`
+ * (server/utils/email-templates.ts).
+ */
+export const EARNEST_LOGO_URL =
+	'https://admin.earnest.guru/assets/ff173436-9761-4f2c-9e1e-d3cc685cb351?key=email-small';
+
 function escapeHtml(input: unknown): string {
 	return String(input ?? '').replace(/[&<>"']/g, (c) => ({
 		'&': '&amp;',
@@ -138,7 +148,7 @@ function earnestHeaderBlock(): string {
 	return `
 		<tr>
 			<td style="padding:24px 32px 8px 32px;text-align:left;">
-				<a href="${EARNEST_HOME}" style="text-decoration:none;color:${EARNEST_BRAND_COLOR};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.01em;">Earnest</a>
+				<a href="${EARNEST_HOME}" style="text-decoration:none;border:0;outline:none;"><img src="${escapeAttr(EARNEST_LOGO_URL)}" alt="Earnest — Do good work." height="52" style="display:block;height:52px;max-height:52px;width:auto;max-width:200px;border:0;outline:none;" /></a>
 			</td>
 		</tr>
 	`;

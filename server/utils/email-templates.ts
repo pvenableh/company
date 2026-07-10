@@ -21,7 +21,7 @@
  */
 
 import { compileMjml } from './mjml-compiler';
-import type { OrgBrandRef } from './email-shell';
+import { EARNEST_LOGO_URL, type OrgBrandRef } from './email-shell';
 
 // Templates are imported as strings (the raw-mjml rollup plugin in
 // nuxt.config.ts turns each `.mjml` into `export default "<contents>"`), so
@@ -163,8 +163,31 @@ function brandVars(brand: BrandContext): Record<string, any> {
 		orgName,
 		brandColor,
 		logoUrl: directusAssetUrl(org?.logo ?? null),
-		earnestLogoUrl: appAsset('/email/earnest-logo.png'),
+		// Earnest wordmark lockup for the email header (Earnest-chrome sends).
+		// Single source of truth lives in email-shell.ts (EARNEST_LOGO_URL) so the
+		// MJML shell and the legacy inline shell always render the same logo. It's
+		// an absolute public URL, so it also renders in local previews.
+		earnestLogoUrl: EARNEST_LOGO_URL,
 		glassBgUrl: appAsset('/email/bg-glass.jpg'),
+		// Early-access welcome imagery (ignored by other templates). Hosted on
+		// Directus (like earnestLogoUrl) rather than app /public, so the email
+		// renders in every environment with no app deploy and marketing can swap a
+		// file without shipping code. Source PNGs live in public/email/ (+ icons/)
+		// as the regeneration source of truth — the crop/chip recipes are in the
+		// template's design-notes comment; re-upload to Directus and update the
+		// asset id here if they change.
+		//   hero  aaf911bc-5784-4708-965a-e758d1db7aba (public/email/hero-command-center.png)
+		//   rail  8ddd686a-8372-4cf0-9287-89fe36a16318 (public/email/detail-app-rail.png)
+		//   icons public/email/icons/<app>.png
+		eaHeroUrl: 'https://admin.earnest.guru/assets/aaf911bc-5784-4708-965a-e758d1db7aba',
+		eaRailUrl: 'https://admin.earnest.guru/assets/8ddd686a-8372-4cf0-9287-89fe36a16318',
+		eaIconHome: 'https://admin.earnest.guru/assets/838e8e51-611e-4080-9fe2-9431a2379022',
+		eaIconPeople: 'https://admin.earnest.guru/assets/100119aa-d42e-4994-b4e2-e2bfaf1b43b1',
+		eaIconWork: 'https://admin.earnest.guru/assets/67bee3a7-1b2c-4ad7-8629-1125f9f1756d',
+		eaIconChannels: 'https://admin.earnest.guru/assets/fb0afea8-52c8-441b-945e-2b47ae9beca1',
+		eaIconMoney: 'https://admin.earnest.guru/assets/723857d9-dde8-44c0-ab95-92e4171b8a6f',
+		eaIconMarketing: 'https://admin.earnest.guru/assets/5916955d-7638-493a-94aa-7be1252a191e',
+		eaIconAi: 'https://admin.earnest.guru/assets/b6b77a9e-c3ce-41ed-b870-89459b11f767',
 		orgWebsite: safeUrl(org?.website),
 		whitelabel: org?.whitelabel === true,
 		unsubscribeUrl: safeUrl(brand.unsubscribeUrl),

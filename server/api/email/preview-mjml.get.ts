@@ -185,11 +185,11 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const vars = sampleVars(name);
-	// The renderer resolves the logo + glass background to absolute prod URLs,
-	// which aren't reachable from a local dev preview. Point them at the local
-	// files so the preview shows them; real sends always use the absolute URLs.
+	// The glass background is app-hosted (public/email), so it resolves to an
+	// absolute prod URL that isn't reachable from a local dev preview — point it
+	// at the local file. The logo + early-access imagery are Directus-hosted
+	// (absolute public URLs), so they render as-is in dev and need no override.
 	if (import.meta.dev) {
-		(vars as any).earnestLogoUrl = '/email/earnest-logo.png';
 		(vars as any).glassBgUrl = '/email/bg-glass.jpg';
 	}
 
