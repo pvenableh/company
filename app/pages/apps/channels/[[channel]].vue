@@ -87,9 +87,10 @@ const effectiveClient = (ch) => {
 	if (pc) return typeof pc === 'object' ? { id: pc.id, name: pc.name } : { id: pc, name: null };
 	return null;
 };
-// Sub-group within a client: project channels use the project title; everything
-// else uses the free-text `category`. null = uncategorized → top of the client.
-const categoryOf = (ch) => (ch.project?.id ? ch.project.title || 'Project' : ch.category || null);
+// Sub-group within a client: an explicit `category` wins (lets you move any
+// channel — even a project one — into a custom folder); otherwise project
+// channels fall back to their project title. null = uncategorized → top of client.
+const categoryOf = (ch) => (ch.category?.trim() ? ch.category.trim() : ch.project?.id ? ch.project.title || 'Project' : null);
 
 const visibleChannels = computed(() => {
 	const q = channelQuery.value.trim().toLowerCase();
@@ -242,6 +243,29 @@ const existingCategories = computed(() =>
 	[...new Set((channels.value || []).map((c) => c.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
 );
 
+// Move a channel into / out of a folder (edits channels.category).
+const moveTarget = ref(null);
+const moveCategory = ref('');
+const savingFolder = ref(false);
+const openMoveFolder = (ch) => {
+	moveTarget.value = ch;
+	moveCategory.value = ch.category || '';
+};
+const saveFolder = async () => {
+	if (!moveTarget.value) return;
+	savingFolder.value = true;
+	try {
+		await channelItems.update(moveTarget.value.id, { category: moveCategory.value.trim() || null });
+		toast.add({ title: 'Folder updated', color: 'green' });
+		moveTarget.value = null;
+	} catch (err) {
+		console.error('Error updating folder:', err);
+		toast.add({ title: 'Failed to update folder', color: 'red' });
+	} finally {
+		savingFolder.value = false;
+	}
+};
+
 const archiveChannel = async (ch) => {
 	try {
 		await channelItems.update(ch.id, { status: 'archived' });
@@ -336,7 +360,7 @@ const createChannel = async () => {
 							<div v-else class="group/row relative">
 								<NuxtLink
 									:to="channelHref(row.ch.name)"
-									class="flex items-center gap-2 pr-8 py-2 rounded-lg transition-colors"
+									class="flex items-center gap-2 pr-14 py-2 rounded-lg transition-colors"
 									:class="[
 										row.indent ? 'pl-6' : 'pl-3',
 										row.ch.name === activeName ? 'bg-primary/10 text-primary' : 'hover:bg-muted/30 text-foreground',
@@ -350,14 +374,25 @@ const createChannel = async () => {
 										:class="row.ch.name === activeName ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'"
 									>{{ row.ch.messageCount }}</span>
 								</NuxtLink>
-								<button
+								<div
 									v-if="isAdmin"
-									class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 opacity-0 group-hover/row:opacity-100 hover:bg-muted/60 hover:text-foreground transition-all"
-									title="Archive channel"
-									@click.prevent.stop="archiveChannel(row.ch)"
+									class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-all"
 								>
-									<Icon name="lucide:archive" class="w-3.5 h-3.5" />
-								</button>
+									<button
+										class="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
+										title="Move to folder"
+										@click.prevent.stop="openMoveFolder(row.ch)"
+									>
+										<Icon name="lucide:folder-input" class="w-3.5 h-3.5" />
+									</button>
+									<button
+										class="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
+										title="Archive channel"
+										@click.prevent.stop="archiveChannel(row.ch)"
+									>
+										<Icon name="lucide:archive" class="w-3.5 h-3.5" />
+									</button>
+								</div>
 							</div>
 						</template>
 					</div>
@@ -542,6 +577,44 @@ const createChannel = async () => {
 					<div class="flex justify-end">
 						<Button :disabled="creating || !newChannelName || newChannelName.length < 3" @click="createChannel">
 							{{ creating ? 'Creating…' : 'Create channel' }}
+						</Button>
+					</div>
+				</div>
+			</UModal>
+		</ClientOnly>
+
+		<!-- Move to folder -->
+		<ClientOnly>
+			<UModal :model-value="!!moveTarget" @update:model-value="(v) => { if (!v) moveTarget = null; }">
+				<div v-if="moveTarget" class="p-6 space-y-4">
+					<h3 class="text-lg font-semibold text-foreground">Move #{{ cleanName(moveTarget.name) }}</h3>
+					<div class="space-y-1.5">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Folder</label>
+						<input
+							v-model="moveCategory"
+							type="text"
+							list="channel-categories"
+							placeholder="Type a folder name, or leave blank for none"
+							class="w-full h-10 px-4 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+							@keydown.enter="saveFolder"
+						>
+						<p class="text-[10px] text-muted-foreground/50">
+							Groups the channel into a folder under its client.
+							<span v-if="moveTarget.project?.id">Overrides its project folder.</span>
+						</p>
+					</div>
+					<div class="flex justify-between items-center gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							class="text-muted-foreground"
+							:disabled="savingFolder || !moveCategory.trim()"
+							@click="() => { moveCategory = ''; saveFolder(); }"
+						>
+							Remove from folder
+						</Button>
+						<Button :disabled="savingFolder" @click="saveFolder">
+							{{ savingFolder ? 'Saving…' : 'Save' }}
 						</Button>
 					</div>
 				</div>
