@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import VueDraggable from 'vuedraggable';
 import { toast } from 'vue-sonner';
+import { Button } from '~/components/ui/button';
 import type { ProjectTabKey } from './ProjectTabsBar.vue';
 
 const props = defineProps<{
@@ -626,6 +627,39 @@ function onChannelAttached() {
 	showAttachChannelModal.value = false;
 	loadChannels();
 }
+
+// Inline channel creation — mirrors Slack/Channels.vue. Names are slugs
+// (lowercase, hyphenated). New channels inherit the project's org + client so
+// they land tagged to this project.
+const showCreateChannel = ref(false);
+const newChannelName = ref('');
+const creatingChannel = ref(false);
+const channelSlug = (s: string) =>
+	String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const channelNameValid = computed(() => channelSlug(newChannelName.value).length >= 3);
+async function createChannel() {
+	if (!channelNameValid.value || creatingChannel.value) return;
+	creatingChannel.value = true;
+	try {
+		await $fetch('/api/channels', {
+			method: 'POST',
+			body: {
+				name: channelSlug(newChannelName.value),
+				organization: organizationId.value || undefined,
+				project: props.projectId,
+				client: clientId.value || undefined,
+			},
+		});
+		toast.success('Channel created');
+		newChannelName.value = '';
+		showCreateChannel.value = false;
+		loadChannels();
+	} catch (err: any) {
+		toast.error(err?.data?.message || err?.message || 'Failed to create channel');
+	} finally {
+		creatingChannel.value = false;
+	}
+}
 function onMeetingCreated() {
 	showCreateMeetingModal.value = false;
 	loadMeetings();
@@ -897,7 +931,7 @@ watch(() => props.projectId, () => {
 
 				<!-- Channels -->
 				<div v-else-if="activeTab === 'channels'">
-					<div class="flex items-center justify-end mb-3">
+					<div class="flex items-center justify-end gap-2 mb-3">
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -906,6 +940,41 @@ watch(() => props.projectId, () => {
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
 						</button>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border transition-colors"
+							:class="showCreateChannel
+								? 'border-border text-muted-foreground hover:bg-muted/60'
+								: 'border-primary/40 text-primary hover:bg-primary/10'"
+							@click="showCreateChannel = !showCreateChannel"
+						>
+							<Icon :name="showCreateChannel ? 'lucide:x' : 'lucide:plus'" class="w-3 h-3" />
+							{{ showCreateChannel ? 'Cancel' : 'New Channel' }}
+						</button>
+					</div>
+
+					<!-- Inline create -->
+					<div v-if="showCreateChannel" class="ios-card p-3 mb-3">
+						<label class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Channel name</label>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 flex items-center gap-1.5 h-9 rounded-full border border-border/50 bg-muted/30 px-3 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+								<span class="text-muted-foreground/50 text-sm">#</span>
+								<input
+									v-model="newChannelName"
+									type="text"
+									placeholder="e.g. design-feedback"
+									:disabled="creatingChannel"
+									class="flex-1 min-w-0 bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none"
+									@keydown.enter="createChannel"
+								>
+							</div>
+							<Button size="sm" class="h-9 shrink-0" :disabled="!channelNameValid || creatingChannel" @click="createChannel">
+								{{ creatingChannel ? 'Creating…' : 'Create' }}
+							</Button>
+						</div>
+						<p class="text-[10px] text-muted-foreground mt-1.5">
+							Lowercase letters, numbers, and hyphens. Tagged to this project automatically.
+						</p>
 					</div>
 					<div v-if="channelsLoading && !channels.length" class="space-y-px" aria-busy="true" aria-label="Loading channels">
 						<div
