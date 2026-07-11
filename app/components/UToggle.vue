@@ -40,7 +40,7 @@ const checked = computed({
 
 <template>
   <Switch
-    v-model:checked="checked"
+    v-model="checked"
     :disabled="disabled"
     :name="name"
     :class="props.class"
