@@ -35,14 +35,26 @@ let hydrationPromise: Promise<void> | null = null;
 //      Setting it during hydration triggers a class-binding hydration
 //      mismatch that Vue silently fails to patch.
 const isMobile: Ref<boolean> = shallowRef(false);
+// Large-desktop gate for the opt-in navigation sidebar (xl / 1280px+). Shares
+// the same module-level + deferred-attach pattern as `isMobile` so SSR (no
+// viewport) agrees on `false` and the client resolves the real value one frame
+// after hydration without triggering a class-binding mismatch. The desktop
+// sidebar only supersedes the bottom dock at this width — below it we always
+// fall back to the dock regardless of the stored preference.
+const isLargeScreen: Ref<boolean> = shallowRef(false);
 let mqlAttached = false;
 function ensureMqlListener() {
 	if (mqlAttached || !import.meta.client) return;
 	mqlAttached = true;
-	const mql = window.matchMedia('(max-width: 1023px)');
-	isMobile.value = mql.matches;
-	mql.addEventListener('change', (e) => {
+	const mobileMql = window.matchMedia('(max-width: 1023px)');
+	isMobile.value = mobileMql.matches;
+	mobileMql.addEventListener('change', (e) => {
 		isMobile.value = e.matches;
+	});
+	const largeMql = window.matchMedia('(min-width: 1280px)');
+	isLargeScreen.value = largeMql.matches;
+	largeMql.addEventListener('change', (e) => {
+		isLargeScreen.value = e.matches;
 	});
 }
 
@@ -123,11 +135,45 @@ export function useAppsMode() {
 		railShowLabels.value = next;
 	}
 
+	// ── Opt-in desktop navigation sidebar ────────────────────────────────────
+	// A labeled, grouped left sidebar (the classic-sidebar virtue) that REPLACES
+	// the bottom app dock on large screens. Off by default; enabled in
+	// Account → Appearance → Layout. Cookie-backed (not a Directus column yet)
+	// so SSR + client agree on the preference and the shell doesn't flash — the
+	// screen-size gate is layered on via CSS + `isLargeScreen`. Can be promoted
+	// to a user column later if cross-device sync matters.
+	const desktopSidebar = useCookie<boolean>('app-desktop-sidebar', {
+		default: () => false,
+	});
+	function setDesktopSidebar(next: boolean): void {
+		desktopSidebar.value = next;
+	}
+
+	// Collapse-to-icon-only state for the sidebar (labels → tooltips). Separate
+	// cookie so a user can keep the sidebar on but collapsed.
+	const sidebarCollapsed = useCookie<boolean>('app-sidebar-collapsed', {
+		default: () => false,
+	});
+	function setSidebarCollapsed(next: boolean): void {
+		sidebarCollapsed.value = next;
+	}
+
+	// Sidebar is only the live nav surface when enabled AND on a large screen.
+	// CSS media queries own the actual show/hide (to avoid a hydration flash);
+	// this derived flag is for JS consumers that need the resolved state.
+	const sidebarActive = computed(() => desktopSidebar.value && isLargeScreen.value);
+
 	return {
 		railPosition,
 		storedRailPosition,
 		railShowLabels,
 		setRailPosition,
 		setRailShowLabels,
+		isLargeScreen,
+		desktopSidebar,
+		setDesktopSidebar,
+		sidebarCollapsed,
+		setSidebarCollapsed,
+		sidebarActive,
 	};
 }

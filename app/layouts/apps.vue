@@ -6,9 +6,26 @@
 
 		<div
 			class="apps-shell apps-shell--floating-rail"
-			:class="`apps-shell--rail-${railPosition}`"
+			:class="[
+				`apps-shell--rail-${railPosition}`,
+				{
+					'apps-shell--has-sidebar': desktopSidebar,
+					'apps-shell--sidebar-collapsed': desktopSidebar && sidebarCollapsed,
+				},
+			]"
+			:data-desktop-sidebar="desktopSidebar ? 'on' : 'off'"
 			:style="accentStyle"
 		>
+			<!-- Opt-in desktop navigation sidebar. Rendered only when the
+			     preference is on; a CSS @media (min-width:1280px) gate owns the
+			     actual show/hide + content offset (and hides the bottom dock),
+			     so there's no JS-driven hydration flash. Client-only for parity
+			     with the AppRail: the active palette is client-only knowledge and
+			     the channel-unread badge fetches client-side. -->
+			<ClientOnly>
+				<LayoutAppSidebar v-if="desktopSidebar" class="apps-shell__sidebar" />
+			</ClientOnly>
+
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
 					<div class="apps-shell__chrome-left">
@@ -157,7 +174,7 @@ import { openEarnestPanel } from '~/composables/useEarnestPanel';
 import { spotlightOpen, toggleSpotlight } from '~/composables/useSpotlight';
 
 const { user } = useDirectusAuth();
-const { railPosition } = useAppsMode();
+const { railPosition, desktopSidebar, sidebarCollapsed } = useAppsMode();
 const { accentStyle } = useAppAccent();
 
 // Reconcile the global slide-over stack from `?slide=` on every route change.
@@ -318,5 +335,35 @@ if (import.meta.client) {
 
 .apps-shell__page--rail-right {
 	@apply pr-16 sm:pr-20;
+}
+
+/* ── Opt-in desktop navigation sidebar ───────────────────────────────
+ * When the `desktopSidebar` preference is on AND the viewport is xl+
+ * (1280px), the fixed AppSidebar becomes the app-nav surface: offset the
+ * shell content by the sidebar width and hide the bottom AppRail dock. The
+ * media query owns the size gate (not JS) so SSR/hydration never flash — the
+ * `--has-sidebar` class is set from a cookie-backed pref that agrees on both
+ * server and client, and this rule simply no-ops below xl.
+ *
+ * The utility FloatingDock is untouched — only the app-switcher rail hides. */
+.apps-shell {
+	transition: padding-left 220ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+
+@media (min-width: 1280px) {
+	.apps-shell--has-sidebar {
+		padding-left: 248px;
+	}
+	.apps-shell--has-sidebar.apps-shell--sidebar-collapsed {
+		padding-left: 72px;
+	}
+	/* Sidebar replaces the bottom app dock. Target the AppRail's own `.app-rail`
+	 * root via `:deep()`: the `apps-shell__rail` class passed to <AppRail> is
+	 * swallowed by reka's <TooltipProvider> root (fallthrough attrs aren't
+	 * forwarded), and the scoped attribute doesn't land on a child component's
+	 * root either — so `:deep(.app-rail)` is the reliable hook. */
+	.apps-shell--has-sidebar :deep(.app-rail) {
+		display: none;
+	}
 }
 </style>

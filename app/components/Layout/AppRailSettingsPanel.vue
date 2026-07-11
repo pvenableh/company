@@ -26,7 +26,7 @@ const props = withDefaults(
   { density: 'comfortable' },
 );
 
-const { railShowLabels, setRailShowLabels } = useAppsMode();
+const { railShowLabels, setRailShowLabels, desktopSidebar, setDesktopSidebar } = useAppsMode();
 const { palette, setPalette, glassChrome, setGlassChrome, paletteTint, setPaletteTint } = useAppPalette();
 
 // The brand palette is an ORG setting — only owners/admins may change it (the
@@ -65,6 +65,22 @@ const isCompact = computed(() => props.density === 'compact');
 
 <template>
   <div :class="isCompact ? 'rail-panel rail-panel--compact' : 'rail-panel rail-panel--comfortable'">
+    <!-- ── Section: Desktop sidebar ──────────────────────────────── -->
+    <div class="rail-panel__toggle" @click="setDesktopSidebar(!desktopSidebar)">
+      <Icon name="lucide:panel-left" class="rail-panel__toggle-icon" />
+      <div class="rail-panel__toggle-body">
+        <div class="rail-panel__toggle-title">Desktop sidebar</div>
+        <div class="rail-panel__toggle-hint">Show a labeled navigation sidebar on large screens (replaces the bottom app dock).</div>
+      </div>
+      <Switch
+        :model-value="desktopSidebar"
+        class="shrink-0"
+        @update:model-value="setDesktopSidebar"
+        @click.stop
+      />
+    </div>
+    <div class="rail-panel__divider" aria-hidden="true" />
+
     <!-- ── Section: Show labels ──────────────────────────────────── -->
     <div
       v-if="labelsToggleVisible"
