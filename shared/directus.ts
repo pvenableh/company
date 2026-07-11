@@ -1951,6 +1951,55 @@ export interface DirectorBriefing {
 	date_updated?: string | null;
 }
 
+export interface DirectorMinute {
+	/** @primaryKey */
+	id: number;
+	/** @description Owning organization (row-scopes read). */
+	organization?: Organization | string | null;
+	/** @description The Director who recorded these minutes. */
+	author?: DirectusUser | string | null;
+	/** @description The live session these minutes came from, if any (solo meetings have none). */
+	session?: DirectorSession | string | null;
+	/** @description Human label (subject / topic). */
+	title?: string | null;
+	/** @description Org-wide, a focused one-entity meeting, or a personal "my work" review. */
+	scope_type?: 'org' | 'entity' | 'mine';
+	/** @description Focused meeting: the collection (e.g. "projects"). */
+	entity_type?: string | null;
+	/** @description Focused meeting: the record id. */
+	entity_id?: string | null;
+	/** @description Agenda subject key or blank for a free topic. */
+	subject?: string | null;
+	/** @description Optional free-text steer that framed the meeting. */
+	topic?: string | null;
+	/** @description The plan whose steps were decided (ai_actions rows with session_id == this). */
+	plan_id?: string | null;
+	/** @description AI-generated plain-English recap of what was reviewed and decided. */
+	summary?: string | null;
+	/** @description The briefing intro/rationale carried over so the recap deck reads on its own. */
+	intro?: string | null;
+	/** @description TL;DR takeaway bullets for the recap deck. */
+	points?: Record<string, any> | null;
+	/** @description Money-mode snapshot metrics on screen at recording time. */
+	finance?: Record<string, any> | null;
+	/** @description Money-mode opportunity intel snapshot. */
+	opportunity?: Record<string, any> | null;
+	/** @description Focused client-review scorecard snapshot. */
+	client_rating?: Record<string, any> | null;
+	/** @description Snapshot of every proposed step + how it was decided: [{id, action_type, title, preview, status}]. */
+	steps?: Record<string, any> | null;
+	/** @description Action items captured during the meeting: [{type, title, priority, assignees}]. */
+	captured?: Record<string, any> | null;
+	/** @description The Ask-Earnest thread: [{role, text}]. */
+	qa?: Record<string, any> | null;
+	/** @description Rollup {done, skipped, failed, open, total, captured}. */
+	stats?: Record<string, any> | null;
+	/** @description recorded (saved) / shared (fanned out to teammates for review). */
+	status?: 'recorded' | 'shared';
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
 export interface DirectorParticipant {
 	/** @primaryKey */
 	id: number;
@@ -5450,6 +5499,7 @@ export interface Schema {
 	courses: Course[];
 	current_work: CurrentWork[];
 	director_briefings: DirectorBriefing[];
+	director_minutes: DirectorMinute[];
 	director_participants: DirectorParticipant[];
 	director_qa: DirectorQa[];
 	director_sessions: DirectorSession[];
@@ -5708,6 +5758,7 @@ export enum CollectionNames {
 	courses = 'courses',
 	current_work = 'current_work',
 	director_briefings = 'director_briefings',
+	director_minutes = 'director_minutes',
 	director_participants = 'director_participants',
 	director_qa = 'director_qa',
 	director_sessions = 'director_sessions',
