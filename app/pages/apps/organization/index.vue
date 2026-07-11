@@ -496,6 +496,31 @@ async function saveDocumentAccent() {
   }
 }
 
+// Goals feature toggle — mirrors the control in the Overview editor, surfaced
+// here in Settings where admins actually look for it. `goals_enabled !== false`
+// counts as on (see useGoalsEnabled), so an unset org reads as enabled.
+const savingGoals = ref(false);
+const goalsEnabled = computed(() => org.value?.goals_enabled !== false);
+async function saveGoalsEnabled(next: boolean) {
+  if (!org.value?.id || savingGoals.value) return;
+  savingGoals.value = true;
+  try {
+    await organizationItems.update(org.value.id, { goals_enabled: next });
+    toast.add({
+      title: next ? 'Goals enabled' : 'Goals hidden',
+      description: next
+        ? 'Goals are visible to everyone in this organization.'
+        : 'Goals are hidden across this organization.',
+      color: 'green',
+    });
+    await fetchOrganizationDetails();
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update goals setting', color: 'red' });
+  } finally {
+    savingGoals.value = false;
+  }
+}
+
 const isArchived = computed(() => !!org.value?.archived_at);
 
 // Danger-zone archive/restore confirm sheet (Settings floor).
@@ -1245,6 +1270,30 @@ function onClientInvited() {
               >
                 Apply
               </Button>
+            </div>
+          </div>
+
+          <!-- Features — org-wide feature switches. Goals lives here (not just
+               in the Overview editor) so admins find it where they look. -->
+          <div v-if="canManageOrg && org" class="ios-card p-5">
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
+              Features
+            </h3>
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-sm font-medium">Goals</p>
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  {{ goalsEnabled
+                    ? 'Goals are visible to everyone in this organization.'
+                    : 'Goals are hidden across this organization — nav, cards, and dashboard widgets.' }}
+                </p>
+              </div>
+              <UToggle
+                :model-value="goalsEnabled"
+                :disabled="savingGoals"
+                class="mt-0.5 shrink-0"
+                @update:model-value="saveGoalsEnabled"
+              />
             </div>
           </div>
 
