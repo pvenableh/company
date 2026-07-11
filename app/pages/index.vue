@@ -180,6 +180,11 @@ const actionAppCounts = computed<Record<ActionApp, number>>(() => {
 	}
 	return counts;
 });
+// On lg+ the priority list sits beside the taller QuickTasks + Earnest Score
+// column, so show two extra items to keep the two columns roughly level. Below
+// lg the layout stacks single-column, so keep the tighter count.
+const isLgScreen = useMediaQuery('(min-width: 1024px)');
+const actionLimit = computed(() => (isLgScreen.value ? 8 : 6));
 const topActions = computed(() => {
 	// "All" keeps the urgent/high focus (the cross-app priority queue). Drilling
 	// into a specific app shows ALL of that app's actions by score — so People
@@ -187,11 +192,11 @@ const topActions = computed(() => {
 	if (actionAppFilter.value === 'all') {
 		return unhandledActions.value
 			.filter(s => s.priority === 'urgent' || s.priority === 'high')
-			.slice(0, 6);
+			.slice(0, actionLimit.value);
 	}
 	return unhandledActions.value
 		.filter(a => CATEGORY_TO_APP[a.category] === actionAppFilter.value)
-		.slice(0, 6);
+		.slice(0, actionLimit.value);
 });
 
 // Several app categories come from deferred analyzers (CardDesk, deals, channels)
