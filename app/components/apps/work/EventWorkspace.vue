@@ -455,7 +455,7 @@ function openProject() {
 										</div>
 										<div class="text-[10px] text-muted-foreground/70">{{ formatMeetingTime(m.scheduled_start) }}</div>
 									</div>
-									<!-- allow-legacy-link — Daily prebuilt UI lives at /meeting/[roomName], no apps-shell equivalent -->
+									<!-- allow-legacy-link — PERMANENT: opens Daily's external prebuilt video UI (/meeting/[roomName], new tab). No in-shell equivalent exists; the call room is not a slide-over panel. -->
 									<NuxtLink
 										:to="`/meeting/${m.room_name}`"
 										target="_blank"

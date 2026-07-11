@@ -862,7 +862,7 @@ const promoteActionItem = async (idx) => {
 <template>
 	<div :class="compact ? '' : 'max-w-4xl mx-auto p-4 sm:p-6'">
 		<!-- Back (page mode only) -->
-		<!-- allow-legacy-link — full-page mode renders an in-shell back link. -->
+		<!-- allow-legacy-link — page-mode only (`v-if="!compact"`): the standalone deep-link route has no slide-over shell to pop, so it renders its own back link. Target stays in-shell (/apps/work); in compact mode the panel's back chrome handles this. -->
 		<NuxtLink
 			v-if="!compact"
 			to="/apps/work?floor=calendar&history=1"

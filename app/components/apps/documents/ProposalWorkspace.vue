@@ -438,7 +438,6 @@ if (!props.compact) {
 
           <div v-if="proposal.lead" class="ios-card p-5">
             <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Linked Lead</p>
-            <!-- allow-legacy-link — lead detail isn't yet a slide-over panel. -->
             <button type="button" @click="slideOverStack.push('lead', proposal.lead.id)" class="text-sm text-primary hover:underline">
               View lead &rarr;
             </button>

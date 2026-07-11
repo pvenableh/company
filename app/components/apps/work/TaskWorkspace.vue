@@ -235,7 +235,9 @@ async function deleteTask() {
 function openProject() {
   if (!projectInfo.value?.id) return;
   if (props.compact) pushPanel('work-project', String(projectInfo.value.id));
-  // allow-legacy-link — full-page mode keeps the classic project route
+  // allow-legacy-link — page-mode only (the `else` of `props.compact`): the
+  // standalone deep-link route has no slide-over stack to push onto, so it
+  // route-navigates to /projects/[id] (itself rendered in the apps shell).
   else useRouter().push(`/projects/${projectInfo.value.id}`);
 }
 </script>

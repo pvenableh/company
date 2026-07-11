@@ -782,7 +782,7 @@ function openContactPivot() {
 											{{ new Date(meeting.scheduled_start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }}
 										</p>
 									</div>
-									<!-- allow-legacy-link — Daily prebuilt UI lives at meeting_url, no apps-shell equivalent -->
+									<!-- allow-legacy-link — PERMANENT: opens Daily's external prebuilt video UI (meeting_url, new tab). No in-shell equivalent exists; the call room is not a slide-over panel. -->
 									<NuxtLink
 										v-if="meeting.meeting_url"
 										:to="meeting.meeting_url"

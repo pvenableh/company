@@ -22,9 +22,12 @@
       mode is exclusively for emailed/shared deep-links — apps-shell
       users always enter through the slide-over.
 
-  This contract is what allows us to delete every `// allow-legacy-link`
-  comment in the workspace bodies: the standalone branch ALWAYS routes
-  inside `/apps/*`, the compact branch ALWAYS stays in the stack.
+  Under this contract most `// allow-legacy-link` markers were retired: the
+  standalone branch routes inside `/apps/*` and the compact branch stays in
+  the stack, so neither punches out to the removed classic layout. The
+  markers that remain are deliberate and permanent — external Daily video
+  rooms (no in-shell equivalent) and page-mode-only back/route links that a
+  standalone deep-link renders because it has no slide-over shell to pop.
 -->
 <script setup lang="ts">
 import type { Invoice, PaymentsReceived } from '~~/shared/directus';

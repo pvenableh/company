@@ -556,7 +556,7 @@ if (!props.compact) {
             >
               {{ contract.proposal.title || 'View proposal' }} &rarr;
             </button>
-            <!-- allow-legacy-link — full-page mode lives outside the apps slide-over stack -->
+            <!-- allow-legacy-link — page-mode branch (`v-else` = !compact). Mirrors the compact push above; kept separate so the standalone deep-link route can still pivot to the proposal panel. -->
             <button type="button" @click="slideOverStack.push('proposal', contract.proposal.id)" v-else class="text-sm text-primary hover:underline">
               {{ contract.proposal.title || 'View proposal' }} &rarr;
             </button>
