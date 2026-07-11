@@ -34,14 +34,17 @@ const emit = defineEmits<{
   (e: 'open'): void
 }>()
 
-const isOpen = computed({
-  get: () => props.open ?? undefined,
-  set: (value: boolean | undefined) => {
-    emit('update:open', !!value)
-    if (!value) emit('close')
-    else emit('open')
-  },
-})
+// Support both controlled (`:open`/`v-model:open`) and uncontrolled usage.
+// The previous wrapper bound a computed that always resolved to a boolean, which
+// forced reka-ui into controlled mode — so bare `<UPopover>` usages (e.g. the
+// member budget editor) could never open. Pass `props.open` straight through:
+// when it's `undefined`, reka-ui manages its own open state; we still surface the
+// open/close events for callers that want them.
+function onOpenChange(value: boolean) {
+  emit('update:open', value)
+  if (value) emit('open')
+  else emit('close')
+}
 
 // Map NuxtUI placement to radix placement
 const side = computed(() => {
@@ -61,7 +64,7 @@ const align = computed(() => {
 </script>
 
 <template>
-  <Popover v-model:open="isOpen">
+  <Popover :open="open" @update:open="onOpenChange">
     <PopoverTrigger as-child :disabled="disabled">
       <slot />
     </PopoverTrigger>
