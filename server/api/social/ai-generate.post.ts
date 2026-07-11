@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
 				model: response.model,
 				inputTokens: response.usage.inputTokens,
 				outputTokens: response.usage.outputTokens,
+				organizationId: (body as any).organizationId,
 				metadata: { platforms: body.platforms, contentType: body.contentType },
 			}).catch(() => {});
 		}

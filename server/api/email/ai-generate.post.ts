@@ -235,6 +235,7 @@ Return this exact JSON structure:
         model: response.model,
         inputTokens: response.usage.inputTokens,
         outputTokens: response.usage.outputTokens,
+        organizationId: body.organizationId,
         metadata: { emailType: body.emailType },
       }).catch(() => {});
     }

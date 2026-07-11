@@ -123,6 +123,7 @@ export default defineEventHandler(async (event) => {
 				model: response.model,
 				inputTokens: response.usage.inputTokens,
 				outputTokens: response.usage.outputTokens,
+				organizationId: body.organization_id ?? undefined,
 				metadata: { platform: body.platform, target_chars: body.target_chars },
 			}).catch(() => {});
 		}
