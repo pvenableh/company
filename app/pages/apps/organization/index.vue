@@ -16,8 +16,9 @@
  * Decisions documented for Phase 6:
  *   - Overview floor is read-mostly; full inline editing stays on the
  *     classic `/organization` page reachable via the Edit header action.
- *   - AI Usage lives inside the Settings floor (single chart + table —
- *     not voluminous enough to warrant its own floor).
+ *   - AI Usage + token management get their own "AI & Tokens" floor —
+ *     usage meter, per-member breakdown, purchase, and org/member limits
+ *     are a first-class org concern, not buried under Settings.
  *   - Roles, Document Blocks, Service Templates surface as link tiles
  *     inside Settings — they're admin tooling, not daily-use.
  *   - `/account` (user profile) and `/account/subscription` stay on the
@@ -36,8 +37,8 @@ const config = useRuntimeConfig();
 const toast = useToast();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'overview' | 'members' | 'teams' | 'billing' | 'integrations' | 'settings';
-const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'teams', 'billing', 'integrations', 'settings'];
+type FloorKey = 'overview' | 'members' | 'teams' | 'billing' | 'ai' | 'integrations' | 'settings';
+const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'teams', 'billing', 'ai', 'integrations', 'settings'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -57,6 +58,7 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'members', label: 'Members', icon: 'lucide:users' },
   { key: 'teams', label: 'Teams', icon: 'lucide:users-round' },
   { key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
+  { key: 'ai', label: 'AI & Tokens', icon: 'lucide:sparkles' },
   { key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
   { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
 ];
@@ -1146,6 +1148,23 @@ function onClientInvited() {
         </template>
       </template>
 
+      <!-- ── AI & Tokens floor ────────────────────────────────────────── -->
+      <!-- Usage meter, per-member breakdown, purchase, and org/member
+           limits. OrganizationAIUsage self-loads; `manage-expanded` seeds
+           the token-management panel open since this floor is where admins
+           come specifically to manage AI spend. -->
+      <template v-else-if="floor === 'ai'">
+        <OrganizationAIUsage
+          v-if="selectedOrg"
+          :organization-id="selectedOrg"
+          manage-expanded
+        />
+        <div v-else class="flex items-center justify-center py-16 gap-3">
+          <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Loading…</span>
+        </div>
+      </template>
+
       <!-- ── Integrations floor ───────────────────────────────────────── -->
       <template v-else-if="floor === 'integrations'">
         <div v-if="stripeConnectLoading && !stripeConnect" class="flex items-center justify-center py-16 gap-3">
@@ -1295,11 +1314,6 @@ function onClientInvited() {
                 @update:model-value="saveGoalsEnabled"
               />
             </div>
-          </div>
-
-          <!-- AI Usage -->
-          <div class="ios-card p-5">
-            <OrganizationAIUsage v-if="selectedOrg" :organization-id="selectedOrg" />
           </div>
 
           <!-- Danger zone -->

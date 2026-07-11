@@ -304,6 +304,14 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	// When true, the admin Token Management panel starts expanded rather than
+	// collapsed behind the "Manage" toggle. The dedicated "AI & Tokens" org
+	// floor passes this since managing spend is the whole reason to land there;
+	// the classic /organization page leaves it collapsed.
+	manageExpanded: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const period = ref('month');
@@ -314,7 +322,7 @@ const userData = ref<any>(null);
 const recentData = ref<any>(null);
 const orgTokenInfo = ref<{ balance: number | null; limit: number | null; used: number; billingPeriodStart: string | null } | null>(null);
 const userBudgets = ref<{ userId: string; name: string; budget: number | null; used: number; isLowUsage: boolean }[]>([]);
-const showManagement = ref(false);
+const showManagement = ref(props.manageExpanded);
 
 // Check if current user can manage AI settings (owner/admin) and view usage
 const { canAccess, hasPermission } = useOrgRole();
