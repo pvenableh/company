@@ -6,7 +6,10 @@
   users hit the slide-over via `useAppSlideOver('mailing-list').open(id)`.
 -->
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Mailing List | Earnest' });
 
 const route = useRoute();
@@ -14,9 +17,7 @@ const listId = computed(() => route.params.id as string);
 </script>
 
 <template>
-  <NuxtLayout name="apps">
-    <LayoutPageContainer>
-      <AppsListsMailingListWorkspace :list-id="listId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsListsMailingListWorkspace :list-id="listId" />
+  </LayoutPageContainer>
 </template>

@@ -7,7 +7,10 @@
   hit the slide-over via `useAppSlideOver('contract').open(id)`.
 -->
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Contract | Earnest' });
 
 const route = useRoute();
@@ -15,9 +18,7 @@ const contractId = computed(() => route.params.id as string);
 </script>
 
 <template>
-  <NuxtLayout name="apps">
-    <LayoutPageContainer>
-      <AppsDocumentsContractWorkspace :contract-id="contractId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsDocumentsContractWorkspace :contract-id="contractId" />
+  </LayoutPageContainer>
 </template>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
 
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Payments | Earnest' });
 
 const { canAccess } = useOrgRole();
@@ -45,7 +48,6 @@ const totalReceived = computed(() => {
 </script>
 
 <template>
-	<NuxtLayout name="apps">
 	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">
@@ -148,5 +150,4 @@ const totalReceived = computed(() => {
 			</table>
 		</div>
 	</LayoutPageContainer>
-	</NuxtLayout>
 </template>

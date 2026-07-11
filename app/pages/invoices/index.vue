@@ -4,7 +4,10 @@ import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 // getFriendlyDateThree is auto-imported from utils/dates.ts
 
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
 
 
@@ -162,7 +165,6 @@ watch(() => selectedClient.value, debouncedFetch);
 </script>
 
 <template>
-  <NuxtLayout name="apps">
   <LayoutPageContainer>
     <LayoutPageHeader
       title="Invoices"
@@ -499,5 +501,4 @@ watch(() => selectedClient.value, debouncedFetch);
       </div>
     </Teleport>
   </LayoutPageContainer>
-  </NuxtLayout>
 </template>

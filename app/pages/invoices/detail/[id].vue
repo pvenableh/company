@@ -7,7 +7,10 @@
   slide-over via `useAppSlideOver('invoice').open(id)`.
 -->
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoice Detail | Earnest' });
 
 const route = useRoute();
@@ -15,9 +18,7 @@ const invoiceId = computed(() => route.params.id as string);
 </script>
 
 <template>
-  <NuxtLayout name="apps">
-    <LayoutPageContainer>
-      <AppsMoneyInvoiceWorkspace :invoice-id="invoiceId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsMoneyInvoiceWorkspace :invoice-id="invoiceId" />
+  </LayoutPageContainer>
 </template>

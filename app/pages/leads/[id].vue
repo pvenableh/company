@@ -7,7 +7,10 @@
   via `useAppSlideOver('lead').open(id)`.
 -->
 <script setup>
-definePageMeta({ layout: false, middleware: ['auth'] });
+// Layout is owned by the global `apps-layout.global.ts` middleware — no more
+// `layout: false` + our own <NuxtLayout>, which remounted the apps shell on
+// every navigation (the blank-screen bug). Nuxt keeps the layout persistent.
+definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Lead | Earnest' });
 
 const route = useRoute();
@@ -15,9 +18,7 @@ const leadId = computed(() => String(route.params.id));
 </script>
 
 <template>
-  <NuxtLayout name="apps">
-    <LayoutPageContainer>
-      <AppsClientsLeadWorkspace :lead-id="leadId" />
-    </LayoutPageContainer>
-  </NuxtLayout>
+  <LayoutPageContainer>
+    <AppsClientsLeadWorkspace :lead-id="leadId" />
+  </LayoutPageContainer>
 </template>
