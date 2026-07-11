@@ -368,7 +368,6 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 const orgItems = useDirectusItems('organizations');
-const prefItems = useDirectusItems('ai_preferences');
 
 async function loadOrgTokenInfo() {
 	if (!props.organizationId) return;
@@ -390,35 +389,25 @@ async function loadOrgTokenInfo() {
 }
 
 async function loadUserBudgets() {
-	if (!props.organizationId) return;
+	if (!props.organizationId || !canManageAI.value) return;
 	try {
-		const prefs = await prefItems.list({
-			fields: ['user.id', 'user.first_name', 'user.last_name', 'token_budget_monthly', 'low_usage_mode'],
-			filter: { organization: { _eq: props.organizationId } },
-			limit: 50,
-		}) as any[];
+		// Source from the admin members endpoint. It scopes ai_preferences by the
+		// org's member ids (the collection is a per-user singleton — filtering it
+		// by `organization` returns nothing), and already merges month-to-date
+		// usage. Only members with a budget or low-usage flag are surfaced here.
+		const data = await $fetch<{ members: any[] }>('/api/ai/manage/members', {
+			params: { organizationId: props.organizationId },
+		});
 
-		if (!prefs?.length) return;
-
-		// Get user usage this month
-		const monthStart = new Date();
-		monthStart.setDate(1);
-		monthStart.setHours(0, 0, 0, 0);
-
-		userBudgets.value = prefs
-			.filter((p: any) => p.user)
-			.map((p: any) => {
-				const u = p.user;
-				// Match with userData for usage info
-				const userUsage = userData.value?.users?.find((ud: any) => ud.id === u.id);
-				return {
-					userId: u.id,
-					name: [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown',
-					budget: p.token_budget_monthly ?? null,
-					used: userUsage?.totalTokens || 0,
-					isLowUsage: p.low_usage_mode === true,
-				};
-			});
+		userBudgets.value = (data.members || [])
+			.filter((m: any) => m.tokenBudget != null || m.lowUsageMode)
+			.map((m: any) => ({
+				userId: m.id,
+				name: m.name || 'Unknown',
+				budget: m.tokenBudget ?? null,
+				used: m.tokensUsedThisMonth || 0,
+				isLowUsage: m.lowUsageMode === true,
+			}));
 	} catch {
 		// Silently fail
 	}

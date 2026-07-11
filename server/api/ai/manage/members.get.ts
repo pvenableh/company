@@ -37,13 +37,15 @@ export default defineEventHandler(async (event) => {
   let prefsMap = new Map<string, any>();
   if (userIds.length > 0) {
     try {
+      // ai_preferences is a per-user singleton (keyed by `user` only — see
+      // ai/preferences.post.ts + member-budget/member-toggle writes). The
+      // `organization` column is essentially always null, so filtering on it
+      // here returned nothing — budgets/access always looked unset and edits
+      // appeared not to persist. Scope by the org's member ids instead.
       const prefs = await directus.request(
         readItems('ai_preferences', {
           filter: {
-            _and: [
-              { user: { _in: userIds } },
-              { organization: { _eq: organizationId } },
-            ],
+            user: { _in: userIds },
           },
           fields: ['user', 'ai_enabled', 'token_budget_monthly', 'low_usage_mode'],
           limit: -1,

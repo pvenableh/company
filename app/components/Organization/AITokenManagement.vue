@@ -180,15 +180,21 @@
 
 					<!-- Controls -->
 					<div class="flex items-center gap-2 flex-shrink-0">
-						<!-- Budget input -->
-						<UPopover>
-							<UButton
-								color="gray"
-								variant="ghost"
-								size="xs"
-								icon="i-heroicons-calculator"
-								class="text-muted-foreground"
-							/>
+						<!-- Budget input. Controlled open state: an uncontrolled
+						     <UPopover> (reka-ui) doesn't open in this app, and a
+						     <UButton> trigger breaks as-child event forwarding — so we
+						     drive open ourselves and use a native <button> trigger. -->
+						<UPopover
+							:open="openBudgetFor === member.id"
+							@update:open="(v: boolean) => openBudgetFor = v ? member.id : null"
+						>
+							<button
+								type="button"
+								class="inline-flex items-center justify-center h-7 w-7 rounded-full text-muted-foreground hover:bg-muted/60 transition-colors"
+								aria-label="Set token budget"
+							>
+								<UIcon name="i-heroicons-calculator" class="w-4 h-4" />
+							</button>
 							<template #panel>
 								<div class="p-3 space-y-2 w-56">
 									<p class="text-xs font-semibold text-foreground">Monthly Token Budget</p>
@@ -292,6 +298,8 @@ const orgLimitInput = ref<string>('');
 const savingOrgLimit = ref(false);
 const editBudgets = ref<Record<string, string>>({});
 const savingBudget = ref<string | null>(null);
+// Which member's budget popover is open (controlled — see template).
+const openBudgetFor = ref<string | null>(null);
 
 // Admin grant state
 const grantTokensInput = ref<string>('');
@@ -410,6 +418,7 @@ async function saveMemberBudget(userId: string) {
 		});
 		const member = members.value.find((m) => m.id === userId);
 		if (member) member.tokenBudget = budget;
+		openBudgetFor.value = null;
 		toast.add({ title: 'Budget Updated', description: budget ? `Set to ${formatTokens(budget)} tokens/month` : 'Budget removed', color: 'green' });
 	} catch (err: any) {
 		toast.add({ title: 'Error', description: err.data?.message || 'Failed to save budget', color: 'red' });
