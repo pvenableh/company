@@ -5,11 +5,25 @@
   which POSTs them to /sessions/[id]/invite (seats them + notifies them).
 -->
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   organizationId: string;
   /** User ids already at the table (host + joined/invited) — shown as seated. */
   seatedIds?: string[];
-}>();
+  /** Header title. Defaults to the live-invite copy; the minutes-share reuse overrides it. */
+  title?: string;
+  /** Header subtitle. */
+  subtitle?: string;
+  /** Send-button label (auto-pluralized with the selection count). */
+  cta?: string;
+  /** Header icon. */
+  icon?: string;
+}>(), {
+  seatedIds: () => [],
+  title: 'Invite to the table',
+  subtitle: "They'll be notified and can join live.",
+  cta: 'Send invite',
+  icon: 'i-lucide-user-plus',
+});
 
 const emit = defineEmits<{ invite: [userIds: string[]]; close: [] }>();
 
@@ -73,11 +87,11 @@ async function send() {
         <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <UIcon name="i-lucide-user-plus" class="w-4.5 h-4.5" />
+              <UIcon :name="icon" class="w-4.5 h-4.5" />
             </span>
             <div class="min-w-0">
-              <h3 class="text-sm font-semibold leading-tight">Invite to the table</h3>
-              <p class="text-xs text-muted-foreground truncate">They'll be notified and can join live.</p>
+              <h3 class="text-sm font-semibold leading-tight">{{ title }}</h3>
+              <p class="text-xs text-muted-foreground truncate">{{ subtitle }}</p>
             </div>
           </div>
           <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="emit('close')">
@@ -141,7 +155,7 @@ async function send() {
           >
             <UIcon v-if="sending" name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
             <UIcon v-else name="i-lucide-send" class="w-4 h-4" />
-            Send invite{{ selected.size === 1 ? '' : 's' }}
+            {{ cta }}{{ selected.size === 1 ? '' : 's' }}
           </button>
         </footer>
       </section>

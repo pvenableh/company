@@ -324,6 +324,17 @@ const clientRating = ref<any | null>(null); // focused client-review scorecard
 const topicInput = ref(''); // free-text "raise a topic" steer for the plan
 const mutated = ref(false); // any step executed → refresh page behind on close
 
+// ── Minutes (async "decision room" recap) ────────────────────────────────────
+// Record the finished meeting into a durable decision record, then optionally
+// share it for review. Captured action items are accumulated here so they land
+// in the minutes alongside the steps + Q&A.
+const { record: recordMinutes, share: shareMinutes } = useDirectorMinutes();
+interface CapturedItem { type: 'task' | 'ticket'; title: string; priority?: string; assignees?: string[] }
+const capturedItems = ref<CapturedItem[]>([]);
+const recordingMinutes = ref(false);
+const savedMinutesId = ref<string | null>(null);
+const showShareMinutes = ref(false);
+
 // ── Board-packet cache ────────────────────────────────────────────────────
 // The overlay is mounted once (app.vue) and only toggles `isOpen`, so this
 // state survives close/reopen. We reuse a recent agenda so reopening is
@@ -707,6 +718,13 @@ async function captureActionItem(payload: { type: 'task' | 'ticket'; title: stri
       },
     });
     mutated.value = true;
+    // Remember it for the minutes (names, not ids, so the recap reads cleanly).
+    capturedItems.value.push({
+      type: payload.type,
+      title: payload.title,
+      priority: payload.priority,
+      assignees: payload.assignTo.map((id) => usersById.value.get(id)?.label).filter(Boolean) as string[],
+    });
     const noun = payload.type === 'ticket' ? 'Ticket' : 'Task';
     toast.add({
       title: `${noun} created`,
@@ -807,6 +825,66 @@ function priorityDot(p: Priority): string {
   return { urgent: 'bg-destructive', high: 'bg-warning', medium: 'bg-info', low: 'bg-muted-foreground/50' }[p];
 }
 
+// Assemble the current meeting into a minutes snapshot and persist it. The
+// server generates the AI summary + rollup. Returns the saved id (or null).
+async function recordMeetingMinutes(): Promise<string | null> {
+  if (!selectedOrg.value || recordingMinutes.value) return null;
+  recordingMinutes.value = true;
+  try {
+    const s = scope.value;
+    const res = await recordMinutes({
+      organizationId: selectedOrg.value,
+      sessionId: liveActive.value ? (liveSession.value?.id ?? null) : null,
+      title: activeSubject.value ? recentLabelForSubject(activeSubject.value) : (s?.label || 'Working session'),
+      scopeType: s?.mode === 'entity' ? (s.entityType === 'user' ? 'mine' : 'entity') : 'org',
+      entityType: s?.mode === 'entity' ? (s.entityType ?? null) : null,
+      entityId: s?.mode === 'entity' ? (s.entityId ?? null) : null,
+      subject: activeSubject.value || null,
+      topic: topicInput.value.trim() || null,
+      planId: planId.value || null,
+      intro: planIntro.value || null,
+      points: slidePoints.value.length ? slidePoints.value : null,
+      finance: finance.value,
+      opportunity: opportunity.value,
+      clientRating: clientRating.value,
+      steps: steps.value.map((st) => ({ id: st.id, action_type: st.action_type, title: st.title, preview: st.preview, status: st.status })),
+      captured: capturedItems.value.slice(),
+      qa: qaThread.value.map((t) => ({ role: t.role, text: t.text })),
+    });
+    if (res?.id) {
+      savedMinutesId.value = res.id;
+      return res.id;
+    }
+    return null;
+  } finally {
+    recordingMinutes.value = false;
+  }
+}
+
+// "Record & share" — save the minutes, then open the teammate picker to fan out
+// a share-for-review notification. If already saved this session, just re-open
+// the picker rather than minting a duplicate record.
+async function recordAndShare() {
+  const id = savedMinutesId.value || (await recordMeetingMinutes());
+  if (!id) return;
+  showShareMinutes.value = true;
+}
+
+async function onShareMinutes(userIds: string[]) {
+  const id = savedMinutesId.value;
+  showShareMinutes.value = false;
+  if (!id || !userIds.length) return;
+  const n = await shareMinutes(id, userIds);
+  if (n > 0) {
+    toast.add({
+      title: `Shared with ${n} ${n === 1 ? 'teammate' : 'teammates'}`,
+      description: 'They’ll get a notification with the recap to review.',
+      icon: 'i-lucide-send',
+      color: 'green',
+    });
+  }
+}
+
 function onClose() {
   // Only refetch the page behind us if the meeting actually changed data.
   if (mutated.value) refreshNuxtData();
@@ -815,7 +893,15 @@ function onClose() {
 }
 
 // Load the agenda + recent meetings each time the office opens.
-watch(isOpen, (open) => { if (open) { meetingStartedAt.value = new Date(); loadAgenda(); loadRecent(); fetchFilteredUsers(); } });
+watch(isOpen, (open) => {
+  if (open) {
+    meetingStartedAt.value = new Date();
+    // Fresh meeting → fresh minutes snapshot.
+    capturedItems.value = [];
+    savedMinutesId.value = null;
+    loadAgenda(); loadRecent(); fetchFilteredUsers();
+  }
+});
 onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 </script>
 
@@ -1497,9 +1583,35 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
 
                 <p v-else-if="!planning" class="text-sm text-muted-foreground">No concrete steps to propose for this area.</p>
 
-                <!-- Minutes rollup -->
-                <div v-if="rollup.total && rollup.open === 0" class="pt-2 border-t border-border text-xs text-muted-foreground">
-                  Meeting minutes — {{ rollup.done }} done, {{ rollup.skipped }} skipped<span v-if="rollup.failed">, {{ rollup.failed }} failed</span>.
+                <!-- Minutes rollup + record/share (async decision room) -->
+                <div v-if="hasBriefing && !planning" class="pt-2 border-t border-border flex items-center justify-between gap-3 flex-wrap">
+                  <p class="text-xs text-muted-foreground min-w-0">
+                    <template v-if="rollup.total">
+                      Meeting minutes — {{ rollup.done }} done, {{ rollup.skipped }} skipped<span v-if="rollup.failed">, {{ rollup.failed }} failed</span><span v-if="rollup.open">, {{ rollup.open }} open</span>.
+                    </template>
+                    <template v-else>Record what you reviewed for the team.</template>
+                    <span v-if="capturedItems.length" class="text-muted-foreground/70"> · {{ capturedItems.length }} action item{{ capturedItems.length === 1 ? '' : 's' }} captured</span>
+                  </p>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <NuxtLink
+                      v-if="savedMinutesId"
+                      :to="`/director/minutes/${savedMinutesId}`"
+                      class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                      title="Open the saved recap"
+                    >
+                      <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5" /> View recap
+                    </NuxtLink>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-foreground text-background hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      :disabled="recordingMinutes"
+                      :title="savedMinutesId ? 'Share the recap with teammates for review' : 'Save these minutes and share for review'"
+                      @click="recordAndShare"
+                    >
+                      <UIcon :name="recordingMinutes ? 'i-lucide-loader-2' : 'i-lucide-gavel'" class="w-3.5 h-3.5" :class="recordingMinutes ? 'animate-spin' : ''" />
+                      {{ savedMinutesId ? 'Share for review' : 'Record & share minutes' }}
+                    </button>
+                  </div>
                 </div>
                 </template>
 
@@ -1638,6 +1750,18 @@ onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
           :seated-ids="seatedIds"
           @invite="onInvite"
           @close="showInvite = false"
+        />
+
+        <!-- Share the recorded minutes with teammates for async review -->
+        <CommandCenterDirectorInvitePicker
+          v-if="showShareMinutes && selectedOrg"
+          :organization-id="selectedOrg"
+          title="Share minutes for review"
+          subtitle="They'll get the recap to review on their own time."
+          cta="Share recap"
+          icon="i-lucide-gavel"
+          @invite="onShareMinutes"
+          @close="showShareMinutes = false"
         />
       </div>
     </Transition>

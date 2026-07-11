@@ -94,7 +94,21 @@ async function load() {
   }
   loading.value = false;
 }
-watch(selectedOrg, () => { load(); loadLive(); }, { immediate: true });
+
+// Decision records — recorded minutes (director_minutes), the async recap layer.
+const { list: listMinutes } = useDirectorMinutes();
+const decisionRecords = ref<Awaited<ReturnType<typeof listMinutes>>>([]);
+async function loadMinutes() {
+  if (!selectedOrg.value) { decisionRecords.value = []; return; }
+  decisionRecords.value = await listMinutes(selectedOrg.value, 12);
+}
+function recordScopeNote(m: { scopeType: string; entityType: string | null }): string {
+  if (m.scopeType === 'entity' && m.entityType) return `Focused · ${m.entityType.replace(/s$/, '')}`;
+  if (m.scopeType === 'mine') return 'My work';
+  return 'Org-wide';
+}
+
+watch(selectedOrg, () => { load(); loadLive(); loadMinutes(); }, { immediate: true });
 
 // Deep-link from an invite notification: /director?session=<id> → join it.
 onMounted(async () => {
@@ -226,6 +240,37 @@ const filteredMeetings = computed(() => {
             </span>
           </div>
         </button>
+      </div>
+    </div>
+
+    <!-- Decision records — recorded minutes, shared for async review -->
+    <div v-if="decisionRecords.length" class="mb-6">
+      <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
+        <UIcon name="i-lucide-gavel" class="w-3.5 h-3.5" /> Decision records
+      </p>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <NuxtLink
+          v-for="r in decisionRecords"
+          :key="r.id"
+          :to="`/director/minutes/${r.id}`"
+          class="group text-left rounded-2xl border border-border bg-card p-3.5 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
+        >
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+              <UIcon name="i-lucide-gavel" class="w-4.5 h-4.5" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold truncate group-hover:text-primary">{{ r.title || 'Working session' }}</p>
+              <p class="text-xs text-muted-foreground truncate">
+                {{ recordScopeNote(r) }}<template v-if="r.stats?.total"> · {{ r.stats.done }} approved / {{ r.stats.total }}</template><template v-if="r.authorName"> · {{ r.authorName }}</template>
+              </p>
+            </div>
+            <span
+              v-if="r.status === 'shared'"
+              class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium bg-success/15 text-success shrink-0"
+            >Shared</span>
+          </div>
+        </NuxtLink>
       </div>
     </div>
 
