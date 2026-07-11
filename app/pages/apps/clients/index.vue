@@ -41,13 +41,10 @@ watch(view, (next) => {
   router.replace({ query: { ...route.query, view: next === 'clients' ? undefined : next } });
 });
 
-const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
-  { key: 'clients', label: 'Clients', icon: 'lucide:building-2' },
-  { key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
-  { key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
-  { key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
-  { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
-];
+// Segment list lifted into the shared nav model (`useAppNav`, keyed 'clients')
+// so this control and the desktop AppSidebar never drift. People deep-links on
+// `?view=` rather than `?floor=` (see `floorParamFor`).
+const segments = appFloors('clients') as Array<{ key: ViewKey; label: string; icon: string }>;
 
 // ── Intelligence data ──────────────────────────────────────────────────────
 const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntelligence();

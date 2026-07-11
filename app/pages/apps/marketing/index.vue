@@ -72,15 +72,12 @@ watch(floor, (next) => {
 
 // Accounts floor connects Facebook/Instagram/LinkedIn (OAuth) + per-account
 // analytics — hidden until the platform app credentials are approved.
+// Base floor list lifted into the shared nav model (`useAppNav`) so this strip
+// and the desktop AppSidebar never drift. The Accounts floor (platform OAuth +
+// analytics) stays hidden here until social publishing is enabled — page-local
+// visibility, layered on top of the shared list.
 const floors = computed<Array<{ key: FloorKey; label: string; icon: string }>>(() => {
-  const all: Array<{ key: FloorKey; label: string; icon: string }> = [
-    { key: 'pulse', label: 'Pulse', icon: 'lucide:activity' },
-    { key: 'campaigns', label: 'Campaigns', icon: 'lucide:rocket' },
-    { key: 'email', label: 'Email', icon: 'lucide:mail' },
-    { key: 'accounts', label: 'Accounts', icon: 'lucide:share-2' },
-    { key: 'studio', label: 'Studio', icon: 'lucide:palette' },
-    { key: 'audience', label: 'Audience', icon: 'lucide:users' },
-  ];
+  const all = appFloors('marketing') as Array<{ key: FloorKey; label: string; icon: string }>;
   return socialPublishingEnabled.value ? all : all.filter((f) => f.key !== 'accounts');
 });
 

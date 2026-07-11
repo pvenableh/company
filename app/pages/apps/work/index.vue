@@ -63,16 +63,10 @@ watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'projects' ? undefined : next } });
 });
 
-const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
-  { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
-  { key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
-  { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
-  // 'meetings' floor folded into 'calendar' — access via the Calendar floor's
-  // "History" button (meeting recaps live in a slide-over there now).
-  { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
-  { key: 'time', label: 'Time', icon: 'lucide:clock' },
-  { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
-];
+// Floor list lifted into the shared nav model (`useAppNav`) so this strip and
+// the desktop AppSidebar never drift. ('meetings' folded into 'calendar' — its
+// recaps live in a slide-over reached from the Calendar floor's History button.)
+const floors = appFloors('work') as Array<{ key: FloorKey; label: string; icon: string }>;
 
 // View toggle on the Projects floor — `timeline` (default) renders the
 // unified Gantt; `table` renders the searchable ProjectsTable. Persists

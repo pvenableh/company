@@ -72,14 +72,9 @@ watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'cashflow' ? undefined : next } });
 });
 
-const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
-  { key: 'cashflow', label: 'Cash flow', icon: 'lucide:trending-up' },
-  { key: 'documents', label: 'Documents', icon: 'lucide:files' },
-  { key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
-  { key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
-  { key: 'expenses', label: 'Expenses', icon: 'lucide:receipt' },
-  { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
-];
+// Floor list lifted into the shared nav model (`useAppNav`) so this strip and
+// the desktop AppSidebar never drift.
+const floors = appFloors('money') as Array<{ key: FloorKey; label: string; icon: string }>;
 
 // Documents floor — sub-tab `?tab=` rides alongside `?floor=documents`.
 // Hosting page owns the create modals; the floor component only renders

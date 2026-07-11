@@ -53,15 +53,9 @@ watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'overview' ? undefined : next } });
 });
 
-const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
-  { key: 'overview', label: 'Overview', icon: 'lucide:home' },
-  { key: 'members', label: 'Members', icon: 'lucide:users' },
-  { key: 'teams', label: 'Teams', icon: 'lucide:users-round' },
-  { key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
-  { key: 'ai', label: 'AI & Tokens', icon: 'lucide:sparkles' },
-  { key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
-  { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
-];
+// Floor list lifted into the shared nav model (`useAppNav`) so this strip and
+// the desktop AppSidebar never drift.
+const floors = appFloors('organization') as Array<{ key: FloorKey; label: string; icon: string }>;
 
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { selectedOrg, currentOrg, fetchOrganizationDetails } = useOrganization();
