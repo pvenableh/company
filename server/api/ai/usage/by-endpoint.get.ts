@@ -12,21 +12,24 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const organizationId = query.organizationId as string;
   const period = (query.period as AiUsagePeriod) || 'month';
+  const requestedUserId = (query.userId as string) || null;
 
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
+  let access;
   try {
-    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+    access = await resolveAiUsageAccess(event, organizationId, requestedUserId);
   } catch (error: any) {
     if (error?.statusCode && error.statusCode < 500) throw error;
-    console.error('[ai/usage/by-endpoint] Permission check failed:', error?.message || error);
+    console.error('[ai/usage/by-endpoint] Access check failed:', error?.message || error);
     return { endpoints: [] };
   }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
+  if (access.userFilter) filter.user = { _eq: access.userFilter };
 
   try {
     const logs = await directus.request(

@@ -12,12 +12,13 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const period = (query.period as AiUsagePeriod) || 'month';
   const organizationId = query.organizationId as string;
+  const requestedUserId = (query.userId as string) || null;
 
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  const empty = {
+  const emptyStats = {
     totalRequests: 0,
     totalTokens: 0,
     totalInput: 0,
@@ -25,19 +26,24 @@ export default defineEventHandler(async (event) => {
     totalCost: 0,
     activeUsers: 0,
     period,
-    daily: [],
+    daily: [] as any[],
   };
 
+  // Managers/admins/owners see the whole org; regular members are constrained
+  // to their own usage. A drill-down `userId` is honoured only for org-wide
+  // viewers (the resolver ignores it for self-scoped members).
+  let access;
   try {
-    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+    access = await resolveAiUsageAccess(event, organizationId, requestedUserId);
   } catch (error: any) {
     if (error?.statusCode && error.statusCode < 500) throw error;
-    console.error('[ai/usage/stats] Permission check failed:', error?.message || error);
-    return empty;
+    console.error('[ai/usage/stats] Access check failed:', error?.message || error);
+    return { ...emptyStats, scope: 'own' as const, viewingUserId: null };
   }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
+  if (access.userFilter) filter.user = { _eq: access.userFilter };
 
   try {
     const logs = await directus.request(
@@ -88,9 +94,11 @@ export default defineEventHandler(async (event) => {
       activeUsers: uniqueUsers,
       period,
       daily,
+      scope: access.scope,
+      viewingUserId: access.userFilter,
     };
   } catch (error: any) {
     console.error('[ai/usage/stats] Failed to fetch:', error?.message || error);
-    return empty;
+    return { ...emptyStats, scope: access.scope, viewingUserId: access.userFilter };
   }
 });

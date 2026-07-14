@@ -5,28 +5,33 @@
  *   organizationId: string (required)
  *   period: 'week' | 'month' | 'all' (default: 'month')
  */
-import { readItems } from '@directus/sdk';
+import { readItems, readUsers } from '@directus/sdk';
 import type { AiUsagePeriod } from '~~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const organizationId = query.organizationId as string;
   const period = (query.period as AiUsagePeriod) || 'month';
+  const requestedUserId = (query.userId as string) || null;
 
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
+  // Self-scoped members only ever see themselves here; org-wide viewers see
+  // everyone (or a single drill-down target).
+  let access;
   try {
-    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+    access = await resolveAiUsageAccess(event, organizationId, requestedUserId);
   } catch (error: any) {
     if (error?.statusCode && error.statusCode < 500) throw error;
-    console.error('[ai/usage/by-user] Permission check failed:', error?.message || error);
+    console.error('[ai/usage/by-user] Access check failed:', error?.message || error);
     return { users: [] };
   }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
+  if (access.userFilter) filter.user = { _eq: access.userFilter };
 
   try {
     const logs = await directus.request(
@@ -61,8 +66,12 @@ export default defineEventHandler(async (event) => {
     const userIds = Array.from(userMap.keys());
     let usersInfo: any[] = [];
     if (userIds.length > 0) {
+      // `directus_users` is a Directus CORE collection — the SDK rejects
+      // `readItems('directus_users', …)` ("Cannot use readItems for core
+      // collections"), which silently emptied this whole endpoint. Use the
+      // dedicated `readUsers()` command instead.
       usersInfo = await directus.request(
-        readItems('directus_users', {
+        readUsers({
           filter: { id: { _in: userIds } },
           fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
           limit: -1,

@@ -1,7 +1,7 @@
 <template>
 	<div class="space-y-6">
-		<!-- Permission gate -->
-		<div v-if="!canViewUsage" class="flex flex-col items-center justify-center py-16">
+		<!-- Access gate — only shown when the server refuses entirely (non-member). -->
+		<div v-if="accessDenied" class="flex flex-col items-center justify-center py-16">
 			<div class="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
 				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-destructive" />
 			</div>
@@ -13,8 +13,15 @@
 
 		<template v-else>
 		<!-- Period selector -->
-		<div class="flex items-center justify-between">
-			<h3 class="text-lg font-semibold text-foreground">Token Usage</h3>
+		<div class="flex items-center justify-between gap-3 flex-wrap">
+			<div class="min-w-0">
+				<h3 class="text-lg font-semibold text-foreground">
+					{{ viewScope === 'own' ? 'Your AI Usage' : 'Token Usage' }}
+				</h3>
+				<p v-if="viewScope === 'own'" class="text-xs text-muted-foreground mt-0.5">
+					You're seeing your own usage. Org-wide totals are visible to managers and admins.
+				</p>
+			</div>
 			<div class="flex items-center gap-2">
 				<button
 					v-for="p in periods"
@@ -28,6 +35,20 @@
 					{{ p.label }}
 				</button>
 			</div>
+		</div>
+
+		<!-- Drill-down banner — when an admin is inspecting a single member. -->
+		<div v-if="selectedUser" class="flex items-center gap-3 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
+			<button
+				type="button"
+				class="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+				@click="clearMember"
+			>
+				<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
+				All members
+			</button>
+			<span class="text-muted-foreground/50">/</span>
+			<span class="text-sm font-medium text-foreground truncate">{{ selectedUser.name }}</span>
 		</div>
 
 		<!-- Token Balance & Limits -->
@@ -134,8 +155,11 @@
 			<!-- Usage over time chart -->
 			<div v-if="stats.daily?.length > 1" class="ios-card p-4">
 				<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Usage Over Time</h4>
-				<div class="h-64">
-					<ClientOnly>
+				<ClientOnly>
+					<!-- The fixed height bounds ONLY the chart; the legend is a
+					     sibling below it so it flows inside the card instead of
+					     being pushed past the h-64 box (which overflowed the card). -->
+					<div class="h-64">
 						<ChartContainer :config="lineChartConfig" class="aspect-auto h-full w-full">
 							<VisXYContainer :data="dailyChartData" :padding="{ top: 10 }" :y-domain="[0, undefined]">
 								<VisLine
@@ -144,7 +168,7 @@
 									:color="[lineChartConfig.input.color, lineChartConfig.output.color]"
 									:curve-type="CurveType.MonotoneX"
 								/>
-								<VisAxis type="x" :x="(d) => d.index" :tick-format="(i) => { const data = dailyChartData; const idx = Math.round(i); return data && idx >= 0 && idx < data.length ? data[idx]?.label || '' : ''; }" :grid-line="false" :tick-line="false" :domain-line="false" />
+								<VisAxis type="x" :x="(d) => d.index" :tick-values="dailyTickValues" :tick-format="(i) => { const data = dailyChartData; const idx = Math.round(i); return data && idx >= 0 && idx < data.length ? data[idx]?.label || '' : ''; }" :grid-line="false" :tick-line="false" :domain-line="false" />
 								<VisAxis type="y" :grid-line="true" :tick-line="false" :domain-line="false" />
 								<ChartCrosshair
 									:template="lineTooltip"
@@ -152,18 +176,18 @@
 								/>
 							</VisXYContainer>
 						</ChartContainer>
-						<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
-							<span class="flex items-center gap-1.5">
-								<span class="w-3 h-0.5 rounded-full bg-blue-500"></span>
-								Input Tokens
-							</span>
-							<span class="flex items-center gap-1.5">
-								<span class="w-3 h-0.5 rounded-full bg-purple-500"></span>
-								Output Tokens
-							</span>
-						</div>
-					</ClientOnly>
-				</div>
+					</div>
+					<div class="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+						<span class="flex items-center gap-1.5">
+							<span class="w-3 h-0.5 rounded-full bg-blue-500"></span>
+							Input Tokens
+						</span>
+						<span class="flex items-center gap-1.5">
+							<span class="w-3 h-0.5 rounded-full bg-purple-500"></span>
+							Output Tokens
+						</span>
+					</div>
+				</ClientOnly>
 			</div>
 
 			<!-- Usage by endpoint -->
@@ -189,11 +213,17 @@
 					</div>
 				</div>
 
-				<!-- Usage by member -->
-				<div v-if="userData" class="ios-card p-4">
+				<!-- Usage by member (org-wide viewers only; hidden while drilled in) -->
+				<div v-if="userData && viewScope === 'all' && !selectedUser" class="ios-card p-4">
 					<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">By Member</h4>
-					<div class="space-y-3">
-						<div v-for="u in userData.users.slice(0, 10)" :key="u.id" class="flex items-center gap-3">
+					<div class="space-y-1">
+						<button
+							v-for="u in userData.users.slice(0, 10)"
+							:key="u.id"
+							type="button"
+							class="w-full flex items-center gap-3 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-muted/50"
+							@click="openMember(u)"
+						>
 							<div class="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
 								{{ u.name?.charAt(0)?.toUpperCase() || '?' }}
 							</div>
@@ -204,7 +234,8 @@
 								</div>
 								<span class="text-[10px] text-muted-foreground">{{ u.requests }} requests · ${{ u.cost.toFixed(2) }}</span>
 							</div>
-						</div>
+							<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+						</button>
 						<p v-if="!userData.users.length" class="text-sm text-muted-foreground text-center py-4">No usage data yet</p>
 					</div>
 				</div>
@@ -324,15 +355,28 @@ const orgTokenInfo = ref<{ balance: number | null; limit: number | null; used: n
 const userBudgets = ref<{ userId: string; name: string; budget: number | null; used: number; isLowUsage: boolean }[]>([]);
 const showManagement = ref(props.manageExpanded);
 
-// Check if current user can manage AI settings (owner/admin) and view usage
+// How much the server let us see: 'all' = org-wide, 'own' = just this member.
+// Authoritative source of truth for what to render (drives the By Member panel
+// + headings), decided server-side from the session role — not the client's
+// permission guess, so there's no async-role race on cold mount.
+const viewScope = ref<'all' | 'own'>('all');
+// Set true only when the server refuses access entirely (non-member 403).
+const accessDenied = ref(false);
+// Admin drill-down: the single member currently being inspected, or null for
+// the org-wide view. Only reachable in 'all' scope (By Member is hidden in
+// 'own' scope, so a member can never set this).
+const selectedUser = ref<{ id: string; name: string } | null>(null);
+
+// Check if current user can manage AI settings (owner/admin) and view all usage
 const { canAccess, hasPermission } = useOrgRole();
 const canManageAI = computed(() => canAccess('org_settings'));
-const canViewUsage = computed(() => hasPermission('ai_usage', 'read'));
+const canViewAll = computed(() => hasPermission('ai_usage', 'read'));
 
 const periods = [
 	{ label: '24h', value: 'day' },
 	{ label: '7d', value: 'week' },
 	{ label: '30d', value: 'month' },
+	{ label: 'All', value: 'all' },
 ];
 
 const lineChartConfig = {
@@ -346,11 +390,24 @@ const dailyChartData = computed(() => {
 	if (!stats.value?.daily) return [];
 	return stats.value.daily.map((d: any, i: number) => ({
 		index: i,
-		label: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+		// `d.date` is a calendar day string ("2026-07-11"). `new Date(str)` parses
+		// it as UTC midnight, which then renders as the PREVIOUS day in any negative
+		// UTC-offset timezone. Build a local Date from the parts so the label shows
+		// the actual bucket day.
+		label: (() => {
+			const [y, m, day] = String(d.date).split('-').map(Number);
+			return new Date(y, (m || 1) - 1, day || 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		})(),
 		input: d.input,
 		output: d.output,
 	}));
 });
+
+// One x-axis tick per actual day. Without this, VisAxis auto-generates a fixed
+// number of ticks across the numeric domain, which rounds fractional positions
+// to duplicate day labels (e.g. "Jul 12, Jul 12, Jul 13") when there are only a
+// few data points.
+const dailyTickValues = computed(() => dailyChartData.value.map((d) => d.index));
 
 const maxEndpointTokens = computed(() => {
 	if (!endpointData.value?.endpoints?.length) return 0;
@@ -422,40 +479,57 @@ async function loadUserBudgets() {
 }
 
 async function refresh() {
-	if (!canViewUsage.value) return;
 	loading.value = true;
 	const params: Record<string, string> = { period: period.value };
 	if (props.organizationId) params.organizationId = props.organizationId;
+	// Drill-down: constrain every panel to the selected member. The server
+	// honours this only for org-wide viewers, so it can't widen a member's scope.
+	if (selectedUser.value) params.userId = selectedUser.value.id;
 	const qs = new URLSearchParams(params).toString();
 
 	try {
 		const [statsRes, endpointRes, userRes, recentRes] = await Promise.all([
-			$fetch(`/api/ai/usage/stats?${qs}`),
+			$fetch<any>(`/api/ai/usage/stats?${qs}`),
 			$fetch(`/api/ai/usage/by-endpoint?${qs}`),
 			$fetch(`/api/ai/usage/by-user?${qs}`),
 			$fetch(`/api/ai/usage/recent?${qs}&limit=20`),
 		]);
+		accessDenied.value = false;
 		stats.value = statsRes;
 		endpointData.value = endpointRes;
 		userData.value = userRes;
 		recentData.value = recentRes;
+		// Server decides scope from the session role — trust it over the client.
+		if (statsRes?.scope === 'own' || statsRes?.scope === 'all') viewScope.value = statsRes.scope;
 
 		// Load token info after main data (userBudgets needs userData)
 		await Promise.all([loadOrgTokenInfo(), loadUserBudgets()]);
-	} catch (err) {
+	} catch (err: any) {
+		// 403 = not a member of this org → show the access-restricted state.
+		const status = err?.statusCode || err?.response?.status;
+		if (status === 403 || status === 401) accessDenied.value = true;
 		console.error('[AIUsage] Failed to load:', err);
 	} finally {
 		loading.value = false;
 	}
 }
 
+// Open the per-member drill-down (org-wide viewers only).
+function openMember(u: { id: string; name: string }) {
+	selectedUser.value = { id: u.id, name: u.name };
+	refresh();
+}
+function clearMember() {
+	if (!selectedUser.value) return;
+	selectedUser.value = null;
+	refresh();
+}
+
 onMounted(refresh);
 
-// The org role loads async — on a cold mount `canViewUsage` is still false
-// when onMounted fires, so refresh() bails and the skeletons would sit there
-// forever once the permission gate lifts. Re-run the load when the permission
-// resolves to true.
-watch(canViewUsage, (ok) => {
-	if (ok && !stats.value) refresh();
+// `canManageAI` (org_settings) resolves async via useOrgRole — when it flips
+// true on a cold mount, pull in the admin-only per-user budgets it gates.
+watch(canManageAI, (ok) => {
+	if (ok) loadUserBudgets();
 });
 </script>

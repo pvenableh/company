@@ -6,7 +6,7 @@
  *   period: 'day' | 'week' | 'month' | 'all' (default: 'month')
  *   limit: number (default: 20, max: 100)
  */
-import { readItems } from '@directus/sdk';
+import { readItems, readUsers } from '@directus/sdk';
 import type { AiUsagePeriod } from '~~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
@@ -14,21 +14,26 @@ export default defineEventHandler(async (event) => {
   const organizationId = query.organizationId as string;
   const period = (query.period as AiUsagePeriod) || 'month';
   const limit = Math.min(Number(query.limit) || 20, 100);
+  const requestedUserId = (query.userId as string) || null;
 
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
+  // Self-scoped members see only their own activity; org-wide viewers see the
+  // whole org (or a single drill-down target).
+  let access;
   try {
-    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+    access = await resolveAiUsageAccess(event, organizationId, requestedUserId);
   } catch (error: any) {
     if (error?.statusCode && error.statusCode < 500) throw error;
-    console.error('[ai/usage/recent] Permission check failed:', error?.message || error);
+    console.error('[ai/usage/recent] Access check failed:', error?.message || error);
     return { activity: [] };
   }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
+  if (access.userFilter) filter.user = { _eq: access.userFilter };
 
   try {
     const logs = await directus.request(
@@ -44,8 +49,11 @@ export default defineEventHandler(async (event) => {
     const userIds = [...new Set(logs.map(l => typeof l.user === 'object' && l.user !== null ? l.user.id : l.user).filter(Boolean))];
     let usersInfo: any[] = [];
     if (userIds.length > 0) {
+      // `directus_users` is a core collection — must use `readUsers()`, not
+      // `readItems('directus_users', …)` (the SDK throws on the latter, which
+      // silently emptied this endpoint). See by-user.get.ts.
       usersInfo = await directus.request(
-        readItems('directus_users', {
+        readUsers({
           filter: { id: { _in: userIds } },
           fields: ['id', 'first_name', 'last_name', 'avatar'],
           limit: -1,
