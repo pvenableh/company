@@ -113,6 +113,32 @@ const DEMO_USER_EMAILS = new Set<string>(
 );
 
 /**
+ * True when the authenticated session belongs to one of the shared demo
+ * workspace logins. Used to route those sessions to the mock AI provider so
+ * public visitors can't burn real Anthropic tokens on our key. Fails closed
+ * (returns false) if the session can't be read.
+ */
+export async function isDemoSession(event: any): Promise<boolean> {
+  try {
+    const session = await requireUserSession(event);
+    const userEmail = ((session as any).user?.email as string | undefined)?.toLowerCase();
+    return Boolean(userEmail && DEMO_USER_EMAILS.has(userEmail));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sync read of the per-request demo-mock flag set by
+ * server/middleware/demo-ai-mock.ts. True when this request is a demo session
+ * AND the demoAiMock kill-switch is on. Callers use it to skip real-token
+ * side effects (e.g. deductOrgTokens) since a mocked call spends nothing.
+ */
+export function isDemoMockEvent(event: any): boolean {
+  return Boolean(event?.context?.demoAiMock);
+}
+
+/**
  * Throw 403 if the authenticated session belongs to one of the shared demo
  * workspace logins. Use this on top of `requireOrgPermission` for routes that
  * mutate billing/payment data, since the agency demo's Admin role would

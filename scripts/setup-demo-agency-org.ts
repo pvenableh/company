@@ -37,6 +37,7 @@ import {
 	generatePassword,
 	pingDirectus,
 	randomToken,
+	seedAiUsage,
 	seedSocial,
 } from './lib/demo-seed';
 
@@ -1707,6 +1708,10 @@ async function main() {
 		],
 		postCount: 10,
 	});
+
+	// AI usage history across the admin + all teammates so the per-member
+	// drill-down on the AI & Tokens dashboard has data for everyone.
+	await seedAiUsage(org.id, [adminUser.id, ...teammateIds]);
 
 	console.log('\n============================================');
 	console.log('  Summary');

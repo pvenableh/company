@@ -499,7 +499,10 @@ export default defineEventHandler(async (event) => {
         metadata: { responseStyle, verbosity },
       }).catch(() => {});
 
-      if (organizationId) {
+      // Skip deduction for mocked demo sessions — a mock call spends nothing,
+      // so a demo should never be able to exhaust its balance. Usage is still
+      // logged above so the dashboard keeps growing.
+      if (organizationId && !isDemoMockEvent(event)) {
         const totalTokens = (streamResult.usage.inputTokens || 0) + (streamResult.usage.outputTokens || 0);
         deductOrgTokens(organizationId, totalTokens).catch(() => {});
       }

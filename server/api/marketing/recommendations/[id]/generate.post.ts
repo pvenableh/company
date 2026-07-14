@@ -286,7 +286,10 @@ export default defineEventHandler(async (event) => {
 			warnings: result.warnings,
 		},
 	}).catch(() => {});
-	deductOrgTokens(organizationId, result.inputTokens + result.outputTokens).catch(() => {});
+	// Mocked demo sessions spend nothing — log usage but never deduct.
+	if (!isDemoMockEvent(event)) {
+		deductOrgTokens(organizationId, result.inputTokens + result.outputTokens).catch(() => {});
+	}
 
 	// ─── Persist draft campaign + touches ───────────────────────────────────
 	const audienceData = candidateData?.audience || {};

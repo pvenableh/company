@@ -13,9 +13,16 @@
 
 import type { LLMProvider } from './types';
 import { ClaudeProvider } from './claude';
+import { MockClaudeProvider } from './mock-claude';
 
 let _cachedProvider: LLMProvider | null = null;
 let _cachedProviderName: string | null = null;
+let _cachedMockProvider: LLMProvider | null = null;
+
+function getMockProvider(): LLMProvider {
+  if (!_cachedMockProvider) _cachedMockProvider = new MockClaudeProvider();
+  return _cachedMockProvider;
+}
 
 /**
  * Get the configured LLM provider.
@@ -26,6 +33,19 @@ let _cachedProviderName: string | null = null;
  * @param providerOverride - Override the configured provider (for testing)
  */
 export function getLLMProvider(providerOverride?: string): LLMProvider {
+  // Demo sessions get the mock provider so public visitors can't spend real
+  // Anthropic tokens on our key. The flag is stamped per-request by
+  // server/middleware/demo-ai-mock.ts and read here via Nitro's async context
+  // (nitro.experimental.asyncContext). If the context is unavailable, we fall
+  // back to the real provider — safe because the demo orgs' ~100k/day token cap
+  // bounds any spend that slips through.
+  try {
+    const event = typeof useEvent === 'function' ? useEvent() : null;
+    if (event?.context?.demoAiMock) return getMockProvider();
+  } catch {
+    // No request context (e.g. background init) — use the configured provider.
+  }
+
   const config = useRuntimeConfig();
   const llmConfig = (config as any).llm || {};
   const providerName = providerOverride || llmConfig.provider || 'claude';

@@ -1035,6 +1035,134 @@ export async function seedDemoProjects(opts: {
 	return out;
 }
 
+// ── AI usage history seed ────────────────────────────────────────────────────
+// Seeds ai_usage_logs so the demo AI & Tokens dashboard renders realistic
+// history (it's empty otherwise). Spread across members × features × ~3-4 weeks.
+//
+// GOTCHA: ai_usage_logs.date_created is a system-managed timestamp — Directus
+// ignores the value on POST. We create the row, then PATCH date_created (which
+// DOES stick with the admin token, same trick as backdateContacts).
+//
+// Idempotent: every seeded row carries session_id='demo-seed-ai'; a re-run
+// deletes those first so counts don't compound. We deliberately DO NOT touch
+// organizations.ai_tokens_used_this_period — that counter drives the token cap,
+// and seeded history must not eat into the live demo's budget.
+
+// Mirror of the pricing in server/utils/ai-usage.ts so seeded estimated_cost
+// matches what a real call would have logged.
+const AI_SEED_PRICING: Record<string, { input: number; output: number }> = {
+	'claude-sonnet-5': { input: 3, output: 15 },
+	'claude-opus-4-8': { input: 15, output: 75 },
+	'claude-haiku-4-5': { input: 1, output: 5 },
+};
+
+const AI_SEED_ENDPOINTS = [
+	'ai/chat',
+	'marketing/ai-analyze',
+	'social/ai-generate',
+	'email/ai-generate',
+	'crm/ai-intelligence',
+];
+
+// Weighted model mix — mostly Sonnet, some Haiku, occasional Opus.
+const AI_SEED_MODELS = [
+	'claude-sonnet-5',
+	'claude-sonnet-5',
+	'claude-sonnet-5',
+	'claude-haiku-4-5',
+	'claude-opus-4-8',
+];
+
+const AI_SEED_SESSION_MARKER = 'demo-seed-ai';
+
+function seedCost(model: string, input: number, output: number): number {
+	const p = AI_SEED_PRICING[model] ?? AI_SEED_PRICING['claude-sonnet-5'];
+	return Math.round(((input * p.input + output * p.output) / 1_000_000) * 1_000_000) / 1_000_000;
+}
+
+/**
+ * Seed ~40-60 ai_usage_logs rows for the given org, spread across its members,
+ * the five AI features, and the last ~25 days. Idempotent.
+ */
+export async function seedAiUsage(orgId: string, memberIds: string[]): Promise<void> {
+	console.log(`\n--- ai usage history ---`);
+	const members = memberIds.filter(Boolean);
+	if (members.length === 0) {
+		console.warn('  [skip] no member ids passed — nothing to seed');
+		return;
+	}
+
+	// 1. Clear prior seeded rows for this org so re-runs don't compound.
+	const filter = encodeURIComponent(
+		JSON.stringify({
+			_and: [{ organization: { _eq: orgId } }, { session_id: { _eq: AI_SEED_SESSION_MARKER } }],
+		}),
+	);
+	const existing = await directusRequest<Array<{ id: number }>>(
+		`/items/ai_usage_logs?filter=${filter}&fields=id&limit=-1`,
+	);
+	const staleIds = (existing.data as Array<{ id: number }>)?.map((r) => r.id) ?? [];
+	if (staleIds.length > 0) {
+		const del = await directusRequest('/items/ai_usage_logs', 'DELETE', staleIds);
+		if (del.ok) console.log(`  [ok]   cleared ${staleIds.length} prior seeded rows`);
+		else console.warn(`  [warn] could not clear prior seeded rows: ${del.error}`);
+	}
+
+	// 2. Aim for ~50 rows total, at least ~8 per member so every member surfaces
+	//    in the per-member drill-down.
+	const perMember = Math.max(8, Math.round(50 / members.length));
+	const windowDays = 25;
+	const now = Date.now();
+	const dayMs = 86_400_000;
+
+	let created = 0;
+	for (let m = 0; m < members.length; m++) {
+		const userId = members[m];
+		for (let i = 0; i < perMember; i++) {
+			const model = AI_SEED_MODELS[(m + i) % AI_SEED_MODELS.length];
+			const endpoint = AI_SEED_ENDPOINTS[(m * 3 + i) % AI_SEED_ENDPOINTS.length];
+			// Believable magnitudes: input 1-9k, output 0.5-4k.
+			const input = 1000 + Math.floor(Math.random() * 8000);
+			const output = 500 + Math.floor(Math.random() * 3500);
+			const total = input + output;
+			const cost = seedCost(model, input, output);
+
+			const createRes = await directusRequest<{ id: number }>(
+				'/items/ai_usage_logs',
+				'POST',
+				{
+					user: userId,
+					organization: orgId,
+					endpoint,
+					model,
+					input_tokens: input,
+					output_tokens: output,
+					total_tokens: total,
+					estimated_cost: cost,
+					session_id: AI_SEED_SESSION_MARKER,
+					metadata: { seed: true, endpoint },
+				},
+			);
+			if (!createRes.ok || !createRes.data) {
+				console.warn(`  [warn] create usage row: ${createRes.error}`);
+				continue;
+			}
+
+			// Backdate: even spread across the window, oldest first, with a little
+			// intra-day jitter so buckets aren't all at midnight.
+			const fraction = perMember === 1 ? 0 : i / (perMember - 1);
+			const offsetDays = Math.floor((1 - fraction) * windowDays);
+			const jitterMs = ((m * 5 + i * 7) % 24) * 3_600_000;
+			const ts = new Date(now - offsetDays * dayMs - jitterMs).toISOString();
+			await directusRequest(`/items/ai_usage_logs/${createRes.data.id}`, 'PATCH', {
+				date_created: ts,
+			});
+			created++;
+		}
+	}
+	console.log(`  [ok]   ${created} ai_usage_logs rows across ${members.length} member(s)`);
+}
+
 // ── Social demo seed ─────────────────────────────────────────────────────────
 // Inserts placeholder social_accounts + social_posts so the demo orgs surface
 // realistic UI. Tokens are non-functional placeholders — diagnostics will

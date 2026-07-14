@@ -50,7 +50,14 @@ export async function logAIUsage(params: AIUsageParams): Promise<void> {
     const userId = (session as any).user?.id;
     if (!userId) return;
 
-    const directus = await getUserDirectus(params.event);
+    // The shared demo logins run on a restricted Directus role that can't write
+    // ai_usage_logs, so a mocked demo call would silently fail to log and the AI
+    // & Tokens dashboard would never grow for visitors. For those requests, log
+    // via the admin token instead (the row is still attributed to the user via
+    // the `user` field). Real users keep using their own token unchanged.
+    const directus = isDemoMockEvent(params.event)
+      ? getTypedDirectus()
+      : await getUserDirectus(params.event);
     const totalTokens = params.inputTokens + params.outputTokens;
     const cost = estimateCost(params.model, params.inputTokens, params.outputTokens);
 

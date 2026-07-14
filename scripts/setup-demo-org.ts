@@ -47,6 +47,7 @@ import {
 	seedDemoProjects,
 	seedTimeEntries,
 	seedSocial,
+	seedAiUsage,
 	type ProjectSeed,
 	type TimeEntrySeed,
 } from './lib/demo-seed';
@@ -1223,6 +1224,10 @@ async function main() {
 		],
 		postCount: 6,
 	});
+
+	// AI usage history for the solo demo user so the AI & Tokens dashboard
+	// renders realistic history instead of an empty state.
+	await seedAiUsage(org.id, [user.id]);
 
 	console.log('\n=========================================');
 	console.log('  Summary');

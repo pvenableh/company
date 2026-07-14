@@ -270,7 +270,10 @@ export default defineEventHandler(async (event) => {
 			warnings: result.warnings,
 		},
 	}).catch(() => {});
-	deductOrgTokens(organizationId, result.inputTokens + result.outputTokens).catch(() => {});
+	// Mocked demo sessions spend nothing — log usage but never deduct.
+	if (!isDemoMockEvent(event)) {
+		deductOrgTokens(organizationId, result.inputTokens + result.outputTokens).catch(() => {});
+	}
 
 	// History head-of-array (newest first), capped at HISTORY_LIMIT to avoid
 	// unbounded JSON growth on heavy regenerate sessions.

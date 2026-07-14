@@ -319,6 +319,16 @@ export default defineNuxtConfig({
 			// prefers-reduced-motion further gate it; this flag overrides both.
 			earnestMascotEnabled: process.env.NUXT_PUBLIC_EARNEST_MASCOT_ENABLED !== 'false',
 
+			// Demo AI mock kill-switch. ON by default. When on, the shared public
+			// demo logins (demo@ / demo-agency@earnest.guru) get canned AI responses
+			// instead of hitting the real Anthropic API — so visitors can't burn real
+			// tokens on our key — while the AI usage dashboard keeps growing (mock
+			// still logs usage). Set NUXT_PUBLIC_DEMO_AI_MOCK=false to flip demo
+			// sessions back to real AI with no rebuild (the ~100k/day org cap still
+			// bounds spend). Only affects demo-workspace sessions; see
+			// server/middleware/demo-ai-mock.ts + server/utils/llm/mock-claude.ts.
+			demoAiMock: process.env.NUXT_PUBLIC_DEMO_AI_MOCK !== 'false',
+
 			// Stripe public key
 			stripePublic: isProduction ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 
@@ -559,6 +569,15 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
+		// Enable AsyncLocalStorage-backed request context so deep server utils
+		// (e.g. getLLMProvider in server/utils/llm/factory.ts) can read the current
+		// event via useEvent() without threading it through every callsite. Used to
+		// route the shared demo logins to the mock AI provider. If context is ever
+		// lost across an async boundary, the factory falls back to the real
+		// provider — safe because the ~100k/day demo-org token cap bounds spend.
+		experimental: {
+			asyncContext: true,
+		},
 		// Transactional MJML templates (server/emails/*.mjml) are imported as
 		// strings in server/utils/email-templates.ts. This rollup plugin turns a
 		// `.mjml` import into `export default "<raw contents>"` so the templates

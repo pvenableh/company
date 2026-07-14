@@ -83,7 +83,10 @@ export default defineEventHandler(async (event) => {
       organizationId,
       metadata: { targets },
     }).catch(() => {});
-    deductOrgTokens(organizationId, (gen.usage.inputTokens || 0) + (gen.usage.outputTokens || 0)).catch(() => {});
+    // Mocked demo sessions spend nothing — log usage but never deduct.
+    if (!isDemoMockEvent(event)) {
+      deductOrgTokens(organizationId, (gen.usage.inputTokens || 0) + (gen.usage.outputTokens || 0)).catch(() => {});
+    }
   }
 
   // Preview-only mode: return generated blocks without persisting.

@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/meeting-reminders",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/demo-token-topup",
+      "schedule": "0 8 * * *"
     }
   ]
 }
