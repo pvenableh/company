@@ -48,9 +48,14 @@
 					<ArcadeIntroModal ref="arcadeIntro" />
 				</section>
 
-				<section v-else-if="section === 'appearance'" class="w-full max-w-2xl">
+				<section v-else-if="section === 'appearance'" class="w-full">
 					<h2 class="account-page__heading">Appearance</h2>
 
+					<!-- Two-column grid on lg+ so the section uses the full page width:
+					     quick toggles + Layout on the left, theme (color scheme +
+					     typography) on the right. Single column below lg. -->
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-6 items-start">
+					<div>
 					<!-- Dark mode (top-of-section quick toggle).
 					     `@click` on the row + the Switch's own click are both
 					     wired to `toggleDark()` because reka-ui's Switch
@@ -104,21 +109,25 @@
 						/>
 					</div>
 
-					<!-- Surface (Glass/Ink) + Typography — personal prefs. The brand
-					     ACCENT palette is an org-level setting (Organization → Brand),
-					     so the per-user Mono/Chromatic hue picker stays hidden here. -->
-					<ThemeSwitcher />
-
 					<!-- Layout — rail position + design options (labels, glass chrome,
 					     palette tint, app palette picker). Grouped with theme because
 					     the user thinks of them as one bucket: how the app looks.
 					     Client-only: palette + glass state is localStorage-backed and
 					     would hydrate-mismatch if rendered on the server. -->
 					<h3 class="account-page__subheading">Layout</h3>
-					<div class="ios-card p-5 max-w-xl">
+					<div class="ios-card p-5">
 						<ClientOnly>
 							<LayoutAppRailSettingsPanel />
 						</ClientOnly>
+					</div>
+					</div>
+
+					<!-- Surface (Glass/Ink) + Typography — personal prefs. The brand
+					     ACCENT palette is an org-level setting (Organization → Brand),
+					     so the per-user Mono/Chromatic hue picker stays hidden here. -->
+					<div>
+						<ThemeSwitcher />
+					</div>
 					</div>
 				</section>
 

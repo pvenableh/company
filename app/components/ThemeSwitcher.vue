@@ -238,7 +238,10 @@ function getStylePreviewClass(styleId: string): string {
 @reference "~/assets/css/tailwind.css";
 
 .theme-switcher {
-	@apply grid gap-6 w-full;
+	@apply grid gap-x-10 gap-y-6 w-full items-start;
+	/* Sections (color scheme / typography) flow side-by-side when the host
+	   container is wide enough, single-column when narrow. */
+	grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
 }
 
 .theme-switcher__section {

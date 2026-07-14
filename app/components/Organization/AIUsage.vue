@@ -450,4 +450,12 @@ async function refresh() {
 }
 
 onMounted(refresh);
+
+// The org role loads async — on a cold mount `canViewUsage` is still false
+// when onMounted fires, so refresh() bails and the skeletons would sit there
+// forever once the permission gate lifts. Re-run the load when the permission
+// resolves to true.
+watch(canViewUsage, (ok) => {
+	if (ok && !stats.value) refresh();
+});
 </script>

@@ -451,19 +451,22 @@ const goTo = (route: string) => {
 					<div class="lg:col-span-2 space-y-6">
 						<!-- Priority Actions -->
 						<div class="space-y-4">
-							<div class="flex items-center justify-between">
-								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
-									<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-										Priority Actions
-									</h3>
-								</div>
+							<div class="flex items-center gap-2">
+								<UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
+								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+									Priority Actions
+								</h3>
 								<button
 									@click="runAnalysis"
 									:disabled="isAnalyzing"
-									class="text-xs text-primary hover:underline disabled:opacity-50"
+									aria-label="Refresh priority actions"
+									class="flex items-center justify-center size-6 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/60 transition-colors disabled:opacity-50"
 								>
-									Refresh
+									<UIcon
+										name="i-heroicons-arrow-path"
+										class="w-3.5 h-3.5"
+										:class="{ 'animate-spin': isAnalyzing }"
+									/>
 								</button>
 							</div>
 
@@ -475,10 +478,10 @@ const goTo = (route: string) => {
 									v-for="app in actionApps"
 									:key="app.key"
 									@click="actionAppFilter = app.key"
-									class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors"
+									class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors"
 									:class="actionAppFilter === app.key
-										? 'bg-primary text-primary-foreground'
-										: 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+										? 'border-primary bg-primary text-primary-foreground'
+										: 'border-border bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted dark:bg-muted/40 dark:hover:bg-muted/70'"
 								>
 									{{ app.label }}
 									<span
