@@ -1,6 +1,7 @@
 // nuxt.config.ts
 // Migrated to Tailwind CSS v4 + shadcn-vue + Directus with nuxt-auth-utils
 
+import { execSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
 import { version as pkgVersion } from './package.json';
 
@@ -8,21 +9,50 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Build-time app version — the human-facing "Earnest vX.Y.Z" label.
 //
-// It is read straight from package.json's "version" and ONLY changes when
-// someone intentionally bumps it (`pnpm release:minor` / `pnpm release:major`,
-// or editing package.json). It deliberately does NOT derive a patch from the
-// git commit count anymore: that made the displayed version climb on every
-// single deploy, which read as "the version keeps changing for no reason".
+// MAJOR.MINOR come from package.json; the PATCH auto-increments with the git
+// commit count (`git rev-list --count HEAD`) so the visible version moves on
+// every deploy. That is intentional — it's the signal a fresh deploy shipped.
 //
-// Deploy freshness (the "Update available — Refresh" toast) is a separate
-// signal driven by `buildId` = the commit SHA (see the runtimeConfig below), so
-// dropping the commit-count patch here does not affect update detection.
+// TAG-FREE BY DESIGN. An earlier scheme used `git describe --tags`, which broke
+// on Vercel: its authenticated clone of the private remote fetches commits but
+// NOT tags, so `describe` failed and the version silently fell back to the
+// static package.json value. Counting commits needs only commit history — which
+// `--unshallow` restores and which works fine on Vercel — never tags. So this
+// survives where the tag scheme didn't.
+//
+// Deploy freshness (the "Update available — Refresh" toast) is still driven by
+// `buildId` = the commit SHA (see runtimeConfig below), independent of this.
+function tryGit(cmd: string): string | null {
+	try {
+		return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000 })
+			.toString()
+			.trim();
+	} catch {
+		return null;
+	}
+}
+
 function resolveAppVersion(): string {
 	// Explicit override always wins (CI / manual lever / Vercel env var).
 	const envVer = process.env.NUXT_PUBLIC_APP_VERSION?.trim();
 	if (envVer) return envVer;
 
-	// Otherwise the static, intentionally-bumped package.json version.
+	// MAJOR.MINOR base from package.json; the static patch there is ignored.
+	const [major = '0', minor = '0'] = pkgVersion.split('.');
+	const base = `${major}.${minor}`;
+
+	// Vercel/CI often hand us a shallow clone (only the tip commit), which would
+	// undercount. Deepen the COMMIT history first — no-op on a complete repo.
+	if (tryGit('git rev-parse --is-shallow-repository') === 'true') {
+		tryGit('git fetch --unshallow --quiet');
+		tryGit('git fetch --deepen=2147483647 --quiet');
+	}
+
+	const count = tryGit('git rev-list --count HEAD');
+	if (count && /^\d+$/.test(count)) return `${base}.${count}`;
+
+	// Git unavailable (some serverless contexts) — fall back to the static
+	// package.json version so the app still boots with a sane label.
 	return pkgVersion;
 }
 

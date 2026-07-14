@@ -352,7 +352,7 @@ if (import.meta.client) {
 
 @media (min-width: 1280px) {
 	.apps-shell--has-sidebar {
-		padding-left: 248px;
+		padding-left: 208px;
 	}
 	.apps-shell--has-sidebar.apps-shell--sidebar-collapsed {
 		padding-left: 72px;

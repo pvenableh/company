@@ -228,6 +228,32 @@ const footerAccentApps = new Set<AppId>([...APP_FOOTER_ORDER]);
 								</NuxtLink>
 							</li>
 						</ul>
+
+						<!-- Floor icons (collapsed layout) — every nested section stays
+						     reachable as a tooltip'd icon so the narrow rail remains a
+						     full launcher, not just top-level apps. -->
+						<ul
+							v-if="sidebarCollapsed && app.floors.length"
+							class="app-sidebar__floors-collapsed"
+						>
+							<li v-for="fl in app.floors" :key="fl.key">
+								<Tooltip>
+									<TooltipTrigger as-child>
+										<NuxtLink
+											:to="floorLinkTo(app, fl.key)"
+											class="app-sidebar__floor-icon-link"
+											:class="{ 'app-sidebar__floor-icon-link--active': isActiveFloor(app, fl.key) }"
+											:aria-label="fl.label"
+											@click="hapticTap()"
+										>
+											<EarnestIcon v-if="fl.icon === 'earnest'" class="size-4" />
+											<Icon v-else :name="fl.icon" class="size-4" />
+										</NuxtLink>
+									</TooltipTrigger>
+									<TooltipContent side="right" :side-offset="8" class="z-[70]">{{ fl.label }}</TooltipContent>
+								</Tooltip>
+							</li>
+						</ul>
 					</li>
 				</ul>
 			</nav>
@@ -278,7 +304,7 @@ const footerAccentApps = new Set<AppId>([...APP_FOOTER_ORDER]);
 .app-sidebar {
 	@apply fixed top-0 left-0 z-40 flex flex-col
 		border-r border-border/40 bg-background/95 select-none;
-	width: var(--app-sidebar-w, 248px);
+	width: var(--app-sidebar-w, 208px);
 	height: 100vh;
 	height: 100dvh;
 	backdrop-filter: blur(18px) saturate(150%);
@@ -364,7 +390,7 @@ const footerAccentApps = new Set<AppId>([...APP_FOOTER_ORDER]);
  * wash. Palette-robust: readable in light + dark without a full gradient
  * chip (so a same-hue glyph can never vanish into a same-hue background). */
 .app-sidebar__chip {
-	@apply relative flex items-center justify-center shrink-0 rounded-lg;
+	@apply relative flex items-center justify-center shrink-0 rounded-full;
 	width: 30px;
 	height: 30px;
 	background: hsl(var(--row-h, 220) var(--row-s, 10%) var(--row-l, 50%) / 0.14);
@@ -381,7 +407,7 @@ const footerAccentApps = new Set<AppId>([...APP_FOOTER_ORDER]);
 }
 
 .app-sidebar__label {
-	@apply text-sm font-medium truncate;
+	@apply text-xs font-medium uppercase tracking-wide truncate;
 }
 
 /* Active app row — tile saturates, label lifts to full foreground, a thin
@@ -452,6 +478,20 @@ const footerAccentApps = new Set<AppId>([...APP_FOOTER_ORDER]);
 .app-sidebar__floor--active .app-sidebar__floor-label {
 	@apply font-semibold;
 	color: hsl(var(--primary));
+}
+
+/* ── Collapsed floor icons ───────────────────────────────────────── */
+.app-sidebar__floors-collapsed {
+	@apply flex flex-col items-center gap-0.5 list-none m-0 mt-0.5 mb-1 p-0;
+}
+.app-sidebar__floor-icon-link {
+	@apply flex items-center justify-center size-8 rounded-full
+		text-muted-foreground/70 transition-colors
+		hover:bg-muted/50 hover:text-foreground;
+}
+.app-sidebar__floor-icon-link--active {
+	color: hsl(var(--primary));
+	background: hsl(var(--primary) / 0.12);
 }
 
 /* ── Badge ───────────────────────────────────────────────────────── */
