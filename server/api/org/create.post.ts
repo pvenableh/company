@@ -5,7 +5,7 @@
  * and creates an owner org_membership for the current user.
  */
 
-import { createItem } from '@directus/sdk';
+import { createItem, createFolder } from '@directus/sdk';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/shared/permissions';
 import type { RoleSlug } from '~~/shared/permissions';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
     let folderId: string | null = null;
     try {
       const folder = await directus.request(
-        createItem('directus_folders', {
+        createFolder({
           name: name.trim(),
           parent: null,
         })
@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
       for (const subName of subfolderNames) {
         try {
           await directus.request(
-            createItem('directus_folders', {
+            createFolder({
               name: subName,
               parent: folderId,
             })

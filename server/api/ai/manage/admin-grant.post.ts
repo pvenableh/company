@@ -7,7 +7,7 @@
  *
  * Body: { organizationId: string, tokens: number, note?: string }
  */
-import { readItem, updateItem } from '@directus/sdk';
+import { readItem, readUser, updateItem } from '@directus/sdk';
 
 const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
 
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   // Verify caller is a Directus system admin (not just an org admin).
   const caller = await directus.request(
-    readItem('directus_users', userId, { fields: ['id', 'email', 'role'] }),
+    readUser(userId, { fields: ['id', 'email', 'role'] }),
   ).catch(() => null) as any;
 
   const callerRoleId = typeof caller?.role === 'object' ? caller.role?.id : caller?.role;

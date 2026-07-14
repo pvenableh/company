@@ -6,7 +6,7 @@
 // 11 doesn't enforce FK-walked filters on the create action, so we gate on
 // host-ownership in code and write through the admin client.
 
-import { createItem, readItem, readItems, uploadFiles } from '@directus/sdk';
+import { createItem, createFolder, readItem, readFolders, uploadFiles } from '@directus/sdk';
 import { requireMeetingAccess } from '~~/server/utils/meeting-perms';
 
 /**
@@ -25,7 +25,7 @@ async function resolveOrgMeetingsFolder(directus: any, organizationId: string | 
 		if (!rootId) return null;
 
 		const existing = (await directus.request(
-			readItems('directus_folders', {
+			readFolders({
 				filter: { name: { _eq: 'Meetings' }, parent: { _eq: rootId } },
 				fields: ['id'] as any,
 				limit: 1,
@@ -34,7 +34,7 @@ async function resolveOrgMeetingsFolder(directus: any, organizationId: string | 
 		if (existing?.length) return existing[0]!.id;
 
 		const created = (await directus.request(
-			createItem('directus_folders', { name: 'Meetings', parent: rootId } as any),
+			createFolder({ name: 'Meetings', parent: rootId } as any),
 		)) as { id: string };
 		return created?.id || null;
 	} catch (err: any) {

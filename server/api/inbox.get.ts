@@ -11,7 +11,7 @@
  *
  * Query: organizationId, limit (default 50)
  */
-import { readItems, readMe } from '@directus/sdk';
+import { readItems, readMe, readNotifications } from '@directus/sdk';
 
 export interface InboxItem {
 	id: string;
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 	let notifs: any[] = [];
 	try {
 		const me = (await directus.request(readMe({ fields: ['id'] }))) as any;
-		notifs = (await directus.request(readItems('directus_notifications' as any, {
+		notifs = (await directus.request(readNotifications({
 			filter: {
 				recipient: { _eq: me?.id || userId },
 				timestamp: { _gte: thirtyDaysAgo },

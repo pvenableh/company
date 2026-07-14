@@ -5,7 +5,7 @@
  *
  * Query: ?organization=<id>&team=<id> | ?organization=<id>&client=<id>
  */
-import { readItems } from '@directus/sdk';
+import { readUsers } from '@directus/sdk';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { resolveAudienceMembers } from '~~/server/utils/channel-members';
 
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!ids.length) return { users: [] };
 
   const users = await directus.request(
-    readItems('directus_users', {
+    readUsers({
       filter: { id: { _in: ids } },
       fields: ['id', 'first_name', 'last_name', 'email'],
       limit: -1,

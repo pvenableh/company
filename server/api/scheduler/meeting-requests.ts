@@ -1,5 +1,5 @@
 // server/api/scheduler/meeting-requests.ts
-import { readItems, createItem, updateItem } from '@directus/sdk';
+import { readItems, readUsers, createItem, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
 	const method = getMethod(event);
@@ -162,7 +162,7 @@ async function handlePatch(event: any) {
 
 			// Fetch requester details to get their email
 			const requesterData = await directus.request(
-				readItems('directus_users', {
+				readUsers({
 					filter: { id: { _eq: requesterId } },
 					fields: ['id', 'first_name', 'last_name', 'email'],
 					limit: 1,

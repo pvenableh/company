@@ -1,7 +1,7 @@
 // server/api/stripe/addons/subscribe.post.ts
 // Add a recurring add-on to the org's existing Stripe subscription.
 
-import { readItems } from '@directus/sdk';
+import { readUsers } from '@directus/sdk';
 import { EARNEST_ADDONS } from '~~/server/utils/stripe';
 import type { EarnestAddonId } from '~~/server/utils/stripe';
 
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
 		if (!subscriptionId) {
 			// Find the user's existing Stripe subscription
 			const users = await directus.request(
-				readItems('directus_users', {
+				readUsers({
 					filter: { id: { _eq: userId } },
 					fields: ['stripe_subscription_id'],
 					limit: 1,

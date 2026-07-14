@@ -16,7 +16,7 @@
  * users hitting it.
  */
 
-import { readItems, createItem } from '@directus/sdk';
+import { readItems, readUsers, createItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event);
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const adminRoleId = config.public.adminRole || config.public.adminRoleId;
   const me = await directus.request(
-    readItems('directus_users', {
+    readUsers({
       filter: { id: { _eq: session.user.id } },
       fields: ['id', 'role'],
       limit: 1,
