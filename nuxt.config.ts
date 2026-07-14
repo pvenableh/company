@@ -198,6 +198,9 @@ export default defineNuxtConfig({
 		stripePlatformFeeBps: process.env.STRIPE_PLATFORM_FEE_BPS || '0',
 		// Stripe Connect (Phase 4): signing secret for the Connect webhook endpoint.
 		stripeConnectWebhookSecret: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+		// Stripe Connect OAuth (ca_…): lets an org link a PRE-EXISTING Stripe
+		// account instead of creating a fresh one (e.g. Hue's historical account).
+		stripeConnectClientId: process.env.STRIPE_CONNECT_CLIENT_ID,
 		social: {
 			instagram: {
 				appId: process.env.INSTAGRAM_APP_ID || '',

@@ -1,11 +1,13 @@
 /**
  * POST /api/stripe/tokens/fulfill
- * Webhook handler to credit AI tokens to an organization after successful Stripe payment.
- * Called by Stripe webhook (checkout.session.completed) or manually by admin.
+ * Fast-path token crediting called by the client success page. The platform
+ * webhook (checkout.session.completed) is the reliable path; this just makes
+ * the balance show up immediately when the buyer lands back in-app. Both share
+ * `fulfillTokenPurchase`, which is idempotent — whichever runs second no-ops.
  *
  * Body: { sessionId } (Stripe checkout session ID)
  */
-import { readItem, updateItem } from '@directus/sdk';
+import { fulfillTokenPurchase } from '~~/server/utils/fulfill-token-purchase';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -20,54 +22,25 @@ export default defineEventHandler(async (event) => {
   try {
     const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
 
-    // Verify it's a completed token purchase
     if (checkoutSession.payment_status !== 'paid') {
       throw createError({ statusCode: 400, message: 'Payment not completed' });
     }
-
-    const metadata = checkoutSession.metadata || {};
-    if (metadata.type !== 'token_purchase') {
+    if (checkoutSession.metadata?.type !== 'token_purchase') {
       throw createError({ statusCode: 400, message: 'Not a token purchase session' });
     }
 
-    const tokensToAdd = Number(metadata.tokens);
-    const organizationId = metadata.organization_id;
+    const result = await fulfillTokenPurchase(stripe, checkoutSession);
 
-    if (!tokensToAdd || !organizationId) {
-      throw createError({ statusCode: 400, message: 'Invalid token purchase metadata' });
+    if (!result.success) {
+      throw createError({ statusCode: 400, message: `Invalid token purchase (${result.reason || 'unknown'})` });
     }
-
-    // Check if already fulfilled (idempotency)
-    if (metadata.fulfilled === 'true') {
-      return { success: true, message: 'Already fulfilled', tokensAdded: tokensToAdd };
-    }
-
-    const directus = getTypedDirectus();
-
-    // Credit tokens to organization
-    const org = await directus.request(
-      readItem('organizations', organizationId, {
-        fields: ['ai_token_balance'],
-      }),
-    ) as any;
-
-    const currentBalance = Number(org.ai_token_balance) || 0;
-    await directus.request(
-      updateItem('organizations', organizationId, {
-        ai_token_balance: currentBalance + tokensToAdd,
-      }),
-    );
-
-    // Mark as fulfilled in Stripe metadata to prevent double-crediting
-    await stripe.checkout.sessions.update(sessionId, {
-      metadata: { ...metadata, fulfilled: 'true' },
-    } as any);
 
     return {
       success: true,
-      tokensAdded: tokensToAdd,
-      newBalance: currentBalance + tokensToAdd,
-      organizationId,
+      tokensAdded: result.tokensAdded ?? 0,
+      newBalance: result.newBalance,
+      organizationId: result.organizationId,
+      alreadyFulfilled: result.alreadyFulfilled ?? false,
     };
   } catch (error: any) {
     if (error.statusCode) throw error;

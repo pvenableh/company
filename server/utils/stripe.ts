@@ -82,10 +82,15 @@ export const EARNEST_PLANS = {
 export type EarnestPlanId = keyof typeof EARNEST_PLANS;
 
 // Token add-on packages available for purchase
+// `wholesalePriceInCents` is charged instead of `priceInCents` when the buying
+// org has `wholesale_pricing` (Earnest-admin grant, e.g. Hue). Tokens granted
+// are identical — only the price changes.
+// NOTE: these wholesale figures are placeholders (~ retail/2). Set them to your
+// true token cost before enabling wholesale for anyone but Hue.
 export const TOKEN_PACKAGES = [
-	{ id: 'tokens_100k', name: '100K Tokens', tokens: 100_000, priceInCents: 900, stripePriceId: process.env.STRIPE_PRICE_TOKENS_100K || null },
-	{ id: 'tokens_500k', name: '500K Tokens', tokens: 500_000, priceInCents: 3900, stripePriceId: process.env.STRIPE_PRICE_TOKENS_500K || null },
-	{ id: 'tokens_1_5m', name: '1.5M Tokens', tokens: 1_500_000, priceInCents: 9900, stripePriceId: process.env.STRIPE_PRICE_TOKENS_1_5M || null },
+	{ id: 'tokens_100k', name: '100K Tokens', tokens: 100_000, priceInCents: 900, wholesalePriceInCents: 450, stripePriceId: process.env.STRIPE_PRICE_TOKENS_100K || null },
+	{ id: 'tokens_500k', name: '500K Tokens', tokens: 500_000, priceInCents: 3900, wholesalePriceInCents: 1950, stripePriceId: process.env.STRIPE_PRICE_TOKENS_500K || null },
+	{ id: 'tokens_1_5m', name: '1.5M Tokens', tokens: 1_500_000, priceInCents: 9900, wholesalePriceInCents: 4950, stripePriceId: process.env.STRIPE_PRICE_TOKENS_1_5M || null },
 ] as const;
 
 export type TokenPackageId = typeof TOKEN_PACKAGES[number]['id'];

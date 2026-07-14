@@ -3219,6 +3219,8 @@ export interface Organization {
 	stripe_account_status?: 'none' | 'pending' | 'active' | 'restricted';
 	/** @description ISO-2 country code used at account creation. Express onboarding is currently US-only. */
 	stripe_account_country?: string;
+	/** @description Earnest-admin grant. When true: wholesale token/credit pricing + zero platform application fee on this org's invoice payments. Fulfillment unchanged. Set only via /api/admin/organizations/:id/wholesale. */
+	wholesale_pricing?: boolean;
 	/** @description Org default for new meetings. Null = inherit plan default (free=off, studio+=on). */
 	default_recording?: boolean | null;
 	/** @description Org default for new meetings. Null = inherit plan default (free=off, solo+=on). */
