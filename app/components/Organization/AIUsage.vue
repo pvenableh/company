@@ -37,20 +37,6 @@
 			</div>
 		</div>
 
-		<!-- Drill-down banner — when an admin is inspecting a single member. -->
-		<div v-if="selectedUser" class="flex items-center gap-3 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
-			<button
-				type="button"
-				class="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-				@click="clearMember"
-			>
-				<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
-				All members
-			</button>
-			<span class="text-muted-foreground/50">/</span>
-			<span class="text-sm font-medium text-foreground truncate">{{ selectedUser.name }}</span>
-		</div>
-
 		<!-- Token Balance & Limits -->
 		<div v-if="orgTokenInfo" class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
@@ -102,15 +88,24 @@
 			</div>
 		</div>
 
-		<!-- Loading -->
-		<div v-if="loading" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-			<div v-for="i in 4" :key="i" class="ios-card p-4 animate-pulse">
-				<div class="h-3 bg-muted/40 rounded w-20 mb-3" />
-				<div class="h-7 bg-muted/40 rounded w-16" />
+		<!-- First load only: skeletons (cards + reserved chart height). Later
+		     refetches keep the content below mounted and just dim it, so nothing
+		     collapses and the chart never unmounts/jumps. -->
+		<div v-if="firstLoad" class="space-y-6">
+			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				<div v-for="i in 4" :key="i" class="ios-card p-4 animate-pulse">
+					<div class="h-3 bg-muted/40 rounded w-20 mb-3" />
+					<div class="h-7 bg-muted/40 rounded w-16" />
+				</div>
 			</div>
+			<div class="ios-card h-72 animate-pulse" />
 		</div>
 
-		<template v-else-if="stats">
+		<div
+			v-else-if="stats"
+			class="space-y-6 transition-opacity duration-300"
+			:class="{ 'opacity-50 pointer-events-none': loading }"
+		>
 			<!-- Stat cards -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 				<div class="ios-card p-4">
@@ -213,8 +208,9 @@
 					</div>
 				</div>
 
-				<!-- Usage by member (org-wide viewers only; hidden while drilled in) -->
-				<div v-if="userData && viewScope === 'all' && !selectedUser" class="ios-card p-4">
+				<!-- Usage by member (org-wide viewers only). Rows open a highlights
+				     slide-over; the org view here stays put underneath. -->
+				<div v-if="userData && viewScope === 'all'" class="ios-card p-4">
 					<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">By Member</h4>
 					<div class="space-y-1">
 						<button
@@ -289,7 +285,7 @@
 					</div>
 				</div>
 			</div>
-		</template>
+		</div>
 
 		<!-- Admin Token Management -->
 		<div v-if="canManageAI">
@@ -321,6 +317,14 @@
 				Earnest usage will appear here as your team uses Earnest features like Chat, Marketing Intelligence, Social, and Email generators.
 			</p>
 		</div>
+
+			<!-- Per-member highlights slide-over (right sheet) -->
+			<OrganizationAIUsageMemberSheet
+				v-model:open="memberSheetOpen"
+				:organization-id="organizationId"
+				:period="period"
+				:member="selectedMember"
+			/>
 		</template>
 	</div>
 </template>
@@ -362,10 +366,17 @@ const showManagement = ref(props.manageExpanded);
 const viewScope = ref<'all' | 'own'>('all');
 // Set true only when the server refuses access entirely (non-member 403).
 const accessDenied = ref(false);
-// Admin drill-down: the single member currently being inspected, or null for
-// the org-wide view. Only reachable in 'all' scope (By Member is hidden in
-// 'own' scope, so a member can never set this).
-const selectedUser = ref<{ id: string; name: string } | null>(null);
+// Admin per-member drill-down: opens a right slide-over with that member's
+// highlights. The org-wide view underneath is never touched, so closing the
+// sheet is instant. Only reachable in 'all' scope (By Member is hidden in 'own'
+// scope, so a member can never open a colleague).
+const memberSheetOpen = ref(false);
+const selectedMember = ref<{ id: string; name: string } | null>(null);
+
+// Skeletons only on the very first load. Once we have data, subsequent
+// refetches (period change) keep the content mounted and just dim it — no
+// collapse-to-skeletons, so the chart never unmounts and the layout can't jump.
+const firstLoad = computed(() => loading.value && !stats.value);
 
 // Check if current user can manage AI settings (owner/admin) and view all usage
 const { canAccess, hasPermission } = useOrgRole();
@@ -482,9 +493,6 @@ async function refresh() {
 	loading.value = true;
 	const params: Record<string, string> = { period: period.value };
 	if (props.organizationId) params.organizationId = props.organizationId;
-	// Drill-down: constrain every panel to the selected member. The server
-	// honours this only for org-wide viewers, so it can't widen a member's scope.
-	if (selectedUser.value) params.userId = selectedUser.value.id;
 	const qs = new URLSearchParams(params).toString();
 
 	try {
@@ -514,15 +522,12 @@ async function refresh() {
 	}
 }
 
-// Open the per-member drill-down (org-wide viewers only).
+// Open the per-member highlights slide-over (org-wide viewers only). The
+// org-wide view underneath is left untouched — the sheet fetches its own
+// member-scoped data — so closing it is instant.
 function openMember(u: { id: string; name: string }) {
-	selectedUser.value = { id: u.id, name: u.name };
-	refresh();
-}
-function clearMember() {
-	if (!selectedUser.value) return;
-	selectedUser.value = null;
-	refresh();
+	selectedMember.value = { id: u.id, name: u.name };
+	memberSheetOpen.value = true;
 }
 
 onMounted(refresh);
