@@ -8,9 +8,9 @@
 //      `{ conversations: true, reactions: false, ... }`. Falsey = opt-out.
 //   3. The grouping key for rail-badge counts.
 //
-// Reactions are special: even when `notification_preferences.reactions` is
-// true, email is never sent for that category. The toggle controls only
-// whether bell rows are created at all.
+// Reactions are the noisy category: their EMAIL is opt-IN (off by default) and
+// they never push, but a user can now enable reaction emails if they want them.
+// Per-channel gating (bell / email / push) lives in notify-event.ts.
 
 export type NotificationCategory =
 	| 'conversations'
@@ -23,7 +23,13 @@ export type NotificationCategory =
 	| 'proposals'
 	| 'meetings';
 
-export const NEVER_EMAIL: ReadonlySet<NotificationCategory> = new Set(['reactions']);
+/**
+ * Categories HARD-blocked from ever emailing, regardless of user prefs. Now
+ * empty — reactions are gated by an opt-in default in notify-event.ts instead
+ * of a hard lock, so users can choose to receive them. Kept as an export for
+ * API stability / future policy blocks.
+ */
+export const NEVER_EMAIL: ReadonlySet<NotificationCategory> = new Set();
 
 /**
  * Maps the source collection of a notification (the *parent* item — the

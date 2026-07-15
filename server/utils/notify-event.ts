@@ -16,7 +16,7 @@
 import { createNotification, readItem, readNotifications, readUsers, updateNotification } from '@directus/sdk';
 import { ctaLabelFor, sendNotificationEmail } from './notification-emails';
 import { fetchOrgBrand } from './email-send';
-import { NEVER_EMAIL, type NotificationCategory } from './notification-categories';
+import { type NotificationCategory } from './notification-categories';
 import { pushToUser } from './web-push';
 import { resolveNotificationTargets } from './notificationRecipients';
 
@@ -60,46 +60,52 @@ const RECIPIENT_FIELDS = [
 ] as const;
 
 /**
+ * The `notification_preferences` key that gates the BELL for a category. Every
+ * category uses `${category}_bell` (default on) EXCEPT reactions, which keeps
+ * its legacy `reactions` key so existing mutes keep working.
+ */
+function bellPrefKey(category: NotificationCategory): string {
+	return category === 'reactions' ? 'reactions' : `${category}_bell`;
+}
+
+/**
  * Returns true if this category is allowed to send an email to this recipient.
- * Bell rows are still created regardless — emailability only controls SendGrid.
+ * Bell rows are governed separately by `bellAllowed`.
+ *
+ * Normal categories are opt-OUT (`prefs[category]`, default on). Reactions are
+ * opt-IN (`prefs.reactions_email`, default OFF) — noise-heavy, so quiet unless
+ * the user explicitly asks for them. (This is what replaced the old hard
+ * NEVER_EMAIL lock, so reaction emails are now a per-user choice.)
  */
 function emailAllowed(recipient: RecipientRow, category: NotificationCategory): boolean {
-	if (NEVER_EMAIL.has(category)) return false;
 	if (recipient.email_notifications === false) return false;
 	if (!recipient.email) return false;
 	const prefs = recipient.notification_preferences || {};
 	if (prefs._all === false) return false;
-	// Per-category opt-out: only suppress on explicit false. Missing key = opt-in.
-	if (prefs[category] === false) return false;
-	return true;
+	if (category === 'reactions') return prefs.reactions_email === true; // opt-in
+	return prefs[category] !== false; // opt-out
 }
 
 /**
- * Same check, but for the bell row itself. Right now the only category that
- * the toggle suppresses at the bell level is reactions — every other
- * category always writes a bell row, and the toggle only controls email.
- * (Rationale: if you turned off "Invoices" emails, you probably still want
- * to know in-app. Reactions are noise-heavy, so the toggle is bell-level.)
+ * Whether to write the in-app BELL row. Now mutable per category via
+ * `${category}_bell` (reactions via legacy `reactions`), default on. The email
+ * master toggle does NOT silence the bell — turning off "Invoices" emails still
+ * shows the bell unless you also mute its bell.
  */
 function bellAllowed(recipient: RecipientRow, category: NotificationCategory): boolean {
-	if (category !== 'reactions') return true;
 	const prefs = recipient.notification_preferences || {};
-	return prefs.reactions !== false;
+	return prefs[bellPrefKey(category)] !== false;
 }
 
 /**
- * Whether to fan out a Web Push for this recipient + category. Push is
- * gated on the per-category opt-out (same as email) but NOT on the
- * `email_notifications` master toggle — push is its own channel. The
- * reactions category never pushes (mirrors the email NEVER_EMAIL rule —
- * lock-screen noise is worse than inbox noise).
- *
- * No "master push" pref key: enabling push is opt-in already (the user
- * must explicitly subscribe in NotificationsMenu). If the subscription
- * exists, they want to be pinged.
+ * Whether to fan out a Web Push. Mirrors the per-category email opt-out for
+ * normal categories, gated on `_all` but NOT the email master toggle (push is
+ * its own channel; enabling it is already opt-in via the device subscription).
+ * Reactions never push even when their email is enabled — lock-screen noise is
+ * worse than inbox noise.
  */
 function pushAllowed(recipient: RecipientRow, category: NotificationCategory): boolean {
-	if (NEVER_EMAIL.has(category)) return false;
+	if (category === 'reactions') return false;
 	const prefs = recipient.notification_preferences || {};
 	if (prefs._all === false) return false;
 	if (prefs[category] === false) return false;

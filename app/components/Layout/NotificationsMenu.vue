@@ -234,34 +234,34 @@
 						</div>
 
 						<div class="pl-4 space-y-3 border-l-2 border-muted">
-							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">In-app + email</div>
+							<!-- Per-category channel matrix. Each row independently controls
+							     the in-app Bell and the Email. Reactions email is opt-in
+							     (off by default); reactions never push. Mirrors the gating in
+							     server/utils/notify-event.ts. -->
+							<div class="flex items-center justify-between gap-3">
+								<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notify me about</div>
+								<div class="flex items-center gap-3 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+									<span class="w-11 text-center">Bell</span>
+									<span class="w-11 text-center">Email</span>
+								</div>
+							</div>
 							<div
-								v-for="opt in emailableCategoryOptions"
+								v-for="opt in channelCategoryOptions"
 								:key="opt.key"
-								class="flex items-center justify-between"
+								class="flex items-center justify-between gap-3"
 							>
-								<div>
+								<div class="min-w-0">
 									<div class="font-medium text-sm">{{ opt.label }}</div>
 									<div class="text-xs text-muted-foreground">{{ opt.hint }}</div>
 								</div>
-								<Switch
-									:model-value="preferences.categoryPrefs[opt.key] !== false"
-									@update:model-value="preferences.categoryPrefs[opt.key] = $event"
-								/>
-							</div>
-						</div>
-
-						<div class="pl-4 space-y-3 border-l-2 border-muted">
-							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">In-app only</div>
-							<div class="flex items-center justify-between">
-								<div>
-									<div class="font-medium text-sm">Reactions</div>
-									<div class="text-xs text-muted-foreground">Bell only — reactions never send email</div>
+								<div class="flex items-center gap-3 shrink-0">
+									<div class="w-11 flex justify-center">
+										<Switch :model-value="bellModel(opt.key)" @update:model-value="setBell(opt.key, $event)" />
+									</div>
+									<div class="w-11 flex justify-center">
+										<Switch :model-value="emailModel(opt.key)" @update:model-value="setEmail(opt.key, $event)" />
+									</div>
 								</div>
-								<Switch
-									:model-value="preferences.categoryPrefs.reactions !== false"
-									@update:model-value="preferences.categoryPrefs.reactions = $event"
-								/>
 							</div>
 						</div>
 
@@ -402,10 +402,9 @@ const preferences = ref({
 });
 const savingPrefs = ref(false);
 
-// Top-level categories that can send email. Reactions are deliberately
-// excluded from this list — they render in a separate "In-app only"
-// section because the email-delivery branch hardcodes a skip.
-const emailableCategoryOptions = [
+// Per-category rows for the Bell·Email matrix. Reactions are included now —
+// their email is opt-in (off by default) rather than hard-blocked.
+const channelCategoryOptions = [
 	{ key: 'conversations', label: 'Conversations', hint: 'Comments and replies on tickets, projects, and other items' },
 	{ key: 'tickets', label: 'Tickets', hint: 'Status changes and new assignments' },
 	{ key: 'tasks', label: 'Tasks', hint: 'When you are assigned a task' },
@@ -414,7 +413,24 @@ const emailableCategoryOptions = [
 	{ key: 'contracts', label: 'Contracts', hint: 'When a contract is sent or signed' },
 	{ key: 'proposals', label: 'Proposals', hint: 'When a proposal is sent, accepted, or declined' },
 	{ key: 'meetings', label: 'Meetings', hint: 'Invites, reschedules, reminders, cancellations' },
+	{ key: 'reactions', label: 'Reactions', hint: 'When someone reacts to something you posted' },
 ];
+
+// Pref-key + default rules must mirror server/utils/notify-event.ts:
+//   bell  → `${cat}_bell` (reactions: legacy `reactions`), default ON.
+//   email → `${cat}` opt-out default ON, EXCEPT reactions → `reactions_email`
+//           opt-IN default OFF.
+const bellPrefKey = (cat) => (cat === 'reactions' ? 'reactions' : `${cat}_bell`);
+const emailPrefKey = (cat) => (cat === 'reactions' ? 'reactions_email' : cat);
+const isEmailOptIn = (cat) => cat === 'reactions';
+
+const bellModel = (cat) => preferences.value.categoryPrefs[bellPrefKey(cat)] !== false;
+const setBell = (cat, val) => { preferences.value.categoryPrefs[bellPrefKey(cat)] = val; };
+const emailModel = (cat) =>
+	isEmailOptIn(cat)
+		? preferences.value.categoryPrefs[emailPrefKey(cat)] === true
+		: preferences.value.categoryPrefs[emailPrefKey(cat)] !== false;
+const setEmail = (cat, val) => { preferences.value.categoryPrefs[emailPrefKey(cat)] = val; };
 
 // Granular per-meeting-type controls. Tucked under a details/summary so the
 // main panel stays tidy — most users just want the category toggle.
