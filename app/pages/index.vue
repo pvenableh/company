@@ -91,15 +91,14 @@ const marketingPulse = useMarketingPulse();
 watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
 
 // ── Band ordering ──
-// Follows the global Mine/All data scope (the header toggle in DataScopeSelect).
-// Scope='mine' → YOU/US/REFERENCE; scope='all' → US/YOU/REFERENCE. REFERENCE is
-// always last. Non-admins are clamped to 'mine' by useDataScope, so they always
-// see YOU first regardless. Previously this used a dedicated useViewLens
-// toggle that shadowed the header's Mine/All — collapsed to one source of
-// truth.
-const { isMine } = useDataScope();
-const youOrder = computed(() => (isMine.value ? 1 : 2));
-const usOrder = computed(() => (isMine.value ? 2 : 1));
+// Fixed order: YOU → US → REFERENCE. Mine/All used to reorder these bands, which
+// pushed Priority Actions below the fold on 'all' and read as "the widget
+// disappeared". Mine/All is now a LOCAL control on Priority Actions (below) that
+// filters its queue instead of reshuffling the page.
+// See docs/dashboard-filters-localization-poc.md.
+const { isMine, canChooseAll, setScope } = useDataScope();
+const youOrder = computed(() => 1);
+const usOrder = computed(() => 2);
 
 // Org-level goals toggle — hides the dashboard's goal widgets when off.
 const { goalsEnabled } = useGoalsEnabled();
@@ -348,7 +347,10 @@ watch(user, (newUser) => {
 	}
 });
 
-watch([selectedOrg, selectedClient, selectedTeam], () => {
+// `isMine` included so flipping the Priority Actions Mine/All toggle actually
+// re-runs analysis (previously the engine's own isMine watcher only cleared the
+// cache, so the queue never visibly refreshed).
+watch([selectedOrg, selectedClient, selectedTeam, isMine], () => {
 	if (user.value) {
 		runAnalysis();
 	}
@@ -386,8 +388,8 @@ const goTo = (route: string) => {
 						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
-						<!-- Lens toggle removed — the header DataScopeSelect (Mine/All) is
-						     now the single source of truth for band ordering. -->
+						<!-- Mine/All now lives as a local toggle on Priority Actions (below),
+						     not the global chrome; band order is fixed. -->
 						<!-- Director's Office — convene an org-wide working meeting where
 						     Earnest reviews the business and proposes a plan you approve
 						     step by step. -->
@@ -397,7 +399,7 @@ const goTo = (route: string) => {
 								aria-label="Director's office"
 								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
 							>
-								<ExecutiveChairIcon class="w-5 h-5" />
+								<DirectorChairIcon class="w-5 h-5" />
 							</button>
 						</UTooltip>
 						<button
@@ -468,6 +470,33 @@ const goTo = (route: string) => {
 										:class="{ 'animate-spin': isAnalyzing }"
 									/>
 								</button>
+
+								<!-- Local Mine/All scope — narrows the priority queue to just your
+								     work. Admin/owner only (members only ever see their own), which
+								     mirrors the old global toggle's access rule. -->
+								<div
+									v-if="canChooseAll"
+									class="ml-auto inline-flex items-center rounded-full border border-border bg-muted/40 p-0.5 text-[11px] font-medium"
+									role="group"
+									aria-label="Priority actions scope"
+								>
+									<button
+										type="button"
+										class="px-2.5 py-0.5 rounded-full transition-colors"
+										:class="isMine ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+										@click="setScope('mine')"
+									>
+										Mine
+									</button>
+									<button
+										type="button"
+										class="px-2.5 py-0.5 rounded-full transition-colors"
+										:class="!isMine ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+										@click="setScope('all')"
+									>
+										All
+									</button>
+								</div>
 							</div>
 
 							<!-- App filters — narrow the list to one app. Counts reflect the

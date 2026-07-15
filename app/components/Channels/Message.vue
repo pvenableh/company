@@ -254,12 +254,6 @@ const hideMessage = async () => {
 	}
 };
 
-const handleKeyboard = (event) => {
-	if (event.key === 'Enter' && (event.ctrlKey || event.metaKey || event.shiftKey)) {
-		event.preventDefault();
-		sendReply();
-	}
-};
 </script>
 
 <template>
@@ -327,8 +321,8 @@ const handleKeyboard = (event) => {
 					</div>
 
 					<!-- Edit mode -->
-					<div v-else-if="isEditing" class="rounded-2xl border border-border/60 bg-muted/20 px-2 py-1">
-						<LazyFormTiptap v-model="editText" :show-toolbar="true" :allow-uploads="true" :show-char-count="false" :character-limit="0" height="min-h-[36px]" custom-classes="px-2 py-1.5" :organization-id="selectedOrg" :context="{ collection: 'messages', itemId: message.id }" class="msg-tiptap-inline">
+					<div v-else-if="isEditing" class="rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
+						<LazyFormTiptap v-model="editText" :show-toolbar="true" :allow-uploads="true" :show-char-count="false" :character-limit="0" height="min-h-[36px]" custom-classes="px-2 py-1.5" :organization-id="selectedOrg" :context="{ collection: 'messages', itemId: message.id }" class="msg-tiptap-inline" :enter-to-send="true" @submit="saveEdit">
 							<template #footer>
 								<div class="msg-reply-footer">
 									<span class="text-[10px] text-muted-foreground">Editing message</span>
@@ -369,7 +363,7 @@ const handleKeyboard = (event) => {
 
 		<!-- Reply Input -->
 		<div v-if="showReplyInput" class="msg-reply-input">
-			<div class="rounded-2xl border border-border/60 bg-muted/20 px-2 py-1">
+			<div class="rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
 				<LazyFormTiptap
 					v-model="replyText"
 					:show-toolbar="true"
@@ -381,11 +375,12 @@ const handleKeyboard = (event) => {
 					:organization-id="selectedOrg"
 					:context="{ collection: 'messages', itemId: message.id }"
 					class="msg-tiptap-inline"
-					@keydown="handleKeyboard"
+					:enter-to-send="true"
+					@submit="sendReply"
 				>
 					<template #footer>
 						<div class="msg-reply-footer">
-							<span class="text-[10px] text-muted-foreground">Shift + Enter to send</span>
+							<span class="text-[10px] text-muted-foreground">Enter to send · Shift+Enter for newline</span>
 							<div class="flex gap-2">
 								<button class="msg-action-btn" @click="showReplyInput = false">Cancel</button>
 								<button class="msg-send-btn" :disabled="!replyText?.trim()" @click="sendReply">Reply</button>
@@ -658,6 +653,7 @@ const handleKeyboard = (event) => {
 /* Strip tiptap chrome for inline inputs — mirrors .channel-tiptap from channel page */
 .msg-tiptap-inline :deep(.tiptap-wrapper) {
 	border: none !important;
+	box-shadow: none !important;
 }
 .msg-tiptap-inline :deep(.tiptap-container) {
 	border: none !important;

@@ -74,18 +74,35 @@ export async function resolveAudienceMembers(
   }
 
   if (opts.client) {
-    const rows = await directus.request(
-      readItems('org_memberships', {
-        filter: { _and: [
-          { organization: { _eq: organization } },
-          { client: { _eq: opts.client } },
-          { status: { _eq: 'active' } },
-        ] },
-        fields: ['user'],
-        limit: -1,
-      }),
-    ) as Array<{ user: any }>;
-    for (const r of rows) {
+    // Client login users live in `client_portal_users` (the portal-user split),
+    // not `org_memberships`. Read both so restricting a channel to a client
+    // actually resolves that client's people. Legacy client-role org_memberships
+    // (if any remain) are still honoured.
+    const [orgRows, portalRows] = await Promise.all([
+      directus.request(
+        readItems('org_memberships', {
+          filter: { _and: [
+            { organization: { _eq: organization } },
+            { client: { _eq: opts.client } },
+            { status: { _eq: 'active' } },
+          ] },
+          fields: ['user'],
+          limit: -1,
+        }),
+      ) as Promise<Array<{ user: any }>>,
+      directus.request(
+        readItems('client_portal_users', {
+          filter: { _and: [
+            { organization: { _eq: organization } },
+            { client: { _eq: opts.client } },
+            { status: { _eq: 'active' } },
+          ] },
+          fields: ['user'],
+          limit: -1,
+        }),
+      ) as Promise<Array<{ user: any }>>,
+    ]);
+    for (const r of [...orgRows, ...portalRows]) {
       const uid = typeof r.user === 'object' ? r.user?.id : r.user;
       if (uid) ids.add(uid);
     }
@@ -207,15 +224,30 @@ export async function requireChannelManager(
   throw createError({ statusCode: 403, message: 'You do not manage this channel' });
 }
 
-/** Active org ids the caller belongs to. */
+/**
+ * Active org ids the caller belongs to — via a team `org_memberships` row OR a
+ * `client_portal_users` row (client login users have no org_membership). Both
+ * are checked so a portal user can legitimately be added to a channel in their
+ * own org.
+ */
 export async function getUserOrgIds(userId: string): Promise<string[]> {
   const directus = getTypedDirectus();
-  const rows = await directus.request(
-    readItems('org_memberships', {
-      filter: { _and: [{ user: { _eq: userId } }, { status: { _eq: 'active' } }] },
-      fields: ['organization'],
-      limit: -1,
-    }),
-  ) as any[];
-  return [...new Set(rows.map((r) => r.organization).filter(Boolean))];
+  const [rows, portalRows] = await Promise.all([
+    directus.request(
+      readItems('org_memberships', {
+        filter: { _and: [{ user: { _eq: userId } }, { status: { _eq: 'active' } }] },
+        fields: ['organization'],
+        limit: -1,
+      }),
+    ) as Promise<any[]>,
+    directus.request(
+      readItems('client_portal_users', {
+        filter: { _and: [{ user: { _eq: userId } }, { status: { _eq: 'active' } }] },
+        fields: ['organization'],
+        limit: -1,
+      }),
+    ) as Promise<any[]>,
+  ]);
+  const orgOf = (r: any) => (typeof r.organization === 'object' ? r.organization?.id : r.organization);
+  return [...new Set([...rows, ...portalRows].map(orgOf).filter(Boolean))];
 }

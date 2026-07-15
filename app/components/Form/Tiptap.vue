@@ -16,7 +16,6 @@
 			class="border-border border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll relative tiptap-container rounded-t"
 			:class="[
 				{ 'px-0 pt-0 border-none': disabled },
-				{ '!border-primary/40': editor.isFocused },
 				{ 'border-b rounded-b': !showToolbar },
 				height,
 				customClasses,
@@ -30,7 +29,6 @@
 		<div
 			v-if="showToolbar"
 			class="w-full flex flex-row justify-between border-border border-r border-l border-b toolbar rounded-b"
-			:class="{ '!border-primary/40': editor.isFocused }"
 		>
 			<div class="flex items-center flex-row">
 				<UButton
@@ -712,18 +710,26 @@ onMounted(() => {
 		onBlur: ({ event }) => {
 			emit('blur', event);
 		},
-		onKeyDown: ({ event }) => {
-			if (event.key === 'Enter' && !event.shiftKey && props.singleLine) {
-				event.preventDefault();
-				emit('enter', event);
-				return true;
-			}
-			// Enter to send: when enabled, plain Enter emits submit (Shift+Enter still creates newline)
-			if (event.key === 'Enter' && !event.shiftKey && props.enterToSend) {
-				event.preventDefault();
-				emit('submit');
-				return true;
-			}
+		// `onKeyDown` is NOT a valid TipTap editor option — it silently never
+		// fired, so Enter-to-send never worked here. Handle it at the ProseMirror
+		// level, which runs BEFORE the default keymap so we can cancel the
+		// newline. Plain Enter sends; Shift+Enter falls through to the hard-break
+		// keymap (newline only). The mention suggestion plugin consumes Enter
+		// while its popup is open, so this won't hijack mention selection.
+		editorProps: {
+			handleKeyDown(view, event) {
+				if (event.key === 'Enter' && !event.shiftKey && props.singleLine) {
+					event.preventDefault();
+					emit('enter', event);
+					return true;
+				}
+				if (event.key === 'Enter' && !event.shiftKey && props.enterToSend) {
+					event.preventDefault();
+					emit('submit');
+					return true;
+				}
+				return false;
+			},
 		},
 		onSelectionUpdate: () => {
 			updateLinkUrl();
@@ -971,10 +977,6 @@ const handleFiles = async (files) => {
 		text-decoration: none;
 		white-space: nowrap;
 	}
-	&:focus-within {
-		outline: none;
-	}
-
 	/* Add a smooth transition for the focus effect */
 	&,
 	&.ProseMirror {
@@ -1002,11 +1004,6 @@ const handleFiles = async (files) => {
 
 .tiptap-container:focus-within + div button {
 	@apply text-primary;
-}
-
-/* Ensure proper contrast in dark mode */
-.dark .tiptap-container:focus-within {
-	border-color: hsl(var(--primary) / 0.4);
 }
 
 .is-active {

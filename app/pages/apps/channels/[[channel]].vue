@@ -13,6 +13,7 @@
  * later phases (project_channels_apps_home).
  */
 import { Button } from '~/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 import { useFilteredUsers } from '~/composables/useFilteredUsers';
 
@@ -920,24 +921,38 @@ const fmtModDate = (d) => {
 							/>
 						</div>
 					</div>
-					<div class="flex items-center gap-1.5 shrink-0">
-						<Button
-							v-if="canManageActive"
-							variant="outline"
-							size="sm"
-							class="h-8 gap-1"
-							:title="activeIsRestricted ? 'Manage members' : 'Channel access'"
-							@click="showManage = true"
-						>
-							<Icon :name="activeIsRestricted ? 'lucide:users' : 'lucide:user-plus'" class="w-3.5 h-3.5" />
-							<span class="hidden sm:inline">{{ activeIsRestricted ? `Members (${activeMembers.length})` : 'Access' }}</span>
-						</Button>
-						<Button variant="outline" size="sm" class="h-8 gap-1 text-primary" @click="sidebarOpen = true">
-							<EarnestIcon class="w-3.5 h-3.5" />
-							<span class="hidden sm:inline">Ask Earnest</span>
-						</Button>
-						<LayoutShareButton :title="`#${displayName} | Earnest`" />
-					</div>
+					<TooltipProvider :delay-duration="120">
+						<div class="flex items-center gap-1.5 shrink-0">
+							<!-- Icon circles matching LayoutShareButton (w-8 h-8 rounded-full) so
+							     the header's action cluster reads as one uniform trio. Tooltips
+							     use the same reka <Tooltip> as the app dock/rail. -->
+							<Tooltip v-if="canManageActive">
+								<TooltipTrigger as-child>
+									<button
+										class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+										@click="showManage = true"
+									>
+										<Icon :name="activeIsRestricted ? 'lucide:users' : 'lucide:user-plus'" class="w-4 h-4" />
+									</button>
+								</TooltipTrigger>
+								<TooltipContent :side-offset="6" class="z-[70]">
+									{{ activeIsRestricted ? `Members (${activeMembers.length})` : 'Channel access' }}
+								</TooltipContent>
+							</Tooltip>
+							<Tooltip>
+								<TooltipTrigger as-child>
+									<button
+										class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-primary hover:text-primary transition-colors"
+										@click="sidebarOpen = true"
+									>
+										<EarnestIcon class="w-4 h-4" />
+									</button>
+								</TooltipTrigger>
+								<TooltipContent :side-offset="6" class="z-[70]">Ask Earnest</TooltipContent>
+							</Tooltip>
+							<LayoutShareButton :title="`#${displayName} | Earnest`" />
+						</div>
+					</TooltipProvider>
 				</div>
 
 				<!-- Connection error -->
@@ -997,7 +1012,7 @@ const fmtModDate = (d) => {
 
 				<!-- Composer -->
 				<div class="px-5 pb-4 pt-2 shrink-0">
-					<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+					<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
 						<LazyFormTiptap
 							v-model="newMessage"
 							:show-toolbar="true"
@@ -1415,7 +1430,7 @@ const fmtModDate = (d) => {
 }
 
 /* Strip Tiptap default chrome so the composer reads as a single pill bar. */
-.channel-tiptap :deep(.tiptap-wrapper) { border: none !important; }
+.channel-tiptap :deep(.tiptap-wrapper) { border: none !important; box-shadow: none !important; }
 .channel-tiptap :deep(.tiptap-container) {
 	border: none !important;
 	border-radius: 0 !important;

@@ -353,14 +353,25 @@ a[role='button']:not([data-no-press]):active,
 *:focus-visible {
   outline: 2px solid hsl(var(--app-accent-h, 220) 80% 55% / 0.85);
   outline-offset: 2px;
-  border-radius: inherit;
+  /* NOTE: no `border-radius: inherit` here. It forced every focused element to
+   * adopt its PARENT's radius, squaring off pill inputs (`rounded-full`) the
+   * moment they received keyboard focus. Browsers already draw the focus
+   * outline following the element's own border-radius, so this isn't needed. */
 }
 /* Native form controls — Input.vue + Textarea.vue manage their own
  * accent-tinted focus border + shadow. Suppress the global outline so
- * the two don't double-render into a triple-ring look. */
+ * the two don't double-render into a triple-ring look.
+ *
+ * `[contenteditable]` / `.ProseMirror` are included so the TipTap editor body (a
+ * contenteditable <div>) draws no inner outline: the editor COMPONENT's outer
+ * border is the single active indicator (see Form/Tiptap.vue). */
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
+select:focus-visible,
+[contenteditable]:focus-visible,
+[contenteditable]:focus,
+.ProseMirror:focus-visible,
+.ProseMirror:focus {
   outline: none;
 }
 

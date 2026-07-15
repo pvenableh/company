@@ -29,15 +29,13 @@
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
 					<div class="apps-shell__chrome-left">
+						<!-- Org switcher only. The global client filter + Mine/All lens were
+						     removed from the chrome (they were consumed inconsistently across
+						     widgets): client-scoped work lives on the client detail page, and
+						     Mine/All is now a local control on the dashboard's Priority Actions.
+						     See docs/dashboard-filters-localization-poc.md. -->
 						<ClientOnly>
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
-						</ClientOnly>
-						<ClientOnly>
-							<!-- Mine/All lens is a desktop-chrome affordance; on phones
-							     it crowds the row, so hide it below sm. -->
-							<div v-if="user" class="hidden sm:flex items-center">
-								<LayoutDataScopeSelect />
-							</div>
 						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">

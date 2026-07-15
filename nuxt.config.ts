@@ -41,18 +41,40 @@ function resolveAppVersion(): string {
 	const [major = '0', minor = '0'] = pkgVersion.split('.');
 	const base = `${major}.${minor}`;
 
-	// Vercel/CI often hand us a shallow clone (only the tip commit), which would
-	// undercount. Deepen the COMMIT history first — no-op on a complete repo.
-	if (tryGit('git rev-parse --is-shallow-repository') === 'true') {
+	// Vercel/CI often hand us a shallow clone (only the tip N commits), which
+	// would undercount. Try to complete the COMMIT history first — no-op on a
+	// full clone. On Vercel's build container the unshallow typically CAN'T
+	// succeed (the clone can't be deepened against the remote), so we re-check
+	// afterwards rather than trusting the count blindly.
+	let shallow = tryGit('git rev-parse --is-shallow-repository') === 'true';
+	if (shallow) {
 		tryGit('git fetch --unshallow --quiet');
 		tryGit('git fetch --deepen=2147483647 --quiet');
+		shallow = tryGit('git rev-parse --is-shallow-repository') === 'true';
 	}
 
-	const count = tryGit('git rev-list --count HEAD');
-	if (count && /^\d+$/.test(count)) return `${base}.${count}`;
+	// Only trust the commit count when the history is actually COMPLETE.
+	// A shallow clone (e.g. Vercel's default depth-10 checkout) would freeze the
+	// label at the clone depth — the "stuck at 2.0.10" bug — so we skip it.
+	if (!shallow) {
+		const count = tryGit('git rev-list --count HEAD');
+		if (count && /^\d+$/.test(count)) return `${base}.${count}`;
+	}
 
-	// Git unavailable (some serverless contexts) — fall back to the static
-	// package.json version so the app still boots with a sane label.
+	// Shallow and un-deepenable (Vercel), or git unavailable: fall back to the
+	// deploy's commit SHA as the patch. It's honest and CHANGES every deploy
+	// (unlike the frozen count), and nothing parses `version` as numeric semver
+	// — deploy-freshness is driven by `buildId`, so a SHA label here is safe.
+	const sha = (
+		process.env.NUXT_PUBLIC_BUILD_ID
+		|| process.env.VERCEL_GIT_COMMIT_SHA
+		|| process.env.GITHUB_SHA
+		|| tryGit('git rev-parse HEAD')
+		|| ''
+	).slice(0, 7);
+	if (sha) return `${base}.${sha}`;
+
+	// Last resort — the static package.json version so the app still boots.
 	return pkgVersion;
 }
 

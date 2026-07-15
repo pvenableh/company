@@ -1,15 +1,13 @@
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Building2, Users, ChevronDown, ArrowRight, Eye } from 'lucide-vue-next'
 
+/**
+ * Org switcher button (formerly the org + global-client picker). The global
+ * client FILTER was removed from the app chrome — it was honored by only a
+ * handful of widgets, so it read as a broken promise. Client-scoped work now
+ * lives on the client detail page. This component is kept as the org-switcher
+ * entry point in the shell chrome. See docs/dashboard-filters-localization-poc.md.
+ */
 const props = defineProps({
 	user: {
 		type: Object,
@@ -19,21 +17,9 @@ const props = defineProps({
 
 const emit = defineEmits(['open-org-switcher']);
 
-const router = useRouter();
 const { currentOrg, hasMultipleOrgs, organizations } = useOrganization();
-const { isOrgAdminOrAbove } = useOrgRole();
-// Hide the entire org+client picker for orgless users — every action it
-// offers (open switcher, filter clients) requires at least one membership.
+// Hide for orgless users — the org switcher needs at least one membership.
 const hasOrg = computed(() => organizations.value.length > 0);
-const {
-	selectedClient,
-	clientOptions,
-	currentClient,
-	hasClients,
-	clientsLoading,
-	setClient,
-	setupClientListeners,
-} = useClients();
 const config = useRuntimeConfig();
 
 const getIconUrl = (item) => {
@@ -53,42 +39,6 @@ const getInitials = (item) => {
 		.toUpperCase()
 		.substring(0, 2);
 };
-
-const displayLabel = computed(() => {
-	if (!selectedClient.value) return 'All';
-	if (currentClient.value) return currentClient.value.name;
-	return 'All';
-});
-
-// Item 6 — admin "Preview as client" affordance. Only available when an
-// admin/owner has a real client (not "All"/"Org") selected.
-const canPreviewAsClient = computed(() => {
-	if (!isOrgAdminOrAbove.value) return false;
-	const id = selectedClient.value;
-	return !!id && id !== 'org';
-});
-
-function previewAsClient() {
-	const id = selectedClient.value;
-	if (!id || id === 'org') return;
-	if (import.meta.client) {
-		// 30-day session cookie scoped to the portal context. Any /api/portal/*
-		// call will pick it up via portal-auth's cookie fallback. Cleared from
-		// the portal layout's "Exit preview" action.
-		document.cookie = `portal_preview_as=${encodeURIComponent(id)}; path=/; max-age=2592000; samesite=lax`;
-		window.open(`/portal?previewAs=${encodeURIComponent(id)}`, '_blank', 'noopener');
-	}
-}
-
-let cleanupListeners = null;
-
-onMounted(() => {
-	cleanupListeners = setupClientListeners();
-});
-
-onUnmounted(() => {
-	if (cleanupListeners) cleanupListeners();
-});
 </script>
 
 <template>
@@ -96,8 +46,7 @@ onUnmounted(() => {
 		<!-- Org icon — always opens the org switcher modal. Single-org users
 		     still get the modal so they can register/switch orgs from there. -->
 		<button
-			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity"
-			:class="'cursor-pointer hover:opacity-80'"
+			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity cursor-pointer hover:opacity-80"
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
 			@click="emit('open-org-switcher')"
 		>
@@ -108,116 +57,5 @@ onUnmounted(() => {
 				</AvatarFallback>
 			</Avatar>
 		</button>
-
-		<!-- Client dropdown -->
-		<DropdownMenu>
-			<DropdownMenuTrigger as-child>
-				<button
-					class="flex items-center gap-1 rounded-full bg-card border border-border hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-foreground p-0.5 sm:px-2 sm:py-1 max-w-[180px]"
-				>
-					<div class="size-6 sm:size-5 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-						<template v-if="currentClient && currentClient.id !== 'org'">
-							<img
-								v-if="getIconUrl(currentClient)"
-								:src="getIconUrl(currentClient)"
-								:alt="currentClient.name"
-								class="size-6 sm:size-5 object-contain rounded-full"
-							/>
-							<span v-else class="font-medium text-foreground text-[8px]">{{ getInitials(currentClient) }}</span>
-						</template>
-						<Building2 v-else class="size-3 text-muted-foreground" />
-					</div>
-					<span class="truncate hidden sm:inline">{{ displayLabel }}</span>
-					<ChevronDown class="size-3 text-muted-foreground shrink-0 hidden sm:block" />
-				</button>
-			</DropdownMenuTrigger>
-
-			<DropdownMenuContent align="start" class="w-64 client-select-dropdown">
-				<DropdownMenuLabel class="text-xs uppercase text-muted-foreground flex items-center justify-between">
-					<span>Filter by Client</span>
-					<NuxtLink to="/clients" class="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 normal-case tracking-normal font-normal">
-						View All <ArrowRight class="size-3" />
-					</NuxtLink>
-				</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-
-				<div v-if="clientsLoading" class="flex items-center justify-center py-4">
-					<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-gray-400" />
-				</div>
-
-				<div v-else class="max-h-60 overflow-y-auto">
-					<DropdownMenuItem
-						v-for="option in clientOptions"
-						:key="option.id || 'all'"
-						class="flex items-center gap-3 cursor-pointer"
-						:class="{ 'bg-accent': selectedClient === option.id }"
-						@click="setClient(option.id)"
-					>
-						<!-- "All" option -->
-						<template v-if="option.id === null">
-							<div class="size-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-								<Users class="size-3.5 text-gray-500" />
-							</div>
-							<span class="text-[9px] uppercase leading-3 flex-1 font-medium">All</span>
-						</template>
-
-						<!-- "Organization" option -->
-						<template v-else-if="option.id === 'org'">
-							<div class="shrink-0" :class="{ 'ring-2 ring-[var(--cyan)] rounded-full': selectedClient === 'org' }">
-								<Avatar class="size-6">
-									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
-									<AvatarFallback class="text-[10px] font-medium">
-										{{ getInitials(option) }}
-									</AvatarFallback>
-								</Avatar>
-							</div>
-							<span class="text-[9px] uppercase leading-3 flex-1">{{ option.name }}</span>
-							<span class="text-[9px] text-[var(--cyan)] uppercase">Internal</span>
-						</template>
-
-						<!-- Client options -->
-						<template v-else>
-							<div
-								class="shrink-0 rounded-full"
-								:class="{ 'ring-2 ring-[var(--cyan)]': selectedClient === option.id }"
-							>
-								<Avatar class="size-6">
-									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
-									<AvatarFallback class="text-[10px] font-medium">
-										{{ getInitials(option) }}
-									</AvatarFallback>
-								</Avatar>
-							</div>
-							<span class="text-[9px] uppercase leading-3 flex-1">{{ option.name }}</span>
-						</template>
-					</DropdownMenuItem>
-				</div>
-
-				<!-- No clients message -->
-				<div v-if="!clientsLoading && !hasClients" class="px-3 py-2">
-					<p class="text-xs text-gray-400">No active clients yet</p>
-				</div>
-
-				<!-- Admin: Preview client portal -->
-				<template v-if="canPreviewAsClient">
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						class="flex items-center gap-3 cursor-pointer"
-						@click="previewAsClient"
-					>
-						<div class="size-6 rounded-full bg-[var(--cyan)]/15 flex items-center justify-center shrink-0">
-							<Eye class="size-3.5 text-[var(--cyan)]" />
-						</div>
-						<span class="text-[9px] uppercase leading-3 flex-1 font-medium">Preview {{ currentClient?.name }} portal</span>
-					</DropdownMenuItem>
-				</template>
-			</DropdownMenuContent>
-		</DropdownMenu>
 	</div>
 </template>
-
-<style>
-.client-select-dropdown img {
-	object-fit: contain !important;
-}
-</style>

@@ -25,7 +25,17 @@ export default defineEventHandler(async (event) => {
   const directus0 = getTypedDirectus();
   const resolved = await resolveAudienceMembers(directus0, organization, { team: body?.team, client: body?.client });
   const users = [...new Set([...(body?.users || []).map((u) => String(u).trim()), ...resolved].filter(Boolean))];
-  if (!users.length) throw createError({ statusCode: 400, message: 'users is required' });
+  if (!users.length) {
+    // Distinguish "no target sent" from "a team/client shortcut resolved to
+    // nobody" — the latter used to surface the confusing "users is required".
+    if (body?.client) {
+      throw createError({ statusCode: 400, message: 'That client has no active members to add yet.' });
+    }
+    if (body?.team) {
+      throw createError({ statusCode: 400, message: 'That team has no members to add.' });
+    }
+    throw createError({ statusCode: 400, message: 'Select at least one person to add.' });
+  }
 
   const directus = getTypedDirectus();
   const now = new Date().toISOString();

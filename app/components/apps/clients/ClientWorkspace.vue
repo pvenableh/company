@@ -54,6 +54,7 @@ const emit = defineEmits<{
 }>();
 
 const { getClient } = useClients();
+const { isOrgAdminOrAbove } = useOrgRole();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { push: pushPanel } = useAppSlideOverStack();
 
@@ -122,6 +123,8 @@ const directConnections = computed<any[]>(() => {
 const relatedProjects = ref<any[]>([]);
 const relatedInvoices = ref<any[]>([]);
 const relatedChannels = ref<any[]>([]);
+const selectedChannelId = ref<string | null>(null);
+const selectedChannel = computed(() => relatedChannels.value.find((c) => c.id === selectedChannelId.value) || null);
 const relatedTickets = ref<any[]>([]);
 const relatedTasks = ref<any[]>([]);
 const relatedMeetings = ref<any[]>([]);
@@ -383,7 +386,7 @@ async function loadChannels() {
 		relatedChannels.value = await channelItemsApi.list({
 			filter: { client: { _eq: props.clientId } },
 			fields: [
-				'id', 'name', 'date_created',
+				'id', 'name', 'date_created', 'organization',
 				'project.id', 'project.title',
 				'ticket.id', 'ticket.title',
 			],
@@ -392,6 +395,10 @@ async function loadChannels() {
 		}).catch(() => []) as any[];
 		channelCount.value = relatedChannels.value.length;
 		channelsLoaded.value = true;
+		// Auto-select a channel so the thread shows inline without an extra click.
+		if (!selectedChannelId.value && relatedChannels.value.length) {
+			selectedChannelId.value = relatedChannels.value[0].id;
+		}
 	} finally {
 		channelsLoading.value = false;
 	}
@@ -1617,31 +1624,54 @@ watch(() => props.clientId, () => {
 					<div v-else-if="!relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">
 						No channels tagged to this client.
 					</div>
-					<div v-else class="space-y-px">
-						<NuxtLink
-							v-for="channel in relatedChannels"
-							:key="channel.id"
-							:to="`/channels/${channel.name}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
-						>
-							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-							<p class="flex-1 text-sm font-medium truncate">{{ channel.name }}</p>
-							<span
-								v-if="channel.project?.title"
-								class="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[160px]"
+					<div v-else class="space-y-3">
+						<!-- Channel picker: switch threads without leaving the client. Only
+						     shown when the client has more than one channel. -->
+						<div v-if="relatedChannels.length > 1" class="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+							<button
+								v-for="channel in relatedChannels"
+								:key="channel.id"
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[12px] font-medium border shrink-0 transition-colors"
+								:class="channel.id === selectedChannelId
+									? 'bg-primary/10 border-primary/40 text-foreground'
+									: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+								@click="selectedChannelId = channel.id"
 							>
-								<Icon name="lucide:folder" class="w-3 h-3 shrink-0" />
-								{{ channel.project.title }}
-							</span>
-							<span
-								v-else-if="channel.ticket?.title"
-								class="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[160px]"
-							>
-								<Icon name="lucide:ticket" class="w-3 h-3 shrink-0" />
-								{{ channel.ticket.title }}
-							</span>
-							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+								<span class="text-muted-foreground/50">#</span>{{ channel.name }}
+							</button>
+						</div>
+
+						<!-- Inline live thread for the selected channel. -->
+						<div v-if="selectedChannel" class="rounded-2xl border border-border/50 bg-card/40 px-3 py-2">
+							<div class="flex items-center justify-between mb-1.5 px-1">
+								<div class="flex items-center gap-1.5 min-w-0">
+									<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
+									<p class="text-sm font-semibold truncate">{{ selectedChannel.name }}</p>
+									<span
+										v-if="selectedChannel.project?.title"
+										class="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground truncate max-w-[160px]"
+									>
+										<Icon name="lucide:folder" class="w-3 h-3 shrink-0" />
+										{{ selectedChannel.project.title }}
+									</span>
+								</div>
+								<NuxtLink
+									:to="`/channels/${selectedChannel.name}`"
+									class="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+								>
+									Open full view
+									<Icon name="lucide:external-link" class="w-3 h-3" />
+								</NuxtLink>
+							</div>
+							<ChannelsChannelThread
+								:key="selectedChannel.id"
+								:channel-id="selectedChannel.id"
+								:channel-name="selectedChannel.name"
+								:organization-id="selectedChannel.organization || (client as any)?.organization || null"
+								:can-moderate="isOrgAdminOrAbove"
+							/>
+						</div>
 					</div>
 				</div>
 			</div>

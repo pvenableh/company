@@ -327,7 +327,7 @@ function chipMagnifyStyle(appId: string) {
 							>
 								<span class="app-rail__chip" :style="chipMagnifyStyle('director')">
 									<span class="app-rail__icon">
-										<ExecutiveChairIcon mono class="app-rail__icon-layer app-rail__icon-base" />
+										<DirectorChairIcon class="app-rail__icon-layer app-rail__icon-base" />
 									</span>
 								</span>
 								<span class="app-rail__label">Director</span>
