@@ -207,7 +207,7 @@ watchEffect(() => {
 	justify-content: center;
 }
 
-:global(.dark) .doc__cover {
+:global(.dark .doc__cover) {
 	border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 

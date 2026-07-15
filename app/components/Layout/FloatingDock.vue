@@ -581,14 +581,46 @@ function snapToNearestCorner() {
 .dock-morph-expanded {
 	gap: 1px;
 	padding: 3px 6px;
-	border: 1px solid hsl(var(--primary) / 0.2);
+	/* Same glass edge + blur recipe as the AppRail pill (border/40 hairline,
+	 * 24px blur @ 160% saturation) so the two floating pills read as one
+	 * material — the old primary-tinted border read as a solid color line. */
+	border: 1px solid hsl(var(--border) / 0.4);
 	background: hsl(var(--primary) / 0.08);
-	backdrop-filter: saturate(180%) blur(20px);
-	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	backdrop-filter: blur(24px) saturate(160%);
+	-webkit-backdrop-filter: blur(24px) saturate(160%);
 	box-shadow:
 		0 1px 3px hsl(var(--primary) / 0.1),
 		0 4px 16px hsl(var(--primary) / 0.06);
 	cursor: grab;
+}
+
+/* ── Palette tint parity with the AppRail ──────────────────────────
+ * The Appearance "Palette tint" toggle washes the rail's floating pill
+ * with a multi-stop gradient sampled from the per-app accents. The dock
+ * is the rail's sibling pill in the same bottom band, so it takes the
+ * same wash — same vars, same stops — and the two read as one system.
+ * The collapsed state stays solid primary (deliberate FAB treatment). */
+:global(html[data-rail-tint='on'] .dock-morph-expanded) {
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-work-h, 220) var(--app-work-s, 50%) var(--app-work-l, 55%) / 0.22) 0%,
+			hsl(var(--app-clients-h, 200) var(--app-clients-s, 50%) var(--app-clients-l, 55%) / 0.18) 35%,
+			hsl(var(--app-marketing-h, 320) var(--app-marketing-s, 50%) var(--app-marketing-l, 55%) / 0.20) 65%,
+			hsl(var(--app-money-h, 145) var(--app-money-s, 50%) var(--app-money-l, 55%) / 0.22) 100%
+		),
+		hsl(220 14% 95% / 0.78);
+}
+:global(html.dark[data-rail-tint='on'] .dock-morph-expanded) {
+	background:
+		linear-gradient(
+			135deg,
+			hsl(var(--app-work-h, 220) var(--app-work-s, 50%) var(--app-work-l, 55%) / 0.34) 0%,
+			hsl(var(--app-clients-h, 200) var(--app-clients-s, 50%) var(--app-clients-l, 55%) / 0.28) 35%,
+			hsl(var(--app-marketing-h, 320) var(--app-marketing-s, 50%) var(--app-marketing-l, 55%) / 0.30) 65%,
+			hsl(var(--app-money-h, 145) var(--app-money-s, 50%) var(--app-money-l, 55%) / 0.34) 100%
+		),
+		rgba(28, 30, 32, 0.92);
 }
 
 .dock-morph-collapsed {

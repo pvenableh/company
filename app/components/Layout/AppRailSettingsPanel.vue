@@ -19,6 +19,7 @@ import {
   APP_ORDER,
   APP_FOOTER_ORDER,
   getAppAccents,
+  getPaletteChrome,
 } from '~/composables/useAppAccent';
 
 const props = withDefaults(
@@ -29,10 +30,38 @@ const props = withDefaults(
 const { railShowLabels, setRailShowLabels, desktopSidebar, setDesktopSidebar } = useAppsMode();
 const { palette, setPalette, glassChrome, setGlassChrome, paletteTint, setPaletteTint } = useAppPalette();
 
-// The brand palette is an ORG setting — only owners/admins may change it (the
-// write re-skins every teammate + the client portal). Members still see their
-// personal glass/tint chrome toggles above; the palette picker is hidden for them.
-const { isOrgAdminOrAbove } = useOrgRole();
+// Glass chrome's visible payoff is flipping gradient chips → frosted. Both
+// picker palettes (Default, Mono) are already frosted (`chipMode:'neutral'`),
+// so the toggle is a no-op for them — hide it rather than ship a dead switch.
+// It reappears automatically if a gradient-chip palette (Fresh/Aurora revival,
+// future Brand Light) becomes active, and stays visible while ON so anyone
+// who enabled it earlier can still turn it off.
+const glassToggleVisible = computed(
+  () => glassChrome.value || getPaletteChrome(palette.value).chipMode === 'palette',
+);
+
+// The palette is a PERSONAL choice (2026-07-15, monetization rung 1) — every
+// member gets the picker; writes land on their own user row. The locked
+// "Your Brand" swatch below it is the Brand Light upsell probe: it renders
+// the org's real brand color and logs a willingness-to-pay signal on click.
+const { currentOrg } = useOrganization();
+const toast = useToast();
+const brandColor = computed(() => (currentOrg.value as any)?.brand_color || '#5390d9');
+const brandNoted = ref(false);
+function handleBrandInterest() {
+  if (!brandNoted.value) {
+    brandNoted.value = true;
+    $fetch('/api/telemetry/upsell', {
+      method: 'POST',
+      body: {
+        feature: 'brand_light',
+        source: 'rail-settings',
+        organization: (currentOrg.value as any)?.id ?? null,
+      },
+    }).catch(() => {});
+  }
+  toast.info('Brand Light is coming — your interest is noted.');
+}
 
 // The rail is locked to the bottom (the position picker has been retired), so
 // the label toggle — which only applies to a horizontal rail — is always shown.
@@ -100,28 +129,32 @@ const isCompact = computed(() => props.density === 'compact');
       />
     </div>
 
-    <!-- ── Section: Glass chrome ─────────────────────────────────── -->
+    <!-- ── Section: Glass chrome (only when the active palette has
+         gradient chips to frost — hidden while both picker palettes
+         are already chipMode-neutral) ────────────────────────────── -->
     <div class="rail-panel__divider" aria-hidden="true" />
-    <div class="rail-panel__toggle" @click="setGlassChrome(!glassChrome)">
-      <Icon name="lucide:gem" class="rail-panel__toggle-icon" />
-      <div class="rail-panel__toggle-body">
-        <div class="rail-panel__toggle-title">Glass chrome</div>
-        <div class="rail-panel__toggle-hint">Frosted chips + buttons; icons wear the palette's chromatic ramp.</div>
+    <template v-if="glassToggleVisible">
+      <div class="rail-panel__toggle" @click="setGlassChrome(!glassChrome)">
+        <Icon name="lucide:gem" class="rail-panel__toggle-icon" />
+        <div class="rail-panel__toggle-body">
+          <div class="rail-panel__toggle-title">Glass chrome</div>
+          <div class="rail-panel__toggle-hint">Frosted chips + buttons; icons wear the palette's chromatic ramp.</div>
+        </div>
+        <Switch
+          :model-value="glassChrome"
+          class="shrink-0"
+          @update:model-value="setGlassChrome"
+          @click.stop
+        />
       </div>
-      <Switch
-        :model-value="glassChrome"
-        class="shrink-0"
-        @update:model-value="setGlassChrome"
-        @click.stop
-      />
-    </div>
+    </template>
 
     <!-- ── Section: Palette tint ─────────────────────────────────── -->
     <div class="rail-panel__toggle" @click="setPaletteTint(!paletteTint)">
       <Icon name="lucide:droplets" class="rail-panel__toggle-icon" />
       <div class="rail-panel__toggle-body">
         <div class="rail-panel__toggle-title">Palette tint</div>
-        <div class="rail-panel__toggle-hint">Wash the rail in a four-stop gradient sampled from the palette — especially rich in dark mode.</div>
+        <div class="rail-panel__toggle-hint">Wash the rail and floating dock in a gradient sampled from the palette — especially rich in dark mode.</div>
       </div>
       <Switch
         :model-value="paletteTint"
@@ -131,11 +164,11 @@ const isCompact = computed(() => props.density === 'compact');
       />
     </div>
 
-    <!-- ── Section: Brand palette (org-wide — owners/admins only) ──── -->
-    <template v-if="APP_PALETTE_IDS.length > 1 && isOrgAdminOrAbove">
+    <!-- ── Section: Palette (personal — every member) ──────────────── -->
+    <template v-if="APP_PALETTE_IDS.length > 1">
       <div class="rail-panel__divider" aria-hidden="true" />
-      <div class="rail-panel__heading">Brand palette</div>
-      <div class="rail-panel__hint">Applies to everyone in your organization and the client portal.</div>
+      <div class="rail-panel__heading">Palette</div>
+      <div class="rail-panel__hint">Yours alone — pick what you like. Client-facing pages keep your org's brand.</div>
       <div class="rail-panel__palettes">
         <button
           v-for="id in APP_PALETTE_IDS"
@@ -154,6 +187,26 @@ const isCompact = computed(() => props.density === 'compact');
               :key="idx"
               class="rail-panel__palette-swatch"
               :style="{ backgroundColor: swatch }"
+            />
+          </span>
+        </button>
+        <!-- Brand Light upsell probe — locked swatch in the org's own color -->
+        <button
+          type="button"
+          class="rail-panel__palette rail-panel__palette--locked"
+          title="Pour your brand color through the glass — coming soon"
+          @click="handleBrandInterest"
+        >
+          <span class="rail-panel__palette-label">
+            Your Brand
+            <UIcon name="lucide:lock" class="rail-panel__lock" aria-hidden="true" />
+          </span>
+          <span class="rail-panel__palette-swatches" aria-hidden="true">
+            <span
+              v-for="i in 7"
+              :key="i"
+              class="rail-panel__palette-swatch"
+              :style="{ backgroundColor: brandColor, opacity: 0.2 + i * 0.11 }"
             />
           </span>
         </button>
@@ -257,4 +310,10 @@ const isCompact = computed(() => props.density === 'compact');
   border-radius: 1px;
 }
 .rail-panel--comfortable .rail-panel__palette-swatch { width: 4px; }
+
+/* Brand Light upsell probe — dashed "locked" affordance */
+.rail-panel__palette--locked { @apply text-muted-foreground; }
+.rail-panel--comfortable .rail-panel__palette--locked { border-style: dashed; }
+.rail-panel__palette--locked:hover { @apply text-foreground; }
+.rail-panel__lock { width: 10px; height: 10px; opacity: 0.7; display: inline-block; vertical-align: -1px; margin-left: 2px; }
 </style>

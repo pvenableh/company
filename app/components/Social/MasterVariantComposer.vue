@@ -402,7 +402,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
   background-size: 100% 100%, 200% 100%;
   animation: filament-shift 3.6s ease-in-out infinite;
 }
-:global(.dark) .lane-chip--insync {
+:global(.dark .lane-chip--insync) {
   background-image: linear-gradient(
       hsl(var(--ch-hue, 0), 22%, 14%),
       hsl(var(--ch-hue, 0), 22%, 14%)
@@ -425,7 +425,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
   border-color: hsl(var(--ch-hue, 0), 70%, 55%);
   animation: ribbon-breathe 2.4s ease-in-out infinite;
 }
-:global(.dark) .lane-chip--forked {
+:global(.dark .lane-chip--forked) {
   background: hsl(var(--ch-hue, 0), 35%, 18%);
   color: hsl(var(--ch-hue, 0), 60%, 80%);
   border-color: hsl(var(--ch-hue, 0), 60%, 55%);
@@ -436,7 +436,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
   background: hsl(var(--ch-hue, 0), 70%, 88%);
   box-shadow: 0 2px 8px -2px hsl(var(--ch-hue, 0), 70%, 55%, 0.4);
 }
-:global(.dark) .lane-chip--forked.lane-chip--active {
+:global(.dark .lane-chip--forked.lane-chip--active) {
   background: hsl(var(--ch-hue, 0), 40%, 24%);
 }
 

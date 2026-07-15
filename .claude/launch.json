@@ -4,16 +4,22 @@
     {
       "name": "earnest-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "source ~/.zshrc && pnpm dev --host localhost"],
+      "runtimeArgs": [
+        "-c",
+        "source ~/.zshrc && pnpm dev --host 127.0.0.1"
+      ],
       "port": 3000,
-      "url": "http://localhost:3000",
-      "host": "localhost",
+      "url": "http://127.0.0.1:3000",
+      "host": "127.0.0.1",
       "autoPort": true
     },
     {
       "name": "marketing-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "cd /Users/peterhoffman/Sites/earnest/earnest-marketing && source ~/.zshrc && pnpm dev"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/peterhoffman/Sites/earnest/earnest-marketing && source ~/.zshrc && pnpm dev"
+      ],
       "port": 3001,
       "url": "http://127.0.0.1:3001",
       "host": "127.0.0.1",
@@ -22,7 +28,10 @@
     {
       "name": "carddesk-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "cd /Users/peterhoffman/Sites/earnest/carddesk/website && source ~/.zshrc && pnpm dev --port 3100"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/peterhoffman/Sites/earnest/carddesk/website && source ~/.zshrc && pnpm dev --port 3100"
+      ],
       "port": 3100,
       "url": "http://127.0.0.1:3100",
       "host": "127.0.0.1",
@@ -31,7 +40,10 @@
     {
       "name": "hue-studio-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "cd /Users/peterhoffman/Sites/hue/hue-studio-1 && source ~/.zshrc && pnpm dev --port 3200"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/peterhoffman/Sites/hue/hue-studio-1 && source ~/.zshrc && pnpm dev --port 3200"
+      ],
       "port": 3200,
       "url": "http://127.0.0.1:3200",
       "host": "127.0.0.1",

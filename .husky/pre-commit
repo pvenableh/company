@@ -6,3 +6,9 @@
 # a // TODO(ios-sweep) or // allow-legacy-link marker. See
 # scripts/audit-ios-containment.ts for the full rule.
 pnpm audit:ios-containment
+
+# Vue :global() selector audit — in <style scoped>, `:global(X) .child`
+# compiles to just `X` (child dropped, style leaks onto the ancestor).
+# Whole selector must live inside :global(...). See
+# scripts/audit-vue-global-selectors.ts.
+pnpm audit:vue-global

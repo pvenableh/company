@@ -1,11 +1,15 @@
 /**
- * useAppPalette — the org's brand accent palette for the apps shell.
+ * useAppPalette — the accent palette for the apps shell.
  *
- * The accent palette is an ORG-LEVEL brand setting (`organizations.app_palette`),
- * NOT a per-user preference: an admin picks it once and it re-skins the semantic
- * accent tokens (`--info` / `--status-*` / `--tag-*` / `--app-*`) for every member
- * of the org AND the client portal. (It used to live on `directus_users.app_palette`
- * — that column is now legacy/unread.) See [[project_universal_ux_color_system]].
+ * 2026-07-15 (monetization ladder, rung 1): the palette is a PER-USER choice.
+ * Resolution order: optimistic local flip → the user's own
+ * `directus_users.app_palette` (the once-legacy column, now read again) →
+ * the org's `organizations.app_palette` as fallback (and as the value
+ * client-portal visitors get, since their user rows carry no palette).
+ * `setPalette` writes to the CURRENT USER via `/api/directus/users/me` —
+ * the field is granted by `scripts/setup-user-pref-perms.ts`. The org
+ * column remains the org-level/client-facing default (future "Brand
+ * Light" lives there). See [[project_universal_ux_color_system]].
  *
  * Shared state lives in Nuxt `useState` (not a module-level `ref`) so every
  * consumer — the `app-palette.client` plugin, `useAppAccent` (rail chips +
@@ -71,22 +75,50 @@ function hydrateTintFromStorage(localTint: Ref<boolean | null>) {
 	}
 }
 
+/**
+ * Load the current user's own `app_palette` once per session. `'unset'`
+ * means "loaded, user has no personal pick" → fall through to the org.
+ * Errors (no session, portal users on a different auth shape) also land
+ * on `'unset'` so the org fallback always renders something sane.
+ */
+function hydrateUserPalette(
+	userPalette: Ref<AppPaletteId | 'unset' | null>,
+	loading: Ref<boolean>,
+	readMe: (q?: Record<string, any>) => Promise<any>,
+) {
+	if (userPalette.value !== null || loading.value) return;
+	loading.value = true;
+	readMe({ fields: ['app_palette'] })
+		.then((me: any) => {
+			const raw = me?.app_palette;
+			userPalette.value = typeof raw === 'string' && raw ? resolvePaletteId(raw) : 'unset';
+		})
+		.catch(() => {
+			userPalette.value = 'unset';
+		});
+}
+
 export function useAppPalette() {
-	const { currentOrg, fetchOrganizationDetails } = useOrganization();
-	const orgItems = useDirectusItems('organizations');
+	const { currentOrg } = useOrganization();
+	const { readMe, updateMe } = useDirectusUsers();
 
 	// Shared, app-wide state — `useState` keeps one store even if this module
 	// is instantiated twice (circular import with useAppAccent).
 	const localPalette = useState<AppPaletteId | null>('app-palette', () => null);
+	const userPalette = useState<AppPaletteId | 'unset' | null>('user-app-palette', () => null);
+	const userPaletteLoading = useState<boolean>('user-app-palette-loading', () => false);
 	const localGlass = useState<boolean | null>('app-glass-chrome', () => null);
 	const localTint = useState<boolean | null>('app-palette-tint', () => null);
 
 	if (import.meta.client) hydrateGlassFromStorage(localGlass);
 	if (import.meta.client) hydrateTintFromStorage(localTint);
+	if (import.meta.client) hydrateUserPalette(userPalette, userPaletteLoading, readMe);
 
 	const palette = computed<AppPaletteId>(() => {
-		// Optimistic override wins until the org row refetches with the saved value.
+		// Optimistic override wins until the user row persists the new value.
 		if (localPalette.value !== null) return localPalette.value;
+		// Personal pick beats the org default (rung 1: user's choice).
+		if (userPalette.value !== null && userPalette.value !== 'unset') return userPalette.value;
 		return resolvePaletteId((currentOrg.value as any)?.app_palette);
 	});
 
@@ -94,26 +126,24 @@ export function useAppPalette() {
 	const paletteTint = computed<boolean>(() => localTint.value ?? true);
 
 	/**
-	 * Set the org's brand accent. Writing re-skins every member of the org +
-	 * the client portal, so gate the calling UI to admins/owners — the write
-	 * itself will 403 for non-privileged users via Directus org perms.
+	 * Set the CURRENT USER's palette (personal chrome preference). The write
+	 * goes to `directus_users.app_palette` via `/api/directus/users/me`;
+	 * client-facing surfaces keep following the org column.
 	 */
 	async function setPalette(next: AppPaletteId): Promise<void> {
 		if (!APP_PALETTE_IDS.includes(next)) return;
 		if (palette.value === next) return;
-		const orgId = (currentOrg.value as any)?.id;
 		// Flip locally first so the picker reacts immediately, even before the
-		// org row refetches (mirrors useAppsMode's best-effort persistence).
+		// user row persists (mirrors useAppsMode's best-effort persistence).
 		localPalette.value = next;
 		applyPaletteToDocument(next);
-		if (!orgId) return;
 		try {
-			await orgItems.update(orgId, { app_palette: next });
-			await fetchOrganizationDetails();
-			// Authoritative org value now matches — drop the optimistic override.
+			await updateMe({ app_palette: next });
+			// Authoritative user value now matches — drop the optimistic override.
+			userPalette.value = next;
 			localPalette.value = null;
 		} catch (err) {
-			console.warn('[useAppPalette] org app_palette persist failed; keeping local override', err);
+			console.warn('[useAppPalette] user app_palette persist failed; keeping local override', err);
 			throw err;
 		}
 	}

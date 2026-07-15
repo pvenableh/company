@@ -186,7 +186,7 @@ const numberingStyle = computed(() => props.payload?.numbering_style || 'phase_w
 	gap: 1rem;
 }
 
-:global(.dark) .scope-phase__estimate { border-color: rgba(255, 255, 255, 0.08); }
+:global(.dark .scope-phase__estimate) { border-color: rgba(255, 255, 255, 0.08); }
 
 @media print {
 	.scope-phase { break-inside: avoid; }

@@ -13,7 +13,7 @@
   Sized by the consumer via a class (e.g. `w-6 h-6`).
 -->
 <template>
-  <svg viewBox="0 0 512 512" fill="none" aria-hidden="true" :class="props.class" :style="mono ? monoVars : undefined">
+  <svg viewBox="0 0 512 512" fill="none" aria-hidden="true" class="ec-chair" :class="props.class" :style="mono ? monoVars : undefined">
     <!-- Armrest supports + centre column -->
     <path fill="var(--ec-frame)" d="M361.931,291.31c4.866,0,8.828-3.961,8.828-8.828v-52.966h17.655v52.966 c0,14.603-11.88,26.483-26.483,26.483h-17.655V291.31H361.931z" />
     <rect x="247.172" y="247.172" fill="var(--ec-frame)" width="17.655" height="194.207" />
@@ -64,7 +64,7 @@ svg {
 }
 /* Dark mode: warm the leather to a lit caramel and lift the castors off black
    so the chair still reads on dark tiles. Silver frame stays (reads on both). */
-:global(.dark) svg {
+:global(.dark .ec-chair) {
   --ec-leather: #ca9c60;
   --ec-leather-mid: #a9743f;
   --ec-leather-dark: #8a5a30;

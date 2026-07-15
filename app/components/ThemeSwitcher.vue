@@ -1,34 +1,35 @@
 <template>
 	<div class="theme-switcher">
-		<!-- ── Color scheme ───────────────────────────────────────── -->
+		<!-- ── Ink (surface tone) ─────────────────────────────────────
+		     Glass is the default surface; Ink is the one real alternative,
+		     so this is a toggle rather than a "Color scheme" card grid.
+		     Mono/Chromatic remain behind the showCustomColor disclosure. -->
 		<section class="theme-switcher__section">
 			<header class="theme-switcher__header">
-				<h3 class="theme-switcher__title">Color scheme</h3>
-				<p class="theme-switcher__subtitle">Sets the surface tone across Earnest — light, warm paper, or a custom accent.</p>
+				<h3 class="theme-switcher__title">Ink</h3>
+				<p class="theme-switcher__subtitle">Warm paper-and-ink surface tone. Off, Earnest wears its default glass look.</p>
 			</header>
 
-			<div class="theme-switcher__grid theme-switcher__grid--swatch">
-				<button
-					v-for="theme in visibleThemes"
-					:key="theme.id"
-					type="button"
-					class="swatch-card"
-					:class="{ 'swatch-card--active': currentTheme === theme.id }"
-					@click="handleThemeClick(theme.id)"
-				>
-					<span
-						class="swatch-card__paint"
-						:style="{ background: `linear-gradient(135deg, ${theme.swatches[0]}, ${theme.swatches[2] || theme.swatches[1]})` }"
-					>
-						<span v-if="currentTheme === theme.id" class="swatch-card__check">
-							<Icon name="lucide:check" class="size-3" />
-						</span>
-					</span>
-					<span class="swatch-card__label">
-						<span class="swatch-card__name">{{ theme.name }}</span>
-						<span class="swatch-card__hint">{{ theme.description }}</span>
-					</span>
-				</button>
+			<div
+				class="ink-toggle"
+				role="switch"
+				:aria-checked="inkOn"
+				tabindex="0"
+				@click="toggleInk(!inkOn)"
+				@keydown.enter.prevent="toggleInk(!inkOn)"
+				@keydown.space.prevent="toggleInk(!inkOn)"
+			>
+				<span class="ink-toggle__paint" :style="{ background: inkPaint }" aria-hidden="true" />
+				<span class="ink-toggle__body">
+					<span class="ink-toggle__name">{{ inkTheme?.name || 'Ink' }}</span>
+					<span class="ink-toggle__hint">{{ inkTheme?.description || 'Warm paper tones with ink text.' }}</span>
+				</span>
+				<Switch
+					:model-value="inkOn"
+					class="shrink-0"
+					@update:model-value="toggleInk"
+					@click.stop
+				/>
 			</div>
 
 			<!-- Custom color (mono/chromatic + hue picker) is hidden by default —
@@ -193,6 +194,8 @@
 </template>
 
 <script setup lang="ts">
+import { Switch } from '@/components/ui/switch';
+
 withDefaults(
 	defineProps<{
 		/** Show the Timeline Icons section. Hidden by default — surface this when the
@@ -211,8 +214,23 @@ const { themes: timelineThemes, currentThemeId: currentTimelineThemeId, setTheme
 const showAdvancedColors = ref(false);
 
 const CUSTOM_THEME_IDS = new Set(['mono', 'chromatic']);
-const visibleThemes = computed(() => themes.filter((t) => !CUSTOM_THEME_IDS.has(t.id)));
 const customThemes = computed(() => themes.filter((t) => CUSTOM_THEME_IDS.has(t.id)));
+
+// Ink is the one alternative to the default glass surface, so it's a toggle:
+// ON → ink, OFF → glass. Legacy mono/chromatic selections read as OFF; the
+// first flip normalizes them onto glass/ink (the custom disclosure can still
+// reach them when `showCustomColor` is set).
+const inkTheme = computed(() => themes.find((t) => t.id === 'ink'));
+const inkOn = computed(() => currentTheme.value === 'ink');
+const inkPaint = computed(() => {
+	const sw = inkTheme.value?.swatches;
+	return sw?.length
+		? `linear-gradient(135deg, ${sw[0]}, ${sw[2] || sw[1]})`
+		: 'linear-gradient(135deg, hsl(40 25% 92%), hsl(30 8% 15%))';
+});
+function toggleInk(on: boolean) {
+	setTheme(on ? 'ink' : 'glass');
+}
 
 function getThemePreviewIcons(theme: typeof timelineThemes[0]): string[] {
 	const keys = ['projects', 'tickets', 'invoices', 'tasks'];
@@ -360,6 +378,33 @@ function getStylePreviewClass(styleId: string): string {
 
 .swatch-card__hint {
 	@apply text-[10px] text-muted-foreground mt-0.5;
+}
+
+/* ── Ink toggle row ───────────────────────────────────────────── */
+.ink-toggle {
+	@apply relative flex items-center gap-3 rounded-xl border border-border bg-card
+		px-3.5 py-3 text-left cursor-pointer max-w-96
+		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
+}
+
+.ink-toggle:hover {
+	@apply border-foreground/15 bg-muted/30 -translate-y-px shadow-sm;
+}
+
+.ink-toggle__paint {
+	@apply block size-10 rounded-lg shrink-0 ring-1 ring-black/5 dark:ring-white/10;
+}
+
+.ink-toggle__body {
+	@apply flex-1 flex flex-col min-w-0;
+}
+
+.ink-toggle__name {
+	@apply text-sm font-semibold text-foreground;
+}
+
+.ink-toggle__hint {
+	@apply text-[11px] text-muted-foreground leading-tight mt-0.5;
 }
 
 /* ── Disclosure (custom color expander) ───────────────────────── */

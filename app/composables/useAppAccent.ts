@@ -270,6 +270,16 @@ interface PaletteDef {
 	uniformIcon?: HSL;
 	/** Semantic colour tokens that drive buttons, badges, status, etc. */
 	semantics: PaletteSemantics;
+	/**
+	 * When true, `applyPaletteToDocument` CLEARS the semantic-token overrides
+	 * instead of writing them, letting the base `themes.css` cascade win —
+	 * including its `.dark` flip (a static palette override can't do that).
+	 * Used by Mono: primary/ring become the theme's ink (near-black on light,
+	 * near-white on dark) and destructive/success/warning keep their stock
+	 * functional colours. `semantics` is still required for the type contract
+	 * but is never read at runtime while this flag is set.
+	 */
+	inheritSemantics?: boolean;
 	/** Optional chip chrome override. Defaults to `{ chipMode: 'palette' }`. */
 	chrome?: PaletteChrome;
 	/**
@@ -379,6 +389,34 @@ const NEUTRAL_SOURCE: readonly HSL[] = [
  *
  * @see useAppPalette.ts — picks the active palette per user.
  */
+/**
+ * Mono — ink & glass, 10 steps near-grey with a whisper of cool (h 220,
+ * s 4–8%) so the liquid-glass tint reads "frosted" rather than "dirty grey".
+ * Because per-app accents sample this ramp, `--app-{id}-s` lands at ~4–8%
+ * and every glass surface desaturates automatically — no glass-specific
+ * code. Colour survives only where it carries meaning: the semantic tokens
+ * are NOT overridden (see `inheritSemantics`), so destructive red, success
+ * green, warning amber, and the ink primary all come from `themes.css`.
+ */
+const MONO_SOURCE: readonly HSL[] = [
+	// Greys have no saturation to carry them, so the top stop is a balance:
+	// the original 82 vanished on light discs (~1.4:1); 50 read well but
+	// flattened the ramp. 62→20 is the tuned middle — a light, airy first
+	// chip (~2.3:1, deliberately soft per design review) with a steep
+	// early fall-off so the depth read is dramatic. Deepest stops go soft
+	// on dark discs, same trade Neutral makes with Yale Blue.
+	{ h: 220, s: 7, l: 62 }, // 0 Silver Slate
+	{ h: 220, s: 7, l: 55 }, // 1
+	{ h: 220, s: 8, l: 49 }, // 2
+	{ h: 220, s: 8, l: 44 }, // 3
+	{ h: 220, s: 7, l: 39 }, // 4
+	{ h: 220, s: 7, l: 35 }, // 5
+	{ h: 220, s: 6, l: 31 }, // 6
+	{ h: 220, s: 6, l: 27 }, // 7
+	{ h: 220, s: 6, l: 23 }, // 8
+	{ h: 220, s: 6, l: 20 }, // 9 Ink Slate
+] as const;
+
 export const APP_PALETTES = {
 	seaMist: {
 		// Id stays `seaMist` so existing `directus_users.app_palette` values
@@ -441,7 +479,7 @@ export const APP_PALETTES = {
 		},
 	},
 	neutral: {
-		meta: { label: 'Neutral', hint: 'Frosted glass with sky → yale-blue chromatic icons' },
+		meta: { label: 'Default', hint: 'Frosted glass with sky → yale-blue chromatic icons' },
 		sourceColors: NEUTRAL_SOURCE,
 		// `identity` makes each chip's icon = its bg pick — so the icons
 		// wear the full chromatic ramp (Sky Aqua → Yale Blue 2) against
@@ -462,6 +500,28 @@ export const APP_PALETTES = {
 			active: { h: 160, s: 60, l: 45 },
 		},
 	},
+	mono: {
+		meta: { label: 'Mono', hint: 'Ink & glass — colour only where it means something' },
+		sourceColors: MONO_SOURCE,
+		// `identity` gives each frosted chip a glyph from the grey ramp —
+		// same depth-read as Default's chromatic ramp, achromatic.
+		iconStrategy: 'identity',
+		chrome: { chipMode: 'neutral', chipAccent: { h: 220, s: 8, l: 48 } },
+		// Never written to the DOM (`inheritSemantics`) — themes.css wins,
+		// so primary/ring flip with light/dark and status colours stay stock.
+		// Values below mirror the themes.css light defaults for the type
+		// contract and any future preview consumer.
+		inheritSemantics: true,
+		semantics: {
+			primary: { h: 0, s: 0, l: 12 },
+			primaryForeground: { h: 0, s: 0, l: 100 },
+			destructive: { h: 0, s: 72, l: 51 },
+			success: { h: 142, s: 72, l: 46 },
+			warning: { h: 38, s: 92, l: 50 },
+			info: { h: 199, s: 89, l: 48 },
+			active: { h: 160, s: 60, l: 45 },
+		},
+	},
 } as const satisfies Record<string, PaletteDef>;
 
 /** Palette id derived from the registry — adding a new palette doesn't
@@ -469,11 +529,13 @@ export const APP_PALETTES = {
 export type AppPaletteId = keyof typeof APP_PALETTES;
 
 /**
- * Picker-visible palettes. The remaining entries (default, oceanic,
- * gradientBlues) stay in `APP_PALETTES` for future revival but are
- * hidden from the picker and aliased to `seaMist` on resolve.
+ * Picker-visible palettes — 2026-07-15 (Peter's call, monetization ladder
+ * rung 1): the free personal choice is Default + Mono. `seaMist` (Fresh)
+ * and `aurora` stay in `APP_PALETTES` for future revival — and as the
+ * hue-generation reference for the paid "Brand Light" palette — but are
+ * hidden from the picker and alias to `neutral` on resolve.
  */
-export const APP_PALETTE_IDS: readonly AppPaletteId[] = ['seaMist', 'aurora', 'neutral'];
+export const APP_PALETTE_IDS: readonly AppPaletteId[] = ['neutral', 'mono'];
 
 /** The out-of-the-box palette for users who haven't picked one. */
 export const DEFAULT_APP_PALETTE: AppPaletteId = 'neutral';
@@ -485,10 +547,13 @@ export const DEFAULT_APP_PALETTE: AppPaletteId = 'neutral';
  * the old id migrate cleanly to the active palette.
  */
 export const APP_PALETTE_ALIASES: Record<string, AppPaletteId> = {
-	royal: 'seaMist',
-	default: 'seaMist',
-	oceanic: 'seaMist',
-	gradientBlues: 'seaMist',
+	royal: 'neutral',
+	default: 'neutral',
+	oceanic: 'neutral',
+	gradientBlues: 'neutral',
+	// Hidden from the picker 2026-07-15 (rung 1 of the monetization ladder):
+	seaMist: 'neutral',
+	aurora: 'neutral',
 };
 
 export function resolvePaletteId(raw: unknown): AppPaletteId {
@@ -739,7 +804,13 @@ export function applyPaletteToDocument(paletteId: AppPaletteId): void {
 
 	// 1. Semantic tokens — single loop over the registry. Adding a new
 	//    token means one entry in TOKEN_REGISTRY + one @theme inline line.
+	//    `inheritSemantics` palettes (Mono) clear the overrides instead so
+	//    the themes.css cascade — including its `.dark` flip — wins.
 	for (const [varName, resolve] of Object.entries(TOKEN_REGISTRY)) {
+		if (palette.inheritSemantics) {
+			root.style.removeProperty(varName);
+			continue;
+		}
 		set(varName, hslToVarString(resolve(palette.semantics)));
 	}
 

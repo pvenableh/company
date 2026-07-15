@@ -1604,8 +1604,8 @@ onMounted(() => {
   @apply bg-white/20 text-white;
 }
 
-:global(html[data-chip-mode='neutral']) .studio-tabs__item--active,
-:global(html[data-surface='glass']) .studio-tabs__item--active {
+:global(html[data-chip-mode='neutral'] .studio-tabs__item--active),
+:global(html[data-surface='glass'] .studio-tabs__item--active) {
   background: linear-gradient(
     135deg,
     hsl(var(--primary) / 0.92),

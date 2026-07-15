@@ -503,8 +503,8 @@ watch(() => selectedClient.value, () => {
   @apply bg-white/20 text-white;
 }
 
-:global(html[data-chip-mode='neutral']) .time-tabs__item--active,
-:global(html[data-surface='glass']) .time-tabs__item--active {
+:global(html[data-chip-mode='neutral'] .time-tabs__item--active),
+:global(html[data-surface='glass'] .time-tabs__item--active) {
   background: linear-gradient(
     135deg,
     hsl(var(--primary) / 0.92),
@@ -515,8 +515,8 @@ watch(() => selectedClient.value, () => {
     0 4px 10px -6px hsl(var(--primary) / 0.55);
 }
 
-:global(html[data-chip-mode='neutral']) .time-tabs__item:hover,
-:global(html[data-surface='glass']) .time-tabs__item:hover {
+:global(html[data-chip-mode='neutral'] .time-tabs__item:hover),
+:global(html[data-surface='glass'] .time-tabs__item:hover) {
   background: hsl(var(--primary) / 0.08);
 }
 

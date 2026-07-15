@@ -584,7 +584,7 @@ function fireConfetti() {
 		particleCount: 60,
 		spread: 55,
 		origin: { y: 0.7 },
-		colors: ['#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#eab308'],
+		colors: getConfettiColors(),
 		disableForReducedMotion: true,
 	});
 }

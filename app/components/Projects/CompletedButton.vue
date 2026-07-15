@@ -30,7 +30,7 @@ import confetti from 'canvas-confetti';
 
 function startConfetti(duration = 4000) {
 	const end = Date.now() + duration;
-	const colors = ['#00bfff', '#0ef62d', '#e8fc00', '#ffcc00', '#ff005c', '#ff00cc', '#502989'];
+	const colors = getConfettiColors();
 
 	function frame() {
 		confetti({

@@ -3,7 +3,7 @@
  * UserMenu — avatar-anchored dropdown for quick account actions.
  *
  * Surfaces the most common destinations one tap away:
- *   Profile · Subscription · Organization · Layout toggle ·
+ *   Account · Subscription · Organization · Layout toggle ·
  *   Dark-mode toggle · Sign out
  *
  * Used by the apps shell (apps.vue). Designed to be drop-in for the
@@ -161,7 +161,7 @@ function handleLogout() {
 
 			<DropdownMenuItem @select="goTo('/account')">
 				<Icon name="lucide:user-round" class="size-4 mr-2 shrink-0" />
-				<span>Profile</span>
+				<span>Account</span>
 			</DropdownMenuItem>
 			<DropdownMenuItem @select="openMyCard()">
 				<Icon name="lucide:contact" class="size-4 mr-2 shrink-0" />

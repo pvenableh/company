@@ -459,7 +459,7 @@ function handleToggle(id) {
 			particleCount: 40,
 			spread: 45,
 			origin: { y: 0.6 },
-			colors: ['#6366f1', '#8b5cf6', '#22c55e', '#eab308'],
+			colors: getConfettiColors(),
 			disableForReducedMotion: true,
 		});
 		if (motivationalTimeout) clearTimeout(motivationalTimeout);

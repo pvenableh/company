@@ -38,13 +38,13 @@ const props = withDefaults(defineProps<{ hidden?: boolean }>(), { hidden: false 
 	color: rgba(0, 0, 0, 0.6);
 }
 
-:global(.dark) .doc__footer {
+:global(.dark .doc__footer) {
 	border-top-color: rgba(255, 255, 255, 0.06);
 }
-:global(.dark) .doc__powered-by {
+:global(.dark .doc__powered-by) {
 	color: rgba(255, 255, 255, 0.3);
 }
-:global(.dark) .doc__powered-by:hover {
+:global(.dark .doc__powered-by:hover) {
 	color: rgba(255, 255, 255, 0.6);
 }
 
