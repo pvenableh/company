@@ -733,7 +733,7 @@ const formatCurrency = (amount) => {
 					<div class="w-full">
 						<!-- Attach Existing button above time entries -->
 						<div class="flex justify-end px-1 mb-2">
-							<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachTimeEntry">
+							<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachTimeEntry">
 								<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 								Attach Existing
 							</Button>
@@ -799,11 +799,11 @@ const formatCurrency = (amount) => {
 						<div class="flex items-center justify-between mb-4">
 							<h2 class="t-label text-muted-foreground">Documents</h2>
 							<div class="flex items-center gap-2">
-								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachFile">
+								<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachFile">
 									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 									Attach Existing
 								</Button>
-								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="triggerFileUpload" :disabled="uploadingDoc">
+								<Button size="sm" variant="outline" class="text-[11px]" @click="triggerFileUpload" :disabled="uploadingDoc">
 									<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
 									<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
 									Upload
@@ -845,7 +845,7 @@ const formatCurrency = (amount) => {
 							</div>
 							<p class="text-sm text-muted-foreground">No documents yet</p>
 							<p class="text-xs text-muted-foreground/60 mt-1">Upload files to keep everything organized.</p>
-							<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="triggerFileUpload">
+							<Button size="sm" variant="outline" class="mt-4 text-[11px]" @click="triggerFileUpload">
 								<UIcon name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
 								Upload Files
 							</Button>
@@ -916,11 +916,11 @@ const formatCurrency = (amount) => {
 						<div class="flex items-center justify-between mb-4">
 							<h2 class="t-label text-muted-foreground">Invoices</h2>
 							<div class="flex items-center gap-2">
-								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachInvoice">
+								<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachInvoice">
 									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 									Attach Existing
 								</Button>
-								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
+								<Button size="sm" variant="outline" class="text-[11px]" @click="showQuickInvoice = true">
 									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 									New Invoice
 								</Button>
@@ -984,7 +984,7 @@ const formatCurrency = (amount) => {
 								<Icon name="lucide:receipt" class="h-6 w-6 text-muted-foreground/60" />
 							</div>
 							<p class="text-sm text-muted-foreground">No invoices for this project.</p>
-							<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
+							<Button size="sm" variant="outline" class="mt-4 text-[11px]" @click="showQuickInvoice = true">
 								<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 								Create Invoice
 							</Button>

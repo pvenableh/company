@@ -374,12 +374,12 @@ if (!props.compact) {
       <Icon name="lucide:alert-circle" class="w-10 h-10 text-destructive" />
       <p class="text-sm text-destructive">{{ error }}</p>
       <div class="flex gap-2">
-        <Button v-if="compact" variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide" @click="$emit('back')">
+        <Button v-if="compact" variant="outline" size="sm" class="text-xs font-medium" @click="$emit('back')">
           <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
           Back
         </Button>
         <NuxtLink v-else to="/apps/money">
-          <Button variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide">
+          <Button variant="outline" size="sm" class="text-xs font-medium">
             <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
             Back to Invoices
           </Button>

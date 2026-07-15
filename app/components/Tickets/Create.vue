@@ -1,7 +1,8 @@
 <template>
 	<div>
-		<!-- Create Button -->
-		<UiActionButton icon="lucide:plus" @click="openForm">
+		<!-- Create Button — `md` size (h-8 px-3) so it matches the h-8 filter
+			 pills / Select triggers it sits beside in the board toolbar. -->
+		<UiActionButton size="md" icon="lucide:plus" @click="openForm">
 			New Ticket
 		</UiActionButton>
 

@@ -223,6 +223,15 @@ const taskTabs = [
   { key: 'all', label: 'All Tasks' },
 ];
 
+// New Task — created against a ticket via <TicketsTaskCreate>. The floor's list
+// (<TicketsTasksList>) subscribes to the parent *tickets* collection, so adding
+// a nested task doesn't push a ticket-level realtime event; refresh the list
+// explicitly so the new row appears immediately.
+const tasksListRef = ref<{ refresh?: () => void } | null>(null);
+function onTaskCreated() {
+  tasksListRef.value?.refresh?.();
+}
+
 // ── Meetings floor ──────────────────────────────────────────────────────────
 const videoMeetingsApi = useDirectusItems('video_meetings');
 const meetings = ref<any[]>([]);
@@ -475,15 +484,22 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
 
       <!-- ── Tasks floor ──────────────────────────────────────────────── -->
       <template v-else-if="floor === 'tasks'">
-        <UTabs
-          v-model="tasksTab"
-          :items="taskTabs.map((t) => ({ key: t.key, label: t.label }))"
-          class="mb-5 w-fit"
-        />
+        <!-- Toolbar: scope tabs + New Task, grouped on one row so the create
+             affordance reads as part of the Tasks controls (mirrors how the
+             Tickets floor pairs New Ticket with its board filters). -->
+        <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
+          <UTabs
+            v-model="tasksTab"
+            :items="taskTabs.map((t) => ({ key: t.key, label: t.label }))"
+            class="w-fit"
+          />
+          <TicketsTaskCreate :organization-id="tasksOrgId" @task-created="onTaskCreated" />
+        </div>
 
         <div class="ios-card p-5">
           <ClientOnly>
             <TicketsTasksList
+              ref="tasksListRef"
               :organizationId="tasksOrgId"
               :userId="tasksFilterUserId"
               :limit="50"

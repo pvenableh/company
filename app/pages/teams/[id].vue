@@ -181,7 +181,7 @@ onUnmounted(() => clearEntity());
       <Icon name="lucide:alert-circle" class="w-10 h-10 text-destructive" />
       <p class="text-sm text-destructive">{{ error }}</p>
       <div class="flex gap-2">
-        <Button variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide" @click="router.push('/organization/teams')">
+        <Button variant="outline" size="sm" class="text-xs font-medium" @click="router.push('/organization/teams')">
           <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
           Back to Teams
         </Button>

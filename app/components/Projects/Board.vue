@@ -43,7 +43,7 @@
 				</div>
 
 				<!-- New Project Button — agency only; portal users can't create projects -->
-				<Button v-if="!portal" size="sm" variant="outline" class="ml-2 uppercase text-[10px] tracking-wide" @click="showNewProjectModal = true">
+				<Button v-if="!portal" size="sm" variant="outline" class="ml-2 text-[11px]" @click="showNewProjectModal = true">
 					<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 					New Project
 				</Button>

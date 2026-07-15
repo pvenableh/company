@@ -421,7 +421,7 @@ onUnmounted(() => clearEntity());
       <p class="text-sm text-destructive">{{ error }}</p>
       <div class="flex gap-2">
         <NuxtLink to="/clients">
-          <Button variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide">
+          <Button variant="outline" size="sm" class="text-xs font-medium">
             <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
             Back to Clients
           </Button>

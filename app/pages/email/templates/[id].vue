@@ -49,7 +49,7 @@ onUnmounted(() => clearEntity());
 				<Icon name="lucide:alert-circle" class="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
 				<p class="text-sm text-muted-foreground mb-4">Template not found</p>
 				<NuxtLink to="/email">
-					<button class="rounded-full px-4 py-2 text-[10px] font-medium uppercase tracking-wide border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1.5">
+					<button class="rounded-full px-4 py-2 text-xs font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1.5">
 						<Icon name="lucide:chevron-left" class="w-3 h-3" />
 						Back to Email
 					</button>

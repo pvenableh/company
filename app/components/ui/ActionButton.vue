@@ -1,7 +1,7 @@
 <template>
 	<button
-		class="ui-action-button inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border text-xs font-medium transition-[colors,transform] duration-150"
-		:class="variantClasses"
+		class="ui-action-button inline-flex items-center rounded-full border border-border text-xs font-medium transition-[colors,transform] duration-150"
+		:class="[variantClasses, sizeClasses]"
 		:disabled="disabled || loading"
 		@click="$emit('click', $event)"
 	>
@@ -21,6 +21,12 @@ const props = defineProps<{
 	loading?: boolean;
 	disabled?: boolean;
 	hideLabel?: string;
+	/**
+	 * Height/padding preset. `sm` (default) is the T3 pill (h-7 px-2.5). `md`
+	 * (h-8 px-3, wider gap) matches the h-8 filter pills / shadcn Select
+	 * triggers so this button lines up when placed in a filter/control row.
+	 */
+	size?: 'sm' | 'md';
 }>();
 
 defineEmits<{
@@ -37,6 +43,8 @@ const variantClasses = computed(() => {
 			return 'text-foreground hover:bg-muted/50 hover:border-primary/30';
 	}
 });
+
+const sizeClasses = computed(() => (props.size === 'md' ? 'gap-1.5 h-8 px-3' : 'gap-1 h-7 px-2.5'));
 
 const labelClass = computed(() => {
 	if (props.hideLabel === 'sm') return 'hidden sm:inline';

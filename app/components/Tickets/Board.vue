@@ -23,12 +23,16 @@
 
 		<!-- Filters and Controls -->
 		<div
-			class="w-full flex flex-col md:flex-row items-start md:items-center justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
+			class="w-full flex flex-col md:flex-row items-start md:items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
 			<div class="flex items-center gap-3 mb-4 xl:mb-0">
 				<!-- Create button — agency only. Portal users use the page-level
-					 New Ticket button on /portal/tickets which posts to /api/portal/tickets. -->
-				<TicketsCreate v-if="!portal" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+					 New Ticket button on /portal/tickets which posts to /api/portal/tickets.
+					 On the desktop board (no projectId), New Ticket instead lives in the
+					 filter row below so it reads as grouped with the filters — this copy
+					 is hidden at md+ then (`md:hidden`) and only carries the mobile +
+					 project-embedded cases, where the filter cluster is absent. -->
+				<TicketsCreate v-if="!portal" :class="{ 'md:hidden': !projectId }" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 				<UButton
 					v-if="!projectId"
 					icon="i-heroicons-x-mark"
@@ -69,12 +73,19 @@
 						<UIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
 					</transition>
 				</div>
-				<!-- Row 2: Due Date, Project, Archive -->
+				<!-- Row 2: New Ticket + Due Date, Project, Archive.
+					 New Ticket sits at the head of the filter row (desktop, non-project
+					 board only) so the create action reads as part of this control
+					 cluster rather than stranded across the toolbar. The mobile +
+					 project-embedded cases are covered by the copy in the left cluster
+					 above. -->
 				<div class="flex flex-row items-center gap-4">
+					<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+
 					<!-- Due Date — universal Select (glass, dark-adaptive). The
 						 leading icon turns amber when a date filter is active. -->
 					<Select v-model="dueDateModel">
-						<SelectTrigger class="h-8 w-40 rounded-full text-xs gap-1.5">
+						<SelectTrigger size="sm" class="h-8 w-40 rounded-full text-xs gap-1.5">
 							<Icon
 								:name="activeDueDateFilter ? 'lucide:clock' : 'lucide:calendar'"
 								class="w-3.5 h-3.5 shrink-0"
@@ -91,7 +102,7 @@
 
 					<!-- Project — universal Select with per-project ticket counts -->
 					<Select v-model="projectModel">
-						<SelectTrigger class="h-8 w-56 rounded-full text-xs gap-1.5">
+						<SelectTrigger size="sm" class="h-8 w-56 rounded-full text-xs gap-1.5">
 							<Icon name="lucide:folder" class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
 							<SelectValue placeholder="All projects" />
 						</SelectTrigger>
