@@ -10,7 +10,7 @@
       <strong>{{hostName}}</strong> rescheduled <strong>{{meetingTitle}}</strong>.
     </mj-text>
     <mj-text color="#888888" padding="0 0 12px 0">
-      <s>{{prevDate}} at {{prevTime}}</s>
+      Was: <s>{{prevDate}} at {{prevTime}}</s>
     </mj-text>
     <mj-text padding="4px 0 8px 0">
       <div style="background:#f7f5f2;padding:16px 20px;border-radius:14px;">
@@ -21,7 +21,7 @@
       </div>
     </mj-text>
     {{#if ctaUrl}}
-    <mj-button href="{{ctaUrl}}"padding="12px 0 8px 0">
+    <mj-button href="{{ctaUrl}}" padding="12px 0 8px 0">
       Join meeting
     </mj-button>
     {{/if}}

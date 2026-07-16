@@ -48,11 +48,14 @@
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Email preview | Earnest' });
 
+// Base transactional/lifecycle templates (1:1 with server/emails/*.mjml), plus
+// a `notification:<category>` variant per notification category — all nine
+// render through the single notification.mjml but with representative
+// per-category content (subject/heading/body/CTA) matching what the app sends.
 const templates = [
 	'welcome',
 	'early-access-welcome',
 	'invite',
-	'notification',
 	'password-reset',
 	'video-invite',
 	'generic',
@@ -61,6 +64,16 @@ const templates = [
 	'meeting-removed',
 	'meeting-cancelled',
 	'meeting-reminder',
+	'notification',
+	'notification:conversations',
+	'notification:reactions',
+	'notification:tickets',
+	'notification:tasks',
+	'notification:projects',
+	'notification:invoices',
+	'notification:contracts',
+	'notification:proposals',
+	'notification:meetings',
 ] as const;
 
 const template = ref<(typeof templates)[number]>('welcome');

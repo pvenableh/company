@@ -18,7 +18,7 @@
       </div>
     </mj-text>
     {{#if ctaUrl}}
-    <mj-button href="{{ctaUrl}}"padding="12px 0 8px 0">
+    <mj-button href="{{ctaUrl}}" padding="12px 0 8px 0">
       Join meeting
     </mj-button>
     {{/if}}
