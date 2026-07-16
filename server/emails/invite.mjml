@@ -9,7 +9,7 @@
     <mj-text font-size="13px" color="#666666" padding="0 0 12px 0">
       Role: <strong>{{roleLabel}}</strong>
     </mj-text>
-    <mj-button href="{{ctaUrl}}"padding="16px 0 8px 0">
+    <mj-button href="{{ctaUrl}}" padding="16px 0 8px 0">
       Accept invitation
     </mj-button>
     <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">

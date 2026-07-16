@@ -14,7 +14,9 @@
 
 import { renderBrandedTemplate, type BrandContext } from '~~/server/utils/email-templates';
 import { fetchOrgBrand } from '~~/server/utils/email-send';
-import type { OrgBrandRef } from '~~/server/utils/email-shell';
+import { escapeHtml, type OrgBrandRef } from '~~/server/utils/email-shell';
+import { ctaLabelFor } from '~~/server/utils/notification-emails';
+import type { NotificationCategory } from '~~/server/utils/notification-categories';
 
 export const TRANSACTIONAL_TEMPLATES = [
 	'welcome',
@@ -32,6 +34,71 @@ export const TRANSACTIONAL_TEMPLATES = [
 ] as const;
 
 type TemplateName = (typeof TRANSACTIONAL_TEMPLATES)[number];
+
+/**
+ * Every notification category renders through the single `notification.mjml`
+ * template (via server/utils/notification-emails.ts). The preview exposes each
+ * one as a `notification:<category>` variant so all nine are individually
+ * reviewable with content that mirrors what the app actually sends
+ * (subject/heading/body/CTA come from notificationRecipients.ts +
+ * CATEGORY_CTA). Selectable in preview-transactional.vue.
+ */
+export const NOTIFICATION_CATEGORIES = [
+	'conversations',
+	'reactions',
+	'tickets',
+	'tasks',
+	'projects',
+	'invoices',
+	'contracts',
+	'proposals',
+	'meetings',
+] as const satisfies readonly NotificationCategory[];
+
+const APP = 'https://app.earnest.guru';
+
+// Representative (subject, plain-text body, click-through link) per category —
+// pulled from the real strings in server/utils/notificationRecipients.ts so the
+// preview reflects production copy, not invented samples.
+const NOTIFICATION_SAMPLES: Record<NotificationCategory, { subject: string; body: string; link: string }> = {
+	conversations: { subject: 'New comment on Brand refresh', body: 'Jordan Lee: Can we push the launch banner live by Friday?', link: `${APP}/tickets/T-241` },
+	// Faithful to notificationRecipients.ts: the reaction message says "Someone"
+	// even though the actor is known (see findings report — a copy weakness).
+	reactions: { subject: 'New reaction', body: 'Someone reacted 🎉 to your comment', link: `${APP}/tickets/T-241` },
+	tickets: { subject: 'Ticket status: In Progress', body: 'Brand refresh — landing page hero', link: `${APP}/tickets/T-241` },
+	tasks: { subject: 'You were assigned to a task', body: 'Draft the August newsletter', link: `${APP}/projects/P-12` },
+	projects: { subject: 'Project completed', body: '"Website redesign" has been marked complete.', link: `${APP}/projects/P-12` },
+	invoices: { subject: 'Invoice paid: INV-1042', body: 'Invoice INV-1042 has been paid.', link: `${APP}/invoices/INV-1042` },
+	contracts: { subject: 'Contract signed: MSA-2026', body: '"MSA-2026" has been signed.', link: `${APP}/contracts/C-30` },
+	proposals: { subject: 'Proposal accepted: PRO-88', body: '"PRO-88" was accepted.', link: `${APP}/proposals/PRO-88` },
+	// Meetings normally ship via the bespoke meeting-* templates; this covers the
+	// generic notification path (e.g. an appointment status change).
+	meetings: { subject: 'Meeting scheduled: Brand strategy review', body: 'Brand strategy review — Friday, August 14 at 3:00 PM EDT', link: `${APP}/meetings/M-7` },
+};
+
+/**
+ * Build the exact `notification.mjml` vars that
+ * server/utils/notification-emails.ts → sendNotificationEmail would produce for
+ * a given category, so the preview is faithful to a real send (heading ==
+ * subject, HTML-escaped body with <br>, per-category CTA label, explicit
+ * plain-text alternative).
+ */
+function notificationSample(category: NotificationCategory): Record<string, any> {
+	const { subject, body, link } = NOTIFICATION_SAMPLES[category];
+	const recipientName = 'Alex';
+	const label = ctaLabelFor(category);
+	const bodyHtml = escapeHtml(body).replace(/\n/g, '<br />');
+	return {
+		subject,
+		preheader: body.slice(0, 140),
+		heading: subject,
+		recipientName,
+		bodyHtml,
+		ctaUrl: link,
+		ctaLabel: label,
+		text: `Hi ${recipientName},\n\n${body}${link ? `\n\n${label}: ${link}` : ''}`,
+	};
+}
 
 const SAMPLE_ORG: OrgBrandRef = {
 	id: 'sample',
@@ -170,9 +237,26 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const query = getQuery(event);
-	const name = String(query.template || 'welcome') as TemplateName;
-	if (!TRANSACTIONAL_TEMPLATES.includes(name)) {
-		throw createError({ statusCode: 400, message: `Unknown template "${name}". Valid: ${TRANSACTIONAL_TEMPLATES.join(', ')}` });
+	const rawName = String(query.template || 'welcome');
+
+	// `notification:<category>` variants render the shared notification.mjml with
+	// per-category sample content; everything else is a 1:1 template name.
+	let renderName: TemplateName = 'welcome';
+	let vars: Record<string, any>;
+	if (rawName.startsWith('notification:')) {
+		const category = rawName.slice('notification:'.length) as NotificationCategory;
+		if (!NOTIFICATION_CATEGORIES.includes(category)) {
+			throw createError({ statusCode: 400, message: `Unknown notification category "${category}". Valid: ${NOTIFICATION_CATEGORIES.join(', ')}` });
+		}
+		renderName = 'notification';
+		vars = notificationSample(category);
+	} else {
+		const name = rawName as TemplateName;
+		if (!TRANSACTIONAL_TEMPLATES.includes(name)) {
+			throw createError({ statusCode: 400, message: `Unknown template "${name}". Valid: ${TRANSACTIONAL_TEMPLATES.join(', ')}` });
+		}
+		renderName = name;
+		vars = sampleVars(name);
 	}
 
 	const brandMode = String(query.brand || 'earnest');
@@ -184,7 +268,6 @@ export default defineEventHandler(async (event) => {
 		brand = { org: SAMPLE_ORG };
 	}
 
-	const vars = sampleVars(name);
 	// The glass background is app-hosted (public/email), so it resolves to an
 	// absolute prod URL that isn't reachable from a local dev preview — point it
 	// at the local file. The logo + early-access imagery are Directus-hosted
@@ -193,10 +276,10 @@ export default defineEventHandler(async (event) => {
 		(vars as any).glassBgUrl = '/email/bg-glass.jpg';
 	}
 
-	const { html, text, errors } = await renderBrandedTemplate(name, vars, brand);
+	const { html, text, errors } = await renderBrandedTemplate(renderName, vars, brand);
 
 	if (String(query.format) === 'json') {
-		return { template: name, brand: brandMode, errors, html, text };
+		return { template: rawName, brand: brandMode, errors, html, text };
 	}
 
 	setHeader(event, 'Content-Type', 'text/html; charset=utf-8');

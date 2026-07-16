@@ -131,6 +131,13 @@ function htmlToText(html: string): string {
 		.replace(/<head[\s\S]*?<\/head>/gi, '')
 		.replace(/<br\s*\/?>/gi, '\n')
 		.replace(/<\/(p|div|h1|h2|h3|li|tr|td)>/gi, '\n')
+		// Keep the destination for links (CTAs especially) — otherwise a
+		// plain-text reader sees the button label with no way to reach it.
+		.replace(/<a\b[^>]*\bhref="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href, inner) => {
+			const label = String(inner).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+			if (!/^https?:\/\//i.test(href)) return label;
+			return label && label !== href ? `${label}: ${href}` : href;
+		})
 		.replace(/<[^>]+>/g, '')
 		.replace(/&nbsp;/g, ' ')
 		.replace(/&amp;/g, '&')
@@ -139,6 +146,11 @@ function htmlToText(html: string): string {
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
 		.replace(/[ \t]+/g, ' ')
+		// MJML's nested-table output leaves hundreds of whitespace-only lines.
+		// Trim the spaces hugging every newline so those lines become empty,
+		// THEN collapse runs — otherwise `\n{3,}` never matches (each blank
+		// line still holds a stray space) and the plain-text part is unreadable.
+		.replace(/ *\n */g, '\n')
 		.replace(/\n{3,}/g, '\n\n')
 		.trim();
 }
