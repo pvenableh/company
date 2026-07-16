@@ -63,11 +63,12 @@ async function resolveRouting(invoiceId: string | undefined, amount: number, con
 					'client.organization.id',
 					'client.organization.stripe_account_id',
 					'client.organization.stripe_account_status',
+					'client.organization.wholesale_pricing',
 				],
 			}),
 		)
 		.catch(() => null)) as
-		| { id: string; client?: { organization?: { id: string; stripe_account_id?: string | null; stripe_account_status?: string | null } | null } | null }
+		| { id: string; client?: { organization?: { id: string; stripe_account_id?: string | null; stripe_account_status?: string | null; wholesale_pricing?: boolean } | null } | null }
 		| null;
 
 	const org = invoice?.client?.organization;
@@ -78,8 +79,19 @@ async function resolveRouting(invoiceId: string | undefined, amount: number, con
 	}
 
 	const status = org.stripe_account_status || 'none';
+
+	// Hardening: an org with an *invoice* must accept it through their OWN
+	// connected account. We no longer fall through to the Earnest platform
+	// account for invoice payments — routing a client's money into Earnest's
+	// balance is exactly the money-transmitter/commingling exposure we're
+	// eliminating. (The no-invoiceId /payment.vue path already returned
+	// 'platform' at the top of this function — that's Earnest's own form.)
 	if (!org.stripe_account_id || status === 'none') {
-		return { mode: 'platform', orgId: org.id, stripeAccount: null, applicationFeeAmount: null };
+		throw createError({
+			statusCode: 412,
+			message:
+				'This organization must connect Stripe before it can accept online payments. Please ask them to activate payments, or pay via another method.',
+		});
 	}
 
 	if (status !== 'active') {
@@ -90,8 +102,9 @@ async function resolveRouting(invoiceId: string | undefined, amount: number, con
 		});
 	}
 
-	// Active connected account → optional platform fee.
-	const bps = parseInt(String(config?.stripePlatformFeeBps || '0'), 10) || 0;
+	// Active connected account → optional platform fee, WAIVED for wholesale
+	// orgs (Earnest-admin grant — e.g. Hue pays no markup on invoice payments).
+	const bps = org.wholesale_pricing ? 0 : parseInt(String(config?.stripePlatformFeeBps || '0'), 10) || 0;
 	const fee = bps > 0 ? Math.floor((amount * bps) / 10_000) : 0;
 
 	return {
@@ -129,7 +142,10 @@ export default defineEventHandler(async (event) => {
 			amount,
 			currency: 'usd',
 			receipt_email: body.email,
-			statement_descriptor: (config.public as any)?.companyName || 'Payment',
+			// No statement_descriptor: Stripe rejects it on card PaymentIntents
+			// (card charges only accept statement_descriptor_suffix). Setting it
+			// here 400'd every card invoice + one-off payment. Card and ACH charges
+			// fall back to the account's default descriptor.
 			metadata: {
 				environment: process.env.NODE_ENV || 'development',
 				created_at: new Date().toISOString(),

@@ -4,6 +4,7 @@
  *
  * Body: { email, customerId?, packageId, organizationId, successUrl?, cancelUrl? }
  */
+import { readItem } from '@directus/sdk';
 import { TOKEN_PACKAGES } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
@@ -34,6 +35,13 @@ export default defineEventHandler(async (event) => {
   if (!pkg) {
     throw createError({ statusCode: 400, message: 'Invalid package ID' });
   }
+
+  // Wholesale orgs (Earnest-admin grant) pay cost, not retail. Tokens granted
+  // are unchanged — only the amount charged differs.
+  const org = (await getTypedDirectus()
+    .request(readItem('organizations', organizationId, { fields: ['wholesale_pricing'] }))
+    .catch(() => null)) as { wholesale_pricing?: boolean } | null;
+  const unitAmount = org?.wholesale_pricing ? pkg.wholesalePriceInCents : pkg.priceInCents;
 
   try {
     // Find or create Stripe customer
@@ -66,7 +74,7 @@ export default defineEventHandler(async (event) => {
               name: `AI Token Package — ${pkg.name}`,
               description: `${formatTokens(pkg.tokens)} AI tokens for your organization`,
             },
-            unit_amount: pkg.priceInCents,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
@@ -77,6 +85,7 @@ export default defineEventHandler(async (event) => {
         tokens: String(pkg.tokens),
         organization_id: organizationId,
         user_id: userId,
+        wholesale: org?.wholesale_pricing ? 'true' : 'false',
       },
       success_url: successUrl || `${process.env.APP_URL || 'http://localhost:3000'}/organization?tab=ai-usage&tokens_purchased=true`,
       cancel_url: cancelUrl || `${process.env.APP_URL || 'http://localhost:3000'}/organization?tab=ai-usage`,

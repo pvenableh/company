@@ -8,6 +8,7 @@ import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
 import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
 import { notifyEvent } from '~~/server/utils/notify-event';
+import { fulfillTokenPurchase } from '~~/server/utils/fulfill-token-purchase';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -100,6 +101,13 @@ export default defineEventHandler(async (event) => {
 			const session = stripeEvent.data.object as Stripe.Checkout.Session;
 			if (session.mode === 'subscription') {
 				await handleCheckoutCompleted(session);
+			} else if (session.mode === 'payment' && session.metadata?.type === 'token_purchase') {
+				// Reliable server-side token crediting — fires even if the buyer
+				// closed the success tab before the client fulfill call ran.
+				const result = await fulfillTokenPurchase(session);
+				if (result.success && !result.alreadyFulfilled) {
+					console.log(`[Stripe] Token purchase fulfilled via webhook for org ${result.organizationId}: +${result.tokensAdded}`);
+				}
 			}
 		}
 

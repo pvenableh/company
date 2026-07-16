@@ -1221,6 +1221,8 @@ export interface CdContact {
 	phones?: Record<string, any> | null;
 	/** @description Free-text objective for this contact — the specific win you're chasing (e.g. "Sign a small-business design package"). Shown on cards + detail; feeds AI next-step suggestions. */
 	objective?: string | null;
+	/** @description Pinned to the top of My Network for quick access. */
+	pinned?: boolean | null;
 	/** @description Touchpoints / interaction log for this contact (cd_activities). */
 	activities?: CdActivity[] | string[];
 }
@@ -3233,6 +3235,8 @@ export interface Organization {
 	app_palette?: 'neutral' | 'seaMist' | 'aurora' | null;
 	/** @description When off, the Goals section is hidden across the org (Account → Goals nav + related-goals cards). Defaults on. */
 	goals_enabled?: boolean | null;
+	/** @description Earnest-admin grant. When on: wholesale token/credit pricing + zero platform fee on this org’s invoice payments. Fulfillment unchanged. */
+	wholesale_pricing?: boolean;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -4720,6 +4724,39 @@ export interface TimeEntry {
 	source_content_plan?: ContentPlan | string | null;
 }
 
+export interface TokenPurchase {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Org credited (organizations.id) */
+	organization?: string | null;
+	/** @description Buyer (directus_users.id) */
+	user_id?: string | null;
+	/** @description Idempotency key — UNIQUE. One row per paid Checkout Session. */
+	stripe_session_id?: string | null;
+	stripe_payment_intent?: string | null;
+	package_id?: string | null;
+	/** @description Tokens granted */
+	tokens?: number | null;
+	amount_cents?: number | null;
+	currency?: string | null;
+	status?: string | null;
+}
+
+export interface UpsellEvent {
+	/** @primaryKey */
+	id: string;
+	/** @description Feature slug, e.g. brand_light */
+	feature?: string;
+	/** @description directus_users id of who clicked */
+	user?: string | null;
+	/** @description organizations id */
+	organization?: string | null;
+	/** @description UI surface, e.g. rail-settings */
+	source?: string | null;
+	date_created?: string | null;
+}
+
 export interface UserPresence {
 	/** @primaryKey */
 	id: string;
@@ -4865,6 +4902,24 @@ export interface Video {
 	tags?: string[] | null;
 	title?: string | null;
 	description?: string | null;
+}
+
+export interface VisitorQuestion {
+	/** @primaryKey */
+	id: string;
+	status?: 'new' | 'answered' | 'added_to_faq' | 'archived' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	/** @description Submitter's email — where you'd reply. @required */
+	email: string;
+	/** @description The visitor's question — candidate FAQ entry. @required */
+	question: string;
+	/** @description Your reply / drafted FAQ answer. Fill this in when turning it into FAQ content. */
+	answer?: string | null;
+	/** @description Which form / page it came from. */
+	source?: string | null;
+	/** @description Page / URL the visitor submitted from. */
+	referrer?: string | null;
 }
 
 export interface DirectusAccess {
@@ -5632,10 +5687,13 @@ export interface Schema {
 	tickets_files: TicketsFile[];
 	tickets_services: TicketsService[];
 	time_entries: TimeEntry[];
+	token_purchases: TokenPurchase[];
+	upsell_events: UpsellEvent[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
 	video_meetings: VideoMeeting[];
 	videos: Video[];
+	visitor_questions: VisitorQuestion[];
 	directus_access: DirectusAccess[];
 	directus_activity: DirectusActivity[];
 	directus_collections: DirectusCollection[];
@@ -5891,10 +5949,13 @@ export enum CollectionNames {
 	tickets_files = 'tickets_files',
 	tickets_services = 'tickets_services',
 	time_entries = 'time_entries',
+	token_purchases = 'token_purchases',
+	upsell_events = 'upsell_events',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',
 	video_meetings = 'video_meetings',
 	videos = 'videos',
+	visitor_questions = 'visitor_questions',
 	directus_access = 'directus_access',
 	directus_activity = 'directus_activity',
 	directus_collections = 'directus_collections',
