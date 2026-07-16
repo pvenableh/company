@@ -123,8 +123,8 @@ confirmed pointing at the **new Earnest test account** `acct_1TtC2pPJZ9KnFoHM`
 |---|----------|--------|-----|
 | 7 | No-account invoice → **412** | ✅ **PASS (driven live)** | `POST /api/stripe/paymentintent` with real Hue invoice `106453c1…` (org status `none`) → HTTP 412, thrown in `resolveRouting` before any Stripe PI is created. |
 | 8 | Wholesale **gate** | ✅ **PASS (live + code)** | Unauthenticated `PATCH …/wholesale` → **401**. Grep confirms the *only* writer of `wholesale_pricing` is `wholesale.patch.ts` (gated by `requirePlatformAdmin` = Directus super-admin). No org-role self-grant path. |
-| 3 | Token fulfillment **idempotent** | ⚠️ **Code-verified** | `fulfillTokenPurchase` guard (`metadata.fulfilled==='true'`) round-trips through a real `stripe.checkout.sessions.update`; both webhook + `/tokens/fulfill` fast-path share it. Live payment attempted (created + expired a test session) but Stripe Elements iframe couldn't be driven in the preview pane. **Re-run manually or logged-in.** |
-| 4 | **Wholesale token price** | ⚠️ **Code-verified** | `checkout.post.ts:44` `unitAmount = wholesale_pricing ? wholesalePriceInCents : priceInCents`; tokens unchanged. E2E is login-gated (`requireOrgPermission org_settings:update`). |
+| 3 | Token fulfillment **idempotent** | 🐛 **BUG FOUND → FIXED** | Live test caught a real double-credit: the guard wrote its flag with `stripe.checkout.sessions.update`, which **doesn't exist in the installed SDK** (TypeError swallowed) → flag never set → every purchase double-credits (webhook + fast-path). Fixed via the `token_purchases` ledger (unique `stripe_session_id`, mirrors CardDesk's `cd_credit_purchases`). Re-verified live: two `fulfill` calls credit exactly once (null→100000, 2nd no-ops), one ledger row. Commit `1d311475`. |
+| 4 | **Wholesale token price** | ✅ **PASS (driven live)** | Via Peter's real session: Hue (wholesale) checkout = **$4.50** (450¢), Earnest (non-wholesale) = **$9.00** (900¢), both grant 100000 tokens. `metadata.wholesale` = true/false respectively. |
 | 5 | Invoice → **connected account** | ⚠️ **Code-verified** | `resolveRouting` → `mode:'connected'`, PI created with `{stripeAccount}`. **Blocked live:** no org has an active connected account, and faking one on a prod org is unsafe. Needs a real test connected account (scenario "Connect existing" / OAuth). |
 | 6 | **Wholesale invoice = zero fee** | ⚠️ **Code-verified** | `paymentintent.post.ts:107` `bps = wholesale_pricing ? 0 : fee`; `application_fee_amount` omitted when 0. Blocked live with #5 (412 fires first for `none`-status orgs). |
 | — | Connect-existing OAuth | ⛔ **Blocked** | `STRIPE_CONNECT_CLIENT_ID` empty → `oauth-start` 500s. Needs the `ca_…` id + a login. |
@@ -135,6 +135,34 @@ used as its fulfillment target (`Earnest Demo — Solo`) was **never credited**
 (balance still 100000). No test state left behind.
 
 ---
+
+## 🐛 Token double-credit bug (found live, fixed 2026-07-16)
+
+Driving scenario 3 with a real payment surfaced a production-severity bug that
+code review had missed: `fulfillTokenPurchase` wrote its idempotency flag with
+`stripe.checkout.sessions.update`, which **is not a function in the installed
+Stripe SDK** (`stripe.rawRequest` and `checkout.sessions.update` are both absent;
+`paymentIntents.update` exists). The `TypeError` was swallowed by the best-effort
+`try/catch`, so the `fulfilled` flag never persisted, the guard never tripped,
+and **every token purchase double-credited** (the webhook and the success-page
+fast-path both call the same function).
+
+**Fix (commit `1d311475`):** replaced the Stripe-metadata flag with a race-free
+DB gate — a new `token_purchases` ledger with a UNIQUE `stripe_session_id`,
+mirroring CardDesk's `cd_credit_purchases`. Insert the row before crediting; only
+one insert wins the constraint, a duplicate short-circuits as `alreadyFulfilled`;
+on credit failure the row is deleted so a retry re-credits. CardDesk's own
+fulfillment already used this pattern and was **not** affected.
+
+**New prerequisite:** run `pnpm tsx scripts/setup-token-purchases.ts` (creates the
+collection + unique index) then `pnpm generate:types`. Already run on **prod**
+Directus 2026-07-16.
+
+**Known follow-up (separate, lower severity):** crediting still does read-modify-
+write on `organizations.ai_token_balance`, so two *distinct* concurrent purchases
+for the same org could lose an update. The gate fixes same-session double-credit;
+concurrent-distinct-purchase atomicity (an increment/retry loop like CardDesk's
+`adjustCreditAccount`) is a separate hardening.
 
 ## Required Stripe configuration (the actual gaps)
 
