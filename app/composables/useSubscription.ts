@@ -170,13 +170,16 @@ export const useSubscription = () => {
 	}
 
 	async function openPortal() {
-		if (!customerId.value) return;
+		// Don't bail when there's no customer yet — pass the email so the server can
+		// find-or-create the Stripe customer and still open the portal (this is what
+		// makes "Add payment method" work for an org that never subscribed).
+		if (!customerId.value && !user.value?.email) return;
 
 		loading.value = true;
 		try {
 			const data = await $fetch<{ url: string }>('/api/stripe/subscription/portal', {
 				method: 'POST',
-				body: { customerId: customerId.value },
+				body: { customerId: customerId.value || undefined, email: user.value?.email },
 			});
 
 			if (data.url) {

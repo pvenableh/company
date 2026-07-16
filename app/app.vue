@@ -51,6 +51,7 @@ const { transition: pageTransition } = useDirectionalPageTransition();
 	<NuxtLayout>
 		<NuxtPage :transition="pageTransition" />
 	</NuxtLayout>
+	<AppUpdateBanner />
 	<SupportReportModal v-if="user" />
 	<CommandCenterDirectorOffice v-if="user" />
 	<AccountMyCardSheet v-if="user" />

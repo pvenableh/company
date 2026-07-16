@@ -286,6 +286,33 @@ async function fetchStripeConnect() {
   }
 }
 
+// Start (or reuse) Stripe Connect onboarding and redirect to Stripe's hosted
+// flow. The integrations "Configure" tile used to router.push('?floor=billing'),
+// but (a) the billing floor has no not-connected onboarding CTA and (b) `floor`
+// is read once at mount and never watched back from the query, so pushing the
+// query did nothing. Kicking off onboarding directly mirrors the classic page.
+const connectActing = ref(false);
+async function startStripeConnect() {
+  const orgId = selectedOrg.value;
+  if (!orgId || connectActing.value) return;
+  connectActing.value = true;
+  try {
+    const res = await $fetch<{ url: string }>('/api/stripe/connect/onboard', {
+      method: 'POST',
+      body: { organizationId: orgId },
+    });
+    if (res?.url) window.location.href = res.url;
+  } catch (err: any) {
+    toast.add({
+      title: 'Could not start onboarding',
+      description: err?.data?.message || err?.message || 'Stripe rejected the request.',
+      color: 'red',
+    });
+  } finally {
+    connectActing.value = false;
+  }
+}
+
 const socialAccounts = ref<any[]>([]);
 const socialLoading = ref(false);
 
@@ -339,8 +366,9 @@ const integrationsList = computed(() => {
           // session, so we open the root and let them sign in.
           window.open('https://dashboard.stripe.com/', '_blank', 'noopener');
         } else {
-          // Stay in apps layout — billing floor hosts the Configure CTA + onboarding link.
-          router.push('/apps/organization?floor=billing');
+          // Create-or-reuse the connected account and redirect to Stripe's
+          // hosted onboarding (see startStripeConnect for why routing didn't work).
+          startStripeConnect();
         }
       },
     },

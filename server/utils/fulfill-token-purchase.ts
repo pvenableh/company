@@ -15,6 +15,8 @@
 // cd_credit_purchases pattern (server/utils/credit-fulfillment.ts).
 import type Stripe from 'stripe';
 import { createItem, deleteItem, readItem, updateItem } from '@directus/sdk';
+import { TOKEN_PACKAGES } from './stripe';
+import { sendTokenPurchaseEmail } from './token-purchase-email';
 
 export interface TokenFulfillmentResult {
 	success: boolean;
@@ -81,13 +83,40 @@ export async function fulfillTokenPurchase(session: Stripe.Checkout.Session): Pr
 	// (otherwise the duplicate-insert short-circuit would strand the payment).
 	try {
 		const org = (await directus.request(
-			readItem('organizations', organizationId, { fields: ['ai_token_balance'] }),
-		)) as { ai_token_balance?: number | string } | null;
+			readItem('organizations', organizationId, { fields: ['ai_token_balance', 'name'] }),
+		)) as { ai_token_balance?: number | string; name?: string | null } | null;
 
 		const currentBalance = Number(org?.ai_token_balance) || 0;
 		const newBalance = currentBalance + tokensToAdd;
 
 		await directus.request(updateItem('organizations', organizationId, { ai_token_balance: newBalance }));
+
+		// Fresh-credit branch only → the ledger's unique gate guarantees this
+		// runs at most once per purchase, so the branded receipt fires exactly
+		// once (never on the alreadyFulfilled no-op above). Best-effort: an email
+		// failure must not fail fulfillment (Stripe would otherwise retry and
+		// re-credit is already gated, but a non-2xx here is still undesirable).
+		try {
+			const buyerEmail = session.customer_details?.email ?? null;
+			if (buyerEmail) {
+				const packageName =
+					TOKEN_PACKAGES.find((p) => p.id === metadata.package_id)?.name ?? 'AI Tokens';
+				await sendTokenPurchaseEmail({
+					to: buyerEmail,
+					buyerName: session.customer_details?.name ?? null,
+					organizationId,
+					orgName: org?.name ?? null,
+					packageName,
+					tokensAdded: tokensToAdd,
+					newBalance,
+					sessionId: session.id,
+				});
+			} else {
+				console.warn('[fulfillTokenPurchase] no buyer email on session; skipping receipt', session.id);
+			}
+		} catch (emailErr: any) {
+			console.warn('[fulfillTokenPurchase] receipt email failed (non-fatal):', emailErr?.message ?? emailErr);
+		}
 
 		return { success: true, tokensAdded: tokensToAdd, newBalance, organizationId };
 	} catch (err: any) {

@@ -12,7 +12,7 @@
 // precaching / offline behaviour to reason about.
 
 export default defineNuxtPlugin(() => {
-	const { isDev, status, liveBuildId, check: checkVersion, refresh } = useAppVersion();
+	const { isDev, status, check: checkVersion } = useAppVersion();
 
 	// No-op in local dev (buildId === 'dev') — there's no deploy to detect and
 	// HMR already keeps things fresh.
@@ -22,28 +22,12 @@ export default defineNuxtPlugin(() => {
 	const MIN_GAP_MS = 60 * 1000; // don't re-check more than once a minute on focus/visibility
 
 	let lastCheck = 0;
-	let promptedFor = ""; // buildId we've already prompted about — prevents spam
 	let timer: ReturnType<typeof setInterval> | null = null;
 
-	const toast = useToast();
-
-	// Drive the toast off the shared version state so the About panel and this
-	// prompt never disagree about whether a newer build is live.
-	watch(status, (s) => {
-		if (s !== "outdated") return;
-		if (promptedFor === liveBuildId.value) return;
-		promptedFor = liveBuildId.value;
-		toast.add({
-			title: "Update available",
-			description: "A newer version of Earnest is ready.",
-			color: "info",
-			duration: Infinity,
-			action: {
-				label: "Refresh",
-				onClick: () => refresh(),
-			},
-		});
-	});
+	// The user-facing prompt is now the persistent <AppUpdateBanner> (mounted in
+	// app.vue), which watches this same `status`. This plugin's only job is to
+	// keep `status` fresh by polling; void the reference so lint doesn't flag it.
+	void status;
 
 	async function check() {
 		if (typeof document !== "undefined" && document.visibilityState === "hidden") return;

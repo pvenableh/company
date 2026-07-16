@@ -10,15 +10,23 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		// Find customer
+		// Find customer.
+		// NOTE: use customers.list({ email }) rather than customers.search. The
+		// Search API relies on an eventually-consistent index that isn't populated
+		// on a freshly-provisioned account, so it returns a 400
+		// (StripeInvalidRequestError) — which is what surfaced after the
+		// Earnest-platform Stripe migration and cascaded into empty billing history,
+		// missing payment methods, and a dead "Add payment method" button (customerId
+		// never resolved). list with an exact email filter is deterministic, available
+		// on every account, and avoids interpolating the email into a query string.
 		let customer;
 		if (customerId) {
 			customer = await stripe.customers.retrieve(customerId as string);
 		} else {
-			const search = await stripe.customers.search({
-				query: `email:"${email}"`,
-			});
-			customer = search.data[0] || null;
+			const list = await stripe.customers.list({ email: email as string, limit: 100 });
+			// Newest non-deleted match (list returns most-recent first), tolerant of
+			// duplicate customer rows for the same email.
+			customer = list.data.find((c) => !(c as any).deleted) || null;
 		}
 
 		if (!customer || (customer as any).deleted) {
@@ -29,12 +37,16 @@ export default defineEventHandler(async (event) => {
 			};
 		}
 
-		// Get active subscriptions
+		// Get active subscriptions.
+		// NOTE: do NOT expand `data.items.data.price.product` — from a list that's a
+		// 5-level path and Stripe caps expansion at 4 levels, so it 400s the whole
+		// request ("cannot expand more than 4 levels"). We resolve the product name
+		// for just the selected subscription below instead.
 		const subscriptions = await stripe.subscriptions.list({
 			customer: customer.id,
 			status: 'all',
 			limit: 5,
-			expand: ['data.default_payment_method', 'data.items.data.price.product'],
+			expand: ['data.default_payment_method'],
 		});
 
 		// Find the most relevant subscription (active > past_due > canceled)
@@ -44,6 +56,31 @@ export default defineEventHandler(async (event) => {
 		});
 
 		const subscription = sorted[0] || null;
+
+		// Resolve a display product for the chosen subscription without the illegal
+		// deep expand: retrieve the product by id (one call), falling back to the
+		// Earnest plan name mapped from the price id. Shape stays `{ id, name }` so
+		// the client's planName (which checks `product?.name`) is unchanged.
+		let resolvedProduct: { id: string | null; name: string } | string | null =
+			subscription?.items?.data?.[0]?.price?.product ?? null;
+		if (subscription) {
+			const price = subscription.items.data[0]?.price;
+			const productId = typeof price?.product === 'string' ? price.product : (price?.product as any)?.id ?? null;
+			let name: string | null = null;
+			if (productId) {
+				try {
+					const product = await stripe.products.retrieve(productId);
+					name = (product as any)?.name ?? null;
+				} catch {
+					/* fall through to plan-map */
+				}
+			}
+			if (!name && price?.id) {
+				const planId = planFromPriceId(price.id);
+				name = planId ? EARNEST_PLANS[planId]?.name ?? null : null;
+			}
+			resolvedProduct = { id: productId, name: name || 'Earnest plan' };
+		}
 
 		// Get payment methods
 		const paymentMethods = await stripe.customers.listPaymentMethods(customer.id, {
@@ -70,7 +107,7 @@ export default defineEventHandler(async (event) => {
 							id: subscription.items.data[0]?.price?.id,
 							amount: subscription.items.data[0]?.price?.unit_amount,
 							interval: subscription.items.data[0]?.price?.recurring?.interval,
-							product: subscription.items.data[0]?.price?.product,
+							product: resolvedProduct,
 						},
 						default_payment_method: subscription.default_payment_method,
 					}

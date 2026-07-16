@@ -18,7 +18,7 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 z-[50] overflow-auto backdrop-blur-lg bg-white/75 dark:bg-gray-900/90"
+					class="fixed inset-0 z-[70] overflow-auto backdrop-blur-lg bg-white/75 dark:bg-gray-900/90"
 				>
 					<div class="w-full max-w-xl mx-auto p-4 lg:p-8 py-8">
 						<!-- Header -->
@@ -119,7 +119,7 @@
 							<div class="ios-card p-4 space-y-4">
 								<div class="grid grid-cols-2 gap-3">
 									<UFormGroup label="Due Date">
-										<UPopover v-model:open="calendarOpen" class="w-full">
+										<UPopover v-model:open="calendarOpen" class="w-full" :ui="{ content: 'z-[80]' }">
 											<button type="button" class="w-full flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
 												<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 												<span :class="form.due_date ? 'text-foreground' : 'text-muted-foreground'">

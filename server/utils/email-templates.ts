@@ -35,6 +35,7 @@ import earlyAccessWelcomeMjml from '../emails/early-access-welcome.mjml';
 import inviteMjml from '../emails/invite.mjml';
 import notificationMjml from '../emails/notification.mjml';
 import passwordResetMjml from '../emails/password-reset.mjml';
+import tokenPurchaseMjml from '../emails/token-purchase.mjml';
 import videoInviteMjml from '../emails/video-invite.mjml';
 import genericMjml from '../emails/generic.mjml';
 import meetingInvitedMjml from '../emails/meeting-invited.mjml';
@@ -52,6 +53,7 @@ const TEMPLATES: Record<string, string> = {
 	invite: inviteMjml,
 	notification: notificationMjml,
 	'password-reset': passwordResetMjml,
+	'token-purchase': tokenPurchaseMjml,
 	'video-invite': videoInviteMjml,
 	generic: genericMjml,
 	'meeting-invited': meetingInvitedMjml,

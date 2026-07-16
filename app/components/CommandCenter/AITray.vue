@@ -55,6 +55,13 @@ const tokensTextClass = computed(() => {
 	return 'text-muted-foreground';
 });
 const canManageTokens = computed(() => canAccess('org_settings'));
+// Low-balance nudge: surface a prominent "Buy tokens" prompt when the org is
+// running low or dry, so buying isn't buried in Organization → AI Usage.
+// tokensDepleted covers balance<=0 even for orgs with no monthly limit.
+const showLowTokenNudge = computed(() => {
+	if (!usageSummary.value) return false;
+	return tokensDepleted.value || tokensUsedPct.value >= 85;
+});
 const showReloadPicker = ref(false);
 const reloadLoading = ref<string | null>(null);
 
@@ -354,20 +361,24 @@ watch(quickStreamingContent, () => {
 					</div>
 				</div>
 				<!-- Token Usage Strip + Reload Picker -->
-				<div v-if="!tokensUnlimited && usageSummary" class="px-4 py-2 bg-background border-t border-border/20">
+				<div v-if="canManageTokens || (usageSummary && !tokensUnlimited)" class="px-4 py-2 bg-background border-t border-border/20">
 					<div class="flex items-center gap-2.5">
 						<UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 flex-shrink-0" :class="tokensTextClass" />
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-shrink-0">Tokens</span>
-						<div class="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
-							<div
-								class="h-full rounded-full transition-all duration-500"
-								:class="tokensBarClass"
-								:style="{ width: `${Math.min(tokensUsedPct, 100)}%` }"
-							/>
-						</div>
-						<span class="text-[10px] font-medium tabular-nums flex-shrink-0" :class="tokensTextClass">
-							{{ tokensUsedPct }}%
-						</span>
+						<template v-if="usageSummary && !tokensUnlimited">
+							<div class="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+								<div
+									class="h-full rounded-full transition-all duration-500"
+									:class="tokensBarClass"
+									:style="{ width: `${Math.min(tokensUsedPct, 100)}%` }"
+								/>
+							</div>
+							<span class="text-[10px] font-medium tabular-nums flex-shrink-0" :class="tokensTextClass">
+								{{ tokensUsedPct }}%
+							</span>
+						</template>
+						<span v-else-if="usageSummary && tokensUnlimited" class="flex-1 text-[10px] text-muted-foreground">Unlimited plan</span>
+						<span v-else class="flex-1"></span>
 						<button
 							v-if="canManageTokens"
 							@click="showReloadPicker = !showReloadPicker"
@@ -376,7 +387,7 @@ watch(quickStreamingContent, () => {
 								? 'bg-primary text-primary-foreground hover:bg-primary/90'
 								: 'text-primary hover:bg-primary/10'"
 						>
-							{{ showReloadPicker ? 'Close' : 'Reload' }}
+							{{ showReloadPicker ? 'Close' : ((usageSummary && !tokensUnlimited) ? 'Reload' : 'Buy tokens') }}
 						</button>
 					</div>
 					<!-- Reload picker -->
@@ -401,6 +412,25 @@ watch(quickStreamingContent, () => {
 					<p v-if="!canManageTokens && (tokensDepleted || tokensUsedPct >= 90)" class="text-[10px] text-muted-foreground mt-1.5">
 						Ask your admin to top up tokens.
 					</p>
+				</div>
+				<!-- Low-balance nudge — prominent Buy Tokens prompt -->
+				<div
+					v-if="showLowTokenNudge"
+					class="px-4 py-2.5 bg-primary/5 border-t border-primary/20 flex items-center gap-3"
+				>
+					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-primary flex-shrink-0" />
+					<p class="text-[11px] text-foreground flex-1 leading-snug">
+						<span class="font-semibold">{{ tokensDepleted ? 'Out of AI tokens.' : 'Running low on AI tokens.' }}</span>
+						<template v-if="canManageTokens"> Top up to keep Earnest working.</template>
+						<template v-else> Ask your admin to top up.</template>
+					</p>
+					<button
+						v-if="canManageTokens"
+						@click="openTokenModal()"
+						class="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0"
+					>
+						Buy tokens
+					</button>
 				</div>
 				<!-- Persona Picker -->
 				<div class="flex gap-1 px-4 py-2 bg-muted/20">
