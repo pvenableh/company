@@ -125,8 +125,8 @@ confirmed pointing at the **new Earnest test account** `acct_1TtC2pPJZ9KnFoHM`
 | 8 | Wholesale **gate** | ✅ **PASS (live + code)** | Unauthenticated `PATCH …/wholesale` → **401**. Grep confirms the *only* writer of `wholesale_pricing` is `wholesale.patch.ts` (gated by `requirePlatformAdmin` = Directus super-admin). No org-role self-grant path. |
 | 3 | Token fulfillment **idempotent** | 🐛 **BUG FOUND → FIXED** | Live test caught a real double-credit: the guard wrote its flag with `stripe.checkout.sessions.update`, which **doesn't exist in the installed SDK** (TypeError swallowed) → flag never set → every purchase double-credits (webhook + fast-path). Fixed via the `token_purchases` ledger (unique `stripe_session_id`, mirrors CardDesk's `cd_credit_purchases`). Re-verified live: two `fulfill` calls credit exactly once (null→100000, 2nd no-ops), one ledger row. Commit `1d311475`. |
 | 4 | **Wholesale token price** | ✅ **PASS (driven live)** | Via Peter's real session: Hue (wholesale) checkout = **$4.50** (450¢), Earnest (non-wholesale) = **$9.00** (900¢), both grant 100000 tokens. `metadata.wholesale` = true/false respectively. |
-| 5 | Invoice → **connected account** | ⚠️ **Code-verified** | `resolveRouting` → `mode:'connected'`, PI created with `{stripeAccount}`. **Blocked live:** no org has an active connected account, and faking one on a prod org is unsafe. Needs a real test connected account (scenario "Connect existing" / OAuth). |
-| 6 | **Wholesale invoice = zero fee** | ⚠️ **Code-verified** | `paymentintent.post.ts:107` `bps = wholesale_pricing ? 0 : fee`; `application_fee_amount` omitted when 0. Blocked live with #5 (412 fires first for `none`-status orgs). |
+| 5 | Invoice → **connected account** | ✅ **PASS (driven live)** | Test connected account (charges-enabled, custom) attached to a demo org; `paymentintent` returned `routingMode:'connected'`, PI created on that account (`application_fee_amount=125` at 250 bps). Reverted after. |
+| 6 | **Wholesale invoice = zero fee** | ✅ **PASS (driven live)** | Same invoice with the demo org flipped to wholesale → PI `application_fee_amount=None` (fee waived) vs 125 non-wholesale, routing still connected. |
 | — | Connect-existing OAuth | ✅ **Config verified live** | `oauth-start` (as Peter, Hue) redirects to Stripe's real "Connect with Earnest" page with correct `client_id=ca_Usyry9…` (test), `redirect_uri=http://127.0.0.1:3000/…/oauth-callback`, `scope=read_write`, `state=<Hue id>`. Not completed (would attach an account to Hue in prod). |
 | — | Subscription checkout | ✅ **Session verified live** | Endpoint (as Peter) creates a `mode=subscription` session on the correct **test** Solo price (`price_1TtUEb…`, $49.00). Completion (webhook sets plan/tokens) needs the card step. |
 
@@ -163,6 +163,21 @@ write on `organizations.ai_token_balance`, so two *distinct* concurrent purchase
 for the same org could lose an update. The gate fixes same-session double-credit;
 concurrent-distinct-purchase atomicity (an increment/retry loop like CardDesk's
 `adjustCreditAccount`) is a separate hardening.
+
+## 🐛 Card-payment `statement_descriptor` bug (found live, fixed 2026-07-16)
+
+Driving scenario 5 surfaced a second, **pre-existing production bug** (on `main`,
+commit `6b3a3aef`, not introduced by this migration): `paymentintent.post.ts` set
+`statement_descriptor` unconditionally in `baseOptions`. **Stripe rejects
+`statement_descriptor` on card PaymentIntents** (only `statement_descriptor_suffix`
+is allowed for card) → every card invoice payment **and** the one-off `/payment.vue`
+form 400'd at PI creation, on **both** the platform and connected-account paths.
+This means invoice card payments are currently broken in production.
+
+**Fix (commit `3eb4c0e1`):** removed `statement_descriptor`. Card + ACH charges use
+the account's default descriptor; a custom card descriptor would need
+`statement_descriptor_suffix` (with its length/char constraints) if wanted later.
+Verified live: connected-account PI now creates with the correct fee.
 
 ## Required Stripe configuration (the actual gaps)
 
