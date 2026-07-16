@@ -483,6 +483,17 @@ const startConnectOnboarding = async () => {
 	}
 };
 
+const connectExistingAccount = () => {
+	if (!org.value?.id || connectActing.value) return;
+	// Standard Connect OAuth — links a PRE-EXISTING Stripe account (e.g. a
+	// business that already runs payments elsewhere) instead of creating a
+	// fresh Express account. Full-page redirect to our oauth-start route, which
+	// bounces to Stripe's authorize screen and returns to oauth-callback →
+	// /organization?tab=billing&connect_linked=1.
+	connectActing.value = true;
+	window.location.href = `/api/stripe/connect/oauth-start?organizationId=${encodeURIComponent(org.value.id)}`;
+};
+
 const openStripeDashboard = () => {
 	// Standard accounts get the full Stripe Dashboard at dashboard.stripe.com.
 	// We can't deep-link to the merchant's account from the platform's
@@ -543,6 +554,32 @@ watch(
 					? 'Your account is active and can accept invoice payments.'
 					: 'Stripe is still verifying your details. This page will update automatically.',
 				color: 'green',
+			});
+		}
+	},
+	{ immediate: true },
+);
+
+// Return leg of the "connect existing account" OAuth flow. oauth-callback
+// redirects to /organization?tab=billing with connect_linked=1 on success or
+// connect_error=<message> if the exchange failed or the user declined.
+watch(
+	() => [route.query.connect_linked, route.query.connect_error],
+	async ([linked, connectError]) => {
+		if (linked) {
+			await fetchConnectStatus();
+			toast.add({
+				title: 'Stripe account linked',
+				description: connectStatus.value?.status === 'active'
+					? 'Your existing account is connected and can accept invoice payments.'
+					: 'Account linked. Stripe is still verifying some details; this page will update automatically.',
+				color: 'green',
+			});
+		} else if (connectError) {
+			toast.add({
+				title: 'Could not link Stripe account',
+				description: String(connectError),
+				color: 'red',
 			});
 		}
 	},
@@ -2000,15 +2037,28 @@ watch(searchEmail, (val) => {
 												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Refunds, balance, and payouts live in this tab once active.</li>
 												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Manage your account anytime in your full Stripe dashboard.</li>
 											</ul>
-											<UiActionButton
-												icon="lucide:credit-card"
-												variant="primary"
-												:loading="connectActing"
-												:disabled="!canManageOrg"
-												@click="startConnectOnboarding"
-											>
-												Activate payments
-											</UiActionButton>
+											<div class="flex flex-wrap items-center gap-2">
+												<UiActionButton
+													icon="lucide:credit-card"
+													variant="primary"
+													:loading="connectActing"
+													:disabled="!canManageOrg"
+													@click="startConnectOnboarding"
+												>
+													Activate payments
+												</UiActionButton>
+												<UiActionButton
+													icon="lucide:link"
+													variant="secondary"
+													:disabled="!canManageOrg || connectActing"
+													@click="connectExistingAccount"
+												>
+													Connect an existing account
+												</UiActionButton>
+											</div>
+											<p class="text-xs text-muted-foreground">
+												Already run payments on Stripe? Use <span class="font-medium">Connect an existing account</span> to link it instead of creating a new one.
+											</p>
 											<p v-if="!canManageOrg" class="text-xs text-muted-foreground">
 												Only owners and admins can connect a Stripe account.
 											</p>

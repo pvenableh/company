@@ -83,7 +83,7 @@ Follow this top to bottom. Do **everything in Test mode first**, confirm it work
 Nothing to create here — the **existing** account is already Hue's and keeps all its history.
 
 1. In the existing account: `Settings → Business → Public details` → rename public business name back to **Hue Studios** (it was "Earnest by Hue").
-2. You'll connect it to the new Earnest platform **from inside the Earnest app** once the code ships: Organization → Billing → **"Connect an existing Stripe account"** → sign in to the Hue account. (I'm building that button now.)
+2. Connect it to the new Earnest platform **from inside the Earnest app**: Organization → Billing → **"Connect an existing account"** → sign in to the Hue account. (This button is live — it drives Standard Connect OAuth via `/api/stripe/connect/oauth-start`. Requires `STRIPE_CONNECT_CLIENT_ID` set and the callback redirect URI whitelisted in Stripe, per Step 1.)
    - If Stripe won't let you connect it because that account previously had Connect enabled, fall back to the normal "Activate payments" button to create a fresh Hue merchant account, and keep the old account purely for viewing history. We'll decide when we test it.
 
 ---
