@@ -142,7 +142,10 @@ export default defineEventHandler(async (event) => {
 			amount,
 			currency: 'usd',
 			receipt_email: body.email,
-			statement_descriptor: (config.public as any)?.companyName || 'Payment',
+			// No statement_descriptor: Stripe rejects it on card PaymentIntents
+			// (card charges only accept statement_descriptor_suffix). Setting it
+			// here 400'd every card invoice + one-off payment. Card and ACH charges
+			// fall back to the account's default descriptor.
 			metadata: {
 				environment: process.env.NODE_ENV || 'development',
 				created_at: new Date().toISOString(),
