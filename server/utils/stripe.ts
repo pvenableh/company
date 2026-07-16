@@ -66,7 +66,7 @@ export const EARNEST_PLANS = {
 		stripePriceId: process.env.STRIPE_PRICE_AGENCY || null,
 		stripePriceIdAnnual: process.env.STRIPE_PRICE_AGENCY_ANNUAL || null,
 		monthlyAmount: 29900, // $299.00
-		annualAmount: 249100, // $2,491.00/yr (2 months free)
+		annualAmount: 298800, // $2,988.00/yr (matches Stripe Agency-annual price; ~2 months off monthly)
 		seats: 15,
 		clientPortalSeats: -1, // unlimited — growth loop for token consumption
 		scanCredits: 500,      // generous cap; heavy scanners buy SCAN_PACKAGES
