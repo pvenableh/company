@@ -68,8 +68,8 @@ export default defineEventHandler(async (event) => {
 			mode: 'subscription',
 			payment_method_types: ['card'],
 			line_items: [{ price: priceId, quantity: 1 }],
-			success_url: successUrl || `${process.env.APP_URL || 'http://localhost:3000'}/account/subscription?session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: cancelUrl || `${process.env.APP_URL || 'http://localhost:3000'}/account/subscription`,
+			success_url: successUrl || `${getAppBaseUrl(event)}/account/subscription?session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: cancelUrl || `${getAppBaseUrl(event)}/account/subscription`,
 			subscription_data: {
 				metadata: {
 					earnest_email: email,

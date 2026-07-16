@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const stripe = useStripe();
-	const baseUrl = process.env.APP_URL || 'http://127.0.0.1:3000';
+	const baseUrl = getAppBaseUrl(event);
 	const returnUrl = body?.returnUrl || `${baseUrl}/organization?tab=billing&onboarding=updated`;
 	const refreshUrl = body?.refreshUrl || `${baseUrl}/organization?tab=billing&onboarding=refresh`;
 

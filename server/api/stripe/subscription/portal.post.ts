@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		const session = await stripe.billingPortal.sessions.create({
 			customer: customerId,
-			return_url: returnUrl || `${process.env.APP_URL || 'http://localhost:3000'}/account/subscription`,
+			return_url: returnUrl || `${getAppBaseUrl(event)}/account/subscription`,
 		});
 
 		return { url: session.url };

@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 404, message: 'Organization not found' });
 	}
 
-	const baseUrl = process.env.APP_URL || 'http://127.0.0.1:3000';
+	const baseUrl = getAppBaseUrl(event);
 	const redirectUri = `${baseUrl}/api/stripe/connect/oauth-callback`;
 
 	// `state` carries the org id; the callback re-checks permission on it, so a

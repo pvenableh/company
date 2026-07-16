@@ -9,7 +9,7 @@ import { updateItem } from '@directus/sdk';
 import Stripe from 'stripe';
 
 function backToBilling(event: any, query: Record<string, string>) {
-	const baseUrl = process.env.APP_URL || 'http://127.0.0.1:3000';
+	const baseUrl = getAppBaseUrl(event);
 	const qs = new URLSearchParams({ tab: 'billing', ...query }).toString();
 	return sendRedirect(event, `${baseUrl}/organization?${qs}`);
 }
