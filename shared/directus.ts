@@ -1221,6 +1221,8 @@ export interface CdContact {
 	phones?: Record<string, any> | null;
 	/** @description Free-text objective for this contact — the specific win you're chasing (e.g. "Sign a small-business design package"). Shown on cards + detail; feeds AI next-step suggestions. */
 	objective?: string | null;
+	/** @description Pinned to the top of My Network for quick access. */
+	pinned?: boolean | null;
 	/** @description Touchpoints / interaction log for this contact (cd_activities). */
 	activities?: CdActivity[] | string[];
 }
@@ -4722,6 +4724,25 @@ export interface TimeEntry {
 	source_content_plan?: ContentPlan | string | null;
 }
 
+export interface TokenPurchase {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Org credited (organizations.id) */
+	organization?: string | null;
+	/** @description Buyer (directus_users.id) */
+	user_id?: string | null;
+	/** @description Idempotency key — UNIQUE. One row per paid Checkout Session. */
+	stripe_session_id?: string | null;
+	stripe_payment_intent?: string | null;
+	package_id?: string | null;
+	/** @description Tokens granted */
+	tokens?: number | null;
+	amount_cents?: number | null;
+	currency?: string | null;
+	status?: string | null;
+}
+
 export interface UpsellEvent {
 	/** @primaryKey */
 	id: string;
@@ -5666,6 +5687,7 @@ export interface Schema {
 	tickets_files: TicketsFile[];
 	tickets_services: TicketsService[];
 	time_entries: TimeEntry[];
+	token_purchases: TokenPurchase[];
 	upsell_events: UpsellEvent[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
@@ -5927,6 +5949,7 @@ export enum CollectionNames {
 	tickets_files = 'tickets_files',
 	tickets_services = 'tickets_services',
 	time_entries = 'time_entries',
+	token_purchases = 'token_purchases',
 	upsell_events = 'upsell_events',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',

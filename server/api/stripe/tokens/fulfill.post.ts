@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Not a token purchase session' });
     }
 
-    const result = await fulfillTokenPurchase(stripe, checkoutSession);
+    const result = await fulfillTokenPurchase(checkoutSession);
 
     if (!result.success) {
       throw createError({ statusCode: 400, message: `Invalid token purchase (${result.reason || 'unknown'})` });

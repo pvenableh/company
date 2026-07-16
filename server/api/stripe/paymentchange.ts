@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
 			} else if (session.mode === 'payment' && session.metadata?.type === 'token_purchase') {
 				// Reliable server-side token crediting — fires even if the buyer
 				// closed the success tab before the client fulfill call ran.
-				const result = await fulfillTokenPurchase(stripe, session);
+				const result = await fulfillTokenPurchase(session);
 				if (result.success && !result.alreadyFulfilled) {
 					console.log(`[Stripe] Token purchase fulfilled via webhook for org ${result.organizationId}: +${result.tokensAdded}`);
 				}
