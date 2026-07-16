@@ -127,8 +127,8 @@ confirmed pointing at the **new Earnest test account** `acct_1TtC2pPJZ9KnFoHM`
 | 4 | **Wholesale token price** | ✅ **PASS (driven live)** | Via Peter's real session: Hue (wholesale) checkout = **$4.50** (450¢), Earnest (non-wholesale) = **$9.00** (900¢), both grant 100000 tokens. `metadata.wholesale` = true/false respectively. |
 | 5 | Invoice → **connected account** | ⚠️ **Code-verified** | `resolveRouting` → `mode:'connected'`, PI created with `{stripeAccount}`. **Blocked live:** no org has an active connected account, and faking one on a prod org is unsafe. Needs a real test connected account (scenario "Connect existing" / OAuth). |
 | 6 | **Wholesale invoice = zero fee** | ⚠️ **Code-verified** | `paymentintent.post.ts:107` `bps = wholesale_pricing ? 0 : fee`; `application_fee_amount` omitted when 0. Blocked live with #5 (412 fires first for `none`-status orgs). |
-| — | Connect-existing OAuth | ⛔ **Blocked** | `STRIPE_CONNECT_CLIENT_ID` empty → `oauth-start` 500s. Needs the `ca_…` id + a login. |
-| — | Subscription checkout | ⛔ **Blocked** | Plan price IDs in `.env` are LIVE (unusable under the test key). Needs test-mode price IDs + a login. |
+| — | Connect-existing OAuth | ✅ **Config verified live** | `oauth-start` (as Peter, Hue) redirects to Stripe's real "Connect with Earnest" page with correct `client_id=ca_Usyry9…` (test), `redirect_uri=http://127.0.0.1:3000/…/oauth-callback`, `scope=read_write`, `state=<Hue id>`. Not completed (would attach an account to Hue in prod). |
+| — | Subscription checkout | ✅ **Session verified live** | Endpoint (as Peter) creates a `mode=subscription` session on the correct **test** Solo price (`price_1TtUEb…`, $49.00). Completion (webhook sets plan/tokens) needs the card step. |
 
 Cleanup: the one test Checkout Session created for #3 was **expired**; the demo org
 used as its fulfillment target (`Earnest Demo — Solo`) was **never credited**
