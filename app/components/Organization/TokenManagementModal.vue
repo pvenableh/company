@@ -26,7 +26,6 @@ async function buyTokens(packageId: string) {
 			method: 'POST',
 			body: {
 				email: (user.value as any).email,
-				customerId: (user.value as any).stripe_customer_id,
 				packageId,
 				organizationId: (selectedOrg.value as any)?.id || selectedOrg.value,
 			},

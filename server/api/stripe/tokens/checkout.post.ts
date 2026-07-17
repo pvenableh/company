@@ -44,21 +44,12 @@ export default defineEventHandler(async (event) => {
   const unitAmount = org?.wholesale_pricing ? pkg.wholesalePriceInCents : pkg.priceInCents;
 
   try {
-    // Find or create Stripe customer
-    let customer = customerId;
+    // Org-owned billing: token purchases bill the ORG's Stripe customer, so the
+    // card added for the subscription is reused and payment methods stay in one
+    // place. Legacy callers may still pass a customerId directly.
+    let customer = customerId || null;
     if (!customer) {
-      const existing = await stripe.customers.search({
-        query: `email:"${email}"`,
-      });
-      if (existing.data.length > 0) {
-        customer = existing.data[0].id;
-      } else {
-        const newCustomer = await stripe.customers.create({
-          email,
-          metadata: { source: 'earnest_tokens' },
-        });
-        customer = newCustomer.id;
-      }
+      customer = await getOrCreateOrgStripeCustomer(organizationId, { emailFallback: email });
     }
 
     // Create one-time payment checkout for token package

@@ -53,7 +53,29 @@ export function useAppVersion() {
 		return status.value;
 	}
 
-	function refresh() {
+	async function refresh() {
+		// Best-effort cache-bust before the hard reload so the new build can't be
+		// served stale assets: clear any Cache Storage and nudge service workers to
+		// update. The PWA is disabled (the only SW is push-only, no fetch handler),
+		// so this is belt-and-suspenders — but it makes "Reload" authoritative.
+		if (typeof window !== 'undefined') {
+			try {
+				if ('caches' in window) {
+					const keys = await caches.keys();
+					await Promise.all(keys.map((k) => caches.delete(k)));
+				}
+			} catch {
+				/* ignore — proceed to reload regardless */
+			}
+			try {
+				if ('serviceWorker' in navigator) {
+					const regs = await navigator.serviceWorker.getRegistrations();
+					await Promise.all(regs.map((r) => r.update()));
+				}
+			} catch {
+				/* ignore */
+			}
+		}
 		reloadNuxtApp({ force: true });
 	}
 

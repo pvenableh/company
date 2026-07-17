@@ -24,6 +24,7 @@ export const TRANSACTIONAL_TEMPLATES = [
 	'invite',
 	'notification',
 	'password-reset',
+	'token-purchase',
 	'video-invite',
 	'generic',
 	'meeting-invited',
@@ -181,6 +182,18 @@ function sampleVars(name: TemplateName): Record<string, any> {
 				firstName: 'Alex',
 				orgName: 'Northwind Studio',
 				ctaUrl: 'https://app.earnest.guru/auth/password-reset?token=sample',
+			};
+		case 'token-purchase':
+			return {
+				subject: 'Your Earnest token top-up is confirmed',
+				preheader: '500,000 tokens added to Northwind Studio.',
+				heading: 'Your tokens are ready',
+				firstName: 'Alex',
+				orgName: 'Northwind Studio',
+				packageName: '500K Tokens',
+				tokensAddedFormatted: '500,000 tokens',
+				newBalanceFormatted: '612,480 tokens',
+				ctaUrl: 'https://app.earnest.guru/organization?tab=ai-usage',
 			};
 		case 'video-invite':
 			return {

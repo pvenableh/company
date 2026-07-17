@@ -124,12 +124,13 @@ export async function getCRMContext(
 		})).catch(() => [] as any[]),
 
 		// ─── Invoices (last 6 months) ───
+		// Invoices are org-scoped via `bill_to` (the agency org that issued them);
+		// there is NO `organization` field on invoices. A stray `organization`
+		// branch here made Directus reject the whole query (unknown field), the
+		// .catch swallowed it, and every revenue metric silently read $0.
 		directus.request(readItems('invoices', {
 			filter: {
-				_or: [
-					{ bill_to: { _eq: orgId } },
-					{ organization: { _eq: orgId } },
-				],
+				bill_to: { _eq: orgId },
 				invoice_date: { _gte: sixMonthsAgo },
 			},
 			fields: ['id', 'invoice_code', 'total_amount', 'invoice_date', 'due_date', 'status', 'bill_to.name', 'client.name'],

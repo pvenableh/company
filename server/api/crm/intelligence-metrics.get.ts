@@ -101,7 +101,9 @@ export default defineEventHandler(async (event) => {
 			// Recent paid invoices for partner-ROI revenue attribution
 			directus.request(readItems('invoices', {
 				filter: {
-					organization: { _eq: orgId },
+					// Invoices are org-scoped via `bill_to`, not `organization` (no such
+					// field) — filtering by `organization` broke the whole query → $0.
+					bill_to: { _eq: orgId },
 					status: { _eq: 'paid' },
 					invoice_date: { _gte: sixMonthsAgo.slice(0, 10) },
 				},

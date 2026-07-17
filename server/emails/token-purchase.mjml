@@ -1,0 +1,41 @@
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      {{heading}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{#if firstName}}Hi {{firstName}},{{else}}Hi there,{{/if}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Your <strong>{{packageName}}</strong> purchase is complete — <strong>{{tokensAddedFormatted}}</strong> have been added to <strong>{{orgName}}</strong>. They're available to use right away.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="4px 32px 8px 32px">
+  <mj-column background-color="#f6f5f3" border-radius="12px" padding="4px 16px">
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="14px 0 2px 0">
+      Tokens added
+    </mj-text>
+    <mj-text font-size="20px" line-height="1.2" font-weight="600" color="#141210" padding="0 0 12px 0">
+      {{tokensAddedFormatted}}
+    </mj-text>
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="0 0 2px 0">
+      New balance
+    </mj-text>
+    <mj-text font-size="20px" line-height="1.2" font-weight="600" color="#141210" padding="0 0 14px 0">
+      {{newBalanceFormatted}}
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-button href="{{ctaUrl}}" padding="8px 0 8px 0">
+      View AI usage
+    </mj-button>
+    <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
+      This is a receipt for your Earnest AI token purchase. Questions? Just reply to this email — a real person reads it.
+    </mj-text>
+  </mj-column>
+</mj-section>

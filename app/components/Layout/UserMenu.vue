@@ -167,7 +167,7 @@ function handleLogout() {
 				<Icon name="lucide:contact" class="size-4 mr-2 shrink-0" />
 				<span>My Card</span>
 			</DropdownMenuItem>
-			<DropdownMenuItem @select="goTo('/account/subscription')">
+			<DropdownMenuItem @select="goTo('/apps/organization?floor=billing')">
 				<Icon name="lucide:credit-card" class="size-4 mr-2 shrink-0" />
 				<span>Subscription</span>
 			</DropdownMenuItem>

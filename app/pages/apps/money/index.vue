@@ -30,6 +30,7 @@ import type { Invoice } from '~~/shared/directus';
 import { useDebounceFn } from '@vueuse/core';
 import { Button } from '~/components/ui/button';
 import { format, startOfWeek, parseISO, isToday as dateFnsIsToday } from 'date-fns';
+import { toast } from 'vue-sonner';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Money | Earnest' });
@@ -50,8 +51,8 @@ const route = useRoute();
 // ── Floor strip ─────────────────────────────────────────────────────────────
 // Time tracking moved to /apps/work?floor=time in Phase 2 of the retainer
 // plan — any lingering `?floor=time` deep-links bounce out below.
-type FloorKey = 'cashflow' | 'documents' | 'invoices' | 'payments' | 'expenses' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['cashflow', 'documents', 'invoices', 'payments', 'expenses', 'insights'];
+type FloorKey = 'cashflow' | 'documents' | 'invoices' | 'payments' | 'deposits' | 'expenses' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['cashflow', 'documents', 'invoices', 'payments', 'deposits', 'expenses', 'insights'];
 
 if (route.query.floor === 'time') {
   await navigateTo({ path: '/apps/work', query: { floor: 'time' } }, { redirectCode: 302, replace: true });
@@ -121,6 +122,95 @@ watch(floor, (next) => {
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { getInvoices, updateInvoice } = useInvoices();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
+
+// ── Deposits floor (Stripe Connect — money the org RECEIVES from its clients) ─
+// Relocated here from the Organization app's Billing tab: getting paid is a
+// Money concern, distinct from the org's own SaaS subscription. Onboarding +
+// the native operational surface (balance / transactions / payouts / refunds)
+// both live on this floor. NOTE: distinct from Plaid bank-sync, which feeds the
+// Expenses floor — Deposits is strictly Stripe settlement of client payments.
+type ConnectStatus = 'active' | 'pending' | 'inactive' | 'restricted' | 'unknown';
+const stripeConnect = ref<{
+  status: ConnectStatus;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  accountId?: string | null;
+} | null>(null);
+const stripeConnectLoading = ref(false);
+let depositsLoaded = false;
+
+async function fetchStripeConnect() {
+  if (!selectedOrg.value) return;
+  stripeConnectLoading.value = true;
+  try {
+    const data = await $fetch<{
+      status: 'none' | 'pending' | 'active' | 'restricted';
+      chargesEnabled: boolean;
+      payoutsEnabled: boolean;
+      accountId: string | null;
+    }>('/api/stripe/connect/status', { query: { organizationId: selectedOrg.value } });
+
+    let mapped: ConnectStatus = 'inactive';
+    if (data.status === 'active') mapped = 'active';
+    else if (data.status === 'pending') mapped = 'pending';
+    else if (data.status === 'restricted') mapped = 'restricted';
+
+    stripeConnect.value = {
+      status: mapped,
+      chargesEnabled: data.chargesEnabled,
+      payoutsEnabled: data.payoutsEnabled,
+      accountId: data.accountId,
+    };
+  } catch (err: any) {
+    stripeConnect.value = { status: err?.statusCode === 403 ? 'unknown' : 'inactive' };
+  } finally {
+    stripeConnectLoading.value = false;
+  }
+}
+
+const connectActing = ref(false);
+async function startStripeConnect() {
+  const orgId = selectedOrg.value;
+  if (!orgId || connectActing.value) return;
+  connectActing.value = true;
+  try {
+    const base = window.location.origin;
+    const res = await $fetch<{ url: string }>('/api/stripe/connect/onboard', {
+      method: 'POST',
+      body: {
+        organizationId: orgId,
+        returnUrl: `${base}/apps/money?floor=deposits&onboarding=complete`,
+        refreshUrl: `${base}/apps/money?floor=deposits&onboarding=refresh`,
+      },
+    });
+    if (res?.url) window.location.href = res.url;
+  } catch (err: any) {
+    toast.error('Could not start onboarding', {
+      description: err?.data?.message || err?.message || 'Stripe rejected the request.',
+    });
+  } finally {
+    connectActing.value = false;
+  }
+}
+
+const connectStatusMeta = computed(() => {
+  const s = stripeConnect.value?.status;
+  if (s === 'active') return { label: 'Connected · accepting payments', tone: 'bg-success/15 text-success', dot: 'bg-success' };
+  if (s === 'pending') return { label: 'Onboarding in progress', tone: 'bg-warning/15 text-warning', dot: 'bg-warning' };
+  if (s === 'restricted') return { label: 'Action required', tone: 'bg-destructive/15 text-destructive', dot: 'bg-destructive' };
+  if (s === 'unknown') return { label: 'Status unavailable', tone: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground/40' };
+  return { label: 'Not connected', tone: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground/30' };
+});
+
+watch(floor, (next) => {
+  if (next === 'deposits' && !depositsLoaded) {
+    depositsLoaded = true;
+    fetchStripeConnect();
+  }
+}, { immediate: true });
+
+watch(selectedOrg, () => { if (depositsLoaded) fetchStripeConnect(); });
+
 const { selectedClient, getClientFilter } = useClients();
 const { canAccess } = useOrgRole();
 const { getStatusBadgeClasses } = useStatusStyle();
@@ -171,12 +261,13 @@ async function fetchCashflow() {
         fields: ['id', 'name', 'amount', 'category', 'date', 'vendor'],
         filter: expenseFilter,
         sort: ['-date'],
-        limit: 50,
+        limit: 500,
       }),
       paymentItems.list({
-        fields: ['id', 'amount', 'date_received', 'payment_method', 'status', 'invoice_id.id', 'invoice_id.invoice_code', 'invoice_id.client.name'],
+        filter: orgPaymentFilter(orgId),
+        fields: ['id', 'amount', 'date_received', 'date_created', 'payment_method', 'status', 'invoice_id.id', 'invoice_id.invoice_code', 'invoice_id.client.name'],
         sort: ['-date_received'],
-        limit: 10,
+        limit: 500,
       }),
     ]);
 
@@ -211,6 +302,89 @@ const cashflowKpis = computed(() => {
 
   return { billedThisMonth, paidThisMonth, outstanding, overdueCount };
 });
+
+// ── Money In vs Out — monthly payments received vs expenses (this year) ──────
+const cashflowMonthly = computed(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const monthsCount = now.getMonth() + 1; // Jan → current month
+  const months = Array.from({ length: monthsCount }, (_, m) => ({
+    key: `${year}-${String(m + 1).padStart(2, '0')}`,
+    label: new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' }),
+    in: 0,
+    out: 0,
+  }));
+  const byKey = new Map(months.map((m) => [m.key, m]));
+
+  for (const p of cashflowPayments.value) {
+    const key = String(p.date_received || p.date_created || '').slice(0, 7);
+    const bucket = byKey.get(key);
+    if (bucket) bucket.in += Number(p.amount) || 0;
+  }
+  for (const e of cashflowExpenses.value) {
+    const key = String(e.date || '').slice(0, 7);
+    const bucket = byKey.get(key);
+    if (bucket) bucket.out += Number(e.amount) || 0;
+  }
+
+  const maxVal = Math.max(1, ...months.map((m) => Math.max(m.in, m.out)));
+  return months.map((m) => ({
+    ...m,
+    net: m.in - m.out,
+    // Give any non-zero value a visible floor so tiny months still register.
+    inPct: m.in > 0 ? Math.max((m.in / maxVal) * 100, 4) : 0,
+    outPct: m.out > 0 ? Math.max((m.out / maxVal) * 100, 4) : 0,
+  }));
+});
+
+const cashflowMonthlyTotals = computed(() => {
+  const t = cashflowMonthly.value.reduce(
+    (a, m) => ({ in: a.in + m.in, out: a.out + m.out }),
+    { in: 0, out: 0 },
+  );
+  return { ...t, net: t.in - t.out };
+});
+
+const netTrendDots = computed(() => {
+  const months = cashflowMonthly.value;
+  const n = months.length;
+  const maxVal = Math.max(1, ...months.map((m) => Math.max(m.in, m.out)));
+  return months.map((m, i) => ({
+    key: m.key,
+    x: n === 1 ? 50 : ((i + 0.5) / n) * 100,
+    y: Math.max(3, Math.min(97, 50 - (m.net / maxVal) * 50)),
+    positive: m.net >= 0,
+  }));
+});
+// Smooth (curved) path through the net dots — Catmull-Rom converted to cubic
+// béziers. Coords are in the 0-100 viewBox; the non-uniform stretch keeps the
+// curve smooth because bézier control points scale linearly.
+const netTrendPath = computed(() => {
+  const pts = netTrendDots.value;
+  if (pts.length < 2) return pts.length === 1 ? `M ${pts[0]!.x} ${pts[0]!.y}` : '';
+  let d = `M ${pts[0]!.x.toFixed(2)} ${pts[0]!.y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]!;
+    const p1 = pts[i]!;
+    const p2 = pts[i + 1]!;
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+});
+
+// Drill a month → Payments floor filtered to that month.
+function drillPaymentsMonth(m: { key: string }) {
+  const [y, mo] = m.key.split('-').map(Number);
+  moneyFrom.value = `${m.key}-01`;
+  moneyTo.value = ymd(new Date(y!, mo!, 0)); // day 0 of next month = last day of this month
+  paymentsView.value = 'list';
+  floor.value = 'payments';
+}
 
 const arAgingBuckets = computed(() => {
   const now = new Date();
@@ -292,6 +466,9 @@ async function fetchInvoices() {
 }
 const debouncedFetchInvoices = useDebounceFn(fetchInvoices, 300);
 
+// Shared date-range filter applied client-side over the fetched invoices.
+const filteredInvoices = computed(() => invoicesList.value.filter((inv: any) => inMoneyRange(inv.invoice_date)));
+
 function getInvoiceDisplayName(inv: Invoice): string {
   const client = inv.client;
   if (client && typeof client === 'object' && (client as any).name) return (client as any).name;
@@ -331,11 +508,25 @@ function onInvoiceCreated() {
 const paymentsList = ref<any[]>([]);
 const paymentsLoading = ref(false);
 
+// payments_received has no reliable direct org column, so scope by the
+// invoice's `bill_to` (the org that issued it) OR a direct `organization` tag.
+// Without this, the list leaks every org's payments (e.g. EA-*/EAG-* invoices).
+// Also exclude Stripe test-mode payments (livemode === false); legacy/manual
+// rows have livemode null and are treated as live.
+function orgPaymentFilter(orgId: string | null | undefined) {
+  const notTest = { _or: [{ livemode: { _null: true } }, { livemode: { _eq: true } }] };
+  const orgScope = orgId
+    ? { _or: [{ invoice_id: { bill_to: { _eq: orgId } } }, { organization: { _eq: orgId } }] }
+    : null;
+  return orgScope ? { _and: [orgScope, notTest] } : notTest;
+}
+
 async function fetchPayments() {
   paymentsLoading.value = true;
   try {
     const paymentItems = useDirectusItems('payments_received');
     paymentsList.value = await paymentItems.list({
+      filter: orgPaymentFilter(selectedOrg.value),
       fields: ['*', 'invoice_id.id', 'invoice_id.invoice_code', 'invoice_id.status', 'invoice_id.total_amount', 'invoice_id.client.name'],
       sort: ['-date_received'],
       limit: 200,
@@ -348,7 +539,54 @@ async function fetchPayments() {
   }
 }
 
-const paymentsTotal = computed(() => paymentsList.value.reduce((s, p) => s + (Number(p.amount) || 0), 0));
+// ── Shared date-range filter — applies across the Money list floors ─────────
+/** Local YYYY-MM-DD (avoids the UTC shift of toISOString). */
+function ymd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+/** First day of the calendar quarter containing `d`. */
+function quarterStart(d: Date): Date {
+  return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+}
+
+// Default timeframe = year-to-date (QTD is available as a preset, but is often
+// too sparse early in a quarter to be a useful landing view).
+const _today = new Date();
+const moneyFrom = ref<string>(ymd(new Date(_today.getFullYear(), 0, 1)));
+const moneyTo = ref<string>(ymd(_today));
+
+const moneyRangeActive = computed(() => !!moneyFrom.value || !!moneyTo.value);
+
+type MoneyRangePreset = '30d' | 'qtd' | 'month' | 'ytd' | 'all';
+function setMoneyRange(preset: MoneyRangePreset) {
+  const now = new Date();
+  if (preset === 'all') { moneyFrom.value = ''; moneyTo.value = ''; return; }
+  moneyTo.value = ymd(now);
+  if (preset === '30d') { const d = new Date(now); d.setDate(d.getDate() - 29); moneyFrom.value = ymd(d); }
+  else if (preset === 'qtd') moneyFrom.value = ymd(quarterStart(now));
+  else if (preset === 'month') moneyFrom.value = ymd(new Date(now.getFullYear(), now.getMonth(), 1));
+  else if (preset === 'ytd') moneyFrom.value = ymd(new Date(now.getFullYear(), 0, 1));
+}
+
+/** Generic date-in-range test on a YYYY-MM-DD(THH…) string. */
+function inMoneyRange(dateStr: any): boolean {
+  const from = moneyFrom.value;
+  const to = moneyTo.value;
+  if (!from && !to) return true;
+  const key = typeof dateStr === 'string' ? dateStr.slice(0, 10) : '';
+  if (!key) return false;
+  if (from && key < from) return false;
+  if (to && key > to) return false;
+  return true;
+}
+
+const filteredPayments = computed(() =>
+  paymentsList.value.filter((p) => inMoneyRange(p?.date_received || p?.date_created)),
+);
+
+const paymentsTotal = computed(() => filteredPayments.value.reduce((s, p) => s + (Number(p.amount) || 0), 0));
 
 // ── Payments river mapping ─────────────────────────────────────────────────
 // Each received payment becomes a leaf at date_received. Method drives hue:
@@ -373,7 +611,7 @@ function paymentHashHour(id: string): number {
 	return 4 + (h % 16);
 }
 const paymentsRiverItems = computed(() => {
-	return paymentsList.value
+	return filteredPayments.value
 		.filter((p) => !!p?.date_received)
 		.map((p) => {
 			const base = new Date(p.date_received);
@@ -417,7 +655,7 @@ const expenseStatusOptions = [
 ];
 
 const filteredExpenses = computed(() => {
-  let result = [...expenses.value];
+  let result = expenses.value.filter((e) => inMoneyRange(e.date));
   if (expensesSearch.value) {
     const q = expensesSearch.value.toLowerCase();
     result = result.filter((e) =>
@@ -582,6 +820,99 @@ const headerAction = computed(() => {
             </div>
           </div>
 
+          <!-- Money In vs Out — diverging monthly bars (payments up, expenses down) -->
+          <div class="ios-card p-5 mb-5">
+            <div class="flex items-end justify-between mb-4 flex-wrap gap-3">
+              <div>
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Money In vs Out</h3>
+                <p class="text-[11px] text-muted-foreground/70 mt-0.5">Payments received vs expenses · {{ new Date().getFullYear() }}</p>
+              </div>
+              <div class="flex items-center gap-4 sm:gap-6">
+                <div class="text-right">
+                  <p class="text-[10px] uppercase tracking-wide text-muted-foreground">In</p>
+                  <p class="text-sm font-bold tabular-nums text-success">{{ fmtCompact(cashflowMonthlyTotals.in) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Out</p>
+                  <p class="text-sm font-bold tabular-nums text-rose-500">{{ fmtCompact(cashflowMonthlyTotals.out) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Net</p>
+                  <p class="text-sm font-bold tabular-nums" :class="cashflowMonthlyTotals.net >= 0 ? 'text-success' : 'text-rose-500'">
+                    {{ cashflowMonthlyTotals.net >= 0 ? '+' : '−' }}{{ fmtCompact(Math.abs(cashflowMonthlyTotals.net)) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative">
+              <!-- Net trend line overlaid on the bars (net-zero rides the centerline).
+                   The line is SVG (preserveAspectRatio=none stretches it to fit); the
+                   dots are HTML circles so the non-uniform scale can't squash them into
+                   ellipses. -->
+              <svg
+                class="absolute inset-x-0 top-0 w-full h-[153px] pointer-events-none"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+              >
+                <path
+                  :d="netTrendPath"
+                  fill="none"
+                  stroke="hsl(var(--foreground) / 0.35)"
+                  stroke-width="1.5"
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                  vector-effect="non-scaling-stroke"
+                />
+              </svg>
+              <div class="absolute inset-x-0 top-0 h-[153px] pointer-events-none">
+                <span
+                  v-for="d in netTrendDots"
+                  :key="d.key"
+                  class="absolute w-2 h-2 rounded-full ring-2 ring-card"
+                  :class="d.positive ? 'bg-success' : 'bg-rose-400'"
+                  :style="{ left: `${d.x}%`, top: `${d.y}%`, transform: 'translate(-50%, -50%)' }"
+                />
+              </div>
+
+              <div class="flex items-stretch gap-1.5 sm:gap-2">
+                <button
+                  v-for="m in cashflowMonthly"
+                  :key="m.key"
+                  type="button"
+                  class="flex-1 flex flex-col items-center group cursor-pointer rounded-lg hover:bg-muted/30 transition-colors py-1"
+                  :title="`${m.label} — in ${fmtMoney(m.in)} · out ${fmtMoney(m.out)} · net ${fmtMoney(m.net)} · click to view payments`"
+                  @click="drillPaymentsMonth(m)"
+                >
+                  <!-- payments in (grows up toward the centerline) -->
+                  <div class="w-full flex items-end justify-center h-[72px]">
+                    <div
+                      class="w-full max-w-[26px] bg-success/70 group-hover:bg-success transition-all duration-300"
+                      :style="{ height: `${m.inPct}%` }"
+                    />
+                  </div>
+                  <div class="w-full h-px bg-border/70 my-1" />
+                  <!-- expenses out (grows down from the centerline) -->
+                  <div class="w-full flex items-start justify-center h-[72px]">
+                    <div
+                      class="w-full max-w-[26px] bg-rose-400/70 group-hover:bg-rose-400 transition-all duration-300"
+                      :style="{ height: `${m.outPct}%` }"
+                    />
+                  </div>
+                  <p class="text-[10px] text-muted-foreground mt-1.5 group-hover:text-foreground transition-colors">{{ m.label }}</p>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4 mt-4 text-[10px] text-muted-foreground">
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-success" /> Payments in</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-400" /> Expenses out</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-3 h-px bg-foreground/40" /> Net</span>
+              <span class="ml-auto hidden sm:inline text-muted-foreground/60">Click a month → payments</span>
+            </div>
+          </div>
+
           <!-- AR aging stack -->
           <div class="ios-card p-5 mb-5">
             <div class="flex items-center justify-between mb-3">
@@ -743,18 +1074,30 @@ const headerAction = computed(() => {
 
       <!-- ── Invoices floor ───────────────────────────────────────────── -->
       <template v-else-if="floor === 'invoices'">
-        <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <input
-            v-model="invoicesSearch"
-            type="search"
-            placeholder="Search invoices…"
-            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
-            @input="debouncedFetchInvoices"
-          />
-          <UTabs
-            v-model="invoicesStatus"
-            :items="invoiceStatusItems"
-            class="w-fit"
+        <div class="flex flex-col gap-3 mb-5">
+          <div class="flex gap-3 flex-wrap items-center">
+            <input
+              v-model="invoicesSearch"
+              type="search"
+              placeholder="Search invoices…"
+              class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+              @input="debouncedFetchInvoices"
+            />
+            <UTabs
+              v-model="invoicesStatus"
+              :items="invoiceStatusItems"
+              class="w-fit"
+            />
+          </div>
+          <AppsMoneyDateFilter
+            v-if="invoicesList.length"
+            v-model:from="moneyFrom"
+            v-model:to="moneyTo"
+            :count="filteredInvoices.length"
+            :total="invoicesList.length"
+            :active="moneyRangeActive"
+            noun="invoices"
+            @preset="setMoneyRange"
           />
         </div>
 
@@ -777,6 +1120,12 @@ const headerAction = computed(() => {
           </Button>
         </div>
 
+        <div v-else-if="!filteredInvoices.length" class="flex flex-col items-center justify-center py-16 gap-3">
+          <Icon name="lucide:calendar-search" class="w-10 h-10 text-muted-foreground/40" />
+          <p class="text-sm text-muted-foreground">No invoices in this date range.</p>
+          <button type="button" class="text-xs text-primary hover:underline" @click="setMoneyRange('all')">Clear filter</button>
+        </div>
+
         <div v-else class="ios-card overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -793,7 +1142,7 @@ const headerAction = computed(() => {
               </thead>
               <tbody>
                 <tr
-                  v-for="inv in invoicesList"
+                  v-for="inv in filteredInvoices"
                   :key="inv.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
                   :class="{ 'opacity-50': inv.status === 'paid' || inv.status === 'archived' }"
@@ -873,20 +1222,28 @@ const headerAction = computed(() => {
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Payments</p>
-              <p class="text-2xl font-bold tabular-nums text-foreground">{{ paymentsList.length }}</p>
+              <p class="text-2xl font-bold tabular-nums text-foreground">{{ filteredPayments.length }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Latest</p>
               <p class="text-2xl font-bold text-foreground">
-                {{ paymentsList.length ? (getFriendlyDateThree(paymentsList[0]?.date_received) || '—') : '—' }}
+                {{ filteredPayments.length ? (getFriendlyDateThree(filteredPayments[0]?.date_received) || '—') : '—' }}
               </p>
             </div>
           </div>
 
-          <!-- List / River — either-or so the payment river never competes with
-               the table; River is an opt-in visual view. -->
-          <div v-if="paymentsList.length" class="flex items-center justify-end mb-3">
-            <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium">
+          <!-- Shared date-range filter (left) + List/River view toggle (right) -->
+          <div v-if="paymentsList.length" class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <AppsMoneyDateFilter
+              v-model:from="moneyFrom"
+              v-model:to="moneyTo"
+              :count="filteredPayments.length"
+              :total="paymentsList.length"
+              :active="moneyRangeActive"
+              noun="payments"
+              @preset="setMoneyRange"
+            />
+            <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium shrink-0">
               <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'list'">List</button>
               <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'river' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'river'">River</button>
             </div>
@@ -900,8 +1257,8 @@ const headerAction = computed(() => {
           <!-- Cash-inflow river — 30-day rhythm of payments received, leaves
                sized only by visibility (every drop matters). Method drives
                hue. Click a leaf → linked invoice slide-over. -->
-          <div v-if="paymentsList.length && paymentsView === 'river'" class="glass-surface p-4 sm:p-5 mb-5">
-            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div v-if="filteredPayments.length && paymentsView === 'river'" class="mb-5">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2 px-1">
               <div>
                 <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Cash inflow river
@@ -929,7 +1286,16 @@ const headerAction = computed(() => {
             />
           </div>
 
-          <div v-if="paymentsList.length && paymentsView === 'list'" class="ios-card overflow-hidden">
+          <div
+            v-if="paymentsList.length && !filteredPayments.length"
+            class="flex flex-col items-center justify-center py-16 gap-3"
+          >
+            <Icon name="lucide:calendar-search" class="w-10 h-10 text-muted-foreground/40" />
+            <p class="text-sm text-muted-foreground">No payments in this date range.</p>
+            <button type="button" class="text-xs text-primary hover:underline" @click="setMoneyRange('all')">Clear filter</button>
+          </div>
+
+          <div v-if="filteredPayments.length && paymentsView === 'list'" class="ios-card overflow-hidden">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-border/50">
@@ -943,7 +1309,7 @@ const headerAction = computed(() => {
               </thead>
               <tbody>
                 <tr
-                  v-for="p in paymentsList"
+                  v-for="p in filteredPayments"
                   :key="p.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
                   :class="{ 'cursor-pointer': p.invoice_id?.id }"
@@ -968,6 +1334,70 @@ const headerAction = computed(() => {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </template>
+      </template>
+
+      <!-- ── Deposits floor (Stripe Connect — getting paid by clients) ─── -->
+      <template v-else-if="floor === 'deposits'">
+        <div v-if="stripeConnectLoading && !stripeConnect" class="flex items-center justify-center py-16 gap-3">
+          <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Loading deposits…</span>
+        </div>
+
+        <template v-else>
+          <!-- Status / onboarding card -->
+          <div class="ios-card p-5 mb-5">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Icon name="lucide:landmark" class="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p class="font-semibold text-foreground">Stripe deposits</p>
+                  <p class="text-xs text-muted-foreground">Card &amp; ACH payments from clients, settled to your bank by Stripe</p>
+                </div>
+              </div>
+              <span
+                class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium shrink-0"
+                :class="connectStatusMeta.tone"
+              >
+                <span :class="['w-1.5 h-1.5 rounded-full', connectStatusMeta.dot]" />
+                {{ connectStatusMeta.label }}
+              </span>
+            </div>
+
+            <div v-if="stripeConnect?.status !== 'active'" class="mt-4 flex items-center gap-3">
+              <Button size="sm" :disabled="connectActing" @click="startStripeConnect">
+                {{ stripeConnect?.status === 'pending' || stripeConnect?.status === 'restricted' ? 'Continue setup' : 'Set up payments' }}
+              </Button>
+              <a href="https://dashboard.stripe.com/" target="_blank" rel="noopener" class="text-xs text-muted-foreground hover:text-foreground">
+                Stripe dashboard
+              </a>
+            </div>
+            <div v-else class="mt-4">
+              <a
+                href="https://dashboard.stripe.com/"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Icon name="lucide:external-link" class="w-3.5 h-3.5" />
+                Manage on Stripe
+              </a>
+            </div>
+          </div>
+
+          <!-- Native operational surface once the connected account is live -->
+          <OrganizationBillingSurface
+            v-if="stripeConnect?.status === 'active' && selectedOrg"
+            :organization-id="selectedOrg"
+          />
+          <div v-else class="ios-card p-8 text-center">
+            <Icon name="lucide:banknote" class="w-9 h-9 mx-auto mb-3 text-muted-foreground/30" />
+            <p class="text-sm text-muted-foreground">
+              Connect your Stripe account to see balance, transactions, and payouts here.
+            </p>
           </div>
         </template>
       </template>
@@ -1028,6 +1458,18 @@ const headerAction = computed(() => {
             >
               Billable only
             </button>
+          </div>
+
+          <div class="mb-4">
+            <AppsMoneyDateFilter
+              v-model:from="moneyFrom"
+              v-model:to="moneyTo"
+              :count="filteredExpenses.length"
+              :total="expenses.length"
+              :active="moneyRangeActive"
+              noun="expenses"
+              @preset="setMoneyRange"
+            />
           </div>
 
           <div v-if="!filteredExpenses.length" class="flex flex-col items-center justify-center py-24 gap-3">

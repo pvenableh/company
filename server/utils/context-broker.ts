@@ -338,7 +338,9 @@ async function buildInvoicesSummary(directus: any, orgFilter: any, now: Date): P
     const invoices = await directus.request(
       readItems('invoices', {
         filter: {
-          ...orgFilter,
+          // Invoices scope via `bill_to`, not `organization` (orgFilter is for the
+          // other entities); using orgFilter here broke the query → no invoices.
+          bill_to: orgFilter.organization,
           status: { _in: ['pending', 'processing'] },
         },
         fields: ['id', 'status', 'total_amount', 'due_date', 'client.name', 'invoice_code'],
@@ -460,7 +462,7 @@ async function buildMomentumSummary(directus: any, orgFilter: any, organizationI
   try {
     const paid = await directus.request(
       readItems('invoices', {
-        filter: { ...orgFilter, status: { _eq: 'paid' }, date_updated: { _gte: days30 } },
+        filter: { bill_to: orgFilter.organization, status: { _eq: 'paid' }, date_updated: { _gte: days30 } },
         fields: ['id', 'total_amount', 'date_updated'],
         sort: ['-date_updated'],
         limit: 50,

@@ -1712,7 +1712,7 @@ watch(searchEmail, (val) => {
 											<UBadge color="green" variant="soft" size="xs">Active</UBadge>
 										</div>
 										<NuxtLink
-											to="/account/subscription"
+											to="/apps/organization?floor=billing"
 											class="flex items-center justify-center gap-1.5 w-full mt-2 px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors"
 										>
 											<UIcon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5" />

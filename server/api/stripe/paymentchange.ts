@@ -128,6 +128,18 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 		const directus = getTypedDirectus();
 		const invoiceId = paymentIntent.metadata?.invoice_id;
 
+		// `payments_received` is the org's CLIENT-revenue ledger (money received
+		// against an invoice). A payment intent with no `invoice_id` is not a client
+		// payment — it's the org paying Earnest (token top-ups, subscription
+		// charges). Those are fulfilled elsewhere (fulfillTokenPurchase / the
+		// subscription webhook) and show in the org's Stripe billing history, so we
+		// must NOT record them here — otherwise they pollute the Payments list,
+		// inflate "Total Received", and (being org-less) leak across orgs.
+		if (!invoiceId) {
+			console.log(`[Stripe] PI ${paymentIntent.id} has no invoice_id — not a client payment, skipping payments_received.`);
+			return;
+		}
+
 		// Record the payment FIRST. Stripe amounts are minor units (cents); the
 		// column stores dollars as a 2-decimal string.
 		await directus.request(
@@ -136,30 +148,30 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 				stripe_status: 'succeeded',
 				amount: (paymentIntent.amount / 100).toFixed(2),
 				email: paymentIntent.receipt_email,
-				invoice_id: invoiceId || null,
+				invoice_id: invoiceId,
 				status: 'paid',
 				date_received: new Date().toISOString(),
+				// Stripe test-mode payments (dev keys) are excluded from Money reporting.
+				livemode: paymentIntent.livemode,
 			})
 		);
 
-		if (invoiceId) {
-			// Stamp the PI ref (useful lookup), then let the payment total drive
-			// the status. A PARTIAL payment must NOT mark the whole invoice paid —
-			// recomputeInvoiceStatus sums payments_received and sets
-			// paid / processing / pending accordingly.
-			await directus.request(
-				updateItems('invoices', [invoiceId], { payment_intent: paymentIntent.id })
-			);
-			const result = await recomputeInvoiceStatus(invoiceId);
+		// Stamp the PI ref (useful lookup), then let the payment total drive the
+		// status. A PARTIAL payment must NOT mark the whole invoice paid —
+		// recomputeInvoiceStatus sums payments_received and sets
+		// paid / processing / pending accordingly.
+		await directus.request(
+			updateItems('invoices', [invoiceId], { payment_intent: paymentIntent.id })
+		);
+		const result = await recomputeInvoiceStatus(invoiceId);
 
-			// Return leg: notify the agency only when the invoice actually became
-			// fully paid (staff-only; the client isn't emailed this sprint).
-			if (result.changed && result.newStatus === 'paid') {
-				await notifyInvoicePaid(directus, invoiceId, result.previousStatus);
-			}
+		// Return leg: notify the agency only when the invoice actually became
+		// fully paid (staff-only; the client isn't emailed this sprint).
+		if (result.changed && result.newStatus === 'paid') {
+			await notifyInvoicePaid(directus, invoiceId, result.previousStatus);
 		}
 
-		console.log(`[Stripe] Payment succeeded: ${paymentIntent.id}`);
+		console.log(`[Stripe] Payment succeeded: ${paymentIntent.id} (invoice ${invoiceId})`);
 	} catch (error) {
 		console.error('[Stripe] Error handling payment success:', error);
 	}
@@ -277,25 +289,32 @@ async function handleSubscriptionChange(
 			? subscription.customer
 			: subscription.customer.id;
 
-		const { userId, orgId } = await findOrgForCustomer(directus, customerId);
-		if (!userId) return;
+		// Org-owned billing: prefer the authoritative org id stamped on the
+		// subscription metadata (set by create/checkout). Fall back to the legacy
+		// customer→user→membership walk for pre-migration subscriptions.
+		const metaOrgId = (subscription.metadata?.organization_id as string | undefined) || null;
+		const { userId, orgId: walkedOrgId } = await findOrgForCustomer(directus, customerId);
+		const orgId = metaOrgId || walkedOrgId;
+		if (!userId && !orgId) return;
 
-		// ── Update user record ──
-		const subscriptionData: Record<string, any> = {
-			stripe_subscription_id: subscription.id,
-			subscription_status: subscription.status,
-			subscription_plan: subscription.items.data[0]?.price?.id || null,
-			subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-		};
+		// ── Update user record (best-effort; only when the customer maps to one) ──
+		if (userId) {
+			const subscriptionData: Record<string, any> = {
+				stripe_subscription_id: subscription.id,
+				subscription_status: subscription.status,
+				subscription_plan: subscription.items.data[0]?.price?.id || null,
+				subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+			};
 
-		if (action === 'deleted') {
-			subscriptionData.subscription_status = 'canceled';
-			subscriptionData.stripe_subscription_id = null;
+			if (action === 'deleted') {
+				subscriptionData.subscription_status = 'canceled';
+				subscriptionData.stripe_subscription_id = null;
+			}
+
+			await directus.request(
+				updateUser(userId, subscriptionData)
+			);
 		}
-
-		await directus.request(
-			updateUser(userId, subscriptionData)
-		);
 
 		// ── Sync organization plan & limits ──
 		if (orgId) {
@@ -315,6 +334,8 @@ async function handleSubscriptionChange(
 				const { planId, plan } = resolvePlanFromSubscription(subscription);
 				const orgUpdate: Record<string, any> = {
 					stripe_subscription_id: subscription.id,
+					// Keep the org's billing customer authoritative.
+					stripe_customer_id: customerId,
 				};
 
 				if (planId && plan) {

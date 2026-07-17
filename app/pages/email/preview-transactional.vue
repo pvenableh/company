@@ -57,6 +57,7 @@ const templates = [
 	'early-access-welcome',
 	'invite',
 	'password-reset',
+	'token-purchase',
 	'video-invite',
 	'generic',
 	'meeting-invited',

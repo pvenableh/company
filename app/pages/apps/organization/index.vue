@@ -7,11 +7,12 @@
  *
  * Same shape as the rest of the apps. Floor switching is in-place via
  * `?floor=` query param so the shell never remounts. This page is a
- * re-shell over `/organization/index.vue` + `/account/subscription.vue`
- * — no new data layers, no new endpoints, no new modals. Existing
- * components (`OrganizationAIUsage`, `OrganizationBillingSurface`,
- * `OrganizationInviteMemberModal`, `ClientsInviteClientModal`) are
- * reused as-is.
+ * re-shell over `/organization/index.vue`. The Billing floor delegates
+ * entirely to `<AppsAccountSubscriptionSurface>` (plan · add-ons · payment
+ * methods · billing history · cancel). Stripe Connect (getting paid by
+ * clients) moved to the Money app's Payouts floor; the Integrations tile is
+ * now a status + deep-link. Existing components (`OrganizationAIUsage`,
+ * `OrganizationInviteMemberModal`, `ClientsInviteClientModal`) are reused as-is.
  *
  * Decisions documented for Phase 6:
  *   - Overview floor is read-mostly; full inline editing stays on the
@@ -21,10 +22,11 @@
  *     are a first-class org concern, not buried under Settings.
  *   - Roles, Document Blocks, Service Templates surface as link tiles
  *     inside Settings — they're admin tooling, not daily-use.
- *   - `/account` (user profile) and `/account/subscription` stay on the
- *     avatar dropdown. The Organization app is org-scoped.
+ *   - `/account` (user profile) stays on the avatar dropdown; subscription &
+ *     billing now lives here on the Billing floor (org-scoped concern).
  *   - Per-floor header action button matching Money/Marketing
- *     ("Invite member" on Members, "Manage plan" on Billing, etc).
+ *     ("Invite member" on Members, etc). Billing has none — the shared
+ *     surface owns its own actions.
  */
 import { Button } from '~/components/ui/button';
 
@@ -190,56 +192,8 @@ function formatRelative(iso: string | undefined) {
 }
 
 // ── Billing floor ───────────────────────────────────────────────────────────
-const {
-  loading: subscriptionLoading,
-  subscriptionData,
-  isActive: subscriptionActive,
-  isPastDue,
-  isCanceling,
-  currentPlan,
-  paymentMethods,
-  invoices: stripeInvoices,
-  periodEnd,
-  fetchStatus: fetchSubscription,
-  openPortal,
-} = useSubscription();
-
-const planName = computed(() => {
-  if (!currentPlan.value) return 'No active plan';
-  const product = (currentPlan.value as any).product;
-  if (typeof product === 'object' && product?.name) return product.name;
-  return 'Unknown Plan';
-});
-
-const planPrice = computed(() => {
-  const p = currentPlan.value as any;
-  if (!p?.amount) return null;
-  return `$${(p.amount / 100).toFixed(2)}/${p.interval || 'month'}`;
-});
-
-const subscriptionStatusBadge = computed(() => {
-  const status = (subscriptionData.value as any)?.subscription?.status;
-  if (!status || status === 'none' || (subscriptionData.value as any)?.status === 'no_customer') {
-    return { label: 'No Plan', tone: 'bg-muted text-muted-foreground' };
-  }
-  const map: Record<string, { label: string; tone: string }> = {
-    active: { label: 'Active', tone: 'bg-success/15 text-success dark:text-success' },
-    trialing: { label: 'Trial', tone: 'bg-info/15 text-info dark:text-info' },
-    past_due: { label: 'Past Due', tone: 'bg-destructive/15 text-destructive dark:text-destructive' },
-    canceled: { label: 'Canceled', tone: 'bg-muted text-muted-foreground' },
-    incomplete: { label: 'Incomplete', tone: 'bg-warning/15 text-warning dark:text-warning' },
-    unpaid: { label: 'Unpaid', tone: 'bg-destructive/15 text-destructive dark:text-destructive' },
-  };
-  return map[status] || { label: status, tone: 'bg-muted text-muted-foreground' };
-});
-
-function formatStripeDate(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function formatStripeMoney(cents: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((cents || 0) / 100);
-}
+// Fully delegated to <AppsAccountSubscriptionSurface> (plan · add-ons · payment
+// methods · billing history · cancel). No local subscription state needed here.
 
 // ── Integrations floor ──────────────────────────────────────────────────────
 type IntegrationStatus = 'active' | 'pending' | 'inactive' | 'restricted' | 'unknown';
@@ -286,6 +240,10 @@ async function fetchStripeConnect() {
   }
 }
 
+// Stripe Connect onboarding + operational surface moved to the Money app's
+// Deposits floor (/apps/money?floor=deposits). This page keeps only the live
+// status read (fetchStripeConnect) so the Integrations tile can show state.
+
 const socialAccounts = ref<any[]>([]);
 const socialLoading = ref(false);
 
@@ -331,18 +289,11 @@ const integrationsList = computed(() => {
       icon: 'lucide:credit-card',
       status: stripeMeta?.status || 'inactive',
       statusLabel: stripeLabel,
-      action: stripeMeta?.status === 'active' ? 'Manage on Stripe' : 'Configure',
-      onClick: () => {
-        if (stripeMeta?.status === 'active') {
-          // Standard accounts: open the full Stripe Dashboard in a new tab.
-          // We can't deep-link to the merchant's account from the platform's
-          // session, so we open the root and let them sign in.
-          window.open('https://dashboard.stripe.com/', '_blank', 'noopener');
-        } else {
-          // Stay in apps layout — billing floor hosts the Configure CTA + onboarding link.
-          router.push('/apps/organization?floor=billing');
-        }
-      },
+      // Onboarding + the operational surface (balance / transactions / payouts)
+      // now live on the Money app's Deposits floor. This tile is a status +
+      // deep-link only.
+      action: 'Open in Money',
+      onClick: () => router.push('/apps/money?floor=deposits'),
     },
     {
       key: 'plaid',
@@ -525,7 +476,6 @@ const showArchiveSheet = ref(false);
 // ── Lazy-load per floor ─────────────────────────────────────────────────────
 const overviewLoaded = ref(false);
 const membersLoaded = ref(false);
-const billingLoaded = ref(false);
 const integrationsLoaded = ref(false);
 const settingsLoaded = ref(false);
 
@@ -543,10 +493,7 @@ watch(
       fetchMembers();
       fetchClientMemberships();
     }
-    if (next === 'billing' && !billingLoaded.value) {
-      billingLoaded.value = true;
-      fetchSubscription();
-    }
+    // Billing floor self-loads via <AppsAccountSubscriptionSurface>.
     if (next === 'integrations' && !integrationsLoaded.value) {
       integrationsLoaded.value = true;
       fetchStripeConnect();
@@ -567,7 +514,6 @@ watch(selectedOrg, () => {
     fetchMembers();
     fetchClientMemberships();
   }
-  if (billingLoaded.value) fetchSubscription();
   if (integrationsLoaded.value) {
     fetchStripeConnect();
     fetchSocialAccounts();
@@ -601,19 +547,6 @@ const headerAction = computed(() => {
       icon: 'lucide:mail',
       onClick: () => {
         showInviteMemberModal.value = true;
-      },
-    };
-  }
-  if (floor.value === 'billing' && (subscriptionActive.value || isPastDue.value)) {
-    return {
-      label: 'Manage plan',
-      icon: 'lucide:external-link',
-      onClick: async () => {
-        try {
-          await openPortal();
-        } catch {
-          toast.add({ title: 'Error', description: 'Could not open Stripe portal', color: 'red' });
-        }
       },
     };
   }
@@ -985,161 +918,13 @@ function onClientInvited() {
         </div>
       </template>
 
-      <!-- ── Billing floor ────────────────────────────────────────────── -->
+      <!-- ── Billing floor ───────────────────────────────── -->
+      <!-- Canonical subscription surface (plan · add-ons · payment methods ·
+           billing history · cancel) — the shared component also backs the
+           Stripe Checkout return receiver at /account/subscription. Stripe
+           Connect (getting paid by your clients) lives in the Money app. -->
       <template v-else-if="floor === 'billing'">
-        <div v-if="subscriptionLoading && !subscriptionData" class="space-y-3">
-          <div v-for="i in 3" :key="i" class="ios-card p-6 animate-pulse">
-            <div class="h-4 bg-muted rounded w-1/3 mb-3" />
-            <div class="h-3 bg-muted rounded w-2/3" />
-          </div>
-        </div>
-
-        <template v-else>
-          <!-- Past Due alert -->
-          <div
-            v-if="isPastDue"
-            class="rounded-xl border-2 border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-4 mb-5 flex items-start gap-3"
-          >
-            <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive mt-0.5" />
-            <div class="flex-1">
-              <p class="font-semibold text-destructive dark:text-destructive text-sm">Payment Past Due</p>
-              <p class="text-xs text-destructive dark:text-destructive mt-1">
-                Your last payment failed. Update your payment method to keep your subscription active.
-              </p>
-              <Button size="sm" variant="destructive" class="mt-3" @click="openPortal">
-                Update payment method
-              </Button>
-            </div>
-          </div>
-
-          <!-- Canceling notice -->
-          <div
-            v-if="isCanceling"
-            class="rounded-xl border-2 border-warning/30 bg-warning/10 dark:bg-warning/20 p-4 mb-5 flex items-start gap-3"
-          >
-            <Icon name="lucide:clock" class="w-5 h-5 text-warning mt-0.5" />
-            <div class="flex-1">
-              <p class="font-semibold text-warning dark:text-warning text-sm">Subscription Canceling</p>
-              <p class="text-xs text-warning dark:text-warning mt-1">
-                Ends on
-                <strong>{{ periodEnd ? periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—' }}</strong>.
-                You'll retain access until then.
-              </p>
-            </div>
-          </div>
-
-          <!-- Current Plan card -->
-          <div class="ios-card p-5 mb-5">
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <EarnestIcon class="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <p class="font-semibold text-foreground">{{ planName }}</p>
-                  <p class="text-xs text-muted-foreground">
-                    <template v-if="planPrice">{{ planPrice }}</template>
-                    <template v-else>Your current plan</template>
-                  </p>
-                </div>
-              </div>
-              <span
-                class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
-                :class="subscriptionStatusBadge.tone"
-              >
-                {{ subscriptionStatusBadge.label }}
-              </span>
-            </div>
-
-            <p v-if="periodEnd" class="text-xs text-muted-foreground">
-              Next billing {{ periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-            </p>
-          </div>
-
-          <!-- Stripe Connect billing surface (native) — when KYC active -->
-          <OrganizationBillingSurface
-            v-if="stripeConnect?.status === 'active' && org?.id"
-            :organization-id="org.id"
-            class="mb-5"
-          />
-
-          <!-- Payment methods -->
-          <div class="ios-card p-5 mb-5">
-            <h3 class="text-sm font-semibold mb-4 flex items-center gap-2">
-              <Icon name="lucide:credit-card" class="w-4 h-4" />
-              Payment Methods
-            </h3>
-            <div v-if="paymentMethods.length === 0" class="flex items-center justify-between">
-              <p class="text-sm text-muted-foreground">No payment method on file</p>
-              <Button size="sm" variant="outline" :disabled="subscriptionLoading" @click="openPortal">
-                Add payment method
-              </Button>
-            </div>
-            <div v-else class="space-y-3">
-              <div
-                v-for="pm in paymentMethods"
-                :key="pm.id"
-                class="flex items-center justify-between"
-              >
-                <div class="flex items-center gap-3">
-                  <Icon name="lucide:credit-card" class="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p class="text-sm font-medium capitalize">{{ pm.brand }} •••• {{ pm.last4 }}</p>
-                    <p class="text-xs text-muted-foreground">Expires {{ pm.exp_month }}/{{ pm.exp_year }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Billing history -->
-          <div class="ios-card p-5">
-            <h3 class="text-sm font-semibold mb-4 flex items-center gap-2">
-              <Icon name="lucide:file-text" class="w-4 h-4" />
-              Billing History
-            </h3>
-            <div v-if="stripeInvoices.length === 0" class="text-center py-6">
-              <Icon name="lucide:file-text" class="w-9 h-9 mx-auto mb-3 text-muted-foreground/30" />
-              <p class="text-sm text-muted-foreground">No billing history yet</p>
-            </div>
-            <div v-else class="divide-y divide-border/40">
-              <div
-                v-for="inv in stripeInvoices"
-                :key="inv.id"
-                class="flex items-center justify-between py-3"
-              >
-                <div class="flex items-center gap-3">
-                  <Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p class="text-sm font-medium">{{ inv.number || 'Invoice' }}</p>
-                    <p class="text-xs text-muted-foreground">{{ formatStripeDate(inv.created) }}</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-sm font-medium tabular-nums">{{ formatStripeMoney(inv.amount_paid || inv.amount_due) }}</span>
-                  <span
-                    class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
-                    :class="inv.status === 'paid'
-                      ? 'bg-success/15 text-success'
-                      : inv.status === 'open'
-                        ? 'bg-warning/15 text-warning'
-                        : 'bg-muted text-muted-foreground'"
-                  >
-                    {{ inv.status }}
-                  </span>
-                  <a
-                    v-if="inv.hosted_invoice_url"
-                    :href="inv.hosted_invoice_url"
-                    target="_blank"
-                    class="text-muted-foreground hover:text-foreground"
-                  >
-                    <Icon name="lucide:external-link" class="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
+        <AppsAccountSubscriptionSurface compact />
       </template>
 
       <!-- ── AI & Tokens floor ────────────────────────────────────────── -->

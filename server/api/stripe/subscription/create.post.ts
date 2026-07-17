@@ -16,12 +16,10 @@ interface CreateBody {
 	plan: EarnestPlanId;
 	interval?: 'monthly' | 'annual';
 	termsAcceptedAt?: string;
+	organizationId?: string;
 }
 
 export default defineEventHandler(async (event) => {
-	// The wizard creates the org before this call, so the user has owner role.
-	await requireOrgRole(event, ['owner', 'admin']);
-
 	const session = await requireUserSession(event);
 	const userId = (session as any).user?.id;
 	const email = (session as any).user?.email;
@@ -30,7 +28,15 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody<CreateBody>(event);
-	const { plan, interval, termsAcceptedAt } = body;
+	const { plan, interval, termsAcceptedAt, organizationId } = body;
+
+	// Org-owned billing: authorize against the target org when provided; the
+	// wizard creates the org before this call so the new owner satisfies the check.
+	if (organizationId) {
+		await requireOrgPermission(event, organizationId, 'org_settings', 'update');
+	} else {
+		await requireOrgRole(event, ['owner', 'admin']);
+	}
 
 	const planDef = EARNEST_PLANS[plan];
 	if (!planDef) {
@@ -48,35 +54,35 @@ export default defineEventHandler(async (event) => {
 	const directus = getServerDirectus();
 
 	try {
-		// Look up the user's Stripe customer id (set at registration).
-		const users = await directus.request(
-			readUsers({
-				filter: { id: { _eq: userId } },
-				fields: ['id', 'stripe_customer_id', 'email', 'first_name', 'last_name'],
-				limit: 1,
-			})
-		);
-		const user = users[0];
-		if (!user) {
-			throw createError({ statusCode: 404, message: 'User not found' });
-		}
-
-		// Defensive: registration may have failed to create the customer (the
-		// Stripe step is best-effort). Create it on demand and persist.
-		let customerId = user.stripe_customer_id || null;
-		if (!customerId) {
-			const customer = await stripe.customers.create({
-				email,
-				name: [user.first_name, user.last_name].filter(Boolean).join(' ') || undefined,
-				metadata: {
-					directus_user_id: userId,
-					source: 'earnest_subscription_create',
-				},
-			});
-			customerId = customer.id;
-			await directus.request(
-				updateUser(userId, { stripe_customer_id: customerId })
+		// Resolve the ORG's Stripe customer (created on demand, tagged with the org
+		// id). Org-owned billing: the subscription belongs to the organization, not
+		// the individual who ran the wizard. Legacy path (no orgId) falls back to a
+		// user-level customer so pre-migration callers keep working.
+		let customerId: string;
+		if (organizationId) {
+			customerId = await getOrCreateOrgStripeCustomer(organizationId, { emailFallback: email });
+		} else {
+			const users = await directus.request(
+				readUsers({
+					filter: { id: { _eq: userId } },
+					fields: ['id', 'stripe_customer_id', 'email', 'first_name', 'last_name'],
+					limit: 1,
+				})
 			);
+			const user = users[0];
+			if (!user) {
+				throw createError({ statusCode: 404, message: 'User not found' });
+			}
+			customerId = user.stripe_customer_id || '';
+			if (!customerId) {
+				const customer = await stripe.customers.create({
+					email,
+					name: [user.first_name, user.last_name].filter(Boolean).join(' ') || undefined,
+					metadata: { directus_user_id: userId, source: 'earnest_subscription_create' },
+				});
+				customerId = customer.id;
+				await directus.request(updateUser(userId, { stripe_customer_id: customerId }));
+			}
 		}
 
 		// Persist terms-acceptance timestamp on the user when supplied. This is
@@ -106,6 +112,8 @@ export default defineEventHandler(async (event) => {
 			metadata: {
 				earnest_email: email,
 				directus_user_id: userId,
+				// Authoritative org link for the webhook (no customer→user walk).
+				...(organizationId ? { organization_id: organizationId } : {}),
 			},
 		});
 

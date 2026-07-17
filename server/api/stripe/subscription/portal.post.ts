@@ -1,20 +1,48 @@
 // POST /api/stripe/subscription/portal
-// Creates a Stripe Customer Portal session for self-service management
+// Creates a Stripe Customer Portal session for self-service management.
+// Org-owned: the portal opens the ORGANIZATION's customer (find-or-created from
+// the org id), so "Add payment method" works even before the org subscribes and
+// every admin manages the same customer.
 export default defineEventHandler(async (event) => {
-	await requireOrgRole(event, ['owner', 'admin']);
-
-	const stripe = useStripe();
 	const body = await readBody(event);
-	const { customerId, returnUrl } = body;
+	const { organizationId, customerId, email, returnUrl } = body as {
+		organizationId?: string;
+		customerId?: string;
+		email?: string;
+		returnUrl?: string;
+	};
 
-	if (!customerId) {
-		throw createError({ statusCode: 400, message: 'Customer ID is required' });
+	if (!organizationId && !customerId && !email) {
+		throw createError({ statusCode: 400, message: 'organizationId, customerId, or email is required' });
 	}
 
+	// Org-scoped authorization when we have an org; otherwise fall back to the
+	// any-org owner/admin check for legacy callers.
+	if (organizationId) {
+		await requireOrgPermission(event, organizationId, 'org_settings', 'update');
+	} else {
+		await requireOrgRole(event, ['owner', 'admin']);
+	}
+
+	const stripe = useStripe();
+
 	try {
+		// Prefer the org's own customer (created on demand). Legacy callers may
+		// still pass customerId/email directly.
+		let resolvedCustomerId = customerId || null;
+		if (!resolvedCustomerId && organizationId) {
+			resolvedCustomerId = await getOrCreateOrgStripeCustomer(organizationId, { emailFallback: email });
+		}
+		if (!resolvedCustomerId && email) {
+			const existing = await stripe.customers.list({ email, limit: 1 });
+			resolvedCustomerId =
+				existing.data.find((c) => !(c as any).deleted)?.id ||
+				(await stripe.customers.create({ email })).id;
+		}
+
 		const session = await stripe.billingPortal.sessions.create({
-			customer: customerId,
-			return_url: returnUrl || `${getAppBaseUrl(event)}/account/subscription`,
+			customer: resolvedCustomerId as string,
+			return_url: returnUrl || `${getAppBaseUrl(event)}/apps/organization?floor=billing`,
 		});
 
 		return { url: session.url };

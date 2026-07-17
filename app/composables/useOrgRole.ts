@@ -240,6 +240,12 @@ export function useOrgRole() {
    * Add-ons are managed by Stripe webhooks and stored in organizations.active_addons.
    */
   function hasAddon(addonId: string): boolean {
+    // Enterprise (the top tier) implicitly includes every add-on. This is the
+    // designed "all features, no per-add-on subscription" exemption for internal /
+    // wholesale orgs like Hue — set organizations.plan = 'enterprise' and every
+    // add-on-gated feature unlocks without a Stripe add-on. Mirrors the intended
+    // server-side requireAddon enterprise bypass.
+    if (((currentOrg.value as any)?.plan ?? 'free') === 'enterprise') return true;
     const addons = (currentOrg.value as any)?.active_addons;
     if (!addons || typeof addons !== 'object') return false;
     return !!addons[addonId];

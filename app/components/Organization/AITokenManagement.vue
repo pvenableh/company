@@ -82,6 +82,89 @@
 			</div>
 		</div>
 
+		<!-- Purchase History — who bought AI tokens -->
+		<div class="ios-card p-4">
+			<div class="flex items-center justify-between mb-3">
+				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
+					<UIcon name="i-heroicons-clock" class="w-4 h-4 text-primary" />
+					Purchase History
+				</h4>
+			</div>
+			<div v-if="purchasesLoading" class="text-xs text-muted-foreground py-4 text-center">Loading…</div>
+			<div v-else-if="purchases.length === 0" class="text-xs text-muted-foreground py-4 text-center">
+				No token purchases yet.
+			</div>
+			<div v-else class="divide-y divide-border/40">
+				<div v-for="p in purchases" :key="p.id" class="flex items-center justify-between py-2.5 gap-3">
+					<div class="flex items-center gap-3 min-w-0">
+						<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+							<UIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
+						</div>
+						<div class="min-w-0">
+							<p class="text-sm font-medium text-foreground truncate">{{ p.buyer?.name || 'Unknown' }}</p>
+							<p class="text-[11px] text-muted-foreground">
+								{{ formatTokens(p.tokens) }} tokens · {{ formatPurchaseDate(p.dateCreated) }}
+							</p>
+						</div>
+					</div>
+					<div class="flex items-center gap-3 shrink-0">
+						<div class="text-right">
+							<p
+								class="text-sm font-semibold"
+								:class="p.status === 'refunded' ? 'text-muted-foreground line-through' : 'text-foreground'"
+							>
+								${{ (p.amountCents / 100).toFixed(2) }}
+							</p>
+							<p
+								class="text-[10px] uppercase tracking-wider"
+								:class="p.status === 'refunded' ? 'text-rose-500' : 'text-muted-foreground'"
+							>
+								{{ p.status }}
+							</p>
+						</div>
+						<UButton
+							v-if="isOrgAdminOrAbove && p.status !== 'refunded'"
+							size="xs"
+							color="red"
+							variant="soft"
+							:disabled="refundLoading"
+							@click="refundTarget = p"
+						>
+							Refund
+						</UButton>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Refund confirmation -->
+		<UModal v-model="showRefundConfirm">
+			<div class="flex items-start gap-4">
+				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center shrink-0">
+					<UIcon name="i-heroicons-arrow-uturn-left" class="w-5 h-5 text-destructive" />
+				</div>
+				<div class="flex-1">
+					<h3 class="text-lg font-semibold text-foreground">Refund this token purchase?</h3>
+					<p class="text-sm text-muted-foreground mt-2">
+						<template v-if="refundTarget">
+							Refunds <strong>${{ (refundTarget.amountCents / 100).toFixed(2) }}</strong> to
+							{{ refundTarget.buyer?.name || 'the buyer' }} via Stripe and removes
+							<strong>{{ formatTokens(refundTarget.tokens) }} tokens</strong> from this org's balance
+							(floored at zero if some were already spent). This can't be undone.
+						</template>
+					</p>
+					<div class="flex items-center gap-2 mt-6">
+						<UButton color="red" :loading="refundLoading" @click="handleRefund">
+							Refund {{ refundTarget ? `$${(refundTarget.amountCents / 100).toFixed(2)}` : '' }}
+						</UButton>
+						<UButton variant="ghost" :disabled="refundLoading" @click="refundTarget = null">
+							Cancel
+						</UButton>
+					</div>
+				</div>
+			</div>
+		</UModal>
+
 		<!-- Org Monthly Limit -->
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
@@ -284,6 +367,7 @@ const props = defineProps({
 
 const { user } = useDirectusAuth();
 const { isDirectusAdmin } = useViewAsOrgAdmin();
+const { isOrgAdminOrAbove } = useOrgRole();
 const { refresh: refreshTokenUsage } = useAITokens();
 const toast = useToast();
 
@@ -306,6 +390,26 @@ const grantTokensInput = ref<string>('');
 const grantNoteInput = ref<string>('');
 const grantLoading = ref(false);
 const lastGrantInfo = ref<{ granted: number; newBalance: number } | null>(null);
+
+interface TokenPurchase {
+	id: string;
+	tokens: number;
+	amountCents: number;
+	packageId: string | null;
+	status: string;
+	dateCreated: string;
+	buyer: { id: string; name: string; email: string | null } | null;
+}
+const purchases = ref<TokenPurchase[]>([]);
+const purchasesLoading = ref(true);
+
+// Refund state (org-admin action)
+const refundTarget = ref<TokenPurchase | null>(null);
+const refundLoading = ref(false);
+const showRefundConfirm = computed({
+	get: () => !!refundTarget.value,
+	set: (v: boolean) => { if (!v) refundTarget.value = null; },
+});
 
 async function grantTokens() {
 	const amount = Number(grantTokensInput.value);
@@ -338,6 +442,50 @@ async function grantTokens() {
 		});
 	} finally {
 		grantLoading.value = false;
+	}
+}
+
+// Load token purchase history (who bought AI tokens)
+async function loadPurchases() {
+	purchasesLoading.value = true;
+	try {
+		const data = await $fetch<{ purchases: TokenPurchase[] }>('/api/ai/manage/purchases', {
+			params: { organizationId: props.organizationId },
+		});
+		purchases.value = data.purchases || [];
+	} catch (err: any) {
+		console.error('[AITokenManagement] Failed to load purchases:', err);
+		purchases.value = [];
+	} finally {
+		purchasesLoading.value = false;
+	}
+}
+
+// Refund a token purchase (org-admin) — refunds Stripe + reverses tokens.
+async function handleRefund() {
+	const p = refundTarget.value;
+	if (!p || refundLoading.value) return;
+	refundLoading.value = true;
+	try {
+		const res = await $fetch<{ tokensReversed: number; newBalance: number }>('/api/ai/manage/refund-purchase', {
+			method: 'POST',
+			body: { organizationId: props.organizationId, purchaseId: p.id },
+		});
+		toast.add({
+			title: 'Refund issued',
+			description: `$${(p.amountCents / 100).toFixed(2)} refunded · ${formatTokens(res.tokensReversed)} tokens reversed · new balance ${formatTokens(res.newBalance)}`,
+			color: 'green',
+		});
+		refundTarget.value = null;
+		await Promise.all([loadPurchases(), refreshTokenUsage()]);
+	} catch (err: any) {
+		toast.add({
+			title: 'Refund failed',
+			description: err?.data?.message || err?.message || 'Could not issue refund',
+			color: 'red',
+		});
+	} finally {
+		refundLoading.value = false;
 	}
 }
 
@@ -458,7 +606,6 @@ async function purchaseTokens() {
 			method: 'POST',
 			body: {
 				email: (user.value as any)?.email,
-				customerId: (user.value as any)?.stripe_customer_id,
 				packageId: selectedPackage.value,
 				organizationId: props.organizationId,
 			},
@@ -480,9 +627,19 @@ function formatTokens(n: number): string {
 	return String(n);
 }
 
+function formatPurchaseDate(iso: string): string {
+	if (!iso) return '—';
+	try {
+		return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	} catch {
+		return '—';
+	}
+}
+
 onMounted(() => {
 	loadMembers();
 	loadPlanInfo();
 	loadOrgLimit();
+	loadPurchases();
 });
 </script>

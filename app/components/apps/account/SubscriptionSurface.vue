@@ -108,6 +108,133 @@ async function handleResume() {
 async function handleManageBilling() {
 	await openPortal();
 }
+
+// ── Add-ons ─────────────────────────────────────────────────────────────────
+// Post-signup add-on management. The 6 add-ons mirror EARNEST_ADDONS in
+// server/utils/stripe.ts; the canonical Stripe price ids live server-side and
+// the client only references add-on ids + human copy (same contract as the
+// signup wizard in pages/organization/new.vue).
+const { isOrgAdminOrAbove, hasAddon, planAllows, orgPlan } = useOrgRole();
+const { selectedOrg, fetchOrganizationDetails } = useOrganization();
+
+interface AddonCatalogEntry {
+	id: string;
+	name: string;
+	price: number; // dollars/mo (EARNEST_ADDONS.monthlyAmount / 100)
+	blurb: string;
+	agencyOnly?: boolean;
+}
+
+const ADDON_CATALOG: AddonCatalogEntry[] = [
+	{ id: 'extra_seats_5', name: 'Extra Seats', price: 15, blurb: '+5 team seats' },
+	{ id: 'communications', name: 'Communications', price: 49, blurb: 'Phone, SMS, video & live chat' },
+	{ id: 'client_pack_starter', name: 'Client Pack Starter', price: 29, blurb: '+5 client portal seats · 50K tokens' },
+	{ id: 'client_pack_pro', name: 'Client Pack Pro', price: 59, blurb: '+10 client portal seats · 150K tokens' },
+	{ id: 'client_pack_unlimited', name: 'Client Pack Unlimited', price: 129, blurb: 'Unlimited client portals · 500K tokens' },
+	{ id: 'white_label', name: 'Companion White-Label', price: 19, blurb: 'Remove Earnest branding', agencyOnly: true },
+];
+
+// White-label is agency-gated (planAllows) and shown to enterprise too.
+const visibleAddons = computed(() =>
+	ADDON_CATALOG.filter((a) => !a.agencyOnly || planAllows('white_label')),
+);
+
+// Enterprise implicitly owns every add-on (internal/wholesale orgs like hue) —
+// render them as "Included with your plan" rather than cancellable line items.
+const isEnterprise = computed(() => orgPlan.value === 'enterprise');
+
+// Subscribing requires an active base subscription for subscriptionItems.create.
+// Enterprise needs no sub (everything is included).
+const canSubscribeAddons = computed(() => isActive.value);
+
+// Optimistic overlay: after a subscribe/cancel the webhook updates
+// active_addons asynchronously, so we flip local state immediately and
+// reconcile against the refetched org (allowing for webhook latency).
+const addonOptimistic = reactive<Record<string, boolean>>({});
+const addonPending = reactive<Record<string, boolean>>({});
+const addonToCancel = ref<string | null>(null);
+// Drives the cancel-confirm UModal via its `v-model` (modelValue) contract.
+const showAddonCancel = computed({
+	get: () => !!addonToCancel.value,
+	set: (v: boolean) => {
+		if (!v) addonToCancel.value = null;
+	},
+});
+
+function isAddonActive(id: string): boolean {
+	if (id in addonOptimistic) return addonOptimistic[id];
+	return hasAddon(id);
+}
+
+function wait(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Poll the org record until active_addons reflects the expected state (webhook
+// caught up) or we exhaust our attempts, then drop the optimistic overlay.
+async function reconcileAddon(id: string, expected: boolean) {
+	for (const delay of [1500, 2500, 4000, 6000]) {
+		await wait(delay);
+		await fetchOrganizationDetails();
+		if (hasAddon(id) === expected) break;
+	}
+	delete addonOptimistic[id];
+	addonPending[id] = false;
+}
+
+async function handleSubscribeAddon(id: string) {
+	if (!isOrgAdminOrAbove.value || addonPending[id]) return;
+	if (!canSubscribeAddons.value) {
+		toast.error('Start a plan first', {
+			description: 'Add-ons attach to an active subscription. Choose a plan, then add these.',
+		});
+		return;
+	}
+	if (!selectedOrg.value) {
+		toast.error('No organization selected');
+		return;
+	}
+
+	addonPending[id] = true;
+	addonOptimistic[id] = true;
+	try {
+		await $fetch('/api/stripe/addons/subscribe', {
+			method: 'POST',
+			body: { addonId: id, orgId: selectedOrg.value },
+		});
+		toast.success('Add-on added', { description: 'Billing updates on your next invoice.' });
+		void reconcileAddon(id, true);
+	} catch (err: any) {
+		delete addonOptimistic[id];
+		addonPending[id] = false;
+		toast.error(err?.data?.message || 'Failed to add add-on');
+	}
+}
+
+async function handleCancelAddon() {
+	const id = addonToCancel.value;
+	addonToCancel.value = null;
+	if (!id || !isOrgAdminOrAbove.value || addonPending[id]) return;
+	if (!selectedOrg.value) {
+		toast.error('No organization selected');
+		return;
+	}
+
+	addonPending[id] = true;
+	addonOptimistic[id] = false;
+	try {
+		await $fetch('/api/stripe/addons/cancel', {
+			method: 'POST',
+			body: { addonId: id, orgId: selectedOrg.value },
+		});
+		toast.success('Add-on removed');
+		void reconcileAddon(id, false);
+	} catch (err: any) {
+		delete addonOptimistic[id];
+		addonPending[id] = false;
+		toast.error(err?.data?.message || 'Failed to remove add-on');
+	}
+}
 </script>
 
 <template>
@@ -164,7 +291,7 @@ async function handleManageBilling() {
 			<div class="rounded-xl border bg-card p-6 mb-6">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-3">
-						<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+						<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
 							<EarnestIcon class="w-5 h-5 text-primary-foreground" />
 						</div>
 						<div>
@@ -213,6 +340,78 @@ async function handleManageBilling() {
 					>
 						Cancel Plan
 					</UButton>
+				</div>
+			</div>
+
+			<!-- Add-ons -->
+			<div class="rounded-xl border bg-card p-6 mb-6">
+				<div class="flex items-center justify-between mb-1">
+					<h3 class="font-semibold text-foreground flex items-center gap-2">
+						<UIcon name="i-heroicons-squares-plus" class="w-5 h-5" />
+						Add-ons
+					</h3>
+					<UBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Enterprise</UBadge>
+				</div>
+				<p class="text-xs text-muted-foreground mb-4">
+					<template v-if="isEnterprise">Every add-on is included with your plan.</template>
+					<template v-else>Optional capabilities, billed monthly alongside your plan.</template>
+				</p>
+
+				<!-- No active subscription: can't attach add-ons yet -->
+				<div
+					v-if="!isEnterprise && !canSubscribeAddons"
+					class="rounded-lg border border-warning/40 bg-warning/10 dark:bg-warning/20 p-3 mb-4 flex items-start gap-2"
+				>
+					<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-warning mt-0.5 shrink-0" />
+					<p class="text-xs text-warning">
+						Add-ons attach to an active plan. Start a plan first, then add these here.
+					</p>
+				</div>
+
+				<div class="space-y-2">
+					<div
+						v-for="addon in visibleAddons"
+						:key="addon.id"
+						class="p-3.5 rounded-xl border flex items-center gap-3"
+						:class="isAddonActive(addon.id) ? 'border-primary/40 bg-primary/5' : 'border-border'"
+					>
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2 flex-wrap">
+								<span class="text-sm font-semibold text-foreground">{{ addon.name }}</span>
+								<UBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Included</UBadge>
+								<UBadge v-else-if="isAddonActive(addon.id)" color="green" variant="soft" size="xs">Active</UBadge>
+							</div>
+							<p class="text-[10px] text-muted-foreground mt-0.5">{{ addon.blurb }}</p>
+						</div>
+
+						<div class="text-right shrink-0">
+							<span class="text-sm font-bold text-foreground">${{ addon.price }}</span>
+							<span class="text-[10px] text-muted-foreground ml-0.5">/mo</span>
+						</div>
+
+						<!-- Actions: owner/admin only. Enterprise = included, no controls. -->
+						<div v-if="isOrgAdminOrAbove && !isEnterprise" class="shrink-0 w-24 flex justify-end">
+							<UButton
+								v-if="isAddonActive(addon.id)"
+								size="xs"
+								variant="ghost"
+								color="red"
+								:loading="addonPending[addon.id]"
+								@click="addonToCancel = addon.id"
+							>
+								Cancel
+							</UButton>
+							<UButton
+								v-else
+								size="xs"
+								:loading="addonPending[addon.id]"
+								:disabled="!canSubscribeAddons"
+								@click="handleSubscribeAddon(addon.id)"
+							>
+								Subscribe
+							</UButton>
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -310,32 +509,52 @@ async function handleManageBilling() {
 		</template>
 
 		<!-- Cancel Confirmation Modal -->
-		<UModal v-model:open="showCancelConfirm">
-			<template #content>
-				<div class="p-6">
-					<div class="flex items-start gap-4">
-						<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
-							<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
-						</div>
-						<div class="flex-1">
-							<h3 class="text-lg font-semibold text-foreground">Cancel Subscription?</h3>
-							<p class="text-sm text-muted-foreground mt-2">
-								Your subscription will remain active until the end of your current billing period
-								<strong v-if="periodEnd">({{ format(periodEnd, 'MMMM d, yyyy') }})</strong>.
-								After that, you'll lose access to your plan's features.
-							</p>
-							<div class="flex items-center gap-2 mt-6">
-								<UButton color="red" :loading="loading" @click="handleCancel">
-									Cancel Subscription
-								</UButton>
-								<UButton variant="ghost" @click="showCancelConfirm = false">
-									Keep Subscription
-								</UButton>
-							</div>
-						</div>
+		<UModal v-model="showCancelConfirm">
+			<div class="flex items-start gap-4">
+				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
+					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
+				</div>
+				<div class="flex-1">
+					<h3 class="text-lg font-semibold text-foreground">Cancel Subscription?</h3>
+					<p class="text-sm text-muted-foreground mt-2">
+						Your subscription will remain active until the end of your current billing period
+						<strong v-if="periodEnd">({{ format(periodEnd, 'MMMM d, yyyy') }})</strong>.
+						After that, you'll lose access to your plan's features.
+					</p>
+					<div class="flex items-center gap-2 mt-6">
+						<UButton color="red" :loading="loading" @click="handleCancel">
+							Cancel Subscription
+						</UButton>
+						<UButton variant="ghost" @click="showCancelConfirm = false">
+							Keep Subscription
+						</UButton>
 					</div>
 				</div>
-			</template>
+			</div>
+		</UModal>
+
+		<!-- Add-on Cancel Confirmation Modal -->
+		<UModal v-model="showAddonCancel">
+			<div class="flex items-start gap-4">
+				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
+					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
+				</div>
+				<div class="flex-1">
+					<h3 class="text-lg font-semibold text-foreground">Remove this add-on?</h3>
+					<p class="text-sm text-muted-foreground mt-2">
+						It's removed from your subscription right away and won't appear on your next invoice.
+						You can re-add it anytime.
+					</p>
+					<div class="flex items-center gap-2 mt-6">
+						<UButton color="red" @click="handleCancelAddon">
+							Remove Add-on
+						</UButton>
+						<UButton variant="ghost" @click="addonToCancel = null">
+							Keep It
+						</UButton>
+					</div>
+				</div>
+			</div>
 		</UModal>
 	</div>
 </template>

@@ -101,7 +101,9 @@ export async function getMarketingContext(
 		// Invoices (last 6 months)
 		directus.request(readItems('invoices', {
 			filter: {
-				organization: { _eq: orgId },
+				// Invoices are org-scoped via `bill_to`, not `organization` (no such
+				// field) — filtering by `organization` broke the whole query → $0.
+				bill_to: { _eq: orgId },
 				invoice_date: { _gte: sixMonthsAgo },
 			},
 			fields: ['id', 'total_amount', 'invoice_date', 'line_items'],

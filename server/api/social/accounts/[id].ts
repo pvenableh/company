@@ -77,13 +77,22 @@ export default defineEventHandler(async (event) => {
     // Best-effort unsubscribe before deleting. FB rows store the page token as
     // access_token; IG rows store the user token + page_id in metadata, so IG
     // unsubscribe relies on whatever token the row has and may no-op silently.
+    // This MUST NOT block removal. "Old" connections routinely have an expired
+    // Meta token (unsubscribeMetaPage throws) or a row encrypted under a since-
+    // rotated key (getDecryptedAccessToken throws); previously either throw 500'd
+    // the whole DELETE, so the stale account could never be removed — exactly the
+    // "can't remove old connections" symptom. Swallow any failure and delete anyway.
     if (account.platform === 'facebook' || account.platform === 'instagram') {
-      const pageId = account.platform === 'facebook'
-        ? account.platform_user_id
-        : (account.metadata as any)?.page_id
-      const token = await getDecryptedAccessToken(id)
-      if (pageId && token) {
-        await unsubscribeMetaPage(pageId, token)
+      try {
+        const pageId = account.platform === 'facebook'
+          ? account.platform_user_id
+          : (account.metadata as any)?.page_id
+        const token = await getDecryptedAccessToken(id)
+        if (pageId && token) {
+          await unsubscribeMetaPage(pageId, token)
+        }
+      } catch (err: any) {
+        console.warn('[social/accounts DELETE] best-effort Meta unsubscribe failed (continuing):', err?.message ?? err)
       }
     }
 
