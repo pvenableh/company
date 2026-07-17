@@ -334,6 +334,78 @@ async function backfillCalendarConnections() {
 	console.log(`  Backfilled ${created} calendar connection(s).`);
 }
 
+// ─── Phase 5: team / round-robin event types ───────────────────────────────────
+
+async function setupTeamEventTypes() {
+	console.log('\n=== event_types: scheduling_type + audience ===');
+
+	await createField('event_types', {
+		field: 'scheduling_type',
+		type: 'string',
+		meta: {
+			interface: 'select-dropdown',
+			width: 'half',
+			options: { choices: [
+				{ text: 'Single host', value: 'single' },
+				{ text: 'Round-robin (any free host)', value: 'round_robin' },
+				{ text: 'Collective (all hosts attend)', value: 'collective' },
+			] },
+			note: 'How a booking is routed when there is a host pool.',
+		},
+		schema: { default_value: 'single', is_nullable: false },
+	});
+
+	await createField('event_types', {
+		field: 'audience',
+		type: 'string',
+		meta: {
+			interface: 'select-dropdown',
+			width: 'half',
+			options: { choices: [
+				{ text: 'Public (anyone with the link)', value: 'public' },
+				{ text: 'Clients (portal login)', value: 'client_portal' },
+				{ text: 'Internal (org members)', value: 'internal' },
+			] },
+			note: 'Who may book this event type.',
+		},
+		schema: { default_value: 'public', is_nullable: false },
+	});
+
+	console.log('\n=== event_type_hosts (round-robin/collective pool) ===');
+
+	await createCollection('event_type_hosts', {
+		icon: 'groups',
+		note: 'Host pool for round-robin / collective event types. One row per (event_type, host).',
+		hidden: true,
+		singleton: false,
+	});
+
+	const fields: Array<Record<string, any>> = [
+		{ field: 'event_type', type: 'integer', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], width: 'half' }, schema: { is_nullable: false } },
+		{ field: 'host_user', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], width: 'half' }, schema: { is_nullable: false } },
+		{ field: 'priority', type: 'integer', meta: { interface: 'input', width: 'half', note: 'Lower = preferred in round-robin ties.' }, schema: { default_value: 0 } },
+		{ field: 'weight', type: 'integer', meta: { interface: 'input', width: 'half', note: 'Weighted round-robin (optional).' }, schema: { default_value: 1 } },
+		{ field: 'enabled', type: 'boolean', meta: { interface: 'boolean', width: 'half' }, schema: { default_value: true, is_nullable: false } },
+	];
+	for (const f of fields) await createField('event_type_hosts', f);
+
+	// event_type_hosts.event_type → event_types (o2m alias `hosts` on event_types)
+	await createRelation({
+		collection: 'event_type_hosts',
+		field: 'event_type',
+		related_collection: 'event_types',
+		schema: { on_delete: 'CASCADE' },
+		meta: { one_field: 'hosts', sort_field: null, one_deselect_action: 'delete' },
+	});
+	await createRelation({
+		collection: 'event_type_hosts',
+		field: 'host_user',
+		related_collection: 'directus_users',
+		schema: { on_delete: 'CASCADE' },
+		meta: { one_field: null, sort_field: null, one_deselect_action: 'nullify' },
+	});
+}
+
 // ─── Backfill: give every existing row an iCal feed token ──────────────────────
 
 async function backfillIcalTokens() {
@@ -377,6 +449,7 @@ async function main() {
 	await setupSchedulerSettingsPolicyFields();
 	await setupFreebusyCache();
 	await setupCalendarConnections();
+	await setupTeamEventTypes();
 	await backfillIcalTokens();
 	await backfillCalendarConnections();
 

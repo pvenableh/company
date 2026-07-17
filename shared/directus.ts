@@ -2412,6 +2412,18 @@ export interface EmailTemplate {
 	blocks?: TemplateBlock[] | string[];
 }
 
+export interface EventTypeHost {
+	/** @primaryKey */
+	id: number;
+	event_type?: EventType | string;
+	host_user?: DirectusUser | string;
+	/** @description Lower = preferred in round-robin ties. */
+	priority?: number | null;
+	/** @description Weighted round-robin (optional). */
+	weight?: number | null;
+	enabled?: boolean;
+}
+
 export interface EventType {
 	/** @primaryKey */
 	id: number;
@@ -2443,6 +2455,10 @@ export interface EventType {
 	date_updated?: string | null;
 	user_created?: string | null;
 	user_updated?: string | null;
+	/** @description How a booking is routed when there is a host pool. */
+	scheduling_type?: 'single' | 'round_robin' | 'collective';
+	/** @description Who may book this event type. */
+	audience?: 'public' | 'client_portal' | 'internal';
 }
 
 export interface Expense {
@@ -5632,6 +5648,7 @@ export interface Schema {
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
+	event_type_hosts: EventTypeHost[];
 	event_types: EventType[];
 	expenses: Expense[];
 	gbp_posts: GbpPost[];
@@ -5896,6 +5913,7 @@ export enum CollectionNames {
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',
+	event_type_hosts = 'event_type_hosts',
 	event_types = 'event_types',
 	expenses = 'expenses',
 	gbp_posts = 'gbp_posts',

@@ -144,6 +144,49 @@
 				</div>
 			</div>
 
+			<!-- Routing + audience -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Scheduling</label>
+					<select v-model="form.scheduling_type" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+						<option value="single">Just me</option>
+						<option value="round_robin">Round-robin (any free teammate)</option>
+						<option value="collective">Collective (all teammates attend)</option>
+					</select>
+				</div>
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Who can book</label>
+					<select v-model="form.audience" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+						<option value="public">Public — anyone with the link</option>
+						<option value="client_portal">Clients — portal login required</option>
+						<option value="internal">Internal — org members only</option>
+					</select>
+				</div>
+			</div>
+
+			<!-- Host pool (round-robin / collective) -->
+			<div v-if="form.scheduling_type !== 'single'" class="space-y-1.5">
+				<label class="t-label text-muted-foreground">Host pool</label>
+				<p class="text-[11px] text-muted-foreground">
+					{{ form.scheduling_type === 'round_robin' ? 'A booking routes to whichever selected teammate is free.' : 'Every selected teammate is added to each booking.' }}
+				</p>
+				<div v-if="availableHosts.length === 0" class="text-xs text-muted-foreground italic px-1">
+					No booking-enabled teammates found.
+				</div>
+				<div v-else class="flex flex-wrap gap-1.5">
+					<button
+						v-for="h in availableHosts"
+						:key="h.id"
+						type="button"
+						class="px-2.5 py-1 rounded-full border text-xs transition"
+						:class="hostPool.includes(h.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40'"
+						@click="toggleHost(h.id)"
+					>
+						{{ [h.first_name, h.last_name].filter(Boolean).join(' ') || h.email }}
+					</button>
+				</div>
+			</div>
+
 			<!-- Toggles -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<div class="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
@@ -243,7 +286,30 @@ const form = reactive({
 	price_cents: null as number | null,
 	is_default: false,
 	enabled: true,
+	scheduling_type: 'single' as 'single' | 'round_robin' | 'collective',
+	audience: 'public' as 'public' | 'client_portal' | 'internal',
 });
+
+// Round-robin/collective host pool (Phase 5). Only used when scheduling_type != single.
+const hostPool = ref<string[]>([]);
+const availableHosts = ref<any[]>([]);
+
+async function loadAvailableHosts() {
+	const orgId = typeof selectedOrg.value === 'string' ? selectedOrg.value : (selectedOrg.value as any)?.id;
+	if (!orgId) return;
+	try {
+		const res = await $fetch('/api/scheduler/available-hosts', { params: { orgId } });
+		availableHosts.value = (res as any)?.data || [];
+	} catch {
+		availableHosts.value = [];
+	}
+}
+
+function toggleHost(id: string) {
+	hostPool.value = hostPool.value.includes(id)
+		? hostPool.value.filter((h) => h !== id)
+		: [...hostPool.value, id];
+}
 
 // Explicit "require payment" toggle. Backed by price_cents (null = free). When
 // turned off we clear the price so the booking flow stays on the free path.
@@ -362,6 +428,12 @@ function populateForm() {
 			requirePayment.value = (et.price_cents ?? 0) > 0;
 		form.is_default = !!et.is_default;
 		form.enabled = et.enabled !== false;
+		form.scheduling_type = (['single', 'round_robin', 'collective'].includes((et as any).scheduling_type) ? (et as any).scheduling_type : 'single');
+		form.audience = (['public', 'client_portal', 'internal'].includes((et as any).audience) ? (et as any).audience : 'public');
+		hostPool.value = [];
+		if (et.id) {
+			$fetch(`/api/scheduler/event-types/${et.id}/hosts`).then((r: any) => { hostPool.value = r?.hostUserIds || []; }).catch(() => {});
+		}
 	} else {
 		form.title = '';
 		form.slug = '';
@@ -374,10 +446,13 @@ function populateForm() {
 			// First event type the host creates becomes default automatically.
 		form.is_default = (props.allEventTypes || []).length === 0;
 		form.enabled = true;
+		form.scheduling_type = 'single';
+		form.audience = 'public';
+		hostPool.value = [];
 	}
 }
 
-watch(isOpen, (val) => { if (val) populateForm(); });
+watch(isOpen, (val) => { if (val) { populateForm(); loadAvailableHosts(); } });
 watch(() => form.slug, () => { slugTouched = true; });
 
 async function unsetOtherDefaults() {
@@ -409,6 +484,8 @@ async function handleSubmit() {
 		price_cents: form.price_cents,
 		is_default: form.is_default,
 		enabled: form.enabled,
+		scheduling_type: form.scheduling_type,
+		audience: form.audience,
 		status: 'published',
 	};
 
@@ -436,6 +513,19 @@ async function handleSubmit() {
 		toast.add({ title: 'Failed to save event type', description: err?.message, color: 'red' });
 	} finally {
 		saving.value = false;
+	}
+
+	// Sync the round-robin/collective host pool (server-side; junction has no
+	// client perms). Only meaningful for pooled types.
+	if (result?.id && form.scheduling_type !== 'single') {
+		try {
+			await $fetch(`/api/scheduler/event-types/${result.id}/hosts`, {
+				method: 'POST',
+				body: { hostUserIds: hostPool.value },
+			});
+		} catch (err: any) {
+			toast.add({ title: 'Saved, but could not update the host pool', description: err?.message, color: 'yellow' });
+		}
 	}
 
 	if (result) {
