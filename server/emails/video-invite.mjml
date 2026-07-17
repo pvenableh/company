@@ -23,9 +23,16 @@
     </mj-text>
     {{/if}}
     {{#if ctaUrl}}
-    <mj-button href="{{ctaUrl}}" padding="12px 0 8px 0">
-      {{ctaLabel}}
-    </mj-button>
+    <!-- Primary "Join" + secondary "Add to calendar". Inline-block pills sit
+         side-by-side on desktop and stack full-width under 480px (see .ecal-btn
+         media query in _layout). The .ics link opens the recipient's calendar
+         app with a save prompt. Colours stay inline for client robustness. -->
+    <mj-text padding="12px 0 8px 0">
+      <a class="ecal-btn ecal-btn-first" href="{{ctaUrl}}" style="background:{{brandColor}};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;line-height:1.2;padding:13px 26px;border-radius:9999px;text-align:center;">{{ctaLabel}}</a>
+      {{#if icsUrl}}
+      <a class="ecal-btn" href="{{icsUrl}}" style="background:#ffffff;color:{{brandColor}};text-decoration:none;font-size:14px;font-weight:600;line-height:1.2;padding:12px 24px;border-radius:9999px;border:1px solid {{brandColor}};text-align:center;">Add to calendar</a>
+      {{/if}}
+    </mj-text>
     {{/if}}
   </mj-column>
 </mj-section>

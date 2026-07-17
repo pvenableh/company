@@ -106,6 +106,13 @@ export default defineEventHandler(async (event) => {
         const { acceptUserInvite } = await import('@directus/sdk');
         const publicClient = getPublicDirectus();
         await publicClient.request(acceptUserInvite(directusToken, password));
+        // Off: the app sends branded notification emails, so Directus's native
+        // notification email would be a raw duplicate. acceptUserInvite can't
+        // carry the flag, so set it on the now-active user.
+        const invitedUserId = membership.user?.id;
+        if (invitedUserId) {
+          await directus.request(updateUser(invitedUserId, { email_notifications: false } as any)).catch(() => {});
+        }
       } catch (acceptErr: any) {
         console.error('Directus invite accept error:', acceptErr);
         throw createError({
@@ -122,7 +129,9 @@ export default defineEventHandler(async (event) => {
         const userId = membership.user?.id;
         if (!userId) throw new Error('Membership row has no user id');
         await directus.request(
-          updateUser(userId, { password, status: 'active' } as any),
+          // email_notifications off — branded app emails already cover this
+          // recipient; Directus's native one would be a raw duplicate.
+          updateUser(userId, { password, status: 'active', email_notifications: false } as any),
         );
       } catch (setPwErr: any) {
         console.error('Admin-set password failed:', setPwErr);

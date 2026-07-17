@@ -110,7 +110,10 @@ export default defineEventHandler(async (event) => {
 			noteHtml: "This meeting link is unique to you. Don't share it with others unless you want them to join.",
 			ctaUrl: meetingUrl,
 			ctaLabel: 'Join video meeting',
-			text: `Hi ${toName || 'there'},\n\n${customMessage || `You're invited to a video meeting with ${meetingHost}.`}\n\n${meetingTitle}\nWhen: ${startTimeFormatted}${endTimeFormatted ? `\nUntil: ${endTimeFormatted}` : ''}\nHost: ${meetingHost}\n\nJoin video meeting: ${meetingUrl}`,
+			// "Add to calendar" → per-meeting .ics (public, keyed by unguessable
+			// room_name). Only offered when we know the room.
+			icsUrl: roomName ? `${config.public.siteUrl}/api/calendar/event-ics/${encodeURIComponent(roomName)}` : null,
+			text: `Hi ${toName || 'there'},\n\n${customMessage || `You're invited to a video meeting with ${meetingHost}.`}\n\n${meetingTitle}\nWhen: ${startTimeFormatted}${endTimeFormatted ? `\nUntil: ${endTimeFormatted}` : ''}\nHost: ${meetingHost}\n\nJoin video meeting: ${meetingUrl}${roomName ? `\nAdd to calendar: ${config.public.siteUrl}/api/calendar/event-ics/${encodeURIComponent(roomName)}` : ''}`,
 		}, { org });
 
 		const result = await sendBrandedEmail({

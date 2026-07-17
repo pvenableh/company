@@ -9,7 +9,7 @@
  * across the codebase).
  */
 
-import { createItem, readItem, readItems, readUser, readUsers, readRoles, inviteUser } from '@directus/sdk';
+import { createItem, readItem, readItems, readUser, readUsers, readRoles, inviteUser, updateUser } from '@directus/sdk';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
 import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
@@ -180,6 +180,13 @@ export default defineEventHandler(async (event) => {
       }
 
       targetUserId = newUsers[0].id;
+
+      // Off for freshly-invited portal users: the app sends its own branded
+      // notification emails, so Directus's native notification email would be a
+      // raw duplicate. inviteUser can't carry the flag, so set it here.
+      await directus.request(
+        updateUser(targetUserId, { email_notifications: false } as any),
+      ).catch((e: any) => console.warn('[invite-client] could not disable directus notification emails:', e?.message));
     }
 
     // Create the client_portal_users row

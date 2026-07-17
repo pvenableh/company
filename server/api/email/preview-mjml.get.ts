@@ -224,7 +224,8 @@ function sampleVars(name: TemplateName): Record<string, any> {
 				],
 				noteHtml: "This meeting link is unique to you. Don't share it with others unless you want them to join.",
 				ctaUrl: 'https://app.earnest.guru/meetings/sample',
-				ctaLabel: 'Join meeting',
+				ctaLabel: 'Join video meeting',
+				icsUrl: 'https://app.earnest.guru/api/calendar/event-ics/sample',
 			};
 		case 'generic':
 			return {

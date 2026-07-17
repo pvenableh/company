@@ -7,9 +7,9 @@
     {{#if useOrg}}
       {{#if logoUrl}}
         {{#if orgWebsite}}
-        <mj-image src="{{logoUrl}}" alt="{{orgName}}" href="{{orgWebsite}}" align="center" height="40px" width="220px" padding="0" />
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" href="{{orgWebsite}}" align="center" height="{{logoHeight}}px" width="{{logoWidth}}px" padding="0" />
         {{else}}
-        <mj-image src="{{logoUrl}}" alt="{{orgName}}" align="center" height="40px" width="220px" padding="0" />
+        <mj-image src="{{logoUrl}}" alt="{{orgName}}" align="center" height="{{logoHeight}}px" width="{{logoWidth}}px" padding="0" />
         {{/if}}
       {{else}}
         <mj-text align="center" font-size="22px" font-weight="700" letter-spacing="-0.01em" color="{{brandColor}}" padding="0">{{orgName}}</mj-text>

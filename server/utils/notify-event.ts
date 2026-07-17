@@ -39,6 +39,11 @@ interface EmitArgs {
 	link?: string | null;
 	/** Optional metadata stuffed into the row's metadata JSON column. */
 	metadata?: Record<string, any>;
+	/** Create the bell + push but send NO email, even for an emailable category.
+	 *  Used when another email already covers this event (e.g. a booking's video
+	 *  invite already reaches the host, so its "New meeting booked" notice is
+	 *  bell-only to avoid a redundant second email). */
+	skipEmail?: boolean;
 }
 
 interface RecipientRow {
@@ -126,6 +131,7 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 		message,
 		link,
 		metadata,
+		skipEmail,
 	} = args;
 
 	const unique = Array.from(new Set(recipientIds)).filter((id) => id && id !== actorId);
@@ -222,7 +228,7 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 				});
 			}
 
-			if (!emailAllowed(recipient, category)) return;
+			if (skipEmail || !emailAllowed(recipient, category)) return;
 
 			const recipientName = recipient.first_name || recipient.email?.split('@')[0] || 'there';
 			try {
@@ -359,6 +365,8 @@ export interface NotifyEventInput {
 	staffOnly?: boolean;
 	/** Pre-resolved actor display name; looked up if omitted. */
 	actorName?: string | null;
+	/** Bell + push only, no email (another email already covers this event). */
+	skipEmail?: boolean;
 }
 
 export async function notifyEvent(input: NotifyEventInput): Promise<{ bellSent: number; emailSent: number }> {
@@ -454,6 +462,7 @@ export async function notifyEvent(input: NotifyEventInput): Promise<{ bellSent: 
 			message: b.message,
 			link: buildNotificationLink(base, b.collection, b.itemId),
 			metadata: b.metadata,
+			skipEmail: input.skipEmail,
 		});
 		bellSent += res.bellSent;
 		emailSent += res.emailSent;

@@ -15,6 +15,13 @@
     <mj-style>
       html, body { margin: 0 !important; padding: 0 !important; }
       a { color: {{brandColor}}; }
+      /* Email CTA pills: inline-block side-by-side on desktop, stacked
+         full-width under 480px. Colours stay inline on each <a>. */
+      .ecal-btn { display: inline-block; }
+      .ecal-btn-first { margin-right: 10px; }
+      @media only screen and (max-width: 480px) {
+        .ecal-btn { display: block !important; width: 100% !important; margin: 0 0 10px 0 !important; box-sizing: border-box; }
+      }
     </mj-style>
   </mj-head>
 

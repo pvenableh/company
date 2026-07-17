@@ -59,6 +59,9 @@ export default defineEventHandler(async (event) => {
         status: 'active',
         role: defaultRoleId,
         terms_accepted_at: new Date().toISOString(),
+        // Off: the app sends its own branded notification emails via SendGrid,
+        // so Directus's native notification email would just be a raw duplicate.
+        email_notifications: false,
       })
     );
 

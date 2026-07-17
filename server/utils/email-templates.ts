@@ -117,12 +117,61 @@ function safeUrl(url: string | null | undefined): string | null {
 	return trimmed;
 }
 
-function directusAssetUrl(logoId: string | null | undefined): string | null {
+// Header logo sizing. Org logos vary wildly in aspect ratio, so we can't force
+// one box — the old fixed 220×40 stretched anything that wasn't 5.5:1 (the
+// reported bug). Instead we read the file's real dimensions and scale to a
+// consistent display HEIGHT, capping absurdly wide wordmarks by width.
+const TARGET_LOGO_HEIGHT = 50; // px, display height of the header logo
+const MAX_LOGO_WIDTH = 240; // px, cap for very wide wordmarks
+
+const orgLogoCache = new Map<string, { url: string; width: number; height: number }>();
+
+/**
+ * Resolve an org logo to a URL + an aspect-correct display box {width,height}.
+ * width/height always match the image's true ratio, so nothing stretches in any
+ * client (Outlook included — we emit explicit px, not CSS max-width). Falls back
+ * to a letterboxed fixed box only when the file's real dimensions can't be read.
+ */
+async function resolveOrgLogo(logoId: string | null | undefined): Promise<{ url: string; width: number; height: number } | null> {
 	if (!logoId) return null;
+	const cached = orgLogoCache.get(logoId);
+	if (cached) return cached;
+
 	const config = useRuntimeConfig() as any;
 	const directusUrl = config.directus?.url || config.public?.directusUrl;
 	if (!directusUrl) return null;
-	return `${String(directusUrl).replace(/\/$/, '')}/assets/${encodeURIComponent(logoId)}?height=80&fit=contain`;
+	const base = String(directusUrl).replace(/\/$/, '');
+	const id = encodeURIComponent(logoId);
+
+	let width = 180;
+	let height = TARGET_LOGO_HEIGHT;
+	let boxed = true; // letterbox fallback when true dimensions are unknown
+
+	try {
+		const token = config.directusServerToken;
+		const meta: any = await $fetch(`${base}/files/${id}`, {
+			query: { fields: 'width,height' },
+			headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+		});
+		const w = Number(meta?.data?.width);
+		const h = Number(meta?.data?.height);
+		if (w > 0 && h > 0) {
+			boxed = false;
+			width = Math.min(MAX_LOGO_WIDTH, Math.round(TARGET_LOGO_HEIGHT * (w / h)));
+			height = Math.round(width * (h / w)); // recompute if width was capped
+		}
+	} catch {
+		// Metadata unavailable — fall through to the letterboxed fixed box.
+	}
+
+	// 2× source for retina. When boxed, request a contain-fit box so a fixed
+	// display size letterboxes (pads) instead of stretching an unknown aspect.
+	const q = boxed
+		? `width=${MAX_LOGO_WIDTH * 2}&height=${TARGET_LOGO_HEIGHT * 2}&fit=contain`
+		: `height=${height * 2}&fit=contain`;
+	const resolved = { url: `${base}/assets/${id}?${q}`, width: boxed ? MAX_LOGO_WIDTH : width, height };
+	orgLogoCache.set(logoId, resolved);
+	return resolved;
 }
 
 /**
@@ -169,16 +218,20 @@ function appAsset(path: string): string {
 	return `${String(appUrl).replace(/\/$/, '')}${path}`;
 }
 
-function brandVars(brand: BrandContext): Record<string, any> {
+async function brandVars(brand: BrandContext): Promise<Record<string, any>> {
 	const org = brand.org;
 	const useOrg = !!org;
 	const orgName = (org?.name && String(org.name).trim()) || 'Your team';
 	const brandColor = (org?.brand_color && String(org.brand_color).trim()) || EARNEST_BRAND_COLOR;
+	const logo = await resolveOrgLogo(org?.logo ?? null);
 	return {
 		useOrg,
 		orgName,
 		brandColor,
-		logoUrl: directusAssetUrl(org?.logo ?? null),
+		logoUrl: logo?.url ?? null,
+		// Aspect-correct display box for the header logo (no stretch).
+		logoWidth: logo?.width ?? MAX_LOGO_WIDTH,
+		logoHeight: logo?.height ?? TARGET_LOGO_HEIGHT,
 		// Earnest wordmark lockup for the email header (Earnest-chrome sends).
 		// Single source of truth lives in email-shell.ts (EARNEST_LOGO_URL) so the
 		// MJML shell and the legacy inline shell always render the same logo. It's
@@ -236,7 +289,7 @@ export async function renderBrandedTemplate(
 		.replace('<!-- @HEADER -->', header)
 		.replace('<!-- @CONTENT -->', content)
 		.replace('<!-- @FOOTER -->', footer);
-	const mergedVars = { ...brandVars(brand), ...vars };
+	const mergedVars = { ...(await brandVars(brand)), ...vars };
 
 	const { html, errors } = compileMjml(combined, mergedVars);
 	if (errors.length) {

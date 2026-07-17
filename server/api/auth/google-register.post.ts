@@ -55,6 +55,9 @@ export default defineEventHandler(async (event) => {
         status: 'active',
         role: defaultRoleId,
         provider: 'google',
+        // Off: the app sends its own branded notification emails; Directus's
+        // native notification email would just be a raw duplicate.
+        email_notifications: false,
         // external_identifier will be set by Directus when they complete Google SSO
       })
     );
