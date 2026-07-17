@@ -2459,6 +2459,8 @@ export interface EventType {
 	scheduling_type?: 'single' | 'round_robin' | 'collective';
 	/** @description Who may book this event type. */
 	audience?: 'public' | 'client_portal' | 'internal';
+	/** @description Round-robin / collective host pool (event_type_hosts). */
+	hosts?: EventTypeHost[] | string[];
 }
 
 export interface Expense {

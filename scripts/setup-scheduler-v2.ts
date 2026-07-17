@@ -389,6 +389,21 @@ async function setupTeamEventTypes() {
 	];
 	for (const f of fields) await createField('event_type_hosts', f);
 
+	// The reverse o2m alias `event_types.hosts` must be created EXPLICITLY — Directus
+	// does not always materialize the directus_fields alias row from the relation's
+	// one_field, and without it `event_types?fields=hosts.*` 403s (reverse-o2m gotcha).
+	await createField('event_types', {
+		field: 'hosts',
+		type: 'alias',
+		meta: {
+			special: ['o2m'],
+			interface: 'list-o2m',
+			options: { template: '{{host_user.first_name}} {{host_user.last_name}}' },
+			note: 'Round-robin / collective host pool (event_type_hosts).',
+		},
+		schema: null,
+	});
+
 	// event_type_hosts.event_type → event_types (o2m alias `hosts` on event_types)
 	await createRelation({
 		collection: 'event_type_hosts',
