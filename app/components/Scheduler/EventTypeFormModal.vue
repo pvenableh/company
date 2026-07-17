@@ -111,28 +111,37 @@
 				</div>
 			</div>
 
-			<!-- Price -->
-			<div class="space-y-1">
-				<label class="t-label text-muted-foreground">Price (USD, optional)</label>
-				<UInput
-					:model-value="priceDollars ?? ''"
-					type="number"
-					min="0"
-					step="0.01"
-					placeholder="0.00"
-					@update:model-value="onPriceInput"
-				/>
-				<p v-if="!stripeActive && (form.price_cents ?? 0) > 0" class="text-[11px] text-warning flex items-center gap-1">
-					<Icon name="lucide:alert-triangle" class="h-3 w-3" />
-					<span>
-						Connect Stripe in
-						<NuxtLink to="/money/settings?floor=payments" class="underline">Money → Settings</NuxtLink>
-						to take payments. Bookings on this event type will fail until then.
-					</span>
-				</p>
-				<p v-else class="text-[11px] text-muted-foreground">
-					Leave blank for free. Paid bookings collect payment via Stripe Checkout before confirming.
-				</p>
+			<!-- Payment -->
+			<div class="space-y-2">
+				<div class="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+					<div>
+						<p class="text-xs font-medium">Require payment</p>
+						<p class="text-[11px] text-muted-foreground">Collect a fee via Stripe Checkout before confirming.</p>
+					</div>
+					<UToggle v-model="requirePayment" />
+				</div>
+				<div v-if="requirePayment" class="space-y-1 pl-1">
+					<label class="t-label text-muted-foreground">Price (USD) <span class="text-destructive">*</span></label>
+					<UInput
+						:model-value="priceDollars ?? ''"
+						type="number"
+						min="0"
+						step="0.01"
+						placeholder="0.00"
+						@update:model-value="onPriceInput"
+					/>
+					<p v-if="!stripeActive" class="text-[11px] text-warning flex items-center gap-1">
+						<Icon name="lucide:alert-triangle" class="h-3 w-3" />
+						<span>
+							Connect Stripe in
+							<NuxtLink to="/money/settings?floor=payments" class="underline">Money → Settings</NuxtLink>
+							to take payments. Paid bookings will fail until then.
+						</span>
+					</p>
+					<p v-else class="text-[11px] text-muted-foreground">
+						Invitees pay via Stripe Checkout before the booking is confirmed.
+					</p>
+				</div>
 			</div>
 
 			<!-- Toggles -->
@@ -236,6 +245,14 @@ const form = reactive({
 	enabled: true,
 });
 
+// Explicit "require payment" toggle. Backed by price_cents (null = free). When
+// turned off we clear the price so the booking flow stays on the free path.
+const requirePayment = ref(false);
+watch(requirePayment, (on) => {
+	if (!on) form.price_cents = null;
+	else if (form.price_cents == null) form.price_cents = 0;
+});
+
 const priceDollars = computed(() => (form.price_cents == null ? null : form.price_cents / 100));
 
 function onPriceInput(v: string | number | null) {
@@ -316,6 +333,10 @@ const validationError = computed(() => {
 	const others = (props.allEventTypes || []).filter((e) => e.id !== props.eventType?.id);
 	if (others.some((e) => e.slug === form.slug)) return 'You already have an event type with this slug.';
 
+		if (requirePayment.value && (!form.price_cents || form.price_cents <= 0)) {
+			return 'Enter a price, or turn off Require payment.';
+		}
+
 	for (const f of form.intake_schema) {
 		if (!f.label.trim()) return 'Each intake field needs a label.';
 		if (!f.name.trim()) return 'Each intake field needs a machine name.';
@@ -338,6 +359,7 @@ function populateForm() {
 			? et.intake_schema.map((f) => ({ ...f, required: !!f.required })) as IntakeFieldDraft[]
 			: [];
 		form.price_cents = et.price_cents ?? null;
+			requirePayment.value = (et.price_cents ?? 0) > 0;
 		form.is_default = !!et.is_default;
 		form.enabled = et.enabled !== false;
 	} else {
@@ -348,7 +370,8 @@ function populateForm() {
 		form.color = COLOR_SWATCHES[0]!;
 		form.intake_schema = [];
 		form.price_cents = null;
-		// First event type the host creates becomes default automatically.
+		requirePayment.value = false;
+			// First event type the host creates becomes default automatically.
 		form.is_default = (props.allEventTypes || []).length === 0;
 		form.enabled = true;
 	}

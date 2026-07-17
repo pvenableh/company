@@ -47,27 +47,9 @@ onMounted(() => fetchBookingData());
 </script>
 
 <template>
-	<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-		<div class="bg-white dark:bg-gray-800 border-b border-border">
-			<div class="max-w-3xl mx-auto px-4 py-6">
-				<div v-if="data?.user" class="flex items-center gap-4">
-					<UAvatar :alt="data.user.first_name" size="lg" />
-					<div>
-						<h1 class="text-xl font-semibold">{{ data.user.first_name }} {{ data.user.last_name }}</h1>
-						<p class="text-muted-foreground">{{ data.settings?.booking_page_title || 'Schedule a meeting' }}</p>
-						<p v-if="data.organization?.name" class="text-xs text-muted-foreground mt-0.5">{{ data.organization.name }}</p>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<div v-if="loading" class="max-w-3xl mx-auto px-4 py-12 text-center">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-			<p class="text-muted-foreground">Loading...</p>
-		</div>
-
-		<div v-else-if="data" class="max-w-3xl mx-auto px-4 py-8">
-			<!-- Default route: when no default event type and not in picker mode, show helpful error -->
+	<SchedulerBookingPageShell :data="data" :loading="loading">
+		<template v-if="data">
+			<!-- Default route: no default event type and not in picker mode -->
 			<div
 				v-if="!activeEventType && !showPicker && (data.eventTypes?.length > 0)"
 				class="ios-card p-6 text-center"
@@ -92,11 +74,6 @@ onMounted(() => fetchBookingData());
 				:event-types="data.eventTypes || []"
 				:event-type="activeEventType"
 			/>
-		</div>
-
-		<div class="text-center py-8 text-sm text-muted-foreground">
-			<template v-if="data?.organization?.whitelabel">{{ data.organization.name }}</template>
-			<template v-else>Powered by <a href="https://earnest.guru" class="hover:text-foreground">Earnest</a></template>
-		</div>
-	</div>
+		</template>
+	</SchedulerBookingPageShell>
 </template>

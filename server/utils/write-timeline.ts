@@ -27,7 +27,8 @@ export type ClientTimelineVerb =
 	| 'proposal.declined'
 	| 'plan.approved'
 	| 'csat.submitted'
-	| 'changes.requested';
+	| 'changes.requested'
+	| 'meeting.booked';
 
 export interface WriteClientTimelineInput {
 	organizationId: string | null | undefined;

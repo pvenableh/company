@@ -111,6 +111,12 @@ export async function resolveNotificationTargets(
 				}
 				break;
 
+			case 'video_meetings':
+				if (action === 'create') {
+					await resolveVideoMeetingTargets(item, itemId, userId, targets);
+				}
+				break;
+
 			// ── Return-leg inbound events (always staff-only) ──────────────────
 			case 'csat':
 				await resolveCsatTargets(directus, item, userId, orgId, targets);
@@ -611,6 +617,40 @@ async function resolveProjectEventTargets(
 			message: item.title || item.description || 'Project activity',
 			collection: 'projects',
 			itemId: projectId,
+		});
+	}
+}
+
+// ── Video meeting booked ────────────────────────────────────────────────────────
+// A public/portal booking has no Directus-user actor (the invitee is external),
+// so the caller passes userId='' — meaning the host is NOT skipped and gets the
+// notification. `attendees` (collective bookings, Phase 5) also get pinged.
+
+async function resolveVideoMeetingTargets(
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	const recipients = new Set<string>();
+	const host = typeof item.host_user === 'object' ? item.host_user?.id : item.host_user;
+	if (host) recipients.add(host);
+	for (const a of item.attendees || []) {
+		const id = typeof a === 'object' ? a?.directus_user ?? a?.id : a;
+		if (id) recipients.add(String(id));
+	}
+
+	const who = item.invitee_name || item.invitee_email || 'a guest';
+	for (const id of recipients) {
+		if (!id || id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: 'meetings',
+			type: 'meeting_booked',
+			subject: 'New meeting booked',
+			message: item.title || `Meeting with ${who}`,
+			collection: 'video_meetings',
+			itemId,
 		});
 	}
 }

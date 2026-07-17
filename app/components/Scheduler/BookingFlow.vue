@@ -80,7 +80,7 @@ watch(intakeFields, (fields) => {
 	}
 }, { immediate: true });
 
-const availableDates = computed(() => {
+const legacyAvailableDates = computed(() => {
 	const dates = [];
 	const today = startOfDay(new Date());
 	for (let i = 1; i <= 30; i++) {
@@ -101,7 +101,7 @@ const availableDates = computed(() => {
 	return dates;
 });
 
-const availableTimeSlots = computed(() => {
+const legacyAvailableTimeSlots = computed(() => {
 	if (!selectedDate.value) return [];
 	const dayAvailability = selectedDate.value.availability;
 	if (!dayAvailability) return [];
@@ -137,6 +137,88 @@ const availableTimeSlots = computed(() => {
 	}
 	return slots;
 });
+
+// ── Authoritative server slots (Phase 1) ────────────────────────────────────
+// Slots are computed by /api/scheduler/slots (timezone-safe, min-notice, daily
+// caps, external free/busy in Phase 2). Flip USE_SERVER_SLOTS to false to fall
+// back to the legacy client-side compute for one release if needed.
+const USE_SERVER_SLOTS = true;
+
+const inviteeTz = ref('UTC');
+const serverSlots = ref([]); // [{ start: Date, end: Date, hostUserId }]
+const slotsLoading = ref(false);
+const slotsError = ref('');
+
+function tzDayKey(d) {
+	return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: inviteeTz.value }).format(d);
+}
+function tzDateLabel(d) {
+	return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: inviteeTz.value }).format(d);
+}
+function tzTimeLabel(d) {
+	return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: inviteeTz.value }).format(d);
+}
+
+async function loadServerSlots() {
+	if (!USE_SERVER_SLOTS) return;
+	if (!eventType.value?.id && !props.hostUser?.id) return;
+	slotsLoading.value = true;
+	slotsError.value = '';
+	try {
+		const params = new URLSearchParams();
+		if (eventType.value?.id) {
+			params.set('eventTypeId', String(eventType.value.id));
+		} else {
+			params.set('hostUserId', props.hostUser.id);
+			params.set('duration', String(duration.value));
+		}
+		params.set('tz', inviteeTz.value);
+		const res = await $fetch(`/api/scheduler/slots?${params.toString()}`);
+		serverSlots.value = (res.slots || []).map((s) => ({
+			start: new Date(s.start),
+			end: new Date(s.end),
+			hostUserId: s.hostUserId,
+		}));
+	} catch (e) {
+		slotsError.value = e?.data?.message || e?.message || 'Failed to load available times';
+		serverSlots.value = [];
+	}
+	slotsLoading.value = false;
+}
+
+const serverAvailableDates = computed(() => {
+	const seen = new Map();
+	for (const s of serverSlots.value) {
+		const key = tzDayKey(s.start);
+		if (!seen.has(key)) seen.set(key, { key, formatted: tzDateLabel(s.start), date: s.start });
+	}
+	return [...seen.values()];
+});
+
+const serverAvailableTimeSlots = computed(() => {
+	if (!selectedDate.value) return [];
+	const key = selectedDate.value.key ?? tzDayKey(selectedDate.value.date);
+	return serverSlots.value
+		.filter((s) => tzDayKey(s.start) === key)
+		.map((s) => ({ time: s.start, formatted: tzTimeLabel(s.start), hostUserId: s.hostUserId }));
+});
+
+// Switch between authoritative server slots and the legacy client compute.
+const availableDates = computed(() => (USE_SERVER_SLOTS ? serverAvailableDates.value : legacyAvailableDates.value));
+const availableTimeSlots = computed(() => (USE_SERVER_SLOTS ? serverAvailableTimeSlots.value : legacyAvailableTimeSlots.value));
+
+if (import.meta.client) {
+	onMounted(() => {
+		inviteeTz.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		loadServerSlots();
+	});
+	// Reload when the active event type changes (picker → flow), and reset selection.
+	watch(eventType, () => {
+		selectedDate.value = null;
+		selectedTime.value = null;
+		loadServerSlots();
+	});
+}
 
 function selectEventType(et) {
 	// Navigate to the 3-segment URL so the URL is shareable.
@@ -457,18 +539,29 @@ onMounted(() => {
 				</button>
 
 				<div class="mb-6">
-					<h2 class="text-base font-semibold mb-3">Select a date</h2>
-					<div class="flex flex-wrap gap-2">
-						<button
-							v-for="dateObj in availableDates"
-							:key="dateObj.formatted"
-							:class="['px-4 py-2 rounded-lg border text-sm transition', selectedDate?.formatted === dateObj.formatted ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40']"
-							@click="selectDate(dateObj)"
-						>
-							{{ dateObj.formatted }}
-						</button>
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-base font-semibold">Select a date</h2>
+						<span v-if="inviteeTz && inviteeTz !== 'UTC'" class="text-xs text-muted-foreground">
+							Times in {{ inviteeTz.replace(/_/g, ' ') }}
+						</span>
 					</div>
-					<p v-if="availableDates.length === 0" class="text-sm text-muted-foreground mt-2">No available dates</p>
+					<div v-if="slotsLoading" class="flex items-center gap-2 text-sm text-muted-foreground py-2">
+						<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" /> Loading availability…
+					</div>
+					<p v-else-if="slotsError" class="text-sm text-destructive py-2">{{ slotsError }}</p>
+					<template v-else>
+						<div class="flex flex-wrap gap-2">
+							<button
+								v-for="dateObj in availableDates"
+								:key="dateObj.key ?? dateObj.formatted"
+								:class="['px-4 py-2 rounded-lg border text-sm transition', (selectedDate?.key ?? selectedDate?.formatted) === (dateObj.key ?? dateObj.formatted) ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40']"
+								@click="selectDate(dateObj)"
+							>
+								{{ dateObj.formatted }}
+							</button>
+						</div>
+						<p v-if="availableDates.length === 0" class="text-sm text-muted-foreground mt-2">No available dates</p>
+					</template>
 				</div>
 
 				<div v-if="selectedDate">

@@ -919,6 +919,46 @@ export interface BusinessHour {
 	close_time?: string | null;
 }
 
+export interface CalendarConnection {
+	/** @primaryKey */
+	id: number;
+	user?: DirectusUser | string;
+	provider?: 'google' | 'outlook';
+	/** @description Email of the connected account. */
+	account_email?: string | null;
+	/** @description Friendly label shown in settings. */
+	display_name?: string | null;
+	/** @description Color used when this calendar overlays the in-app calendar. */
+	color?: string | null;
+	/** @description External calendar id (Google) or 'primary'. */
+	calendar_id?: string | null;
+	refresh_token?: string | null;
+	access_token?: string | null;
+	token_expiry?: string | null;
+	/** @description Busy times on this calendar hide booking slots. */
+	blocks_availability?: boolean;
+	/** @description Overlay this calendar's events on the in-app calendar (opt-in). */
+	show_on_calendar?: boolean;
+	/** @description New bookings are pushed to this calendar. */
+	is_write_target?: boolean;
+	enabled?: boolean;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
+export interface CalendarFreebusyCache {
+	/** @primaryKey */
+	id: number;
+	host_user?: DirectusUser | string;
+	provider?: 'google' | 'outlook';
+	window_start?: string;
+	window_end?: string;
+	/** @description Array of { start, end } ISO intervals. */
+	busy?: Record<string, any> | null;
+	fetched_at?: string;
+	stale?: boolean | null;
+}
+
 export interface CallLog {
 	/** @primaryKey */
 	id: number;
@@ -1267,8 +1307,8 @@ export interface CdCreditPurchase {
 	amount_cents?: number | null;
 	/** @description ISO currency code. */
 	currency?: string | null;
-	/** @description Fulfillment status. */
-	status?: 'paid' | 'pending' | 'failed' | null;
+	/** @description Fulfillment status. 'refunded' is set by the credit refund flow (Stripe refund + credits reversed). */
+	status?: 'paid' | 'pending' | 'failed' | 'refunded' | null;
 }
 
 export interface CdFeedback {
@@ -3476,6 +3516,8 @@ export interface PaymentsReceived {
 	check_image?: DirectusFile | string | null;
 	/** @description Date the check was deposited (for the "checks awaiting deposit" workflow). */
 	deposit_date?: string | null;
+	/** @description Stripe livemode flag. false = test-mode payment (excluded from Money reporting). null = legacy/manual (treated as live). */
+	livemode?: boolean | null;
 }
 
 export interface People {
@@ -4086,6 +4128,24 @@ export interface SchedulerSetting {
 	outlook_calendar_enabled?: boolean | null;
 	outlook_refresh_token?: string | null;
 	timezone?: `America/New_York` | `America/Chicago` | `America/Denver` | `America/Los_Angeles` | null;
+	/** @description Secret token that validates the iCal subscription feed at /api/calendar/ical/<userId>?token=… */
+	ical_feed_token?: string | null;
+	/** @description Invitees cannot book a slot starting sooner than this many minutes from now. */
+	minimum_notice_minutes?: number;
+	/** @description How many days into the future invitees may book. */
+	booking_horizon_days?: number;
+	/** @description Max bookings accepted per day across all event types. Null = no cap. */
+	daily_booking_limit?: number | null;
+	/** @description Granularity of the offered start-time grid. */
+	slot_interval_minutes?: 5 | 10 | 15 | 20 | 30 | 60;
+	/** @description Cached google access token (short-lived). */
+	google_access_token?: string | null;
+	/** @description Expiry of the cached google access token. */
+	google_token_expiry?: string | null;
+	/** @description Cached outlook access token (short-lived). */
+	outlook_access_token?: string | null;
+	/** @description Expiry of the cached outlook access token. */
+	outlook_token_expiry?: string | null;
 }
 
 export interface Service {
@@ -5512,6 +5572,8 @@ export interface Schema {
 	blog_industries: BlogIndustry[];
 	blog_services: BlogService[];
 	business_hours: BusinessHour[];
+	calendar_connections: CalendarConnection[];
+	calendar_freebusy_cache: CalendarFreebusyCache[];
 	call_logs: CallLog[];
 	call_routes: CallRoute[];
 	capabilities: Capability[];
@@ -5774,6 +5836,8 @@ export enum CollectionNames {
 	blog_industries = 'blog_industries',
 	blog_services = 'blog_services',
 	business_hours = 'business_hours',
+	calendar_connections = 'calendar_connections',
+	calendar_freebusy_cache = 'calendar_freebusy_cache',
 	call_logs = 'call_logs',
 	call_routes = 'call_routes',
 	capabilities = 'capabilities',

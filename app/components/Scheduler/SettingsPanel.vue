@@ -381,6 +381,46 @@ const disconnectOutlook = async () => {
 	}
 };
 
+// ── Multi-calendar connections (Phase 3) ────────────────────────────────────
+const connections = ref([]);
+const connectionsLoading = ref(false);
+
+async function loadConnections() {
+	connectionsLoading.value = true;
+	try {
+		const res = await $fetch('/api/scheduler/calendar-connections');
+		connections.value = res?.data || [];
+	} catch {
+		connections.value = [];
+	}
+	connectionsLoading.value = false;
+}
+
+async function updateConnection(conn, patch) {
+	Object.assign(conn, patch); // optimistic
+	try {
+		await $fetch(`/api/scheduler/calendar-connections/${conn.id}`, { method: 'PATCH', body: patch });
+	} catch {
+		toast.add({ title: 'Could not update calendar', color: 'red' });
+		loadConnections();
+	}
+}
+
+async function removeConnection(conn) {
+	if (!confirm(`Disconnect ${conn.display_name || conn.account_email || 'this calendar'}?`)) return;
+	try {
+		await $fetch(`/api/scheduler/calendar-connections/${conn.id}`, { method: 'DELETE' });
+		connections.value = connections.value.filter((c) => c.id !== conn.id);
+		toast.add({ title: 'Calendar disconnected', color: 'green' });
+	} catch {
+		toast.add({ title: 'Could not disconnect', color: 'red' });
+	}
+}
+
+const CONNECTION_COLORS = ['#4285F4', '#0F6CBD', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6'];
+
+watch(floor, (f) => { if (f === 'calendar') loadConnections(); }, { immediate: true });
+
 const copyBookingLink = async () => {
 	await navigator.clipboard.writeText(bookingUrl.value);
 	toast.add({ title: 'Link copied', color: 'green' });
@@ -716,44 +756,67 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 			<!-- Calendar Sync ────────────────────────────────────────── -->
 			<template v-if="floor === 'calendar'">
 				<div class="space-y-4 max-w-3xl">
+					<!-- Connected calendars (multi-account) -->
 					<div class="ios-card p-5">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3 min-w-0">
-								<div class="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center shrink-0">
-									<UIcon name="i-simple-icons-google" class="w-5 h-5 text-destructive" />
-								</div>
-								<div class="min-w-0">
-									<div class="font-medium text-sm">Google Calendar</div>
-									<div class="text-xs" :class="form.google_calendar_enabled ? 'text-success' : 'text-muted-foreground'">
-										{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
-									</div>
-								</div>
+						<div class="flex items-center justify-between mb-1">
+							<h2 class="text-base font-semibold">Connected calendars</h2>
+							<div class="flex gap-2">
+								<UButton color="gray" size="xs" icon="i-simple-icons-google" @click="connectGoogle">Add Google</UButton>
+								<UButton color="gray" size="xs" icon="i-simple-icons-microsoftoutlook" @click="connectOutlook">Add Outlook</UButton>
 							</div>
-							<UButton v-if="!form.google_calendar_enabled" color="gray" size="sm" @click="connectGoogle">Connect</UButton>
-							<UButton v-else color="red" variant="soft" size="sm" @click="disconnectGoogle">Disconnect</UButton>
 						</div>
-						<div v-if="form.google_calendar_enabled" class="mt-4">
-							<UFormGroup label="Calendar ID">
-								<UInput v-model="form.google_calendar_id" placeholder="primary" />
-							</UFormGroup>
-						</div>
-					</div>
+						<p class="text-xs text-muted-foreground mb-3">
+							Connect as many accounts as you like. Busy times block your booking slots; colours label each calendar.
+						</p>
 
-					<div class="ios-card p-5">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3 min-w-0">
-								<div class="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center shrink-0">
-									<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-info" />
+						<div v-if="connectionsLoading" class="text-xs text-muted-foreground py-3">Loading…</div>
+						<div v-else-if="connections.length === 0" class="text-sm text-muted-foreground py-4 text-center">
+							No calendars connected yet. Add one above to prevent double-booking.
+						</div>
+						<div v-else class="space-y-2.5">
+							<div
+								v-for="conn in connections"
+								:key="conn.id"
+								class="rounded-xl border bg-muted/20 p-3"
+							>
+								<div class="flex items-center gap-3">
+									<span class="w-3 h-3 rounded-full shrink-0" :style="{ background: conn.color || '#888' }" />
+									<UIcon
+										:name="conn.provider === 'google' ? 'i-simple-icons-google' : 'i-simple-icons-microsoftoutlook'"
+										class="w-4 h-4 shrink-0 text-muted-foreground"
+									/>
+									<div class="min-w-0 flex-1">
+										<div class="text-sm font-medium truncate">{{ conn.display_name || conn.account_email || 'Calendar' }}</div>
+										<div v-if="conn.account_email && conn.account_email !== conn.display_name" class="text-[11px] text-muted-foreground truncate">{{ conn.account_email }}</div>
+									</div>
+									<UButton color="red" variant="soft" size="xs" @click="removeConnection(conn)">Disconnect</UButton>
 								</div>
-								<div class="min-w-0">
-									<div class="font-medium text-sm">Outlook Calendar</div>
-									<div class="text-xs" :class="form.outlook_calendar_enabled ? 'text-success' : 'text-muted-foreground'">
-										{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
+								<div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pl-6">
+									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
+										<UToggle :model-value="conn.blocks_availability" size="2xs" @update:model-value="(v) => updateConnection(conn, { blocks_availability: v })" />
+										Blocks availability
+									</label>
+									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
+										<UToggle :model-value="conn.show_on_calendar" size="2xs" @update:model-value="(v) => updateConnection(conn, { show_on_calendar: v })" />
+										Show on calendar
+									</label>
+									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
+										<UToggle :model-value="conn.is_write_target" size="2xs" @update:model-value="(v) => updateConnection(conn, { is_write_target: v })" />
+										Add bookings here
+									</label>
+									<div class="flex items-center gap-1">
+										<button
+											v-for="c in CONNECTION_COLORS"
+											:key="c"
+											type="button"
+											class="w-4 h-4 rounded-full border-2 transition"
+											:class="conn.color === c ? 'border-foreground' : 'border-transparent'"
+											:style="{ background: c }"
+											@click="updateConnection(conn, { color: c })"
+										/>
 									</div>
 								</div>
 							</div>
-							<UButton v-if="!form.outlook_calendar_enabled" color="gray" size="sm" @click="connectOutlook">Connect</UButton>
-							<UButton v-else color="red" variant="soft" size="sm" @click="disconnectOutlook">Disconnect</UButton>
 						</div>
 					</div>
 

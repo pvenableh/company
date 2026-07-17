@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		const results = await adminDirectus.request(
 			readItems('scheduler_settings', {
-				filter: { user: { _eq: userId }, ical_feed_token: { _eq: token } },
+				filter: { user_id: { _eq: userId }, ical_feed_token: { _eq: token } },
 				limit: 1,
 			}),
 		);
