@@ -255,7 +255,7 @@ async function loadProject() {
 	try {
 		const p = await projectItemsApi.get(props.projectId, {
 			fields: [
-				'id', 'title', 'status', 'description', 'contract_value',
+				'id', 'title', 'status', 'pinned', 'description', 'contract_value',
 				'start_date', 'due_date', 'projected_date', 'completion_date',
 				'url', 'template',
 				'csat_rating', 'csat_comment', 'csat_submitted_at',
@@ -527,6 +527,21 @@ function openContactSlideOver(id: string) {
 	contactSlide.open(id);
 }
 
+// Open a channel inside the slide-over stack (see the channels list template).
+function openChannel(channel: { id: string | number }) {
+	pushPanel('channel', String(channel.id));
+}
+
+// Ticket board status columns — shared source of truth (also feeds the header
+// New Ticket composer). Bound in script so template access is unambiguous.
+const ticketColumns = TICKET_BOARD_COLUMNS;
+
+// Pin-to-top toggle — bumps the project to the front of the home widget + lists.
+const { togglePin: togglePinProject } = usePinnable('projects');
+async function onTogglePin() {
+	if (project.value) await togglePinProject(project.value as any);
+}
+
 async function loadFiles() {
 	filesLoading.value = true;
 	try {
@@ -593,9 +608,10 @@ function onFileDrop(e: DragEvent) {
 }
 
 // ── Inline create / attach modals ─────────────────────────────────────────
-// Ticket/task creation is owned by the embedded TicketsBoard /
-// TasksBoard / TasksListView components (each ships its own + button),
-// so the workspace only adds Attach Existing affordances for those.
+// Task creation is owned by the embedded TasksBoard / TasksListView (each
+// ships its own + button), so the workspace only adds Attach Existing there.
+// Tickets are workspace-owned: the New Ticket + Attach Existing buttons live
+// together in the tickets header (board create suppressed via `hide-create`).
 const showAttachTicketModal = ref(false);
 const showAttachTaskModal = ref(false);
 const showCreateInvoiceModal = ref(false);
@@ -610,6 +626,12 @@ const showAttachContactModal = ref(false);
 function onTicketAttached() {
 	showAttachTicketModal.value = false;
 	refreshTicketCount();
+}
+// New Ticket is created from the workspace header (next to Attach Existing);
+// refresh the tab count and nudge the embedded board to re-fetch.
+function onTicketCreated() {
+	refreshTicketCount();
+	useTicketsStore().triggerRefresh();
 }
 function onTaskAttached() {
 	showAttachTaskModal.value = false;
@@ -807,24 +829,23 @@ watch(() => props.projectId, () => {
 					/>
 				</template>
 				<template #actions>
-					<!-- Convene a focused Director's Office meeting on just this
-					     project — same overlay as the org-wide command center,
-					     scoped to this entity. -->
+					<!-- A single, wrapping action row so the top never spills
+					     onto a sloppy second line. Order: pin, primary coaching
+					     action, Ask-Earnest drafting, then any panel-injected
+					     escape hatch (e.g. "Open Project" in the slide-over). -->
+					<PinButton :pinned="(project as any)?.pinned" always @toggle="onTogglePin" />
 					<button
 						type="button"
 						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-[12px] font-medium ios-press shrink-0"
 						@click="conveneMeeting"
 					>
 						<DirectorChairIcon class="w-3.5 h-3.5" />
-						<span class="hidden sm:inline">Convene a meeting</span>
+						<span class="hidden sm:inline">Convene</span>
 					</button>
+					<AppsCreateWithEarnest entity-type="project" />
 					<slot name="actions" />
 				</template>
 			</AppsWorkProjectIdentityStrip>
-
-			<div class="flex justify-end mb-3">
-				<AppsCreateWithEarnest entity-type="project" />
-			</div>
 
 			<AppsWorkProjectTabsBar
 				v-model="activeTab"
@@ -911,22 +932,41 @@ watch(() => props.projectId, () => {
 					/>
 				</div>
 
-				<!-- Tickets — TicketsBoard ships its own "New Ticket" button,
-				     so the workspace adds only the Attach Existing affordance. -->
+				<!-- Tickets — the workspace owns both create affordances here
+				     (New Ticket + Attach Existing) so they sit together; the
+				     board's own embedded create button is suppressed via
+				     `hide-create`. -->
 				<div v-else-if="activeTab === 'tickets'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">All tickets opened for this project.</p>
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-							@click="showAttachTicketModal = true"
-						>
-							<Icon name="lucide:link" class="w-3 h-3" />
-							Attach Existing
-						</button>
+						<div class="flex items-center gap-2">
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+								@click="showAttachTicketModal = true"
+							>
+								<Icon name="lucide:link" class="w-3 h-3" />
+								Attach Existing
+							</button>
+							<TicketsCreate
+								:columns="ticketColumns"
+								:default-project="projectId"
+								:default-organization="organizationId || undefined"
+								@ticketCreated="onTicketCreated"
+							/>
+						</div>
 					</div>
 
-					<TicketsBoard :projectId="projectId" :organizationId="organizationId" />
+					<TicketsBoard :projectId="projectId" :organizationId="organizationId" hide-create />
+				</div>
+
+				<!-- Touchpoints — lightweight communication log (outreach + follow-up). -->
+				<div v-else-if="activeTab === 'touchpoints'">
+					<AppsWorkProjectTouchpoints
+						:project-id="projectId"
+						:organization-id="organizationId"
+						:client-id="clientId"
+					/>
 				</div>
 
 				<!-- Channels -->
@@ -991,11 +1031,17 @@ watch(() => props.projectId, () => {
 						No channels tagged to this project.
 					</div>
 					<div v-else class="space-y-px">
-						<NuxtLink
+						<!-- Open the channel INSIDE the slide-over stack (stacked on
+						     top of this project) rather than navigating the
+						     underlying page — which previously left the channel
+						     rendered behind the slide-over. Works the same on the
+						     full project page (opens as a first-level slide-over). -->
+						<button
 							v-for="channel in channels"
 							:key="channel.id"
-							:to="`/channels/${channel.name}`"
-							class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							type="button"
+							class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+							@click="openChannel(channel)"
 						>
 							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
 							<p class="flex-1 text-sm font-medium truncate">{{ channel.name }}</p>
@@ -1007,7 +1053,7 @@ watch(() => props.projectId, () => {
 								{{ channel.ticket.title }}
 							</span>
 							<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 

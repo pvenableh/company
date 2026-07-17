@@ -32,7 +32,7 @@
 					 filter row below so it reads as grouped with the filters — this copy
 					 is hidden at md+ then (`md:hidden`) and only carries the mobile +
 					 project-embedded cases, where the filter cluster is absent. -->
-				<TicketsCreate v-if="!portal" :class="{ 'md:hidden': !projectId }" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+				<TicketsCreate v-if="!portal && !hideCreate" :class="{ 'md:hidden': !projectId }" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 				<UButton
 					v-if="!projectId"
 					icon="i-heroicons-x-mark"
@@ -330,6 +330,15 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	/**
+	 * Suppress the board's own embedded "New Ticket" button. Used when a host
+	 * surface (e.g. the project workspace) renders the create action in its own
+	 * header next to "Attach Existing" so the two sit together.
+	 */
+	hideCreate: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const emit = defineEmits(['view-ticket']);
@@ -363,12 +372,7 @@ const {
 } = useTeams();
 
 // Define columns
-const columns = [
-	{ id: 'Pending', name: 'Pending', color: 'cyan' },
-	{ id: 'Scheduled', name: 'Scheduled', color: 'cyan2' },
-	{ id: 'In Progress', name: 'In Progress', color: 'green2' },
-	{ id: 'Completed', name: 'Completed', color: 'green' },
-];
+const columns = TICKET_BOARD_COLUMNS;
 
 // Use our mobile navigation composable
 const {

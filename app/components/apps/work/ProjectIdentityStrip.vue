@@ -142,7 +142,7 @@ function saveDates() {
 				{{ contractLabel }}
 			</span>
 		</div>
-		<div v-if="$slots.actions" class="flex items-center gap-1.5 shrink-0">
+		<div v-if="$slots.actions" class="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
 			<slot name="actions" />
 		</div>
 	</div>

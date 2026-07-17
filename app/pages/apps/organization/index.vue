@@ -402,42 +402,27 @@ const settingsTiles = [
   { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
 ];
 
-// Document theme — applied to invoices, proposals, contracts. Inline editor in
-// the Settings floor; mirrors the classic /organization page so the user never
-// has to leave /apps/* to change it.
-const DOC_THEMES = [
-  { value: 'classic', label: 'Classic', desc: 'Clean white card, sans-serif. The default.' },
-  { value: 'editorial', label: 'Editorial', desc: 'Warm cream paper, serif body. Traditional document feel.' },
-  { value: 'mono', label: 'Mono', desc: 'Minimal black-on-white with your accent color.' },
-] as const;
-
+// Document theme studio — applied to invoices, proposals, contracts. Inline
+// editor in the Settings floor; mirrors the classic /organization page so the
+// user never has to leave /apps/* to change it.
 const savingDocTheme = ref(false);
 const localAccent = ref('#1f2937');
 watch(() => (org.value as any)?.document_accent, (v) => { if (v) localAccent.value = v as string; }, { immediate: true });
 
-async function saveDocumentTheme(theme: string) {
+async function saveDocumentStudio(payload: { theme: string; accent: string; config: Record<string, any> }) {
   if (!org.value?.id || savingDocTheme.value) return;
   savingDocTheme.value = true;
   try {
-    await organizationItems.update(org.value.id, { document_theme: theme });
-    toast.add({ title: 'Document theme updated', description: 'Applied to invoices, proposals, and contracts.', color: 'green' });
+    await organizationItems.update(org.value.id, {
+      document_theme: payload.theme,
+      document_accent: payload.accent,
+      document_theme_config: payload.config,
+    });
+    localAccent.value = payload.accent;
+    toast.add({ title: 'Document theme saved', description: 'Applied to invoices, proposals, and contracts.', color: 'green' });
     await fetchOrganizationDetails();
   } catch (error: any) {
-    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update theme', color: 'red' });
-  } finally {
-    savingDocTheme.value = false;
-  }
-}
-
-async function saveDocumentAccent() {
-  if (!org.value?.id || savingDocTheme.value) return;
-  savingDocTheme.value = true;
-  try {
-    await organizationItems.update(org.value.id, { document_accent: localAccent.value });
-    toast.add({ title: 'Accent color updated', color: 'green' });
-    await fetchOrganizationDetails();
-  } catch (error: any) {
-    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update accent', color: 'red' });
+    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to save theme', color: 'red' });
   } finally {
     savingDocTheme.value = false;
   }
@@ -1016,59 +1001,16 @@ function onClientInvited() {
             <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
               Document theme
             </h3>
-            <p class="text-xs text-muted-foreground mb-3">
-              Sets the look of every invoice, proposal, and contract you send.
+            <p class="text-xs text-muted-foreground mb-4">
+              Style every invoice, proposal, and contract you send — preview updates live.
             </p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                v-for="t in DOC_THEMES"
-                :key="t.value"
-                type="button"
-                class="text-left rounded-lg border p-3 transition-all"
-                :class="(org.document_theme || 'classic') === t.value
-                  ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
-                  : 'border-border hover:border-primary/40 hover:bg-muted/40'"
-                :disabled="savingDocTheme"
-                @click="saveDocumentTheme(t.value)"
-              >
-                <div
-                  class="mb-2 h-12 rounded border doc-shell"
-                  :class="`doc-theme--${t.value}`"
-                  :style="t.value === 'mono' ? { '--doc-accent-color': localAccent } : {}"
-                >
-                  <div class="h-full flex items-center px-2 gap-1.5">
-                    <div class="w-3 h-3 rounded-sm" :style="`background: var(--doc-accent)`" />
-                    <div class="flex-1 h-1.5 rounded-full" :style="`background: var(--doc-rule)`" />
-                  </div>
-                </div>
-                <p class="font-medium text-xs">{{ t.label }}</p>
-                <p class="text-[10px] text-muted-foreground leading-snug mt-0.5">{{ t.desc }}</p>
-              </button>
-            </div>
-            <div
-              v-if="(org.document_theme || 'classic') === 'mono'"
-              class="flex items-center gap-2 pt-3 mt-3 border-t border-border"
-            >
-              <label class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand accent</label>
-              <input
-                v-model="localAccent"
-                type="color"
-                class="h-7 w-10 rounded cursor-pointer border border-border"
-              />
-              <input
-                v-model="localAccent"
-                type="text"
-                class="h-7 px-2 text-xs rounded border border-border bg-background w-24 font-mono"
-                placeholder="#1f2937"
-              />
-              <Button
-                size="sm"
-                :disabled="savingDocTheme || localAccent === org.document_accent"
-                @click="saveDocumentAccent"
-              >
-                Apply
-              </Button>
-            </div>
+            <DocumentsDocumentThemeStudio
+              :theme="org.document_theme || 'classic'"
+              :accent="org.document_accent || '#1f2937'"
+              :config="(org as any).document_theme_config || null"
+              :saving="savingDocTheme"
+              @save="saveDocumentStudio"
+            />
           </div>
 
           <!-- Features — org-wide feature switches. Goals lives here (not just

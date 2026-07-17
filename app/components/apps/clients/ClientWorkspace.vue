@@ -260,6 +260,12 @@ function contentStateLabel(s: string | undefined): string {
 	}
 }
 
+// Pin-to-top toggle — bumps the client to the front of the home widget + lists.
+const { togglePin: togglePinClient } = usePinnable('clients');
+async function onTogglePin() {
+	if (client.value) await togglePinClient(client.value as any);
+}
+
 async function loadClient(force = false) {
 	loading.value = true;
 	error.value = null;
@@ -813,14 +819,12 @@ watch(() => props.clientId, () => {
 				size="sm"
 				class="mb-5"
 			>
-				<template v-if="$slots.actions" #actions>
+				<template #actions>
+					<PinButton :pinned="(client as any)?.pinned" always @toggle="onTogglePin" />
+					<AppsCreateWithEarnest entity-type="client" />
 					<slot name="actions" />
 				</template>
 			</AppsClientsClientIdentityStrip>
-
-			<div class="flex justify-end mb-3">
-				<AppsCreateWithEarnest entity-type="client" />
-			</div>
 
 			<AppsClientsClientTabsBar
 				v-model="activeTab"

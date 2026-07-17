@@ -52,6 +52,23 @@ const { pendingCount: aiPendingCount, refresh: refreshPendingActions } = useAiPe
 const mascot = useEarnestMascot();
 watch(isStreaming, (streaming) => mascot.react(streaming ? 'think' : 'idle'));
 
+// Enter the calm full-screen coaching takeover, carrying the panel's current
+// focus (entity if we're scoped to one, otherwise an org-wide check-in).
+const coaching = useCoachingMode();
+function enterFocusMode() {
+	if (aware.hasEntity.value && aware.entityType.value && aware.entityId.value) {
+		coaching.open({
+			mode: 'entity',
+			entityType: aware.entityType.value,
+			entityId: aware.entityId.value,
+			label: aware.focus.value,
+		});
+	} else {
+		coaching.open({ mode: 'org' });
+	}
+	closeEarnestPanel();
+}
+
 // ── Compositor-driven enter/leave (no Vue <Transition>) ──────────────────────
 const SPRING = 'cubic-bezier(0.36, 0.66, 0.04, 1)';
 const ANIM_MS = 360;
@@ -388,6 +405,13 @@ function formatSessionTime(iso?: string): string {
 							</div>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
+							<button
+								@click="enterFocusMode"
+								class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+								title="Focus mode — a calmer, full-screen walkthrough"
+							>
+								<Icon name="lucide:maximize" class="w-3.5 h-3.5 text-muted-foreground" />
+							</button>
 							<button
 								v-if="activeTab === 'chat'"
 								@click="showHistory ? closeHistory() : openHistory()"

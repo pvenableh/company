@@ -368,41 +368,27 @@ const saveBrand = async () => {
 };
 
 
-// --- Document theme ---
-const DOC_THEMES = [
-	{ value: 'classic', label: 'Classic', desc: 'Clean white card, sans-serif. The default.' },
-	{ value: 'editorial', label: 'Editorial', desc: 'Warm cream paper, serif body. Traditional document feel.' },
-	{ value: 'mono', label: 'Mono', desc: 'Minimal black-on-white with your accent color.' },
-] as const;
+// --- Document theme studio ---
 const savingDocTheme = ref(false);
 const localAccent = ref('#1f2937');
 watch(() => org.value?.document_accent, (v) => { if (v) localAccent.value = v; }, { immediate: true });
 
-async function saveDocumentTheme(theme: string) {
+async function saveDocumentStudio(payload: { theme: string; accent: string; config: Record<string, any> }) {
 	if (!org.value?.id || savingDocTheme.value) return;
 	savingDocTheme.value = true;
 	try {
-		await organizationItems.update(org.value.id, { document_theme: theme });
-		org.value = { ...org.value, document_theme: theme };
-		toast.add({ title: 'Document theme updated', description: `Applied to invoices, proposals, and contracts.`, color: 'green' });
+		const patch = {
+			document_theme: payload.theme,
+			document_accent: payload.accent,
+			document_theme_config: payload.config,
+		};
+		await organizationItems.update(org.value.id, patch);
+		org.value = { ...org.value, ...patch };
+		localAccent.value = payload.accent;
+		toast.add({ title: 'Document theme saved', description: 'Applied to invoices, proposals, and contracts.', color: 'green' });
 		await fetchOrganizationDetails();
 	} catch (error: any) {
-		toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update theme', color: 'red' });
-	} finally {
-		savingDocTheme.value = false;
-	}
-}
-
-async function saveDocumentAccent() {
-	if (!org.value?.id || savingDocTheme.value) return;
-	savingDocTheme.value = true;
-	try {
-		await organizationItems.update(org.value.id, { document_accent: localAccent.value });
-		org.value = { ...org.value, document_accent: localAccent.value };
-		toast.add({ title: 'Accent color updated', color: 'green' });
-		await fetchOrganizationDetails();
-	} catch (error: any) {
-		toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update accent', color: 'red' });
+		toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to save theme', color: 'red' });
 	} finally {
 		savingDocTheme.value = false;
 	}
@@ -1520,70 +1506,23 @@ watch(searchEmail, (val) => {
 										</div>
 									</div>
 								</UCard>
-							<!-- Document theme — applied to invoices, proposals, contracts -->
+							<!-- Document theme studio — applied to invoices, proposals, contracts -->
 								<UCard v-if="canManageOrg">
 									<template #header>
-										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Document theme</h3>
+										<div>
+											<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Document theme</h3>
+											<p class="text-xs text-muted-foreground mt-1">
+												Style every invoice, proposal, and contract you send — preview updates live.
+											</p>
+										</div>
 									</template>
-									<div class="space-y-4 text-sm">
-										<p class="text-xs text-muted-foreground">
-											Sets the look of every invoice, proposal, and contract you send.
-										</p>
-										<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-											<button
-												v-for="t in DOC_THEMES"
-												:key="t.value"
-												type="button"
-												class="text-left rounded-lg border p-3 transition-all"
-												:class="(org.document_theme || 'classic') === t.value
-													? 'border-primary ring-2 ring-primary/20 bg-primary/5'
-													: 'border-border hover:border-primary/40 hover:bg-muted/40'"
-												:disabled="savingDocTheme"
-												@click="saveDocumentTheme(t.value)"
-											>
-												<!-- Preview swatch -->
-												<div
-													class="mb-2 h-12 rounded border doc-shell"
-													:class="`doc-theme--${t.value}`"
-													:style="t.value === 'mono' ? { '--doc-accent-color': localAccent } : {}"
-												>
-													<div class="h-full flex items-center px-2 gap-1.5">
-														<div class="w-3 h-3 rounded-sm" :style="`background: var(--doc-accent)`"></div>
-														<div class="flex-1 h-1.5 rounded-full" :style="`background: var(--doc-rule)`"></div>
-													</div>
-												</div>
-												<p class="font-medium text-xs">{{ t.label }}</p>
-												<p class="text-[10px] text-muted-foreground leading-snug mt-0.5">{{ t.desc }}</p>
-											</button>
-										</div>
-										<!-- Accent picker (Mono only) -->
-										<div
-											v-if="(org.document_theme || 'classic') === 'mono'"
-											class="flex items-center gap-2 pt-2 border-t border-border"
-										>
-											<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand accent</label>
-											<input
-												v-model="localAccent"
-												type="color"
-												class="h-7 w-10 rounded cursor-pointer border border-border"
-											/>
-											<input
-												v-model="localAccent"
-												type="text"
-												class="h-7 px-2 text-xs rounded border border-border bg-background w-24 font-mono"
-												placeholder="#1f2937"
-											/>
-											<UButton
-												size="xs"
-												color="primary"
-												:loading="savingDocTheme"
-												:disabled="localAccent === org.document_accent"
-												@click="saveDocumentAccent"
-											>
-												Apply
-											</UButton>
-										</div>
-									</div>
+									<DocumentsDocumentThemeStudio
+										:theme="org.document_theme || 'classic'"
+										:accent="org.document_accent || '#1f2937'"
+										:config="org.document_theme_config || null"
+										:saving="savingDocTheme"
+										@save="saveDocumentStudio"
+									/>
 								</UCard>
 
 								<!-- Branding (whitelabel) -->

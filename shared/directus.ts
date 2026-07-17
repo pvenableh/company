@@ -1566,6 +1566,8 @@ export interface Client {
 	/** @primaryKey */
 	id: string;
 	status?: 'published' | 'draft' | 'archived';
+	/** @description Pinned to the top of the clients widget / list for quick access. */
+	pinned?: boolean;
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -3273,6 +3275,8 @@ export interface Organization {
 	document_theme?: 'classic' | 'editorial' | 'mono';
 	/** @description Used by the Mono theme as the brand accent. Defaults to a neutral gray. */
 	document_accent?: string | null;
+	/** @description Optional per-org visual overrides layered on top of the base document_theme (colors, fonts, radius, etc). Shape: DocumentThemeConfig. */
+	document_theme_config?: Record<string, any> | null;
 	/** @description Stripe Express connected-account id (acct_…). Each org has their own; invoice payments route through this account. */
 	stripe_account_id?: string | null;
 	/** @description Snapshot of the connected account state. Updated by the Connect webhook on `account.updated`. */
@@ -3805,6 +3809,26 @@ export interface ProjectEventFile {
 	directus_files_id?: DirectusFile | string | null;
 }
 
+/** A lightweight communication touch point on a project (CardDesk-style). */
+export interface ProjectTouchpoint {
+	/** @primaryKey */
+	id: number;
+	project?: Project | string | null;
+	organization?: Organization | string | null;
+	type?: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
+	summary?: string | null;
+	note?: string | null;
+	occurred_at?: string | null;
+	awaiting_response?: boolean;
+	is_response?: boolean;
+	response_note?: string | null;
+	/** Tagged people: [{ kind: 'member'|'contact'|'portal', id, name }]. */
+	participants?: Array<{ kind: string; id: string; name: string }> | null;
+	sort?: number | null;
+	date_created?: string | null;
+	user_created?: DirectusUser | string | null;
+}
+
 export interface ProjectEvent {
 	/** @primaryKey */
 	id: string;
@@ -3875,6 +3899,10 @@ export interface Project {
 	/** @primaryKey */
 	id: string;
 	status?: 'Pending' | 'Scheduled' | `In Progress` | 'completed' | 'Archived';
+	/** @description Pinned to the top of the projects widget / list for quick access. */
+	pinned?: boolean;
+	/** @description Communication touch points logged on this project (o2m alias). */
+	touchpoints?: ProjectTouchpoint[] | number[] | null;
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;

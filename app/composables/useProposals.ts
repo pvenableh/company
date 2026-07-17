@@ -62,6 +62,7 @@ export function useProposals() {
         'organization.whitelabel',
         'organization.document_theme',
         'organization.document_accent',
+        'organization.document_theme_config',
         'lead.id',
         'lead.status',
         'lead.stage',

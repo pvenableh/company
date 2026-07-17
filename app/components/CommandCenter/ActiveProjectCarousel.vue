@@ -13,6 +13,7 @@ const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const projectSlide = useAppSlideOver('work-project');
 const items = useDirectusItems('projects');
+const { togglePin } = usePinnable('projects');
 
 const projects = ref<any[]>([]);
 const loading = ref(true);
@@ -40,12 +41,12 @@ async function load() {
 		}
 		projects.value = await items.list({
 			fields: [
-				'id', 'title', 'status', 'date_updated', 'due_date',
+				'id', 'title', 'status', 'pinned', 'date_updated', 'due_date',
 				'service.color',
 				'client.id', 'client.name',
 			],
 			filter,
-			sort: ['-date_updated'],
+			sort: ['-pinned', '-date_updated'],
 			limit: 12,
 		}) as any[];
 	} catch (err) {
@@ -60,6 +61,11 @@ watch([selectedOrg, selectedClient], load, { immediate: true });
 
 function openProject(id: string) {
 	projectSlide.open(id);
+}
+
+async function onTogglePin(project: any) {
+	await togglePin(project);
+	projects.value = sortPinnedFirst(projects.value);
 }
 
 function statusChip(s: string | null | undefined) {
@@ -130,6 +136,7 @@ function fmtDue(d: string | null | undefined) {
 					<p class="text-sm font-medium text-foreground line-clamp-2 leading-snug flex-1">
 						{{ project.title }}
 					</p>
+					<PinButton :pinned="project.pinned" size="xs" @toggle="onTogglePin(project)" />
 				</div>
 				<p v-if="project.client?.name" class="text-[11px] text-muted-foreground truncate mb-2">
 					{{ project.client.name }}

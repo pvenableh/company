@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -218,6 +218,7 @@ export function useOrganization() {
 					whitelabel: org.whitelabel ?? false,
 					document_theme: org.document_theme ?? null,
 					document_accent: org.document_accent ?? null,
+					document_theme_config: org.document_theme_config ?? null,
 					brand_color: org.brand_color ?? null,
 					app_palette: org.app_palette ?? null,
 					brand_direction: org.brand_direction ?? null,

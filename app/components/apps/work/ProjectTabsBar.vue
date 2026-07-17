@@ -7,6 +7,7 @@
 export type ProjectTabKey =
 	| 'overview'
 	| 'activity'
+	| 'touchpoints'
 	| 'tasks'
 	| 'tickets'
 	| 'channels'
@@ -45,6 +46,7 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
+	{ key: 'touchpoints', label: 'Touchpoints', icon: 'lucide:megaphone' },
 	{ key: 'files', label: 'Files', icon: 'lucide:folder' },
 	// Activity lives last — the deepest history, not the landing view.
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },

@@ -19,7 +19,7 @@ watch(aiMutationSignal, () => { onProjectUpdated(); });
 
 import type { ProjectTabKey } from '~/components/apps/work/ProjectTabsBar.vue';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu';
-const VALID_TABS: ProjectTabKey[] = ['activity', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
+const VALID_TABS: ProjectTabKey[] = ['activity', 'touchpoints', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
 
 const PROJECT_STATUSES = [
   { label: 'Pending', value: 'Pending' },

@@ -12,6 +12,7 @@ const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const clientSlide = useAppSlideOver('client');
 const items = useDirectusItems('clients');
+const { togglePin } = usePinnable('clients');
 
 const clients = ref<any[]>([]);
 const loading = ref(true);
@@ -31,12 +32,12 @@ async function load() {
 	loading.value = true;
 	try {
 		clients.value = await items.list({
-			fields: ['id', 'name', 'logo', 'status', 'last_activity_at', 'date_updated'],
+			fields: ['id', 'name', 'logo', 'status', 'pinned', 'last_activity_at', 'date_updated'],
 			filter: {
 				organization: { _eq: selectedOrg.value },
 				status: { _neq: 'archived' },
 			},
-			sort: ['-last_activity_at', '-date_updated', 'name'],
+			sort: ['-pinned', '-last_activity_at', '-date_updated', 'name'],
 			limit: 12,
 		}) as any[];
 	} catch (err) {
@@ -53,6 +54,11 @@ const { getUrl: getFileUrl } = useDirectusFiles();
 
 function openClient(id: string) {
 	clientSlide.open(id);
+}
+
+async function onTogglePin(client: any) {
+	await togglePin(client);
+	clients.value = sortPinnedFirst(clients.value);
 }
 
 function relTime(iso: string | null | undefined) {
@@ -125,6 +131,7 @@ function relTime(iso: string | null | undefined) {
 					</div>
 					<p class="text-sm font-medium text-foreground truncate flex-1">{{ client.name }}</p>
 					<ClientsClientRatingBadge :client-id="client.id" size="xs" />
+					<PinButton :pinned="client.pinned" size="xs" @toggle="onTogglePin(client)" />
 				</div>
 				<div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
 					<span v-if="client.status" class="truncate">{{ client.status }}</span>

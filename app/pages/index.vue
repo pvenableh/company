@@ -128,6 +128,7 @@ const checkinOpen = ref(false);
 
 // ── Director's Office (org-wide command center overlay) ──
 const { open: openDirectorOffice } = useDirectorOffice();
+const { open: openCoaching } = useCoachingMode();
 
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
@@ -400,6 +401,17 @@ const goTo = (route: string) => {
 								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
 							>
 								<DirectorChairIcon class="w-5 h-5" />
+							</button>
+						</UTooltip>
+						<!-- Focus mode — a calm, full-screen Earnest walkthrough for when
+						     the command center feels like too much. -->
+						<UTooltip text="Focus mode" :popper="{ placement: 'bottom' }">
+							<button
+								@click="openCoaching({ mode: 'org' })"
+								aria-label="Focus mode"
+								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
+							>
+								<Icon name="lucide:sparkles" class="w-5 h-5" />
 							</button>
 						</UTooltip>
 						<button
