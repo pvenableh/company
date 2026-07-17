@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations, liveTranscript, routeScope, routeKey, scope, routeFocus, includedContext } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations, liveTranscript, routeScope, routeKey, scope, routeFocus, includedContext, coaching } = body;
 
   // Knowledge gating — the unified panel lets the user deselect what Earnest
   // can see ("What Earnest can see" chip). `includedContext` is the set of
@@ -356,7 +356,21 @@ export default defineEventHandler(async (event) => {
       ? `\n\nCURRENT FOCUS: Right now the user is looking at ${routeFocus.trim()}. Tailor your help to this context.`
       : '';
 
-    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + liveTranscriptBlock + focusBlock + toolNudge + styleContext + verbosityContext;
+    // Focus mode — Earnest's calm, one-thing-at-a-time "honest partner" register.
+    // Layered LAST so it refines the default tone toward reflection without
+    // touching the non-negotiable accuracy floor above. The brand is a verb:
+    // do good work, honestly, with good motivation, beside a trusted partner.
+    const coachingContext = coaching
+      ? `\n\nFOCUS MODE — you are speaking inside Earnest's Focus mode, a calm full-screen space the user stepped into because the day felt like a lot. This is a real, human 1:1, not a dashboard. Shift how you speak (the accuracy & honesty rules above still hold):
+- Be present and unhurried. One honest thing at a time. Do NOT dump a wall of options or a long bulleted list — that's the overwhelm they came here to escape.
+- Reflect before you advise ("know thyself"): when it helps, ask one gentle, specific question that helps them see their own situation clearly, rather than immediately prescribing.
+- Speak like a trusted partner who genuinely wants them to do good work — warm, honest, on their side. Name what's hard plainly and kindly; never flatter, never manufacture reassurance.
+- Keep it short and human: usually 2–4 sentences of real talk. Prefer one clear, doable next step over an exhaustive plan.
+- Only when they explicitly ask to plan, break something down, or list steps: give a tight, ordered list of a FEW concrete steps — never a data dump.
+- Close on something grounding and forward: the single next true thing, or a note of earned encouragement when they've actually made progress. The quiet motto underneath everything is "do good work."`
+      : '';
+
+    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + liveTranscriptBlock + focusBlock + toolNudge + styleContext + verbosityContext + coachingContext;
 
     // 6. Stream/tool response via SSE
     let provider;

@@ -244,7 +244,11 @@ async function send(text?: string) {
 	bumpEnergy(0.6);
 	// Talk turned to doing → re-form into the Working Table (if we can).
 	if (canWork.value && mode.value === 'companion' && WORK_INTENT.test(content)) setMode('working');
-	try { await sendMessage(content); } catch { /* engine surfaces errors */ }
+	const s = scope.value;
+	const routeFocus = s?.mode === 'entity' && s.label
+		? `${s.label} — in Focus mode, one honest thing at a time`
+		: 'their work in Focus mode — helping them find the next true step';
+	try { await sendMessage(content, { coaching: true, routeFocus }); } catch { /* engine surfaces errors */ }
 }
 
 // ── Input behaviour ──────────────────────────────────────────────────────────
@@ -344,6 +348,11 @@ watch(mounted, (m) => {
 				</div>
 				<div class="aura__core" />
 				<div class="aura__veil" />
+				<!-- Mantras drift through the field like reflections on water — only
+				     once a conversation is under way, so the centre is clear and it
+				     reads as depth behind the messages, never clutter behind the
+				     opening greeting. -->
+				<div v-if="!reduceMotion && hasConversation" :key="mantraIdx" class="aura__drift">{{ MANTRAS[mantraIdx] }}</div>
 			</div>
 
 			<div class="coach__inner">
@@ -516,6 +525,29 @@ watch(mounted, (m) => {
 	filter: blur(30px); animation: coach-breathe 7s ease-in-out infinite; transition: opacity 400ms ease;
 }
 .aura__veil { position: absolute; inset: 0; background: radial-gradient(130% 96% at 50% 42%, transparent 0%, rgba(4,6,12,.34) 58%, rgba(4,6,12,.74) 100%); }
+
+/* A single mantra surfacing and sinking through the field — barely there. */
+.aura__drift {
+	position: absolute;
+	left: 0; right: 0;
+	top: 50%;
+	text-align: center;
+	font-family: 'Iowan Old Style', Palatino, Georgia, serif;
+	font-style: italic;
+	font-size: clamp(40px, 9vw, 110px);
+	letter-spacing: .01em;
+	color: rgba(238, 242, 248, 0.07);
+	white-space: nowrap;
+	pointer-events: none;
+	filter: blur(.4px);
+	animation: coach-drift-line 4.7s ease-in-out both;
+}
+@keyframes coach-drift-line {
+	0%   { opacity: 0; transform: translateY(-50%) translateY(34px); }
+	24%  { opacity: 1; }
+	76%  { opacity: 1; }
+	100% { opacity: 0; transform: translateY(-50%) translateY(-34px); }
+}
 
 @keyframes coach-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(4vmax,3vmax) scale(1.07); } }
 @keyframes coach-breathe { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.09); } }

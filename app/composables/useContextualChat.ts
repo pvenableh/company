@@ -51,6 +51,9 @@ export interface SendOpts {
   scope?: string;
   /** Knowledge keys the user kept toggled on ('user' | 'organization' | 'entity'). */
   includedContext?: string[];
+  /** Message sent from Earnest's Focus mode — layers the reflective, one-thing-
+   *  at-a-time "honest partner" voice on top of the charter. */
+  coaching?: boolean;
 }
 
 export interface ToolCallState {
@@ -323,6 +326,8 @@ export function useContextualChat() {
           scope: opts.scope,
           routeFocus: opts.routeFocus,
           includedContext: opts.includedContext,
+          // Focus mode → reflective "honest partner" voice.
+          coaching: opts.coaching || undefined,
         }),
       });
 
