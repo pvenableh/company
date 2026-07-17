@@ -12,7 +12,9 @@
  *
  * Body: { organizationId, purchaseId }
  */
-import { readItem, updateItem } from '@directus/sdk';
+import { readItem, readUsers, updateItem } from '@directus/sdk';
+import { TOKEN_PACKAGES } from '~~/server/utils/stripe';
+import { sendTokenRefundEmail } from '~~/server/utils/token-refund-email';
 
 interface RefundBody {
   organizationId?: string;
@@ -35,7 +37,7 @@ export default defineEventHandler(async (event) => {
 
   const purchase = (await directus.request(
     readItem('token_purchases', purchaseId, {
-      fields: ['id', 'organization', 'tokens', 'amount_cents', 'currency', 'stripe_payment_intent', 'status'],
+      fields: ['id', 'organization', 'tokens', 'amount_cents', 'currency', 'stripe_payment_intent', 'status', 'user_id', 'package_id'],
     }),
   )) as any;
 
@@ -75,16 +77,49 @@ export default defineEventHandler(async (event) => {
 
   // 3) Reverse the granted tokens from the org balance (floor at 0).
   const org = (await directus.request(
-    readItem('organizations', organizationId, { fields: ['ai_token_balance'] }),
+    readItem('organizations', organizationId, { fields: ['ai_token_balance', 'name'] }),
   )) as any;
   const tokensReversed = Number(purchase.tokens) || 0;
   const newBalance = Math.max(0, (Number(org?.ai_token_balance) || 0) - tokensReversed);
   await directus.request(updateItem('organizations', organizationId, { ai_token_balance: newBalance }));
 
+  const amountRefundedCents = refund?.amount ?? purchase.amount_cents ?? 0;
+
+  // 4) Refund receipt to the original buyer. Best-effort — the money has already
+  //    moved, so a send failure must never fail the request. The status guard
+  //    above means this fires at most once per purchase.
+  void (async () => {
+    try {
+      if (!purchase.user_id) return;
+      const users = (await directus.request(
+        readUsers({
+          filter: { id: { _eq: purchase.user_id } },
+          fields: ['email', 'first_name', 'last_name'],
+          limit: 1,
+        }),
+      )) as any[];
+      const buyer = users?.[0];
+      if (!buyer?.email) return;
+      await sendTokenRefundEmail({
+        to: buyer.email,
+        buyerName: [buyer.first_name, buyer.last_name].filter(Boolean).join(' ') || null,
+        organizationId,
+        orgName: org?.name ?? null,
+        packageName: TOKEN_PACKAGES.find((p) => p.id === purchase.package_id)?.name ?? 'AI Tokens',
+        amountRefundedCents,
+        tokensReversed,
+        newBalance,
+        purchaseId,
+      });
+    } catch (err: any) {
+      console.warn('[refund-purchase] refund receipt failed (non-fatal):', err?.message ?? err);
+    }
+  })();
+
   return {
     success: true,
     refundId: refund?.id ?? null,
-    amountRefundedCents: refund?.amount ?? purchase.amount_cents ?? 0,
+    amountRefundedCents,
     tokensReversed,
     newBalance,
   };

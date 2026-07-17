@@ -58,6 +58,7 @@ const templates = [
 	'invite',
 	'password-reset',
 	'token-purchase',
+	'token-refund',
 	'video-invite',
 	'generic',
 	'meeting-invited',
