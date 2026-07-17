@@ -5,14 +5,19 @@ import { EARNEST_PLANS } from '~~/server/utils/stripe';
 import type { EarnestPlanId } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
-	// Caller must be owner/admin of *some* org. The wizard creates the org
-	// before invoking checkout, so the new owner membership satisfies this.
-	await requireOrgRole(event, ['owner', 'admin']);
-
 	const stripe = useStripe();
 	const body = await readBody(event);
-	const { customerId, plan, interval, successUrl, cancelUrl } = body;
+	const { organizationId, customerId, plan, interval, successUrl, cancelUrl } = body;
 	let { email, priceId } = body;
+
+	// Org-owned billing: the org is the billing entity. Scope authorization to the
+	// target org when provided; fall back to the any-org owner/admin check for
+	// legacy callers.
+	if (organizationId) {
+		await requireOrgPermission(event, organizationId, 'org_settings', 'update');
+	} else {
+		await requireOrgRole(event, ['owner', 'admin']);
+	}
 
 	// Default email to the authenticated user when client omits it (the wizard
 	// flow doesn't have it client-side and shouldn't need to send it).
@@ -46,21 +51,18 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		// Find or create customer
-		let customer = customerId;
+		// Resolve the ORG's Stripe customer (created on demand, tagged with the org
+		// id). Legacy callers may still pass a customerId directly.
+		let customer = customerId || null;
+		if (!customer && organizationId) {
+			customer = await getOrCreateOrgStripeCustomer(organizationId, { emailFallback: email });
+		}
 		if (!customer) {
-			const existing = await stripe.customers.search({
-				query: `email:"${email}"`,
-			});
-			if (existing.data.length > 0) {
-				customer = existing.data[0].id;
-			} else {
-				const newCustomer = await stripe.customers.create({
-					email,
-					metadata: { source: 'earnest_subscription' },
-				});
-				customer = newCustomer.id;
-			}
+			// Legacy fallback: list-by-email (never search — 400s on new accounts).
+			const existing = await stripe.customers.list({ email, limit: 1 });
+			customer =
+				existing.data.find((c) => !(c as any).deleted)?.id ||
+				(await stripe.customers.create({ email, metadata: { source: 'earnest_subscription' } })).id;
 		}
 
 		const session = await stripe.checkout.sessions.create({
@@ -68,11 +70,13 @@ export default defineEventHandler(async (event) => {
 			mode: 'subscription',
 			payment_method_types: ['card'],
 			line_items: [{ price: priceId, quantity: 1 }],
-			success_url: successUrl || `${getAppBaseUrl(event)}/account/subscription?session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: cancelUrl || `${getAppBaseUrl(event)}/account/subscription`,
+			success_url: successUrl || `${getAppBaseUrl(event)}/apps/organization?floor=billing&session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: cancelUrl || `${getAppBaseUrl(event)}/apps/organization?floor=billing`,
 			subscription_data: {
 				metadata: {
 					earnest_email: email,
+					// Authoritative org link for the webhook (no customer→user walk).
+					...(organizationId ? { organization_id: organizationId } : {}),
 				},
 			},
 		});

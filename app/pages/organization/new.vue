@@ -368,6 +368,7 @@ async function handleContinueToPayment() {
       {
         method: 'POST',
         body: {
+          organizationId: createdOrgId.value,
           plan: selectedPlan.value,
           interval: selectedInterval.value,
           termsAcceptedAt: new Date().toISOString(),

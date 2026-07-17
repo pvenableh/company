@@ -1,7 +1,7 @@
 // server/api/stripe/addons/subscribe.post.ts
 // Add a recurring add-on to the org's existing Stripe subscription.
 
-import { readUsers } from '@directus/sdk';
+import { readItem } from '@directus/sdk';
 import { EARNEST_ADDONS } from '~~/server/utils/stripe';
 import type { EarnestAddonId } from '~~/server/utils/stripe';
 
@@ -42,20 +42,17 @@ export default defineEventHandler(async (event) => {
 		const directus = getTypedDirectus();
 
 		// In-page Elements flow: the wizard already knows the subscription id
-		// from /subscription/create — skip the user-row lookup entirely.
+		// from /subscription/create — skip the lookup entirely.
 		let subscriptionId: string | null = body.subscriptionId || null;
 
 		if (!subscriptionId) {
-			// Find the user's existing Stripe subscription
-			const users = await directus.request(
-				readUsers({
-					filter: { id: { _eq: userId } },
+			// Org-owned billing: the subscription lives on the organization record.
+			const org = await directus.request(
+				readItem('organizations', body.orgId, {
 					fields: ['stripe_subscription_id'],
-					limit: 1,
 				})
-			) as any[];
-
-			subscriptionId = users[0]?.stripe_subscription_id || null;
+			) as any;
+			subscriptionId = org?.stripe_subscription_id || null;
 		}
 
 		// Wizard fallback: if the webhook hasn't linked the sub yet, resolve it

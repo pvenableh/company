@@ -1,12 +1,37 @@
-// GET /api/stripe/subscription/status?email=...&customerId=...
-// Returns current subscription status for a user
+// GET /api/stripe/subscription/status?organizationId=...&email=...&customerId=...
+// Returns current subscription status for an ORGANIZATION.
+//
+// Org-owned billing: `organizationId` is the primary key — the customer is read
+// from `organizations.stripe_customer_id`, so any admin of the org sees the same
+// plan regardless of who signed up. The legacy `email` / `customerId` params are
+// kept as a fallback for pre-migration callers.
 export default defineEventHandler(async (event) => {
+	// Billing status exposes payment-method last4 + invoice history, so require an
+	// authenticated session. (Org-scoped membership authz is a follow-up; today
+	// every caller reaches this from behind the app's auth middleware.)
+	await requireUserSession(event);
+
 	const stripe = useStripe();
 	const query = getQuery(event);
-	const { email, customerId } = query as { email?: string; customerId?: string };
+	const { email, customerId, organizationId } = query as {
+		email?: string;
+		customerId?: string;
+		organizationId?: string;
+	};
 
-	if (!email && !customerId) {
-		throw createError({ statusCode: 400, message: 'Email or customerId is required' });
+	// Prefer the org's own customer id. An org that never subscribed has none →
+	// report "no_customer" (the No Plan state) rather than falling back to some
+	// individual user's personal customer.
+	let resolvedCustomerId = customerId || null;
+	if (!resolvedCustomerId && organizationId) {
+		resolvedCustomerId = await getOrgStripeCustomerId(organizationId);
+		if (!resolvedCustomerId) {
+			return { status: 'no_customer', subscription: null, customer: null, paymentMethods: [], invoices: [] };
+		}
+	}
+
+	if (!resolvedCustomerId && !email) {
+		throw createError({ statusCode: 400, message: 'organizationId, email, or customerId is required' });
 	}
 
 	try {
@@ -20,8 +45,8 @@ export default defineEventHandler(async (event) => {
 		// never resolved). list with an exact email filter is deterministic, available
 		// on every account, and avoids interpolating the email into a query string.
 		let customer;
-		if (customerId) {
-			customer = await stripe.customers.retrieve(customerId as string);
+		if (resolvedCustomerId) {
+			customer = await stripe.customers.retrieve(resolvedCustomerId);
 		} else {
 			const list = await stripe.customers.list({ email: email as string, limit: 100 });
 			// Newest non-deleted match (list returns most-recent first), tolerant of

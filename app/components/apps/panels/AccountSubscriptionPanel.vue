@@ -19,7 +19,7 @@ defineEmits<{ (e: 'close'): void }>();
 	>
 		<template #actions>
 			<NuxtLink
-				to="/account/subscription"
+				to="/apps/organization?floor=billing"
 				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
 				title="Open the subscription page in a full window"
 			>

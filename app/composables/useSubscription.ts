@@ -48,6 +48,10 @@ interface SubscriptionStatus {
 
 export const useSubscription = () => {
 	const { user } = useDirectusAuth();
+	// Org-owned billing: the organization is the billing entity, not the user.
+	// The customer id + subscription are read from the selected org so any admin
+	// sees the same plan regardless of who signed up.
+	const { selectedOrg, currentOrg } = useOrganization();
 	const loading = ref(false);
 	const error = ref<string | null>(null);
 
@@ -71,7 +75,11 @@ export const useSubscription = () => {
 	});
 
 	const customerId = computed(() => {
-		return subscriptionData.value?.customer?.id || (user.value as any)?.stripe_customer_id || null;
+		return (
+			subscriptionData.value?.customer?.id ||
+			(currentOrg.value as any)?.stripe_customer_id ||
+			null
+		);
 	});
 
 	const paymentMethods = computed(() => {
@@ -88,7 +96,7 @@ export const useSubscription = () => {
 	});
 
 	async function fetchStatus() {
-		if (!user.value?.email) return;
+		if (!selectedOrg.value) return;
 
 		loading.value = true;
 		error.value = null;
@@ -96,8 +104,8 @@ export const useSubscription = () => {
 		try {
 			const data = await $fetch<SubscriptionStatus>('/api/stripe/subscription/status', {
 				params: {
-					email: user.value.email,
-					customerId: (user.value as any).stripe_customer_id || undefined,
+					organizationId: selectedOrg.value,
+					customerId: (currentOrg.value as any)?.stripe_customer_id || undefined,
 				},
 			});
 			subscriptionData.value = data;
@@ -110,15 +118,15 @@ export const useSubscription = () => {
 	}
 
 	async function startCheckout(priceId: string) {
-		if (!user.value?.email) return;
+		if (!selectedOrg.value) return;
 
 		loading.value = true;
 		try {
 			const data = await $fetch<{ url: string }>('/api/stripe/subscription/checkout', {
 				method: 'POST',
 				body: {
-					email: user.value.email,
-					customerId: customerId.value,
+					organizationId: selectedOrg.value,
+					email: user.value?.email,
 					priceId,
 				},
 			});
@@ -170,16 +178,16 @@ export const useSubscription = () => {
 	}
 
 	async function openPortal() {
-		// Don't bail when there's no customer yet — pass the email so the server can
-		// find-or-create the Stripe customer and still open the portal (this is what
-		// makes "Add payment method" work for an org that never subscribed).
-		if (!customerId.value && !user.value?.email) return;
+		// Org-owned: the server find-or-creates the ORG's Stripe customer from the
+		// org id, so "Add payment method" works even for an org that never
+		// subscribed. Email is passed only as a customer-creation fallback.
+		if (!selectedOrg.value) return;
 
 		loading.value = true;
 		try {
 			const data = await $fetch<{ url: string }>('/api/stripe/subscription/portal', {
 				method: 'POST',
-				body: { customerId: customerId.value || undefined, email: user.value?.email },
+				body: { organizationId: selectedOrg.value, email: user.value?.email },
 			});
 
 			if (data.url) {
