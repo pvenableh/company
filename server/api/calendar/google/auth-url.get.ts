@@ -24,6 +24,10 @@ export default defineEventHandler(async (event) => {
 		const scopes = [
 			'https://www.googleapis.com/auth/calendar',
 			'https://www.googleapis.com/auth/calendar.events',
+			// email → lets the callback label each connection by its account,
+			// so a user can connect several Google accounts and tell them apart.
+			'openid',
+			'email',
 		];
 
 		const url = oauth2Client.generateAuthUrl({

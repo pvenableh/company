@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
 		}
 
 		const user = await client.request(
-			readUser(userId, { fields: ['id', 'first_name', 'last_name', 'avatar', 'email'] }),
+			readUser(userId, { fields: ['id', 'first_name', 'last_name', 'avatar', 'email', 'title'] }),
 		);
 
 		// 3. Settings + availability + meetings
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
 				whitelabel: !!organization.whitelabel,
 				website: organization.website,
 			},
-			user: { id: user.id, first_name: user.first_name, last_name: user.last_name, avatar: user.avatar },
+			user: { id: user.id, first_name: user.first_name, last_name: user.last_name, avatar: user.avatar, title: (user as any).title },
 			settings: userSettings,
 			availability,
 			meetings: [

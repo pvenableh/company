@@ -1,32 +1,34 @@
 // server/api/scheduler/availability.ts
-// Get and set user availability
+// Get and set the CURRENT USER's weekly availability.
+//
+// Both GET and POST are scoped to the signed-in user (`user_id`). This is
+// critical for POST: it deletes the user's existing availability rows before
+// re-creating them, so an unscoped delete would wipe EVERY user's availability
+// (the pre-fix behaviour). Never remove the user_id filter.
 
-import { createDirectus, rest, staticToken, readItems, createItem, deleteItems } from '@directus/sdk';
+import { readItems, createItem, deleteItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
 	const method = getMethod(event);
 
-	const directusUrl = config.public.directusUrl;
-	const directusToken = config.directusServerToken as string;
-
-	if (!directusUrl || !directusToken) {
-		throw createError({
-			statusCode: 500,
-			message: 'Directus not configured',
-		});
+	// Session is required — availability is always per-user.
+	const session = await getUserSession(event);
+	if (!session?.user?.id) {
+		throw createError({ statusCode: 401, message: 'Unauthorized - Please sign in' });
 	}
+	const userId = session.user.id as string;
 
-	const directus = createDirectus(directusUrl).with(rest()).with(staticToken(directusToken));
+	// User-scoped Directus client (writes attribute to the real user).
+	const directus = await getUserDirectus(event);
 
 	if (method === 'GET') {
-		// Fetch availability
 		try {
 			const availability = await directus.request(
 				readItems('availability', {
 					fields: ['*', 'user_id.id', 'user_id.first_name', 'user_id.last_name'],
 					filter: {
-						status: { _eq: 'published' },
+						user_id: { _eq: userId },
+						status: { _neq: 'archived' },
 					},
 					sort: ['day_of_week'],
 				}),
@@ -46,17 +48,16 @@ export default defineEventHandler(async (event) => {
 	}
 
 	if (method === 'POST') {
-		// Save availability
 		try {
 			const body = await readBody(event);
 
-			// Delete existing availability for user
-			// TODO: Filter by user_id when auth is available
+			// Delete this user's existing availability only. The user_id filter
+			// is load-bearing — without it this wipes all users' rows.
 			try {
 				await directus.request(
 					deleteItems('availability', {
 						filter: {
-							status: { _eq: 'published' },
+							user_id: { _eq: userId },
 						},
 					}),
 				);
@@ -80,6 +81,7 @@ export default defineEventHandler(async (event) => {
 				const { enabled, start, end } = data as { enabled: boolean; start: string; end: string };
 				if (enabled) {
 					entries.push({
+						user_id: userId,
 						day_of_week: dayMapping[day] || day,
 						start_time: start + ':00',
 						end_time: end + ':00',

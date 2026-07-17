@@ -399,8 +399,75 @@ export const CREATE_CAMPAIGN_TOOL: ToolDefinition = {
   },
 };
 
+export const FIND_A_TIME_TOOL: ToolDefinition = {
+  name: 'find_a_time',
+  description:
+    'Finds open time slots on the CURRENT USER\'s calendar, honoring their availability, buffers, minimum notice, and their connected Google/Outlook calendars (real free/busy). READ-ONLY — this suggests times, it does not book anything. Use when the user asks "when am I free", "find a time", "what times are open next week", or as the first step before book_meeting. Returns a short list of open start times you can offer.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      duration_minutes: { type: 'number', description: 'Meeting length in minutes. Defaults to 30.' },
+      from: { type: 'string', description: 'Optional start of the search window (YYYY-MM-DD or ISO). Defaults to now.' },
+      to: { type: 'string', description: 'Optional end of the search window (YYYY-MM-DD or ISO). Defaults to the booking horizon.' },
+    },
+    required: [],
+  },
+};
+
+export const BOOK_MEETING_TOOL: ToolDefinition = {
+  name: 'book_meeting',
+  description:
+    'PROPOSES booking a meeting on the current user\'s calendar with an external invitee (a client/contact). This does NOT book anything — it queues the booking for the user to approve in the AI Activity queue; on approval it creates the meeting, provisions the video room, and emails the invitee. Use when the user asks to "book", "schedule", or "set up a meeting/call with" someone at a specific time. Provide scheduled_start (ISO). Provide the invitee via invitee_email, or a contact_id present verbatim in the context (or focus the chat on a contact/lead/client). Always describe this as a proposal awaiting approval — never say the meeting was booked.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      scheduled_start: { type: 'string', description: 'Meeting start as an ISO timestamp (e.g. 2026-07-20T14:00:00Z). Get an open time from find_a_time first when unsure.' },
+      duration_minutes: { type: 'number', description: 'Meeting length in minutes. Defaults to 30.' },
+      title: { type: 'string', description: 'Optional meeting title.' },
+      invitee_email: { type: 'string', description: 'The external invitee\'s email. Provide this OR contact_id.' },
+      invitee_name: { type: 'string', description: 'Optional invitee display name.' },
+      contact_id: { type: 'string', description: 'Directus contact id to resolve the invitee email/name from. Pass ONLY an id present verbatim in the context; omit to use the focused contact/lead/client.' },
+      notes: { type: 'string', description: 'Optional notes/agenda for the meeting.' },
+    },
+    required: ['scheduled_start'],
+  },
+};
+
+export const RESCHEDULE_MEETING_TOOL: ToolDefinition = {
+  name: 'reschedule_meeting',
+  description:
+    'PROPOSES moving an existing meeting to a new time. Queues the change for approval; nothing moves until approved. Use when the user asks to "move", "reschedule", or "push" a specific meeting. Pass meeting_id (a video_meetings UUID present verbatim in the context, e.g. when focused on a meeting) and new_start (ISO).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      meeting_id: { type: 'string', description: 'The video_meetings UUID to move. Pass ONLY a UUID present verbatim in the context; omit to use the focused meeting.' },
+      new_start: { type: 'string', description: 'The new start as an ISO timestamp.' },
+      duration_minutes: { type: 'number', description: 'Optional new duration in minutes; keeps the existing duration if omitted.' },
+    },
+    required: ['new_start'],
+  },
+};
+
+export const CANCEL_MEETING_TOOL: ToolDefinition = {
+  name: 'cancel_meeting',
+  description:
+    'PROPOSES cancelling an existing meeting. Queues the cancellation for approval; the meeting stays until approved. Use when the user asks to "cancel" or "call off" a specific meeting. Pass meeting_id (a video_meetings UUID present verbatim in the context; omit to use the focused meeting).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      meeting_id: { type: 'string', description: 'The video_meetings UUID to cancel. Pass ONLY a UUID present verbatim in the context; omit to use the focused meeting.' },
+      reason: { type: 'string', description: 'Optional cancellation reason.' },
+    },
+    required: [],
+  },
+};
+
 /** All mutation tools — passed to Anthropic when allow_ai_mutations is on */
 export const MUTATION_TOOLS: ToolDefinition[] = [
+  FIND_A_TIME_TOOL,
+  BOOK_MEETING_TOOL,
+  RESCHEDULE_MEETING_TOOL,
+  CANCEL_MEETING_TOOL,
   RESCHEDULE_PROJECT_TOOL,
   UPDATE_FIELD_TOOL,
   ADD_TASK_TOOL,

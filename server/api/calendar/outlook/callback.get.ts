@@ -59,11 +59,56 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
+		// Resolve the connected Outlook mailbox (for multi-account labels + the
+		// getSchedule free/busy lookup, which is keyed by the mailbox address).
+		let accountEmail: string | null = null;
+		try {
+			const me = (await $fetch('https://graph.microsoft.com/v1.0/me', {
+				headers: { Authorization: `Bearer ${tokens.access_token}` },
+			})) as any;
+			accountEmail = me?.mail || me?.userPrincipalName || null;
+		} catch {
+			accountEmail = (session?.user as any)?.email || null;
+		}
+
 		// Save refresh token to settings
 		const client = createDirectus(config.public.directusUrl).with(rest());
 		const staticToken = config.directusServerToken;
 		if (staticToken) {
 			client.setToken(staticToken);
+		}
+
+		// Multi-calendar: upsert a calendar_connections row (non-fatal).
+		try {
+			const existingConn = (await client.request(
+				readItems('calendar_connections', {
+					fields: ['id'],
+					filter: { user: { _eq: userId }, provider: { _eq: 'outlook' }, account_email: { _eq: accountEmail } },
+					limit: 1,
+				}),
+			)) as any[];
+			if (existingConn.length > 0) {
+				await client.request(updateItem('calendar_connections', existingConn[0].id, {
+					refresh_token: tokens.refresh_token,
+					enabled: true,
+				} as any));
+			} else {
+				await client.request(createItem('calendar_connections', {
+					user: userId,
+					provider: 'outlook',
+					account_email: accountEmail,
+					display_name: accountEmail || 'Outlook Calendar',
+					color: '#0F6CBD',
+					calendar_id: 'primary',
+					refresh_token: tokens.refresh_token,
+					blocks_availability: true,
+					show_on_calendar: false,
+					is_write_target: true,
+					enabled: true,
+				} as any));
+			}
+		} catch (e: any) {
+			console.warn('[outlook/callback] calendar_connections upsert failed (non-fatal):', e?.message);
 		}
 
 		const existing = await client.request(

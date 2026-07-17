@@ -95,31 +95,46 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 	}
 
 	// ── Resolve host + settings + event type ──────────────────────────────────
-	const hostUser = (await client.request(
-		readUser(input.hostUserId, { fields: ['id', 'first_name', 'last_name', 'email'] }),
-	)) as { id: string; first_name?: string; last_name?: string; email?: string };
-
-	const settings = (await client.request(
-		readItems('scheduler_settings', {
-			fields: ['*'],
-			filter: { user_id: { _eq: input.hostUserId } },
-			limit: 1,
-		}),
-	)) as any[];
-	const hostSettings = settings[0];
+	let bookingHostId = input.hostUserId;
 
 	let eventType: any | null = null;
 	if (input.eventTypeId) {
 		try {
 			eventType = await client.request(
 				readItem('event_types', input.eventTypeId, {
-					fields: ['id', 'title', 'slug', 'organization', 'host_user'],
+					fields: ['id', 'title', 'slug', 'organization', 'host_user', 'scheduling_type'],
 				}),
 			);
 		} catch (e: any) {
 			console.warn('[finalize] event_types lookup failed:', e.message);
 		}
 	}
+
+	// Round-robin: re-resolve the actual host at booking time (a free pooled host,
+	// least-loaded first). Closes the gap between slot-listing and submit. Falls
+	// back to the requested host if none of the pool is free.
+	if (eventType && eventType.scheduling_type === 'round_robin') {
+		const startForRr = new Date(input.scheduledStart);
+		const endForRr = input.scheduledEnd
+			? new Date(input.scheduledEnd)
+			: new Date(startForRr.getTime() + (input.durationMinutes || 30) * 60000);
+		const picked = await resolveRoundRobinHost(client, eventType, startForRr, endForRr);
+		if (picked) bookingHostId = picked;
+		else console.warn('[finalize] round-robin: no pooled host free; using requested host', input.hostUserId);
+	}
+
+	const hostUser = (await client.request(
+		readUser(bookingHostId, { fields: ['id', 'first_name', 'last_name', 'email'] }),
+	)) as { id: string; first_name?: string; last_name?: string; email?: string };
+
+	const settings = (await client.request(
+		readItems('scheduler_settings', {
+			fields: ['*'],
+			filter: { user_id: { _eq: bookingHostId } },
+			limit: 1,
+		}),
+	)) as any[];
+	const hostSettings = settings[0];
 
 	// ── Generate room + compute times ─────────────────────────────────────────
 	const timestamp = Date.now().toString(36);
@@ -131,10 +146,51 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 		? new Date(input.scheduledEnd)
 		: new Date(startTime.getTime() + (input.durationMinutes || 30) * 60000);
 
+	// ── Double-book guard (Phase 2, log-only) ─────────────────────────────────
+	// Re-check the slot against internal + external busy right before writing, to
+	// close the window where the client computed slots against stale data. Shipped
+	// LOG-ONLY first: we log a "would-reject" so we can confirm the engine agrees
+	// with reality before it can block a real booking. Flip ENFORCE to enable 409s.
+	// NB: the idempotent-reuse path already returned above, so this only runs for
+	// genuinely new bookings — but enforcement should still be gated to the
+	// interactive (free/direct) path, not payment webhooks, when turned on.
+	const ENFORCE_DOUBLE_BOOK_GUARD = false;
+	try {
+		const conflict = await hasSlotConflict(client, bookingHostId, startTime, endTime, hostSettings);
+		if (conflict) {
+			if (ENFORCE_DOUBLE_BOOK_GUARD) {
+				throw createError({ statusCode: 409, message: 'That time was just taken. Please choose another slot.' });
+			}
+			console.warn(
+				`[finalize] DOUBLE-BOOK GUARD (log-only): ${startTime.toISOString()} for host ${input.hostUserId} ` +
+					`conflicts with an existing internal/external event. Would have returned 409.`,
+			);
+		}
+	} catch (e: any) {
+		if (e?.statusCode === 409) throw e;
+		console.warn('[finalize] conflict check failed (continuing):', e?.message);
+	}
+
+	// ── Provision the Daily room at booking time (was lazy) ───────────────────
+	// The room name is freshly random so this won't collide. Non-fatal: if Daily
+	// is down we fall back to lazy provisioning at join time.
+	let dailyRoomId: string | null = null;
+	try {
+		const room = await createDailyRoom({
+			name: roomName,
+			expiresAt: new Date(endTime.getTime() + 60 * 60 * 1000),
+			enableTranscription: true,
+		});
+		dailyRoomId = room?.id || null;
+	} catch (e: any) {
+		console.warn('[finalize] Daily room provisioning failed (lazy fallback at join):', e?.message);
+	}
+
 	// ── Create video_meeting ──────────────────────────────────────────────────
 	const meeting = (await client.request(
 		createItem('video_meetings', {
 			room_name: roomName,
+			room_sid: dailyRoomId,
 			title: input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`,
 			description: input.bookingNotes,
 			meeting_type: input.meetingType || 'consultation',
@@ -142,7 +198,7 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 			scheduled_start: startTime.toISOString(),
 			scheduled_end: endTime.toISOString(),
 			duration_minutes: input.durationMinutes || 30,
-			host_user: input.hostUserId,
+			host_user: bookingHostId,
 			host_identity: `${hostUser.first_name || ''} ${hostUser.last_name || ''}`.trim(),
 			invitee_name: input.inviteeName,
 			invitee_email: input.inviteeEmail,
@@ -222,7 +278,7 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 				method: 'POST',
 				body: {
 					meetingId: meeting.id,
-					userId: input.hostUserId,
+					userId: bookingHostId,
 					title: input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`,
 					description: `Video meeting: ${config.public.siteUrl}/meeting/${roomName}\n\n${input.bookingNotes || ''}`,
 					startTime: startTime.toISOString(),
@@ -241,7 +297,7 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 				method: 'POST',
 				body: {
 					meetingId: meeting.id,
-					userId: input.hostUserId,
+					userId: bookingHostId,
 					title: input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`,
 					description: `Video meeting: ${config.public.siteUrl}/meeting/${roomName}\n\n${input.bookingNotes || ''}`,
 					startTime: startTime.toISOString(),
@@ -268,8 +324,9 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 	}
 
 	let contactMatched = false;
+	let resolvedClientId: string | null = null;
 	try {
-		contactMatched = await logBookingToPipeline({
+		const pipe = await logBookingToPipeline({
 			inviteeEmail: input.inviteeEmail,
 			inviteeName: input.inviteeName,
 			bookingNotes: input.bookingNotes,
@@ -279,8 +336,50 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 			durationMinutes: input.durationMinutes || 30,
 			organizationId: finalizeOrgId,
 		});
+		contactMatched = pipe.matched;
+		resolvedClientId = pipe.clientId;
 	} catch (e: any) {
 		console.warn('[finalize] auto-log to pipeline failed:', e.message);
+	}
+
+	// ── Cross-app wiring (Phase 2): make the booking visible across Earnest ────
+	// Staff bell/email for the host. Actor is the external invitee (no directus
+	// user), so userId='' means the host is NOT filtered out of recipients.
+	try {
+		await notifyEvent({
+			collection: 'video_meetings',
+			action: 'create',
+			itemId: meeting.id,
+			item: {
+				host_user: bookingHostId,
+				title: appointmentPayload.title,
+				invitee_name: input.inviteeName,
+				invitee_email: input.inviteeEmail,
+			},
+			userId: '',
+			orgId: finalizeOrgId,
+			staffOnly: true,
+			actorName: input.inviteeName || input.inviteeEmail,
+		});
+	} catch (e: any) {
+		console.warn('[finalize] notifyEvent failed (non-fatal):', e?.message);
+	}
+
+	// Client CRM timeline — only when the invitee maps to a client company.
+	if (resolvedClientId) {
+		void writeClientTimeline({
+			organizationId: finalizeOrgId,
+			clientId: resolvedClientId,
+			verb: 'meeting.booked',
+			title: `${eventType?.title || input.title || 'Meeting'} booked`,
+			subtitle: `${input.inviteeName || input.inviteeEmail} · ${startTime.toISOString()}`,
+			actorType: 'client',
+			actorName: input.inviteeName || input.inviteeEmail,
+			sourceCollection: 'video_meetings',
+			sourceId: meeting.id,
+			href: `/meetings/${meeting.id}`,
+			icon: 'calendar-check',
+		});
 	}
 
 	return {
@@ -310,10 +409,10 @@ async function logBookingToPipeline(opts: {
 	scheduledStart: string;
 	durationMinutes: number;
 	organizationId: string | null;
-}): Promise<boolean> {
+}): Promise<{ matched: boolean; clientId: string | null }> {
 	const admin = getTypedDirectus();
 	const email = (opts.inviteeEmail || '').trim().toLowerCase();
-	if (!email) return false;
+	if (!email) return { matched: false, clientId: null };
 
 	const filter: any = { email: { _eq: email } };
 	if (opts.organizationId) {
@@ -327,14 +426,19 @@ async function logBookingToPipeline(opts: {
 	const rows = (await admin.request(
 		readItems('contacts' as any, {
 			filter,
-			fields: ['id', 'email', 'leads.id'],
+			fields: ['id', 'email', 'client', 'leads.id'],
 			limit: 1,
 		} as any),
-	)) as Array<{ id: string; email: string; leads?: Array<{ id: number }> }>;
+	)) as Array<{ id: string; email: string; client?: string | { id: string } | null; leads?: Array<{ id: number }> }>;
 
 	const contact = rows && rows[0];
-	if (!contact) return false;
+	if (!contact) return { matched: false, clientId: null };
 
+	const clientId = contact.client
+		? typeof contact.client === 'object'
+			? contact.client.id
+			: contact.client
+		: null;
 	const leadId = contact.leads && contact.leads.length > 0 ? contact.leads[0]!.id : null;
 
 	const intakeBlock = (() => {
@@ -359,5 +463,122 @@ async function logBookingToPipeline(opts: {
 		} as any),
 	);
 
-	return true;
+	return { matched: true, clientId };
+}
+
+/**
+ * Round-robin host selection at booking time. Returns the pooled host who is
+ * free for [start,end], least-loaded first (fewest upcoming meetings), or null
+ * if the pool is empty or nobody is free.
+ */
+async function resolveRoundRobinHost(
+	client: any,
+	eventType: any,
+	start: Date,
+	end: Date,
+): Promise<string | null> {
+	// Query the pool directly (the `hosts` o2m alias may not be registered).
+	const poolRows = (await client.request(
+		(readItems as any)('event_type_hosts', {
+			fields: ['host_user', 'enabled'],
+			filter: { event_type: { _eq: eventType.id }, enabled: { _eq: true } },
+		}),
+	).catch(() => [])) as any[];
+	const pool: string[] = poolRows
+		.map((h: any) => (typeof h.host_user === 'object' ? h.host_user?.id : h.host_user))
+		.filter(Boolean);
+	if (!pool.length) return null;
+
+	const free: string[] = [];
+	for (const hid of pool) {
+		const s = ((await client.request(
+			(readItems as any)('scheduler_settings', { fields: ['buffer_before', 'buffer_after'], filter: { user_id: { _eq: hid } }, limit: 1 }),
+		)) as any[])[0] || {};
+		const conflict = await hasSlotConflict(client, hid, start, end, s);
+		if (!conflict) free.push(hid);
+	}
+	if (!free.length) return null;
+
+	const counts: Record<string, number> = {};
+	for (const hid of free) {
+		const rows = (await client.request(
+			(readItems as any)('video_meetings', {
+				fields: ['id'],
+				filter: { _and: [{ host_user: { _eq: hid } }, { status: { _in: ['scheduled', 'in_progress'] } }, { scheduled_start: { _gte: new Date().toISOString() } }] },
+				limit: 300,
+			}),
+		)) as any[];
+		counts[hid] = rows.length;
+	}
+	free.sort((a, b) => (counts[a]! - counts[b]!) || a.localeCompare(b));
+	return free[0]!;
+}
+
+/**
+ * Booking-time double-book guard. Returns true if [start,end] collides with the
+ * host's internal (video_meetings + appointments) or external (Google/Outlook)
+ * busy, with the host's buffers applied. Best-effort: any lookup error is logged
+ * and treated as "no conflict" so a transient failure can't block bookings.
+ */
+async function hasSlotConflict(
+	client: any,
+	hostUserId: string,
+	start: Date,
+	end: Date,
+	hostSettings: any,
+): Promise<boolean> {
+	const bufferBefore = Number(hostSettings?.buffer_before) || 0;
+	const bufferAfter = Number(hostSettings?.buffer_after) || 0;
+	const pad = 2 * 60 * 60 * 1000; // widen the fetch window for buffer math
+	const from = new Date(start.getTime() - pad);
+	const to = new Date(end.getTime() + pad);
+
+	const busy: Array<{ start: Date; end: Date }> = [];
+
+	const meetings = (await client.request(
+		(readItems as any)('video_meetings', {
+			fields: ['scheduled_start', 'scheduled_end', 'duration_minutes'],
+			filter: {
+				_and: [
+					{ host_user: { _eq: hostUserId } },
+					{ status: { _in: ['scheduled', 'in_progress'] } },
+					{ scheduled_start: { _gte: from.toISOString() } },
+					{ scheduled_start: { _lte: to.toISOString() } },
+				],
+			},
+		}),
+	)) as any[];
+	for (const m of meetings) {
+		if (!m.scheduled_start) continue;
+		const s = new Date(m.scheduled_start);
+		const e = m.scheduled_end ? new Date(m.scheduled_end) : new Date(s.getTime() + (Number(m.duration_minutes) || 30) * 60000);
+		busy.push({ start: s, end: e });
+	}
+
+	const appts = (await client.request(
+		(readItems as any)('appointments', {
+			fields: ['start_time', 'end_time'],
+			filter: {
+				_and: [
+					{ user_created: { _eq: hostUserId } },
+					{ status: { _neq: 'canceled' } },
+					{ start_time: { _gte: from.toISOString() } },
+					{ start_time: { _lte: to.toISOString() } },
+				],
+			},
+		}),
+	)) as any[];
+	for (const a of appts) {
+		if (!a.start_time) continue;
+		busy.push({ start: new Date(a.start_time), end: a.end_time ? new Date(a.end_time) : end });
+	}
+
+	try {
+		const external = await getBusyForHosts([hostUserId], from, to);
+		busy.push(...(external[hostUserId] || []));
+	} catch {
+		// fail-open on external provider
+	}
+
+	return !isIntervalFree(start, end, busy, bufferBefore, bufferAfter);
 }
