@@ -119,7 +119,7 @@ const typeStyles = (event: CalendarEvent) => {
 	switch (event.type) {
 		case 'video_meeting': return { color: '#10b981', icon: 'i-heroicons-video-camera', iconColor: 'text-success' };
 		case 'follow_up': return { color: '#f59e0b', icon: 'i-heroicons-arrow-path', iconColor: 'text-warning' };
-		case 'external': return { color: '#9ca3af', icon: 'i-heroicons-globe-alt', iconColor: 'text-gray-400' };
+		case 'external': return { color: event.external_color || '#9ca3af', icon: 'i-heroicons-globe-alt', iconColor: 'text-gray-400' };
 		default: return { color: '#3b82f6', icon: 'i-heroicons-calendar', iconColor: 'text-blue-500' };
 	}
 };

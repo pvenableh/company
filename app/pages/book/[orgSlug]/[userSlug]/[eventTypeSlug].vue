@@ -42,7 +42,7 @@ onMounted(() => fetchBookingData());
 </script>
 
 <template>
-	<SchedulerBookingPageShell :data="data" :loading="loading">
+	<SchedulerBookingPageShell :data="data" :loading="loading" :active-event-type="data?.selectedEventType || null">
 		<SchedulerBookingFlow
 			v-if="data"
 			:host-user="data.user"

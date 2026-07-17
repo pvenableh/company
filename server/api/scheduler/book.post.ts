@@ -8,6 +8,14 @@ import { readItem } from '@directus/sdk';
 import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 
 export default defineEventHandler(async (event) => {
+	// Portal preview is read-only. A staff admin previewing a client's portal
+	// carries the `portal_preview_as` cookie; block writes so a preview can't
+	// book a real meeting on the client's behalf (mirrors contract-sign /
+	// proposal-action). Genuine public + client bookings never set this cookie.
+	if (getCookie(event, 'portal_preview_as')) {
+		throw createError({ statusCode: 403, message: 'Portal preview is read-only — booking is disabled while previewing as a client.' });
+	}
+
 	const body = await readBody(event);
 
 	const {

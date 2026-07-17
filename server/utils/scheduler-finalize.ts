@@ -235,6 +235,39 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 		updateItem('video_meetings', meeting.id, { related_appointment: appointment.id }),
 	);
 
+	// ── Collective bookings: fan the whole host pool onto the meeting ─────────
+	// A collective event type means EVERY pooled host attends (the availability
+	// engine already intersected their free time). Book them all as internal
+	// attendees so the roster reads "all N hosts", not just the primary. Internal
+	// users ride the appointment via appointments_directus_users (the junction
+	// the hub roster reads); the primary host is host_user and skipped here.
+	if (eventType?.scheduling_type === 'collective') {
+		try {
+			const poolRows = (await client.request(
+				readItems('event_type_hosts', {
+					fields: ['host_user', 'enabled'],
+					filter: { event_type: { _eq: eventType.id }, enabled: { _eq: true } },
+				}),
+			)) as any[];
+			const coHosts = poolRows
+				.map((h) => (typeof h.host_user === 'object' ? h.host_user?.id : h.host_user))
+				.filter((id): id is string => !!id && id !== bookingHostId);
+			for (const coHostId of [...new Set(coHosts)]) {
+				await client.request(
+					createItem('appointments_directus_users', {
+						appointments_id: appointment.id,
+						directus_users_id: coHostId,
+					}),
+				).catch((e: any) => console.warn(`[finalize] collective attendee ${coHostId} link failed:`, e?.message));
+			}
+			if (coHosts.length > 0) {
+				console.info(`[finalize] collective booking: linked ${coHosts.length} co-host attendee(s) to appointment ${appointment.id}`);
+			}
+		} catch (e: any) {
+			console.warn('[finalize] collective host fan-out failed (non-fatal):', e?.message);
+		}
+	}
+
 	// ── Confirmation emails ───────────────────────────────────────────────────
 	if (hostSettings?.send_confirmations !== false) {
 		try {
@@ -272,42 +305,37 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 	}
 
 	// ── Calendar sync (best-effort) ───────────────────────────────────────────
-	if (hostSettings?.google_calendar_enabled && hostSettings?.google_refresh_token) {
-		try {
-			await $fetch('/api/calendar/google/create-event', {
-				method: 'POST',
-				body: {
-					meetingId: meeting.id,
-					userId: bookingHostId,
-					title: input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`,
-					description: `Video meeting: ${config.public.siteUrl}/meeting/${roomName}\n\n${input.bookingNotes || ''}`,
-					startTime: startTime.toISOString(),
-					endTime: endTime.toISOString(),
-					attendeeEmail: input.inviteeEmail,
-				},
-			});
-		} catch (e) {
-			console.error('Failed to sync to Google Calendar:', e);
+	// Push the booking to EVERY write-target calendar the host connected
+	// (calendar_connections.is_write_target), not just the primary account.
+	// pushBookingToCalendars falls back to the legacy inline scheduler_settings
+	// google_/outlook_ fields for hosts not yet migrated to calendar_connections,
+	// so un-migrated hosts behave exactly as before. Fail-open per target.
+	try {
+		const eventTitle = input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`;
+		const eventDescription = `Video meeting: ${config.public.siteUrl}/meeting/${roomName}\n\n${input.bookingNotes || ''}`;
+		const writeResults = await pushBookingToCalendars({
+			hostUserId: bookingHostId,
+			title: eventTitle,
+			description: eventDescription,
+			startTime: startTime.toISOString(),
+			endTime: endTime.toISOString(),
+			timezone: hostSettings?.timezone || null,
+			attendeeEmail: input.inviteeEmail,
+		});
+		// Record the first event id per provider on the meeting for history/back-ref
+		// (the fields are single-valued; the write itself fans out to all targets).
+		const firstGoogle = writeResults.find((r) => r.provider === 'google');
+		const firstOutlook = writeResults.find((r) => r.provider === 'outlook');
+		if (firstGoogle || firstOutlook) {
+			await client.request(
+				updateItem('video_meetings', meeting.id, {
+					...(firstGoogle ? { google_event_id: firstGoogle.eventId } : {}),
+					...(firstOutlook ? { outlook_event_id: firstOutlook.eventId } : {}),
+				}),
+			).catch((e: any) => console.warn('[finalize] could not record external event ids:', e?.message));
 		}
-	}
-
-	if (hostSettings?.outlook_calendar_enabled && hostSettings?.outlook_refresh_token) {
-		try {
-			await $fetch('/api/calendar/outlook/create-event', {
-				method: 'POST',
-				body: {
-					meetingId: meeting.id,
-					userId: bookingHostId,
-					title: input.title || `Meeting with ${input.inviteeName || input.inviteeEmail}`,
-					description: `Video meeting: ${config.public.siteUrl}/meeting/${roomName}\n\n${input.bookingNotes || ''}`,
-					startTime: startTime.toISOString(),
-					endTime: endTime.toISOString(),
-					attendeeEmail: input.inviteeEmail,
-				},
-			});
-		} catch (e) {
-			console.error('Failed to sync to Outlook Calendar:', e);
-		}
+	} catch (e) {
+		console.error('Failed to sync booking to external calendars:', e);
 	}
 
 	// ── Touch contacts + log to pipeline ──────────────────────────────────────
@@ -360,6 +388,10 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 			orgId: finalizeOrgId,
 			staffOnly: true,
 			actorName: input.inviteeName || input.inviteeEmail,
+			// Bell only — the host already gets the video-invite email (with the
+			// join link + Add-to-calendar), so a second "New meeting booked"
+			// email would be redundant.
+			skipEmail: true,
 		});
 	} catch (e: any) {
 		console.warn('[finalize] notifyEvent failed (non-fatal):', e?.message);

@@ -47,7 +47,7 @@ onMounted(() => fetchBookingData());
 </script>
 
 <template>
-	<SchedulerBookingPageShell :data="data" :loading="loading">
+	<SchedulerBookingPageShell :data="data" :loading="loading" :active-event-type="activeEventType">
 		<template v-if="data">
 			<!-- Default route: no default event type and not in picker mode -->
 			<div

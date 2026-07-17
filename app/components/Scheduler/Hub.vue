@@ -21,6 +21,15 @@
 			<button
 				type="button"
 				class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+				title="Book with a teammate"
+				aria-label="Book with a teammate"
+				@click="showTeammateBooking = true"
+			>
+				<UIcon name="i-heroicons-user-plus" class="w-4.5 h-4.5 text-muted-foreground" />
+			</button>
+			<button
+				type="button"
+				class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
 				title="Meeting history — recordings & recaps"
 				aria-label="Meeting history"
 				@click="showHistory = true"
@@ -147,6 +156,9 @@
 		>
 			<SchedulerHistoryPanel />
 		</AppSlideOver>
+
+		<!-- Member-to-member booking — pick a teammate, open their booking page. -->
+		<SchedulerTeammateBookingSheet v-model="showTeammateBooking" />
 	</div>
 </template>
 
@@ -167,6 +179,7 @@ const meetingRequests = ref<any[]>([]);
 const showRequestsModal = ref(false);
 const showSettings = ref(false);
 const showHistory = ref(false);
+const showTeammateBooking = ref(false);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
 
 // The Apps-layout Work app can deep-link the meeting history open via
@@ -187,7 +200,7 @@ watch(showHistory, (open) => {
 });
 
 // Filters
-const activeFilters = ref(new Set(['appointments', 'video', 'follow_ups']));
+const activeFilters = ref(new Set(['appointments', 'video', 'follow_ups', 'external']));
 
 const MINE_ONLY_KEY = 'earnest:scheduler-mine-only';
 const mineOnly = ref(false);
@@ -208,10 +221,15 @@ onMounted(() => {
 //   Follow-ups (action needed) → warning
 // Dark-mode variants drop out — semantic tokens read from the same CSS
 // var in both themes, so a single utility paints correctly under either.
+// `external` is the connected-calendar overlay (show_on_calendar). It reads
+// from the host's real Google/Outlook calendars, so its chip uses the neutral
+// muted token here in the legend; individual event chips wear each connection's
+// own colour (CalendarEventChip.external_color).
 const eventFilters = [
-	{ key: 'appointments', label: 'Appointments', dot: 'bg-info',    activeBg: 'bg-info/10',    activeText: 'text-info' },
-	{ key: 'video',        label: 'Video',        dot: 'bg-success', activeBg: 'bg-success/10', activeText: 'text-success' },
-	{ key: 'follow_ups',   label: 'Follow-ups',   dot: 'bg-warning', activeBg: 'bg-warning/10', activeText: 'text-warning' },
+	{ key: 'appointments', label: 'Appointments', dot: 'bg-info',             activeBg: 'bg-info/10',    activeText: 'text-info' },
+	{ key: 'video',        label: 'Video',        dot: 'bg-success',          activeBg: 'bg-success/10', activeText: 'text-success' },
+	{ key: 'follow_ups',   label: 'Follow-ups',   dot: 'bg-warning',          activeBg: 'bg-warning/10', activeText: 'text-warning' },
+	{ key: 'external',      label: 'Calendars',    dot: 'bg-muted-foreground', activeBg: 'bg-muted',      activeText: 'text-foreground' },
 ];
 
 const toggleFilter = (key: string) => {
@@ -226,6 +244,7 @@ const filteredEvents = computed(() => {
 		if (e.type === 'video_meeting' && !activeFilters.value.has('video')) return false;
 		if (e.type === 'appointment' && !activeFilters.value.has('appointments')) return false;
 		if (e.type === 'follow_up' && !activeFilters.value.has('follow_ups')) return false;
+		if (e.type === 'external' && !activeFilters.value.has('external')) return false;
 		if (mineOnly.value && e.is_mine === false) return false;
 		return true;
 	});
@@ -302,6 +321,12 @@ const handleNewVideoMeeting = (dateStr: string) => {
 const handleEditEvent = (event: CalendarEvent) => {
 	if (event.type === 'follow_up' && event.lead?.id) {
 		router.push(`/leads/${event.lead.id}`);
+		return;
+	}
+	// External-calendar overlay events are read-only — they live in Google/
+	// Outlook, not Earnest. Open the source event in a new tab if we have a link.
+	if (event.type === 'external') {
+		if (event.external_link) window.open(event.external_link, '_blank', 'noopener');
 		return;
 	}
 	const apt = event.source_record;

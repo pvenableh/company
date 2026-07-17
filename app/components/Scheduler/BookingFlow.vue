@@ -27,7 +27,16 @@ const props = defineProps({
 	eventTypes: { type: Array, default: () => [] },
 	// Active event type. null = show picker.
 	eventType: { type: Object, default: null },
+	// Embedded mode (e.g. inside the client portal): the picker and "Change"
+	// affordances emit `select-event-type` instead of navigating to the public
+	// /book/<org>/<user>/<slug> URL, so the flow stays inside its host surface.
+	embedded: { type: Boolean, default: false },
+	// Optional invitee prefill { name, email } — used by the portal embed to
+	// pre-fill the signed-in client's details.
+	initialInvitee: { type: Object, default: null },
 });
+
+const emit = defineEmits(['select-event-type']);
 
 const toast = useToast();
 const router = useRouter();
@@ -69,6 +78,13 @@ const bookingForm = reactive({
 	phone: '',
 	notes: '',
 });
+
+// Prefill the invitee from the embedding surface (e.g. the signed-in portal
+// client). Non-destructive — the invitee can still edit both fields.
+if (props.initialInvitee) {
+	if (props.initialInvitee.name) bookingForm.name = props.initialInvitee.name;
+	if (props.initialInvitee.email) bookingForm.email = props.initialInvitee.email;
+}
 
 const duration = computed(() => eventType.value?.duration || props.settings?.default_duration || 30);
 
@@ -221,6 +237,11 @@ if (import.meta.client) {
 }
 
 function selectEventType(et) {
+	if (props.embedded) {
+		// Let the host surface (portal) own the active type — no route change.
+		emit('select-event-type', et);
+		return;
+	}
 	// Navigate to the 3-segment URL so the URL is shareable.
 	const orgSlug = route.params.orgSlug;
 	const userSlug = route.params.userSlug;
@@ -295,12 +316,15 @@ async function submitBooking() {
 		const intakeBlock = formatIntakeForDescription();
 
 		if (isPaid.value && eventType.value?.id) {
-			// Build the URL we'll come back to. The success URL adds session_id +
-			// keeps the eventTypeSlug intact so we can resolve the merchant org.
+			// Build the URL we'll come back to. On the public /book route the event
+			// type lives in the PATH, so we can drop the query. In embedded mode
+			// (portal) the host + type live in the QUERY, so we must PRESERVE it —
+			// otherwise the return leg can't restore which host/type was booked.
 			const here = new URL(window.location.href);
-			here.search = '';
-			const successUrl = `${here.toString()}?session_id={CHECKOUT_SESSION_ID}`;
-			const cancelUrl = `${here.toString()}?canceled=1`;
+			if (!props.embedded) here.search = '';
+			const sep = here.search ? '&' : '?';
+			const successUrl = `${here.toString()}${sep}session_id={CHECKOUT_SESSION_ID}`;
+			const cancelUrl = `${here.toString()}${sep}canceled=1`;
 
 			const checkout = await $fetch('/api/scheduler/booking-checkout', {
 				method: 'POST',
@@ -489,8 +513,16 @@ onMounted(() => {
 					</div>
 					<p v-if="eventType.description" class="text-xs text-muted-foreground truncate">{{ eventType.description }}</p>
 				</div>
+				<button
+					v-if="embedded && eventTypes.length > 1 && currentStage !== 'done'"
+					type="button"
+					class="text-xs text-muted-foreground underline shrink-0"
+					@click="selectEventType(null)"
+				>
+					Change
+				</button>
 				<NuxtLink
-					v-if="eventTypes.length > 1 && currentStage !== 'done'"
+					v-else-if="eventTypes.length > 1 && currentStage !== 'done'"
 					:to="`/book/${route.params.orgSlug}/${route.params.userSlug}?picker=1`"
 					class="text-xs text-muted-foreground underline shrink-0"
 				>

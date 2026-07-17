@@ -146,6 +146,7 @@ export default defineEventHandler(async (event) => {
 					fields: [
 						'id', 'title', 'slug', 'description', 'duration', 'color',
 						'intake_schema', 'price_cents', 'is_default', 'sort', 'status', 'enabled',
+						'audience', 'scheduling_type',
 					],
 					filter: {
 						_and: [

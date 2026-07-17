@@ -48,6 +48,7 @@ export type PortalAppId =
 	| 'billing'
 	| 'performance'
 	| 'messages'
+	| 'book'
 	| 'account';
 
 export interface PortalAppAccent {
@@ -95,6 +96,7 @@ const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
 	billing:     { id: 'billing',     name: 'Billing',     shortName: 'Bill', icon: 'lucide:trending-up',       to: '/portal/billing',     availabilityKey: 'billing',     notificationCategories: ['invoices', 'proposals', 'contracts'] },
 	performance: { id: 'performance', name: 'Performance', shortName: 'Perf', icon: 'ph:chart-line-up-duotone', to: '/portal/performance', availabilityKey: 'performance' },
 	messages:    { id: 'messages',    name: 'Messages',    shortName: 'Msgs', icon: 'ph:chats-circle-duotone',  to: '/portal/messages',    availabilityKey: 'messages',    notificationCategories: ['conversations'] },
+	book:        { id: 'book',        name: 'Book',        shortName: 'Book', icon: 'ph:calendar-plus-duotone', to: '/portal/book' },
 	account:     { id: 'account',     name: 'Account',     shortName: 'Me',   icon: 'lucide:circle-user-round', to: '/portal/account' },
 };
 
@@ -109,6 +111,7 @@ export const PORTAL_ORDER: PortalAppId[] = [
 	'billing',
 	'performance',
 	'messages',
+	'book',
 ];
 
 export const PORTAL_FOOTER_ORDER: PortalAppId[] = ['account'];
@@ -130,6 +133,7 @@ const PORTAL_APP_PREFIXES: Array<{ id: PortalAppId; prefixes: string[] }> = [
 	{ id: 'billing',     prefixes: ['/portal/billing', '/portal/invoices', '/portal/proposals', '/portal/contracts'] },
 	{ id: 'performance', prefixes: ['/portal/performance', '/portal/social', '/portal/marketing'] },
 	{ id: 'messages',    prefixes: ['/portal/messages'] },
+	{ id: 'book',        prefixes: ['/portal/book'] },
 ];
 
 /**

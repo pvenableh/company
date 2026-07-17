@@ -50,6 +50,13 @@ export interface CalendarEvent {
 	creator_name?: string | null;
 	creator_avatar?: string | null;
 	is_mine?: boolean;
+	// External-calendar overlay (type='external'): events read back from a
+	// connected Google/Outlook calendar the host flagged `show_on_calendar`.
+	// `external_color` is the connection's own colour (drives the chip stripe +
+	// tint); `external_calendar_name` labels the source calendar in the tooltip.
+	external_color?: string | null;
+	external_calendar_name?: string | null;
+	external_link?: string | null;
 	source_record: any;
 }
 
@@ -224,16 +231,35 @@ export function useCalendarEvents() {
 		}
 	};
 
+	// ── External-calendar overlay (connections flagged show_on_calendar) ──
+	// Read-only feed of the host's real Google/Outlook events, surfaced as
+	// colour-coded 'external' chips. Fail-open: an errored overlay returns [].
+	const externalOverlayEvents = ref<any[]>([]);
+	const fetchExternalOverlay = async () => {
+		if (!user.value) return;
+		try {
+			const res = await $fetch('/api/scheduler/external-events');
+			externalOverlayEvents.value = (res as any)?.data || [];
+		} catch {
+			externalOverlayEvents.value = [];
+		}
+	};
+
 	// Initial fetch + periodic refresh
 	let followUpInterval: ReturnType<typeof setInterval> | null = null;
+	let overlayInterval: ReturnType<typeof setInterval> | null = null;
 
 	onMounted(() => {
 		fetchFollowUps();
+		fetchExternalOverlay();
 		followUpInterval = setInterval(fetchFollowUps, 120_000);
+		// Overlay is an external round-trip per provider — refresh less often.
+		overlayInterval = setInterval(fetchExternalOverlay, 300_000);
 	});
 
 	onUnmounted(() => {
 		if (followUpInterval) clearInterval(followUpInterval);
+		if (overlayInterval) clearInterval(overlayInterval);
 	});
 
 	// ── Unified events ──
@@ -395,6 +421,28 @@ export function useCalendarEvents() {
 			});
 		}
 
+		// External-calendar overlay → CalendarEvent (type 'external')
+		// These are the host's OWN external calendars, so is_mine=true keeps them
+		// visible under "Mine only". They're read-only: no source_record to edit.
+		for (const ext of externalOverlayEvents.value) {
+			if (!ext?.start) continue;
+			result.push({
+				id: `ext-${ext.id}`,
+				type: 'external',
+				title: ext.title || '(No title)',
+				start_time: ext.start,
+				end_time: ext.end || null,
+				is_video: false,
+				status: 'confirmed',
+				external_color: ext.color || null,
+				external_calendar_name: ext.calendarName || null,
+				external_link: ext.link || null,
+				creator_id: meId || null,
+				is_mine: true,
+				source_record: ext,
+			});
+		}
+
 		// Lead follow-ups → CalendarEvent
 		for (const lead of followUpLeads.value) {
 			if (!lead.next_follow_up) continue;
@@ -466,7 +514,7 @@ export function useCalendarEvents() {
 
 	const refresh = async () => {
 		refreshAppointments();
-		await fetchFollowUps();
+		await Promise.all([fetchFollowUps(), fetchExternalOverlay()]);
 	};
 
 	return {

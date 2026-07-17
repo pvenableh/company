@@ -14,8 +14,23 @@ const { getStatusOpacity } = useStatusStyle();
 // `creator_id`, so the day reads as a multi-host calendar at a glance.
 // Own events keep the type-based accent so the user's own pattern stays calm.
 const hostStripeStyle = computed(() => {
+	// External-calendar overlay events carry the connection's own color so the
+	// day reads Google-blue / Outlook-teal / whatever the host picked — that
+	// colour is the whole point of the "show on calendar" overlay.
+	if (props.event.type === 'external' && props.event.external_color) {
+		return { backgroundColor: props.event.external_color };
+	}
 	if (props.event.is_mine === false && props.event.creator_id) {
 		return { backgroundColor: hostAccentColor(props.event.creator_id) };
+	}
+	return null;
+});
+
+// Tinted background for external events keyed to the connection colour, so the
+// chip fill matches its stripe instead of the flat muted token.
+const externalTintStyle = computed(() => {
+	if (props.event.type === 'external' && props.event.external_color) {
+		return { backgroundColor: `color-mix(in srgb, ${props.event.external_color} 12%, transparent)` };
 	}
 	return null;
 });
@@ -81,14 +96,23 @@ const leadStageColor = computed(() => {
 	if (!props.event.lead?.stage) return null;
 	return LEAD_STAGE_COLORS[props.event.lead.stage] || null;
 });
+
+// Tooltip: teammate name on their events; source calendar on external overlays.
+const externalTitleAttr = computed(() => {
+	if (props.event.type === 'external') {
+		return props.event.external_calendar_name || 'External calendar';
+	}
+	return props.event.is_mine === false && props.event.creator_name ? props.event.creator_name : undefined;
+});
 </script>
 
 <template>
 	<div
-		:class="[typeBg]"
+		:class="[externalTintStyle ? '' : typeBg]"
 		class="relative rounded-md transition-all duration-200 cursor-pointer group hover:shadow-sm min-w-0 overflow-hidden"
 		:style="[
 			compact ? 'padding: 2px 6px 2px 12px' : 'padding: 6px 8px 6px 14px',
+			externalTintStyle || {},
 			{ opacity: chipOpacity },
 		]"
 	>
@@ -96,7 +120,7 @@ const leadStageColor = computed(() => {
 			class="absolute left-1 top-1 bottom-1 w-[2px] rounded-full"
 			:class="hostStripeStyle ? '' : typeAccent"
 			:style="hostStripeStyle || undefined"
-			:title="event.is_mine === false && event.creator_name ? event.creator_name : undefined"
+			:title="externalTitleAttr"
 		/>
 		<div class="flex items-center gap-1.5 min-w-0">
 			<UIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />

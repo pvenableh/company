@@ -44,6 +44,10 @@ onUnmounted(() => { if (nowInterval) clearInterval(nowInterval); });
 
 const isVideo = computed(() => props.event.type === 'video_meeting');
 
+// External-calendar overlay events are read-only mirrors of Google/Outlook
+// events — none of the Earnest row actions (join/copy/invite/edit/delete) apply.
+const isExternal = computed(() => props.event.type === 'external');
+
 const isInActiveWindow = computed(() => {
 	if (!isVideo.value) return false;
 	if (props.event.meeting_status === 'in_progress') return true;
@@ -141,6 +145,27 @@ async function deleteMeeting() {
 			<div class="w-60 p-1">
 				<div class="px-2.5 py-2 border-b border-border/30 mb-1">
 					<p class="text-[12px] font-semibold text-foreground truncate">{{ event.title }}</p>
+					<p v-if="isExternal && event.external_calendar_name" class="text-[10px] text-muted-foreground truncate mt-0.5">
+						{{ event.external_calendar_name }}
+					</p>
+				</div>
+
+				<!-- External overlay: read-only mirror. Offer only "open in calendar". -->
+				<div v-if="isExternal" class="px-1 pb-1">
+					<a
+						v-if="event.external_link"
+						:href="event.external_link"
+						target="_blank"
+						rel="noopener"
+						class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-foreground hover:bg-muted/40 transition-colors"
+						@click="open = false"
+					>
+						<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3.5 h-3.5 text-muted-foreground" />
+						<span>Open in calendar</span>
+					</a>
+					<p v-else class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
+						Read-only event from a connected calendar.
+					</p>
 				</div>
 
 				<div
@@ -209,8 +234,9 @@ async function deleteMeeting() {
 					class="border-t border-border/30 my-1"
 				/>
 
-				<!-- Secondary icon-row actions: copy / invite / edit / delete. -->
-				<div class="flex items-center justify-between gap-1 px-2 py-1.5">
+				<!-- Secondary icon-row actions: copy / invite / edit / delete. Hidden for
+				     external overlay events, which are read-only. -->
+				<div v-if="!isExternal" class="flex items-center justify-between gap-1 px-2 py-1.5">
 					<UTooltip v-if="isVideo && meetingUrl" text="Copy link">
 						<button
 							type="button"

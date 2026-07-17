@@ -53,6 +53,11 @@ function chunkValue(value: string, prefix: string, out: Record<string, string>) 
 }
 
 export default defineEventHandler(async (event) => {
+	// Portal preview is read-only — block the paid path too (mirrors book.post.ts).
+	if (getCookie(event, 'portal_preview_as')) {
+		throw createError({ statusCode: 403, message: 'Portal preview is read-only — booking is disabled while previewing as a client.' });
+	}
+
 	const config = useRuntimeConfig();
 	const stripe = useStripe();
 	const body = await readBody<Body>(event);
