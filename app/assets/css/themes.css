@@ -293,7 +293,10 @@
 [data-style='modern'] {
 	--title-font: var(--font-proxima-regular);
 	--title-transform: uppercase;
-	--title-tracking: 0.04em;
+	/* Uppercase display titles want to breathe — tracked out for the
+	   gallery/Apple large-title feel. Applies app-wide to h1/h2/h3 in the
+	   Modern (default) style, including AppHeader page titles. */
+	--title-tracking: 0.1em;
 	--title-weight: 500;
 	--body-font: var(--font-proxima-regular);
 	--label-transform: uppercase;

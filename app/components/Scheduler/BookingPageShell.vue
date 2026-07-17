@@ -12,6 +12,9 @@ import { userAvatar } from '~/utils/user-name';
 const props = defineProps({
 	data: { type: Object, default: null },
 	loading: { type: Boolean, default: false },
+	/** The event type currently being booked (null in picker mode). Drives the
+	 *  header lead-in: "Schedule a <type> with". */
+	activeEventType: { type: Object, default: null },
 });
 
 const config = useRuntimeConfig();
@@ -22,6 +25,20 @@ const org = computed(() => props.data?.organization || null);
 const hostName = computed(() =>
 	host.value ? `${host.value.first_name || ''} ${host.value.last_name || ''}`.trim() : '',
 );
+
+// Sits above the name as a sentence-form lead-in: "Schedule a Meeting with".
+const bookingLabel = computed(() => props.data?.settings?.booking_page_title || 'Schedule a Meeting');
+
+// The selected meeting type's name, bolded in the lead-in when a type is active.
+const selectedTypeName = computed(() => (props.activeEventType?.title || '').trim() || null);
+
+// Role line under the name: "JOB TITLE @ COMPANY" (uppercased in the template).
+const roleLine = computed(() => {
+	const t = (host.value?.title || '').trim();
+	const c = (org.value?.name || '').trim();
+	if (t && c) return `${t} @ ${c}`;
+	return t || c || '';
+});
 // Display avatar always resolves (userAvatar falls back to a generated placeholder).
 const avatarSrc = computed(() => (host.value ? userAvatar(host.value) : undefined));
 // Only a REAL uploaded avatar is embedded in the vCard photo.
@@ -71,40 +88,48 @@ function saveContact() {
 		<!-- Host header -->
 		<div class="bg-white dark:bg-gray-800 border-b border-border">
 			<div class="max-w-3xl mx-auto px-4 py-6">
-				<div class="flex items-start gap-4">
+				<div class="flex items-center gap-4">
 					<UAvatar :src="avatarSrc" :alt="hostName || 'Host'" size="lg" />
 					<div class="min-w-0 flex-1">
 						<template v-if="loading && !host">
-							<div class="h-7 w-44 rounded bg-muted animate-pulse mb-2" />
-							<div class="h-4 w-28 rounded bg-muted animate-pulse" />
+							<div class="h-3 w-32 rounded bg-muted animate-pulse mb-2" />
+							<div class="h-7 w-48 rounded bg-muted animate-pulse mb-2" />
+							<div class="h-3 w-40 rounded bg-muted animate-pulse" />
 						</template>
 						<template v-else-if="host">
-							<h1 class="text-2xl font-semibold tracking-tight truncate">{{ hostName }}</h1>
-							<p v-if="host.title" class="text-sm font-medium text-muted-foreground truncate">{{ host.title }}</p>
-							<p class="text-sm text-muted-foreground">
-								{{ data?.settings?.booking_page_title || 'Schedule a meeting' }}
+							<p class="text-sm text-muted-foreground leading-tight">
+								<template v-if="selectedTypeName">Schedule a <span class="font-semibold text-foreground">{{ selectedTypeName }}</span> with</template>
+								<template v-else>{{ bookingLabel }} with</template>
 							</p>
-							<p v-if="org?.name" class="text-xs text-muted-foreground mt-0.5">{{ org.name }}</p>
+							<h1 class="text-2xl font-semibold tracking-tight leading-tight truncate">{{ hostName }}</h1>
+							<p
+								v-if="roleLine"
+								class="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground leading-tight truncate"
+							>{{ roleLine }}</p>
 						</template>
 					</div>
 
-					<!-- CardDesk card + save-contact -->
-					<div v-if="host && !loading" class="flex flex-col items-end gap-1.5 shrink-0">
+					<!-- CardDesk card + save-contact — circular icon buttons -->
+					<div v-if="host && !loading" class="flex items-center gap-2 shrink-0">
 						<a
 							v-if="cardUrl"
 							:href="cardUrl"
 							target="_blank"
 							rel="noopener"
-							class="text-xs text-primary hover:underline flex items-center gap-1 whitespace-nowrap"
+							title="View card"
+							aria-label="View digital card"
+							class="size-10 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center justify-center"
 						>
-							<UIcon name="i-heroicons-identification" class="w-3.5 h-3.5" /> View card
+							<UIcon name="i-heroicons-identification" class="w-5 h-5" />
 						</a>
 						<button
 							type="button"
-							class="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 whitespace-nowrap"
+							title="Save contact"
+							aria-label="Save contact"
+							class="size-10 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center"
 							@click="saveContact"
 						>
-							<UIcon name="i-heroicons-user-plus" class="w-3.5 h-3.5" /> Save contact
+							<UIcon name="i-heroicons-user-plus" class="w-5 h-5" />
 						</button>
 					</div>
 				</div>
