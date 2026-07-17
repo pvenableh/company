@@ -77,7 +77,7 @@ export async function applyRefundAdjustment(
 					...(chargeId ? [{ charge_id: { _eq: chargeId } } as any] : []),
 				],
 			},
-			fields: ['id', 'invoice_id', 'amount', 'organization', 'note', 'stripe_status'],
+			fields: ['id', 'invoice_id', 'amount', 'organization', 'note', 'stripe_status', 'livemode'],
 			limit: -1,
 		}),
 	)) as Array<{
@@ -131,6 +131,8 @@ export async function applyRefundAdjustment(
 			status: 'paid',
 			date_received: new Date().toISOString(),
 			note: `Refund of $${deltaDollars} for charge ${chargeId || piId}`,
+			// Inherit test/live so the negative row hides/shows with its original.
+			livemode: (original as any).livemode ?? null,
 		}),
 	);
 
