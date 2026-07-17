@@ -169,6 +169,12 @@ const actionAppFilter = ref<'all' | ActionApp>('all');
 const unhandledActions = computed(() =>
 	suggestions.value.filter(s => !handledActionIds.value.has(s.id)),
 );
+
+// Attention load — how many things are asking for the user at once. Feeds the
+// fatigue-aware Focus-mode nudge (a calmer way through when the board is heavy).
+const attentionLoad = computed(() =>
+	unhandledActions.value.filter(s => s.priority === 'urgent' || s.priority === 'high').length,
+);
 // Pill counts reflect ALL priorities per app (not just urgent/high) so an app
 // with only medium-priority items — e.g. CardDesk follow-ups — still shows a
 // count and isn't a dead pill.
@@ -370,6 +376,8 @@ const goTo = (route: string) => {
 	<div class="min-h-screen t-bg t-text">
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
+			<!-- Fatigue-aware invite into Focus mode when the board gets heavy. -->
+			<EarnestFocusNudge :load="attentionLoad" />
 			<!-- Apps Layout per-app header — shows the dashboard accent
 			     chip + page title, matching the rest of /apps/*. -->
 			<AppHeader title="Dashboard" />
