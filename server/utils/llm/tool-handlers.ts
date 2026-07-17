@@ -353,6 +353,53 @@ async function handleGenerateDocuments(
   };
 }
 
+// ─── find_a_time (read-only) ─────────────────────────────────────────────────
+// Suggests open slots on the CURRENT USER's calendar via the authoritative slot
+// endpoint (which honors availability, buffers, min-notice + external free/busy).
+// No side effect — the model uses the result to offer times before book_meeting.
+
+async function handleFindATime(
+  input: Record<string, any>,
+  ctx: ToolHandlerContext,
+): Promise<ToolHandlerResult> {
+  const duration = Number(input.duration_minutes) > 0 ? Math.round(Number(input.duration_minutes)) : 30;
+  const query: Record<string, any> = { hostUserId: ctx.userId, duration };
+  if (input.from) query.from = String(input.from);
+  if (input.to) query.to = String(input.to);
+
+  const res = (await $fetch('/api/scheduler/slots', { query })) as any;
+  const tz = res?.timezone || 'America/New_York';
+  const slots = (res?.slots || []) as Array<{ start: string }>;
+
+  if (!slots.length) {
+    return {
+      success: true,
+      summary: 'No open times were found in that window — the user may have no availability configured, or the window is fully booked.',
+      data: { slots: [], timezone: tz },
+    };
+  }
+
+  const fmt = (iso: string) =>
+    new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: tz,
+    }).format(new Date(iso));
+
+  // Offer a spread (first slot per distinct day, up to 8) rather than 8 in a row.
+  const byDay = new Map<string, string>();
+  for (const s of slots) {
+    const dayKey = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz }).format(new Date(s.start));
+    if (!byDay.has(dayKey)) byDay.set(dayKey, s.start);
+    if (byDay.size >= 8) break;
+  }
+  const offered = [...byDay.values()];
+
+  return {
+    success: true,
+    summary: `Open times (${tz}):\n${offered.map((s) => `• ${fmt(s)} (ISO ${s})`).join('\n')}`,
+    data: { slots: offered, timezone: tz, total: slots.length },
+  };
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 export async function executeToolCall(
@@ -370,6 +417,8 @@ export async function executeToolCall(
         return await handleAddTask(toolInput, ctx);
       case 'generate_documents':
         return await handleGenerateDocuments(toolInput, ctx);
+      case 'find_a_time':
+        return await handleFindATime(toolInput, ctx);
       default:
         return { success: false, summary: '', error: `Unknown tool: ${toolName}` };
     }

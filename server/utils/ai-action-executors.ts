@@ -35,6 +35,7 @@
  */
 
 import { createItem, updateItem, readItem, readItems } from '@directus/sdk';
+import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { fetchOrgBrand, sendBrandedEmail } from '~~/server/utils/email-send';
 import { evaluateOutboundGate } from '~~/server/utils/outbound-gate';
@@ -936,6 +937,79 @@ const createInvoiceExecutor: AiActionExecutor = async ({ action, organizationId 
   };
 };
 
+// ── scheduling: book_meeting / reschedule_meeting / cancel_meeting ─────────────
+// On approval, book_meeting runs the shared finalizeBooking pipeline (creates the
+// meeting + appointment, provisions the Daily room, emails the invitee, notifies).
+// reschedule/cancel update the video_meetings row + its linked appointment.
+
+const bookMeetingExecutor: AiActionExecutor = async ({ action }) => {
+  const p = action?.payload ?? {};
+  if (!p.hostUserId || !p.scheduledStart || !p.inviteeEmail) {
+    throw new Error('book_meeting: missing hostUserId, scheduledStart, or inviteeEmail');
+  }
+  const result = await finalizeBooking({
+    hostUserId: String(p.hostUserId),
+    scheduledStart: String(p.scheduledStart),
+    durationMinutes: Number(p.durationMinutes) || 30,
+    inviteeName: p.inviteeName ?? null,
+    inviteeEmail: String(p.inviteeEmail),
+    title: p.title ?? null,
+    bookingNotes: p.bookingNotes ?? null,
+  });
+  return {
+    meetingId: result.meeting.id,
+    appointmentId: result.appointmentId,
+    start: result.meeting.scheduledStart,
+    meetingUrl: result.meeting.meetingUrl,
+  };
+};
+
+const rescheduleMeetingExecutor: AiActionExecutor = async ({ action }) => {
+  const directus = getServerDirectus();
+  const p = action?.payload ?? {};
+  if (!p.meeting_id || !p.new_start) throw new Error('reschedule_meeting: missing meeting_id or new_start');
+  const start = new Date(String(p.new_start));
+  if (Number.isNaN(start.getTime())) throw new Error('reschedule_meeting: invalid new_start');
+  const duration = Number(p.duration_minutes) || 30;
+  const end = new Date(start.getTime() + duration * 60000);
+
+  const m = (await directus.request(
+    readItem('video_meetings' as any, p.meeting_id, { fields: ['id', 'related_appointment'] as any }),
+  ).catch(() => null)) as any;
+  if (!m) throw new Error('reschedule_meeting: meeting not found');
+
+  await directus.request(updateItem('video_meetings' as any, p.meeting_id, {
+    scheduled_start: start.toISOString(),
+    scheduled_end: end.toISOString(),
+    duration_minutes: duration,
+    status: 'scheduled',
+  }));
+  if (m.related_appointment) {
+    await directus.request(updateItem('appointments' as any, m.related_appointment, {
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+    })).catch(() => {});
+  }
+  return { meetingId: String(p.meeting_id), newStart: start.toISOString(), durationMinutes: duration };
+};
+
+const cancelMeetingExecutor: AiActionExecutor = async ({ action }) => {
+  const directus = getServerDirectus();
+  const p = action?.payload ?? {};
+  if (!p.meeting_id) throw new Error('cancel_meeting: missing meeting_id');
+
+  const m = (await directus.request(
+    readItem('video_meetings' as any, p.meeting_id, { fields: ['id', 'related_appointment'] as any }),
+  ).catch(() => null)) as any;
+  if (!m) throw new Error('cancel_meeting: meeting not found');
+
+  await directus.request(updateItem('video_meetings' as any, p.meeting_id, { status: 'canceled' }));
+  if (m.related_appointment) {
+    await directus.request(updateItem('appointments' as any, m.related_appointment, { status: 'canceled' })).catch(() => {});
+  }
+  return { meetingId: String(p.meeting_id), status: 'canceled' };
+};
+
 // ── stubs for not-yet-outbound types ──────────────────────────────────────────
 // generate_documents draft-creation is non-outbound and logged straight to
 // `executed`, so it never flows through approval — but we register a stub anyway
@@ -966,6 +1040,9 @@ const EXECUTORS: Record<string, AiActionExecutor> = {
   draft_social_posts: draftSocialPostsExecutor,
   create_campaign: createCampaignExecutor,
   create_invoice: createInvoiceExecutor,
+  book_meeting: bookMeetingExecutor,
+  reschedule_meeting: rescheduleMeetingExecutor,
+  cancel_meeting: cancelMeetingExecutor,
   generate_documents: makeStub('generate_documents'),
   draft_email: makeStub('draft_email'),
   other: makeStub('other'),

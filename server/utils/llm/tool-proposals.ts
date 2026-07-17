@@ -55,7 +55,7 @@ async function resolveUserNames(userIds: string[]): Promise<Record<string, strin
 }
 
 /** Tool names whose effects are outbound/destructive → propose, don't execute. */
-export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket', 'create_content_plan', 'draft_social_posts', 'create_campaign']);
+export const PROPOSAL_TOOLS = new Set<string>(['send_email', 'create_project', 'add_event', 'create_invoice', 'create_ticket', 'create_content_plan', 'draft_social_posts', 'create_campaign', 'book_meeting', 'reschedule_meeting', 'cancel_meeting']);
 
 /** Normalize AI line items into clean {description, rate, quantity, product?} rows. */
 function normalizeLineItems(raw: any): Array<Record<string, any>> {
@@ -150,9 +150,182 @@ export async function proposeToolCall(
       return await proposeDraftSocialPosts(input, ctx);
     case 'create_campaign':
       return await proposeCreateCampaign(input, ctx);
+    case 'book_meeting':
+      return await proposeBookMeeting(input, ctx);
+    case 'reschedule_meeting':
+      return await proposeRescheduleMeeting(input, ctx);
+    case 'cancel_meeting':
+      return await proposeCancelMeeting(input, ctx);
     default:
       return { success: false, summary: '', error: `Unknown proposal tool: ${toolName}` };
   }
+}
+
+// ── book_meeting / reschedule_meeting / cancel_meeting ───────────────────────
+// Approval-gated scheduling. On approval the executors call finalizeBooking (for
+// a new booking) or update the video_meetings + linked appointment rows.
+
+function fmtWhen(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+async function proposeBookMeeting(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const start = new Date(input.scheduled_start);
+  if (Number.isNaN(start.getTime())) return { success: false, summary: '', error: 'book_meeting needs a valid scheduled_start (ISO timestamp)' };
+  const duration = Number(input.duration_minutes) > 0 ? Math.round(Number(input.duration_minutes)) : 30;
+
+  let email = (input.invitee_email ?? '').toString().trim();
+  let name = input.invitee_name ? String(input.invitee_name) : null;
+
+  const contactId = input.contact_id ?? ((ctx.entityType === 'contact' || ctx.entityType === 'contacts') ? ctx.entityId : null);
+  if (!email && contactId) {
+    const directus = getTypedDirectus();
+    const c = (await directus.request(
+      readItem('contacts' as any, contactId, { fields: ['id', 'email', 'first_name', 'last_name', 'name', 'organizations.organizations_id'] as any }),
+    ).catch(() => null)) as any;
+    if (c) {
+      // Org-scope the contact so a stray id can't book across tenants.
+      const orgs = (c.organizations || []).map((o: any) => (typeof o.organizations_id === 'object' ? o.organizations_id?.id : o.organizations_id));
+      if (ctx.organizationId && orgs.length && !orgs.includes(ctx.organizationId)) {
+        return { success: false, summary: '', error: 'That contact belongs to another organization.' };
+      }
+      email = (c.email || '').trim();
+      name = name || [c.first_name, c.last_name].filter(Boolean).join(' ').trim() || c.name || null;
+    }
+  }
+
+  if (!email) return { success: false, summary: '', error: 'book_meeting needs an invitee — provide invitee_email, or a contact_id / focus a contact with an email on file.' };
+
+  const payload: Record<string, any> = {
+    hostUserId: ctx.userId,
+    scheduledStart: start.toISOString(),
+    durationMinutes: duration,
+    inviteeName: name,
+    inviteeEmail: email,
+    title: input.title ? String(input.title) : null,
+    bookingNotes: input.notes ? String(input.notes) : null,
+  };
+
+  const who = name || email;
+  const rowTitle = `Book ${duration}-min meeting with ${who} — ${fmtWhen(start.toISOString())}`;
+  const preview = { kind: 'book_meeting' as const, start: start.toISOString(), duration, invitee: who, inviteeEmail: email, title: payload.title };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'book_meeting',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: ctx.entityType ?? null,
+    entityId: ctx.entityId ?? null,
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the booking for approval. Please try again.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. It's waiting in your AI Activity queue for approval — nothing has been booked and no invite has gone out yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+/** Fetch + org/host-verify a video_meetings row the current user may act on. */
+async function loadOwnedMeeting(meetingId: string, ctx: ProposalContext): Promise<{ id: string; scheduled_start?: string; scheduled_end?: string; duration_minutes?: number; title?: string; related_appointment?: string } | null> {
+  const directus = getTypedDirectus();
+  const m = (await directus.request(
+    readItem('video_meetings' as any, meetingId, { fields: ['id', 'host_user', 'scheduled_start', 'scheduled_end', 'duration_minutes', 'title', 'related_appointment'] as any }),
+  ).catch(() => null)) as any;
+  if (!m) return null;
+  const host = typeof m.host_user === 'object' ? m.host_user?.id : m.host_user;
+  if (host !== ctx.userId) return null; // v1: only the host may reschedule/cancel via AI
+  return m;
+}
+
+async function proposeRescheduleMeeting(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const meetingId = input.meeting_id ?? (ctx.entityType === 'video_meeting' || ctx.entityType === 'video_meetings' ? ctx.entityId : null);
+  if (!meetingId) return { success: false, summary: '', error: 'reschedule_meeting needs a meeting_id (or focus the chat on a meeting).' };
+  const start = new Date(input.new_start);
+  if (Number.isNaN(start.getTime())) return { success: false, summary: '', error: 'reschedule_meeting needs a valid new_start (ISO timestamp).' };
+
+  const meeting = await loadOwnedMeeting(String(meetingId), ctx);
+  if (!meeting) return { success: false, summary: '', error: 'Meeting not found, or you are not its host.' };
+
+  const duration = Number(input.duration_minutes) > 0
+    ? Math.round(Number(input.duration_minutes))
+    : (Number(meeting.duration_minutes) || 30);
+
+  const payload = { meeting_id: String(meetingId), new_start: start.toISOString(), duration_minutes: duration };
+  const rowTitle = `Reschedule "${meeting.title || 'meeting'}" → ${fmtWhen(start.toISOString())}`;
+  const preview = { kind: 'reschedule_meeting' as const, from: meeting.scheduled_start ?? null, to: start.toISOString(), duration };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'reschedule_meeting',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: 'video_meetings',
+    entityId: String(meetingId),
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the reschedule for approval.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. Waiting in your AI Activity queue for approval — the meeting hasn't moved yet.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
+}
+
+async function proposeCancelMeeting(
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const meetingId = input.meeting_id ?? (ctx.entityType === 'video_meeting' || ctx.entityType === 'video_meetings' ? ctx.entityId : null);
+  if (!meetingId) return { success: false, summary: '', error: 'cancel_meeting needs a meeting_id (or focus the chat on a meeting).' };
+
+  const meeting = await loadOwnedMeeting(String(meetingId), ctx);
+  if (!meeting) return { success: false, summary: '', error: 'Meeting not found, or you are not its host.' };
+
+  const payload = { meeting_id: String(meetingId), reason: input.reason ? String(input.reason) : null };
+  const rowTitle = `Cancel "${meeting.title || 'meeting'}"${meeting.scheduled_start ? ` (${fmtWhen(meeting.scheduled_start)})` : ''}`;
+  const preview = { kind: 'cancel_meeting' as const, title: meeting.title ?? null, when: meeting.scheduled_start ?? null, reason: payload.reason };
+
+  const actionId = await logAiAction({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    actionType: 'cancel_meeting',
+    status: 'pending',
+    title: rowTitle,
+    payload,
+    preview,
+    entityType: 'video_meetings',
+    entityId: String(meetingId),
+    sessionId: ctx.sessionId ?? null,
+  });
+  if (actionId == null) return { success: false, summary: '', error: 'Could not queue the cancellation for approval.' };
+
+  return {
+    success: true,
+    summary: `Proposed: ${rowTitle}. Waiting in your AI Activity queue for approval — the meeting is still on until you approve.`,
+    data: { actionId, proposed: true, status: 'pending' },
+  };
 }
 
 // ── create_content_plan ──────────────────────────────────────────────────────
