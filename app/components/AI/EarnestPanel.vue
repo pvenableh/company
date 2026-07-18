@@ -17,6 +17,7 @@
  * <Transition> class-swap that can stall under throttled RAF.
  */
 import { nextTick } from 'vue';
+import { useEarnestPresence, EARNEST_GROUND, type EarnestMood } from '~/composables/useEarnestPresence';
 
 const { panelOpen, panelInitialPrompt, closeEarnestPanel } = useEarnestPanel();
 const aware = useEarnestAwareness();
@@ -51,6 +52,15 @@ const { pendingCount: aiPendingCount, refresh: refreshPendingActions } = useAiPe
 // Earnest's own face reacts: the "…" typing state while he streams a reply.
 const mascot = useEarnestMascot();
 watch(isStreaming, (streaming) => mascot.react(streaming ? 'think' : 'idle'));
+
+// ── Living presence — the "Whisper" altitude: a small quiet aura + voice ─────
+// One shared brain drives the header's mood-orb; its colour follows the
+// conversation — 'present' at rest, leaning to 'listen' while you type,
+// gathering to a 'think' spark while Earnest streams, blooming 'warm' when an
+// action lands. Reuses the Phase-0 foundation (<EarnestAura> / <EarnestPresenceMark>).
+const presence = useEarnestPresence({ initial: 'present' });
+const ground = EARNEST_GROUND;
+// mood wiring lives just below, once `newMessage` (the composer) is declared.
 
 // Enter the calm full-screen coaching takeover, carrying the panel's current
 // focus (entity if we're scoped to one, otherwise an org-wide check-in).
@@ -129,6 +139,18 @@ watch(
 // ── Send ─────────────────────────────────────────────────────────────────────
 const newMessage = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
+
+// Presence mood follows the conversation (brain declared above). Placed here so
+// the 'listen'-while-typing rule can read the composer's `newMessage`.
+const panelMood = computed<EarnestMood>(() => {
+	if (isSending.value || isStreaming.value) return 'think';
+	if (newMessage.value.trim()) return 'listen';
+	return 'present';
+});
+watch(panelMood, (m) => presence.setMood(m), { immediate: true });
+// an earned bloom when a tool action succeeds; a token-paced flicker while streaming
+watch(() => activeToolCall.value?.success, (s) => { if (s === true) { presence.setMood('warm'); presence.bump(0.6); } });
+watch(streamingContent, () => presence.bump(0.05));
 
 const scrollToBottom = (smooth = false) => {
 	const el = messagesContainer.value;
@@ -393,11 +415,10 @@ function formatSessionTime(iso?: string): string {
 				<div class="border-b border-border/30 shrink-0">
 					<div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-violet-500/5">
 						<div class="flex items-center gap-2.5 min-w-0">
-							<!-- No background circle — the mark sits on its own. text-foreground
-							     keeps the Earnest brand ink instead of the theme accent. -->
-							<div class="w-8 h-8 flex items-center justify-center shrink-0 text-foreground">
-								<EarnestMascot v-if="mascot.enabled.value" :size="30" />
-								<EarnestIcon v-else class="w-5 h-5 text-primary" />
+							<!-- the quiet living presence: a small mood-orb that breathes and
+							     recolours with the conversation (Phase-2 Whisper). -->
+							<div class="cwp-orb relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-1 ring-border/30" :style="{ backgroundColor: ground }">
+								<EarnestAura :presence="presence" :mood="panelMood" class="cwp-orb-aura" />
 							</div>
 							<div class="min-w-0">
 								<h2 class="text-sm font-bold text-foreground truncate">{{ titleLine }}</h2>
@@ -547,9 +568,10 @@ function formatSessionTime(iso?: string): string {
 					<div v-else-if="!messages.length && !isStreaming" class="flex flex-col h-full">
 						<AIAwarenessChip :items="aware.knowledge.value" @toggle="aware.toggle" />
 						<div class="flex-1 flex flex-col items-center justify-center text-center px-2 py-6">
-							<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-foreground">
-								<EarnestIcon class="w-6 h-6" />
-							</div>
+							<!-- voice: the brand mark greets — the iconic "E." with its live blue
+							     dot (tap it to unfurl to the full wordmark). Non-redundant with
+							     the persona name below, which the label carries. -->
+							<EarnestPresenceMark :height="30" class="text-foreground mb-3.5" />
 							<p class="text-sm font-medium text-foreground mb-1">{{ activePersona.label }}</p>
 							<p class="text-xs text-muted-foreground mb-4 max-w-[260px]">{{ activePersona.description }}</p>
 						</div>
@@ -703,6 +725,16 @@ function formatSessionTime(iso?: string): string {
 </template>
 
 <style scoped>
+/* The header mood-orb: the shared aura, clipped to a small gem. <EarnestAura> is
+   tuned as a large, quiet Focus backdrop, so at 36px it needs help to read as a
+   live presence rather than a dark dot: */
+/*  · trim the darkening veil — the orb's own ground already supplies the dark,
+      and the veil would only mute the mood colour in this small pocket, */
+.cwp-orb-aura :deep(.aura__veil) { display: none; }
+/*  · lift the glow — brighten + saturate just the coloured field (the dark
+      ground lives on the parent, so nothing washes out) so the mood reads. */
+.cwp-orb-aura { filter: brightness(1.8) saturate(1.35); }
+
 .is-streaming {
 	box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.12);
 }
