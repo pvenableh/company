@@ -81,7 +81,7 @@ function fmtUsd(n: number): string {
 function normalizeTasks(raw: any): Array<Record<string, any>> {
   return (Array.isArray(raw) ? raw : [])
     .map((t) => {
-      const title = (t?.title ?? '').toString().trim();
+      const title = softenTitleCase((t?.title ?? '').toString());
       if (!title) return null;
       const task: Record<string, any> = { title };
       if (t.due_date) task.due_date = String(t.due_date);
@@ -568,6 +568,19 @@ async function proposeCreateTicket(
   };
 }
 
+// Defensive: most models write proper sentence-case titles, but if one SHOUTS
+// (a mostly-uppercase title), soften it back to sentence case so tasks read as
+// descriptions, not headlines. Mixed-case input is left untouched.
+function softenTitleCase(s: string): string {
+  const t = s.trim();
+  const letters = t.replace(/[^a-z]/gi, '');
+  const uppers = t.replace(/[^A-Z]/g, '');
+  if (letters.length > 3 && uppers.length / letters.length > 0.7) {
+    return t.toLowerCase().replace(/^(\s*[a-z])/, (m) => m.toUpperCase());
+  }
+  return t;
+}
+
 // ── create_invoice ─────────────────────────────────────────────────────────
 // Approval-gated: the invoice + line items are queued; the executor generates
 // the invoice code and totals on approval. Line items need a description + rate.
@@ -1025,7 +1038,7 @@ async function proposeDirectorCreateTasks(
 
   const tasks = rawTasks
     .map((t) => {
-      const title = (t?.title ?? '').toString().trim();
+      const title = softenTitleCase((t?.title ?? '').toString());
       if (!title) return null;
       const task: Record<string, any> = { title };
       if (t.description) task.description = String(t.description);

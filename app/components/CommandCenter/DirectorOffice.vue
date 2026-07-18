@@ -1221,22 +1221,24 @@ const vReveal = {
                 <div class="flex items-end justify-between mb-2 gap-2">
                   <div class="min-w-0">
                     <!-- Back out of a focused department — app-standard back link.
-                         A fixed-height slot always holds it (never reflows the
-                         header, never clipped by the scroll container), with a
-                         fade/slide as it shows + hides. Extra bottom space so it
-                         reads as its own element above the meeting title. -->
-                    <div class="h-3.5 mb-3.5">
-                      <Transition name="backlink">
+                         A grid-rows collapse takes ZERO space when unfocused (no
+                         gap) and expands smoothly when a department is focused, so
+                         it neither leaves a gap nor jumps the header. The mb-3 on
+                         the button gives it room as its own element above the
+                         title (and collapses with it). -->
+                    <div class="grid transition-[grid-template-rows] duration-300 ease-out" :style="{ gridTemplateRows: activeSubject ? '1fr' : '0fr' }">
+                      <div class="overflow-hidden transition-opacity duration-200" :class="activeSubject ? 'opacity-100' : 'opacity-0'">
                         <button
-                          v-if="activeSubject"
                           type="button"
                           data-no-press
-                          class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
+                          :tabindex="activeSubject ? 0 : -1"
+                          :aria-hidden="!activeSubject"
+                          class="inline-flex items-center gap-0.5 mb-3 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
                           @click="backToBoard"
                         >
                           <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
                         </button>
-                      </Transition>
+                      </div>
                     </div>
                     <p class="text-[11px] uppercase tracking-wider font-semibold text-foreground leading-none">
                       Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
@@ -1945,11 +1947,6 @@ const vReveal = {
 /* The whole panel scrolls as one; hide its scrollbar. */
 .director-scroll { scrollbar-width: none; }
 .director-scroll::-webkit-scrollbar { display: none; }
-
-/* Back link fades + slides in/out (it lives in a fixed-height slot, so this
-   never reflows the title below it). */
-.backlink-enter-active, .backlink-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.backlink-enter-from, .backlink-leave-to { opacity: 0; transform: translateX(-5px); }
 .director-aura { position: absolute; inset: 0; opacity: 0.9; z-index: 0; }
 
 /* Half-circle board — departments fanned around the Director (you). Seats are

@@ -99,19 +99,11 @@ const subjectTitle = computed(() => {
 function labelForType(t: string): string {
   return { create_tasks: 'Create tasks', update_field: 'Update', send_email: 'Send email', reschedule_project: 'Reschedule' }[t] || t;
 }
-// The action type is shown as its own subtitle, so drop a redundant
-// "Create task(s):" prefix from the step title; and if the title is SHOUTING
-// (mostly uppercase, as some are generated), soften it back to sentence case so
-// it reads as a description, not a headline.
+// The action type is shown as its own subtitle, so just drop a redundant
+// "Create task(s):" prefix from the step title. Case is normalized server-side
+// (softenTitleCase in tool-proposals.ts).
 function stepTitle(step: any): string {
-  let t = String(step?.title || '').trim();
-  t = t.replace(/^\s*create\s+tasks?\s*:?\s*/i, '');
-  const letters = t.replace(/[^a-z]/gi, '');
-  const uppers = t.replace(/[^A-Z]/g, '');
-  if (letters.length > 3 && uppers.length / letters.length > 0.7) {
-    t = t.toLowerCase().replace(/^(\s*[a-z])/, (m) => m.toUpperCase());
-  }
-  return t;
+  return String(step?.title || '').replace(/^\s*create\s+tasks?\s*:?\s*/i, '').trim();
 }
 function iconForType(t: string): string {
   return {
