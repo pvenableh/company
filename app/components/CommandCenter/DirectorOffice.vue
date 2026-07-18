@@ -279,6 +279,13 @@ const presenterAvatar = computed(() => {
 });
 // The department currently in focus (for the meeting's context sub-line).
 const activeGroupLabel = computed(() => visibleAgendaGroups.value.find((g) => g.subject === activeSubject.value)?.label || '');
+// What the meeting is focused on: a picked department, an entity scope, or — by
+// default — the whole organization.
+const focusLabel = computed(() => {
+  if (activeSubject.value && activeGroupLabel.value) return activeGroupLabel.value;
+  if (scope.value?.mode === 'entity') return scopeLabel.value;
+  return 'the whole organization';
+});
 
 // The Director at the head of the table — the current user. Name from the
 // session; job title needs the full user record (session omits it).
@@ -1190,25 +1197,22 @@ const vReveal = {
               <div v-else>
                 <div class="flex items-end justify-between mb-2 gap-2">
                   <div class="min-w-0">
-                    <p class="text-sm font-semibold flex items-center gap-1.5">
-                      <UIcon name="i-lucide-gavel" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      Board meeting
-                      <span v-if="meetingLabel" class="font-normal text-xs text-muted-foreground">· {{ meetingLabel }}</span>
-                    </p>
-                    <p class="text-[11px] text-muted-foreground truncate mt-0.5 pl-5">
-                      {{ scope?.mode === 'entity' ? scopeLabel : orgName }}
-                      <template v-if="activeSubject && activeGroupLabel"> · focused on {{ activeGroupLabel }}</template>
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-2 shrink-0">
+                    <!-- Back out of a focused department — app-standard back link -->
                     <button
                       v-if="activeSubject"
                       type="button"
-                      class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
+                      class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors mb-0.5"
                       @click="activeSubject = null"
                     >
-                      <UIcon name="i-lucide-arrow-left" class="w-3 h-3" /> Whole business
+                      <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> Whole business
                     </button>
+                    <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground">
+                      <UIcon name="i-lucide-gavel" class="w-3 h-3 text-muted-foreground shrink-0" />
+                      Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
+                    </p>
+                    <p class="text-[11px] text-muted-foreground truncate mt-0.5 pl-[18px]">Focused on {{ focusLabel }}</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
                     <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
                       <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'arc' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'arc'">
                         <UIcon name="i-lucide-users-round" class="w-3.5 h-3.5" /> Board
