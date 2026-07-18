@@ -40,6 +40,12 @@ const {
 const presence = useEarnestPresence({ initial: 'reflect' });
 const reduceMotion = presence.reduceMotion;
 
+// Focus has three faces: Companion (reflect together), the Working Table (do),
+// and the Mirror (learn — read-only patterns). Declared up here, above the mood
+// machine, because the mood reads it (mirror = a calm, inward 'reflect').
+type FocusMode = 'companion' | 'working' | 'mirror';
+const mode = ref<FocusMode>('companion');
+
 // ── Enter / leave (compositor-driven, per Motion stack policy) ───────────────
 const mounted = ref(false);
 const visible = ref(false);
@@ -95,6 +101,7 @@ let warmTimer: ReturnType<typeof setTimeout> | null = null;
 const hasConversation = computed(() => messages.value.length > 0 || isStreaming.value);
 
 const mood = computed<EarnestMood>(() => {
+	if (mode.value === 'mirror') return 'reflect'; // the Mirror is a calm, inward look
 	if (isStreaming.value) return 'think';
 	if (warmFlash.value) return 'warm';
 	if (typing.value) return 'listen';
@@ -117,10 +124,8 @@ watch(isStreaming, (now, was) => {
 	}
 });
 
-// ── A → B mode ────────────────────────────────────────────────────────────────
-type Mode = 'companion' | 'working';
-const mode = ref<Mode>('companion');
-function setMode(m: Mode) { mode.value = m; nextTick(scrollToBottom); }
+// ── Mode switching (the `mode` ref lives up top, for the mood machine) ────────
+function setMode(m: FocusMode) { mode.value = m; nextTick(scrollToBottom); }
 
 // The conversation turning to "doing" pulls us into the Working Table.
 const WORK_INTENT = /\b(plan|steps?|break (?:it |this )?down|to-?dos?|task|checklist|get (?:it |this )?done|work through|next move|prioriti[sz]e|organi[sz]e)\b/i;
@@ -223,6 +228,8 @@ async function send(text?: string) {
 	input.value = '';
 	autoResize();
 	presence.bump(0.6);
+	// Speaking from the Mirror returns you to the conversation.
+	if (mode.value === 'mirror') setMode('companion');
 	// Talk turned to doing → re-form into the Working Table (if we can).
 	if (canWork.value && mode.value === 'companion' && WORK_INTENT.test(content)) setMode('working');
 	const s = scope.value;
@@ -332,13 +339,15 @@ const markRef = ref<{ expand: () => void } | null>(null);
 					</div>
 
 					<div class="coach__controls">
-						<!-- A ↔ B mode -->
-						<div v-if="canWork" class="coach__modeswitch" role="group" aria-label="Mode">
+						<!-- Reflect / Work / Mirror. Work only when scoped to a project;
+						     Reflect + Mirror are always there (the Mirror reflects YOU). -->
+						<div class="coach__modeswitch" role="group" aria-label="Mode">
 							<button type="button" :data-on="mode === 'companion'" @click="setMode('companion')">Reflect</button>
-							<button type="button" :data-on="mode === 'working'" @click="setMode('working')">
+							<button v-if="canWork" type="button" :data-on="mode === 'working'" @click="setMode('working')">
 								Work
 								<span v-if="openTaskCount" class="coach__badge">{{ openTaskCount }}</span>
 							</button>
+							<button type="button" :data-on="mode === 'mirror'" @click="setMode('mirror')">Mirror</button>
 						</div>
 						<button type="button" class="coach__close" aria-label="Leave focus mode" @click="close">
 							<Icon name="lucide:x" class="w-5 h-5" />
@@ -346,9 +355,12 @@ const markRef = ref<{ expand: () => void } | null>(null);
 					</div>
 				</header>
 
-				<!-- Body: conversation (+ task rail in Working mode) -->
+				<!-- Body: conversation (+ task rail in Working mode), or the Mirror -->
 				<div class="coach__body" :class="{ 'coach__body--working': mode === 'working' }">
-					<div ref="scroller" class="coach__convo">
+					<!-- Mirror mode: a read-only reflection of how you actually work -->
+					<EarnestMirror v-if="mode === 'mirror'" :active="mode === 'mirror'" />
+
+					<div v-show="mode !== 'mirror'" ref="scroller" class="coach__convo">
 						<div class="coach__convo-wrap">
 							<!-- Opening / empty -->
 							<div v-if="!hasConversation" class="coach__opener">

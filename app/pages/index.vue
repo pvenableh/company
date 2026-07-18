@@ -417,9 +417,9 @@ const goTo = (route: string) => {
 							<button
 								@click="openCoaching({ mode: 'org' })"
 								aria-label="Focus mode"
-								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
+								class="relative overflow-hidden flex items-center justify-center size-9 bg-card border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
 							>
-								<Icon name="lucide:sparkles" class="w-5 h-5" />
+								<EarnestPresenceDot />
 							</button>
 						</UTooltip>
 						<button
