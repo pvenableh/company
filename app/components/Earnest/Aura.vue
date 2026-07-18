@@ -181,6 +181,10 @@ function stopMantras() { if (mantraTimer) { clearInterval(mantraTimer); mantraTi
 watch(() => props.showMantras, (on) => (on ? startMantras() : stopMantras()));
 
 onMounted(async () => {
+	// Dev-only: expose the app's gsap instance so a throttled automation tab can
+	// advance the ticker (gsap.globalTimeline.time(+N)) to inspect tween end-states
+	// — the presence layer's standard verify escape hatch (see the phase strategy).
+	if (import.meta.dev && import.meta.client) (window as any).__earnestGsap = gsap;
 	orbEls.value = Array.from(rootEl.value?.querySelectorAll<HTMLElement>('.aura__orb') ?? []);
 	attachRoot(rootEl.value);
 	startEnergy();
