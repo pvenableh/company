@@ -2,12 +2,13 @@
 /**
  * CoachingTakeover — Earnest's "Focus mode": a full-screen presence, not a panel.
  *
- * Earnest is a verb. This surface makes that literal — a living aura whose COLOUR
- * IS ITS EMOTIONAL STATE. It breathes when you're quiet (present), leans in and
- * warms when you type (listening), gathers to the centre with a creative amber
- * spark while it works (thinking), and blooms mint-gold when you've made honest
- * progress (encouraging). The opening is reflective — "know thyself" — asking for
- * the honest version first.
+ * This is the first surface to mount the shared presence foundation
+ * (useEarnestPresence + <EarnestAura>): a living aura whose COLOUR IS EARNEST'S
+ * EMOTIONAL STATE. It reflects when you're quiet, leans down and listens when
+ * you type, gathers to a warm amber spark while it thinks, and blooms mint-gold
+ * on earned progress. The five moods (reflect · present · listen · think · warm)
+ * and all their GSAP motion live in the shared layer now — this file only reads
+ * the moment and hands the aura a mood.
  *
  * Hybrid A→B: it starts as the Companion (one calm thought at a time) and
  * re-forms into the Working Table (Earnest to one side, the project's real tasks
@@ -19,6 +20,7 @@
  * in app.vue. Mirrors the Director's Office overlay (teleport + Esc-to-close).
  */
 import { nextTick } from 'vue';
+import { useEarnestPresence, EARNEST_MOOD_TOKENS, type EarnestMood } from '~/composables/useEarnestPresence';
 
 const { isOpen, scope, close } = useCoachingMode();
 const {
@@ -32,8 +34,11 @@ const {
 	cancelStream,
 } = useContextualChat();
 
-const mascot = useEarnestMascot();
-const reduceMotion = import.meta.client ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+// The shared presence brain — owns the mood + the energy engine. <EarnestAura>
+// (mounted below) is handed this exact instance, so bumps + mood changes here
+// drive the aura directly.
+const presence = useEarnestPresence({ initial: 'reflect' });
+const reduceMotion = presence.reduceMotion;
 
 // ── Enter / leave (compositor-driven, per Motion stack policy) ───────────────
 const mounted = ref(false);
@@ -48,11 +53,9 @@ watch(isOpen, (open) => {
 		syncScope();
 		loadTasks();
 		setTimeout(() => { visible.value = true; }, 16);
-		startEnergyLoop();
 		nextTick(scrollToBottom);
 	} else {
 		visible.value = false;
-		stopEnergyLoop();
 		leaveTimer = setTimeout(() => { mounted.value = false; }, ANIM_MS);
 	}
 });
@@ -83,7 +86,7 @@ const headerLabel = computed(() => {
 });
 
 // ── Emotional state machine ──────────────────────────────────────────────────
-// mood is a reading of the moment, expressed as light (see <style>).
+// mood is a reading of the moment; the shared aura turns it into light.
 const typing = ref(false);
 const warmFlash = ref(false);
 let typingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -91,20 +94,19 @@ let warmTimer: ReturnType<typeof setTimeout> | null = null;
 
 const hasConversation = computed(() => messages.value.length > 0 || isStreaming.value);
 
-const mood = computed<'reflective' | 'present' | 'listening' | 'thinking' | 'encouraging'>(() => {
-	if (isStreaming.value) return 'thinking';
-	if (warmFlash.value) return 'encouraging';
-	if (typing.value) return 'listening';
-	if (!hasConversation.value) return 'reflective';
+const mood = computed<EarnestMood>(() => {
+	if (isStreaming.value) return 'think';
+	if (warmFlash.value) return 'warm';
+	if (typing.value) return 'listen';
+	if (!hasConversation.value) return 'reflect';
 	return 'present';
 });
+// Drive the shared brain; <EarnestAura> tweens colour + motion in response.
+watch(mood, (m) => presence.setMood(m), { immediate: true });
 
-// Earnest's face mirrors the mood.
-watch(mood, (m) => {
-	if (m === 'thinking') mascot.react('think');
-	else if (m === 'encouraging') mascot.react('celebrate');
-	else mascot.react('idle');
-});
+// The composer accent echoes the mood (a quiet, CSS-eased colour, not the live
+// GSAP-tweened field — just enough that the send button belongs to the moment).
+const accent = computed(() => EARNEST_MOOD_TOKENS[mood.value]);
 
 // When a reply finishes streaming, bloom warm for a beat — encouragement, earned.
 watch(isStreaming, (now, was) => {
@@ -114,27 +116,6 @@ watch(isStreaming, (now, was) => {
 		warmTimer = setTimeout(() => { warmFlash.value = false; }, 2600);
 	}
 });
-
-// ── Typing energy (drives the aura via a CSS var, no per-frame re-render) ─────
-const rootEl = ref<HTMLElement | null>(null);
-let energy = 0;
-let energyRaf: number | null = null;
-function bumpEnergy(v = 0.22) { energy = Math.min(1, energy + v); }
-function startEnergyLoop() {
-	if (reduceMotion || energyRaf != null) return;
-	const tick = () => {
-		energy *= 0.93;
-		if (energy < 0.004) energy = 0;
-		rootEl.value?.style.setProperty('--energy', energy.toFixed(3));
-		energyRaf = requestAnimationFrame(tick);
-	};
-	energyRaf = requestAnimationFrame(tick);
-}
-function stopEnergyLoop() {
-	if (energyRaf != null) { cancelAnimationFrame(energyRaf); energyRaf = null; }
-	energy = 0;
-	rootEl.value?.style.setProperty('--energy', '0');
-}
 
 // ── A → B mode ────────────────────────────────────────────────────────────────
 type Mode = 'companion' | 'working';
@@ -178,7 +159,7 @@ async function loadTasks() {
 async function toggleTask(task: any) {
 	const nowDone = task.status !== 'completed';
 	task.status = nowDone ? 'completed' : 'new';
-	if (nowDone) { bumpEnergy(0.5); flashWarm(); }
+	if (nowDone) { presence.bump(0.5); flashWarm(); }
 	try {
 		await taskItems.update(String(task.id), {
 			status: task.status,
@@ -207,7 +188,7 @@ async function addStep() {
 		const created = (await taskItems.create({ title, status: 'new', project_id: pid })) as any;
 		if (created?.id) tasks.value = [...tasks.value, created];
 		newStep.value = '';
-		bumpEnergy(0.35);
+		presence.bump(0.35);
 	} catch { /* toast handled globally */ }
 	finally { addingStep.value = false; }
 }
@@ -241,7 +222,7 @@ async function send(text?: string) {
 	if (!content || isStreaming.value) return;
 	input.value = '';
 	autoResize();
-	bumpEnergy(0.6);
+	presence.bump(0.6);
 	// Talk turned to doing → re-form into the Working Table (if we can).
 	if (canWork.value && mode.value === 'companion' && WORK_INTENT.test(content)) setMode('working');
 	const s = scope.value;
@@ -261,7 +242,7 @@ function autoResize() {
 }
 function onInput() {
 	autoResize();
-	bumpEnergy(0.22);
+	presence.bump(0.22);
 	markTyping();
 }
 function markTyping() {
@@ -282,7 +263,6 @@ watch(mounted, (m) => {
 });
 onBeforeUnmount(() => {
 	if (import.meta.client) window.removeEventListener('keydown', onKeydown);
-	stopEnergyLoop();
 	if (typingTimer) clearTimeout(typingTimer);
 	if (warmTimer) clearTimeout(warmTimer);
 });
@@ -301,73 +281,54 @@ function renderMarkdown(text: string): string {
 	return `<p>${html}</p>`;
 }
 
-// Rotating brand mantras.
+// Rotating brand mantras — the header line + the aura's drifting reflection.
 const MANTRAS = ['Do good work.', 'Know thyself.', 'Honest. Hard. Creative.', 'A trusted partner.'];
 const mantraIdx = ref(0);
 let mantraTimer: ReturnType<typeof setInterval> | null = null;
 watch(mounted, (m) => {
-	if (m && !reduceMotion && !mantraTimer) {
+	if (m && !reduceMotion.value && !mantraTimer) {
 		mantraTimer = setInterval(() => { mantraIdx.value = (mantraIdx.value + 1) % MANTRAS.length; }, 4800);
 	} else if (!m && mantraTimer) {
 		clearInterval(mantraTimer); mantraTimer = null;
 	}
 });
+
+// The presence mark unfurls E → Earnest on open.
+const markRef = ref<{ expand: () => void } | null>(null);
 </script>
 
 <template>
 	<Teleport to="body">
 		<div
 			v-if="mounted"
-			ref="rootEl"
 			class="coach"
 			:data-mood="mood"
 			:data-mode="mode"
-			:style="overlayStyle"
+			:style="{ ...overlayStyle, '--accent1': accent.c1, '--accent2': accent.c2 }"
 			role="dialog"
 			aria-modal="true"
 			aria-label="Earnest focus mode"
 		>
-			<!-- goo filter — merges the orbs into one liquid organism -->
-			<svg width="0" height="0" class="coach__defs" aria-hidden="true">
-				<defs>
-					<filter id="earnest-goo">
-						<feGaussianBlur in="SourceGraphic" stdDeviation="20" result="b" />
-						<feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo" />
-						<feBlend in="SourceGraphic" in2="goo" />
-					</filter>
-				</defs>
-			</svg>
-
-			<!-- Living aura -->
-			<div class="aura" aria-hidden="true">
-				<div class="aura__fieldwrap">
-					<div class="aura__field">
-						<span class="orb orb--1" /><span class="orb orb--2" /><span class="orb orb--3" />
-						<span class="orb orb--4" /><span class="orb orb--5" />
-					</div>
-				</div>
-				<div class="aura__core" />
-				<div class="aura__veil" />
-				<!-- Mantras drift through the field like reflections on water — only
-				     once a conversation is under way, so the centre is clear and it
-				     reads as depth behind the messages, never clutter behind the
-				     opening greeting. -->
-				<div v-if="!reduceMotion && hasConversation" :key="mantraIdx" class="aura__drift">{{ MANTRAS[mantraIdx] }}</div>
-			</div>
+			<!-- Shared living aura (owns the orbs, GSAP motion, the 5 moods) -->
+			<EarnestAura
+				:presence="presence"
+				:aside="mode === 'working'"
+				:mantras="MANTRAS"
+				:show-mantras="hasConversation"
+				draggable
+			/>
 
 			<div class="coach__inner">
 				<!-- Header -->
 				<header class="coach__top">
 					<div class="coach__brand">
-						<EarnestMascot :size="34" />
-						<div class="coach__meta">
-							<p class="coach__name">Earnest · Focus</p>
-							<p class="coach__mantra">
-								<Transition name="mantra" mode="out-in">
-									<span :key="mantraIdx">{{ MANTRAS[mantraIdx] }}</span>
-								</Transition>
-							</p>
-						</div>
+						<EarnestPresenceMark ref="markRef" :height="24" auto-reveal :still="reduceMotion" />
+						<span class="coach__focus-tag">Focus</span>
+						<p class="coach__mantra">
+							<Transition name="mantra" mode="out-in">
+								<span :key="mantraIdx">{{ MANTRAS[mantraIdx] }}</span>
+							</Transition>
+						</p>
 					</div>
 
 					<div class="coach__controls">
@@ -478,96 +439,27 @@ watch(mounted, (m) => {
 </template>
 
 <style scoped>
-/* Living colour: the "brand colour" is an emotional state, not a fixed hex. */
-@property --c1 { syntax: '<color>'; inherits: true; initial-value: #1ea79f; }
-@property --c2 { syntax: '<color>'; inherits: true; initial-value: #2f6df0; }
-@property --c3 { syntax: '<color>'; inherits: true; initial-value: #17b6a6; }
-@property --warmth { syntax: '<number>'; inherits: true; initial-value: 0.22; }
+/* The composer accent echoes the mood — a quiet CSS-eased colour. Registered
+   so the gradient interpolates instead of snapping. */
+@property --accent1 { syntax: '<color>'; inherits: true; initial-value: #2f8a84; }
+@property --accent2 { syntax: '<color>'; inherits: true; initial-value: #356299; }
 
 .coach {
 	position: fixed; inset: 0; z-index: 85;
 	display: flex; flex-direction: column;
 	color: #eef2f8;
 	background: radial-gradient(140% 120% at 50% 8%, #0c1424 0%, #070b14 52%, #04060c 100%);
-	transition: --c1 1.5s ease, --c2 1.5s ease, --c3 1.5s ease, --warmth 1.5s ease;
+	--accent1: #2f8a84; --accent2: #356299;
+	transition: --accent1 1.2s ease, --accent2 1.2s ease;
 }
-.coach__defs { position: absolute; }
-
-/* Mood → palette. Each state is a feeling, expressed as light. */
-.coach[data-mood="reflective"]  { --c1:#6366f1; --c2:#7c3aed; --c3:#4f5bd5; --warmth:.16; }
-.coach[data-mood="present"]     { --c1:#1ea79f; --c2:#2f6df0; --c3:#17b6a6; --warmth:.22; }
-.coach[data-mood="listening"]   { --c1:#12b6a6; --c2:#22c9e0; --c3:#3ad6a0; --warmth:.38; }
-.coach[data-mood="thinking"]    { --c1:#f0a838; --c2:#25c6e6; --c3:#f7c94a; --warmth:.62; }
-.coach[data-mood="encouraging"] { --c1:#0fe08a; --c2:#12b981; --c3:#f4cd6a; --warmth:.72; }
-
-/* Aura */
-.aura { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.aura__fieldwrap { position: absolute; inset: 0; transition: transform 900ms cubic-bezier(.4,.66,.04,1); will-change: transform; }
-.aura__field {
-	position: absolute; inset: 0;
-	filter: url(#earnest-goo) blur(14px);
-	transform: scale(calc(1 + var(--energy, 0) * 0.05));
-	transition: transform 140ms ease-out;
-	will-change: transform;
-}
-.orb { position: absolute; border-radius: 50%; mix-blend-mode: screen; animation: coach-drift var(--dur, 24s) ease-in-out infinite; will-change: transform; }
-.orb--1 { width: 42vmax; height: 42vmax; left: 8%;  top: 2%;   --dur: 23s; background: radial-gradient(circle at 34% 34%, var(--c1), transparent 66%); }
-.orb--2 { width: 38vmax; height: 38vmax; right: 4%; top: 12%;  --dur: 29s; background: radial-gradient(circle at 60% 40%, var(--c2), transparent 68%); }
-.orb--3 { width: 34vmax; height: 34vmax; left: 26%; bottom: -8%; --dur: 26s; background: radial-gradient(circle at 50% 50%, var(--c3), transparent 66%); }
-.orb--4 { width: 26vmax; height: 26vmax; right: 22%; bottom: -4%; --dur: 33s; background: radial-gradient(circle at 42% 58%, var(--c1), transparent 64%); }
-.orb--5 { width: 20vmax; height: 20vmax; left: 44%; top: 30%;  --dur: 19s; background: radial-gradient(circle at 50% 40%, var(--c2), transparent 62%); }
-
-.aura__core {
-	position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
-	width: 60vmin; height: 60vmin; border-radius: 50%;
-	background: radial-gradient(circle, color-mix(in oklab, var(--c1), #f3c465 calc(var(--warmth) * 60%)) 0%, transparent 62%);
-	opacity: calc(0.26 + var(--warmth) * 0.4 + var(--energy, 0) * 0.28);
-	filter: blur(30px); animation: coach-breathe 7s ease-in-out infinite; transition: opacity 400ms ease;
-}
-.aura__veil { position: absolute; inset: 0; background: radial-gradient(130% 96% at 50% 42%, transparent 0%, rgba(4,6,12,.34) 58%, rgba(4,6,12,.74) 100%); }
-
-/* A single mantra surfacing and sinking through the field — barely there. */
-.aura__drift {
-	position: absolute;
-	left: 0; right: 0;
-	top: 50%;
-	text-align: center;
-	font-family: 'Iowan Old Style', Palatino, Georgia, serif;
-	font-style: italic;
-	font-size: clamp(40px, 9vw, 110px);
-	letter-spacing: .01em;
-	color: rgba(238, 242, 248, 0.07);
-	white-space: nowrap;
-	pointer-events: none;
-	filter: blur(.4px);
-	animation: coach-drift-line 4.7s ease-in-out both;
-}
-@keyframes coach-drift-line {
-	0%   { opacity: 0; transform: translateY(-50%) translateY(34px); }
-	24%  { opacity: 1; }
-	76%  { opacity: 1; }
-	100% { opacity: 0; transform: translateY(-50%) translateY(-34px); }
-}
-
-@keyframes coach-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(4vmax,3vmax) scale(1.07); } }
-@keyframes coach-breathe { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.09); } }
-
-/* mood-driven field motion */
-.coach[data-mood="thinking"] .orb { animation-duration: 11s; }
-.coach[data-mood="thinking"] .aura__fieldwrap { transform: scale(.9); }
-.coach[data-mood="listening"] .aura__fieldwrap { transform: translateY(4%); }
-.coach[data-mood="reflective"] .aura__fieldwrap { transform: scale(1.06); }
-/* Working mode biases the aura aside so the room makes space for the work */
-.coach[data-mode="working"] .aura__fieldwrap { transform: translateX(-14%) scale(.94); }
 
 /* Foreground */
 .coach__inner { position: relative; z-index: 3; display: flex; flex-direction: column; height: 100%; min-height: 0; }
 
 .coach__top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 18px clamp(16px, 4vw, 40px) 6px; }
-.coach__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.coach__meta { min-width: 0; }
-.coach__name { margin: 0; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
-.coach__mantra { margin: 0; height: 1.25em; overflow: hidden; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-style: italic; font-size: 12.5px; color: rgba(238,242,248,.4); }
+.coach__brand { display: flex; align-items: center; gap: 12px; min-width: 0; color: #eef2f8; }
+.coach__focus-tag { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(238,242,248,.5); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(238,242,248,.14); }
+.coach__mantra { margin: 0; height: 1.25em; overflow: hidden; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-style: italic; font-size: 12.5px; color: rgba(238,242,248,.4); min-width: 0; }
 .mantra-enter-active, .mantra-leave-active { transition: opacity .5s ease, transform .5s ease; }
 .mantra-enter-from { opacity: 0; transform: translateY(6px); }
 .mantra-leave-to { opacity: 0; transform: translateY(-6px); }
@@ -644,7 +536,7 @@ watch(mounted, (m) => {
 @keyframes coach-composer-in { 0% { opacity: 0; transform: translateY(16px) scaleX(.86); filter: blur(8px); border-radius: 40px; } 100% { opacity: 1; transform: none; filter: blur(0); } }
 .coach__composer textarea { flex: 1; resize: none; border: 0; background: transparent; color: #eef2f8; font: inherit; font-size: 15px; line-height: 1.5; padding: 9px 10px; max-height: 140px; outline: none; }
 .coach__composer textarea::placeholder { color: rgba(238,242,248,.4); }
-.coach__send { width: 44px; height: 44px; border-radius: 50%; border: 0; flex: none; cursor: pointer; display: grid; place-items: center; color: #06121f; background: linear-gradient(150deg, color-mix(in oklab, var(--c1), white 14%), var(--c2)); box-shadow: 0 8px 26px -8px var(--c2); transition: transform .18s, background 1.2s ease, opacity .2s; }
+.coach__send { width: 44px; height: 44px; border-radius: 50%; border: 0; flex: none; cursor: pointer; display: grid; place-items: center; color: #06121f; background: linear-gradient(150deg, color-mix(in oklab, var(--accent1), white 14%), var(--accent2)); box-shadow: 0 8px 26px -8px var(--accent2); transition: transform .18s, opacity .2s; }
 .coach__send:hover { transform: scale(1.06); }
 .coach__send:active { transform: scale(.94); }
 .coach__send:disabled { opacity: .45; cursor: default; }
@@ -653,7 +545,6 @@ watch(mounted, (m) => {
 kbd { font: inherit; background: rgba(255,255,255,.1); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
 
 @media (prefers-reduced-motion: reduce) {
-	.orb, .aura__core { animation: none !important; }
 	.coach__msg, .coach__task, .coach__tasks, .coach__composer, .coach__typing span { animation: none !important; }
 	.coach { transition: none; }
 }
