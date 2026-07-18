@@ -82,7 +82,7 @@ async function send() {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="emit('close')">
+    <div class="dark fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-foreground" @click.self="emit('close')">
       <section class="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
         <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
           <div class="flex items-center gap-2.5 min-w-0">

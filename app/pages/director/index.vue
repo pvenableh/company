@@ -182,8 +182,14 @@ const filteredMeetings = computed(() => {
           <DirectorChairIcon class="w-7 h-7" />
         </div>
         <div class="min-w-0">
-          <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">The Director's Office</h1>
-          <p class="text-[15px] text-muted-foreground mt-0.5">Earnest AI reviews the business and proposes a plan you approve step by step.</p>
+          <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight flex items-center gap-2">
+            The Director's Office
+            <UIcon
+              name="i-lucide-info"
+              class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0"
+              title="Earnest AI reviews the business and proposes a plan you approve step by step — nothing runs on its own."
+            />
+          </h1>
         </div>
       </div>
       <div class="flex items-center gap-2 shrink-0">

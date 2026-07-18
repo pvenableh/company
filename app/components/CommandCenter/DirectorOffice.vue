@@ -277,6 +277,8 @@ const presenterAvatar = computed(() => {
   const p = livePresentNow.value.find((x) => String(x.userId) === String(pid));
   return p ? { name: p.name, src: avatarFor(p) } : null;
 });
+// The department currently in focus (for the meeting's context sub-line).
+const activeGroupLabel = computed(() => visibleAgendaGroups.value.find((g) => g.subject === activeSubject.value)?.label || '');
 
 // The Director at the head of the table — the current user. Name from the
 // session; job title needs the full user record (session omits it).
@@ -1016,12 +1018,15 @@ const vReveal = {
                 <DirectorChairIcon class="w-6 h-6" />
               </div>
               <div class="min-w-0">
-                <h2 class="text-base font-semibold leading-tight">
+                <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
                   The Director's Office
+                  <UIcon
+                    name="i-lucide-info"
+                    class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0"
+                    :title="`Earnest reviewed ${scopeLabel} and drafted the work below — you approve each step; nothing runs on its own.`"
+                  />
                 </h2>
-                <p class="text-xs text-muted-foreground truncate">
-                  Earnest AI reviewed {{ scopeLabel }} and drafted the work — approve each step, nothing runs on its own.
-                </p>
+                <p class="text-xs text-muted-foreground truncate">Approve each step — nothing runs on its own.</p>
               </div>
             </div>
             <div class="relative flex items-center gap-1.5 shrink-0">
@@ -1183,12 +1188,18 @@ const vReveal = {
 
               <!-- Agenda: boardroom table (default) or card outline -->
               <div v-else>
-                <div class="flex items-center justify-between mb-2 gap-2">
-                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1.5 min-w-0">
-                    <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5 shrink-0" />
-                    {{ agendaLayout === 'arc' ? 'The board · pick a department, or take the lot' : 'Agenda' }}
-                    <span v-if="meetingLabel" class="font-normal text-muted-foreground/70 truncate">· meeting · {{ meetingLabel }}</span>
-                  </p>
+                <div class="flex items-end justify-between mb-2 gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold flex items-center gap-1.5">
+                      <UIcon name="i-lucide-gavel" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      Board meeting
+                      <span v-if="meetingLabel" class="font-normal text-xs text-muted-foreground">· {{ meetingLabel }}</span>
+                    </p>
+                    <p class="text-[11px] text-muted-foreground truncate mt-0.5 pl-5">
+                      {{ scope?.mode === 'entity' ? scopeLabel : orgName }}
+                      <template v-if="activeSubject && activeGroupLabel"> · focused on {{ activeGroupLabel }}</template>
+                    </p>
+                  </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <button
                       v-if="activeSubject"
@@ -1787,7 +1798,7 @@ const vReveal = {
 
         <!-- Go-live setup — curate which advisors are in the room -->
         <Teleport to="body">
-          <div v-if="showGoLive" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showGoLive = false">
+          <div v-if="showGoLive" class="dark fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-foreground" @click.self="showGoLive = false">
             <section class="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
               <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
                 <div class="flex items-center gap-2.5 min-w-0">
