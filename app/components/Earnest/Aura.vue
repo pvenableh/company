@@ -70,6 +70,9 @@ const ORBS = [
 const orbColor = (i: number): 'c1' | 'c2' | 'c3' => (['c1', 'c2', 'c3', 'c1', 'c2'] as const)[i]!;
 
 // ── GSAP idle life: drift (per orb) + breathe (core + field) ─────────────────
+// Each orb gets INDEPENDENT x / y / scale tweens on different periods, so the
+// composite drift is a slowly-evolving Lissajous that never quite repeats —
+// that's what reads as liquid + alive rather than a synchronised loop.
 function buildIdle() {
 	killIdle();
 	if (reduceMotion.value) return;
@@ -77,20 +80,14 @@ function buildIdle() {
 		const o = ORBS[i];
 		if (!el || !o) return;
 		idleTweens.push(
-			gsap.to(el, {
-				xPercent: o.dx * 2,
-				yPercent: o.dy * 2,
-				scale: 1.07,
-				duration: o.dur / 2,
-				ease: 'sine.inOut',
-				repeat: -1,
-				yoyo: true,
-			}),
+			gsap.to(el, { xPercent: o.dx * 2, duration: o.dur * 0.5, ease: 'sine.inOut', repeat: -1, yoyo: true }),
+			gsap.to(el, { yPercent: o.dy * 2, duration: o.dur * 0.64, ease: 'sine.inOut', repeat: -1, yoyo: true, delay: o.dur * 0.12 }),
+			gsap.to(el, { scale: 1.08, duration: o.dur * 0.43, ease: 'sine.inOut', repeat: -1, yoyo: true, delay: i * 0.5 }),
 		);
 	});
 	if (coreEl.value) {
 		breatheTl = gsap.timeline({ repeat: -1, yoyo: true })
-			.to(coreEl.value, { scale: 1.09, duration: 3.5, ease: 'sine.inOut' });
+			.to(coreEl.value, { scale: 1.1, duration: 4.2, ease: 'sine.inOut' });
 	}
 	applyPace(tokens.value.pace);
 }

@@ -48,6 +48,19 @@ function onClientDeleted() {
   router.push('/apps/clients');
 }
 
+// Scope the Earnest panel + Focus mode to THIS client immediately on mount and
+// on any client-side route change — don't wait for the workspace's async
+// @loaded (which may not re-fire when the component is reused across
+// navigations, leaving the panel stuck on a stale/app-level scope). The real
+// name is filled in by onWorkspaceLoaded once the data lands.
+if (import.meta.client) {
+  watch(
+    () => route.params.id,
+    (id) => { if (id) setEntity('client', String(id), client.value?.name || 'Client'); },
+    { immediate: true },
+  );
+}
+
 onUnmounted(() => clearEntity());
 </script>
 

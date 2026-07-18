@@ -16,7 +16,7 @@ defineEmits<{ (e: 'toggle'): void }>();
 		:class="[
 			size === 'xs' ? 'w-6 h-6' : 'w-7 h-7',
 			pinned
-				? 'text-primary'
+				? 'text-red-500'
 				: always
 					? 'text-muted-foreground/50 hover:text-foreground'
 					: 'text-muted-foreground/40 hover:text-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100',

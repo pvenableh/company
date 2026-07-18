@@ -11,6 +11,7 @@
   Mounted once globally (app.vue); opened from anywhere via useDirectorOffice().
 -->
 <script setup lang="ts">
+import { gsap } from 'gsap';
 const { isOpen, scope, close } = useDirectorOffice();
 const { selectedOrg, currentOrg } = useOrganization();
 const orgName = computed(() => (currentOrg.value as any)?.name || '');
@@ -903,11 +904,39 @@ watch(isOpen, (open) => {
   }
 });
 onKeyStroke('Escape', () => { if (isOpen.value) onClose(); });
+
+// ── Liquid entrance (GSAP) ───────────────────────────────────────────────────
+// The old flat opacity fade read "old". Now the scrim washes in while the panel
+// rises and settles out of a soft blur with a spring — the same living language
+// as Earnest's presence. IMPORTANT: transform/filter on `.director-office`
+// create a containing block that would trap the full-screen (position: fixed)
+// slides deck living inside it, so we clearProps the instant the entrance
+// settles, leaving the panel with no lingering inline transform/filter.
+const reduceMotionDO = import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function onEnter(el: Element, done: () => void) {
+  const scrim = el as HTMLElement;
+  const panel = scrim.querySelector('.director-office') as HTMLElement | null;
+  if (reduceMotionDO || !panel) { gsap.set(scrim, { opacity: 1 }); done(); return; }
+  gsap.set(scrim, { opacity: 0 });
+  gsap.set(panel, { opacity: 0, scale: 0.94, yPercent: 3, filter: 'blur(12px)', transformOrigin: '50% 34%', willChange: 'transform, filter' });
+  gsap.timeline({ onComplete: () => { gsap.set(panel, { clearProps: 'transform,filter,opacity,willChange,transformOrigin' }); done(); } })
+    .to(scrim, { opacity: 1, duration: 0.32, ease: 'power2.out' }, 0)
+    .to(panel, { opacity: 1, scale: 1, yPercent: 0, filter: 'blur(0px)', duration: 0.62, ease: 'power3.out' }, 0.03);
+}
+function onLeave(el: Element, done: () => void) {
+  const scrim = el as HTMLElement;
+  const panel = scrim.querySelector('.director-office') as HTMLElement | null;
+  if (reduceMotionDO || !panel) { gsap.to(scrim, { opacity: 0, duration: 0.2, onComplete: done }); return; }
+  gsap.set(panel, { willChange: 'transform, filter' });
+  gsap.timeline({ onComplete: done })
+    .to(panel, { opacity: 0, scale: 0.965, yPercent: 1.5, filter: 'blur(8px)', duration: 0.3, ease: 'power2.in' }, 0)
+    .to(scrim, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0.04);
+}
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition name="director-fade">
+    <Transition :css="false" @enter="onEnter" @leave="onLeave">
       <div
         v-if="isOpen"
         class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:p-8"

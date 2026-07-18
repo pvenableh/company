@@ -836,11 +836,12 @@ watch(() => props.projectId, () => {
 					<PinButton :pinned="(project as any)?.pinned" always @toggle="onTogglePin" />
 					<button
 						type="button"
-						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-[12px] font-medium ios-press shrink-0"
+						class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-foreground text-background ios-press shrink-0"
+						title="Convene a meeting"
+						aria-label="Convene a meeting"
 						@click="conveneMeeting"
 					>
-						<DirectorChairIcon class="w-3.5 h-3.5" />
-						<span class="hidden sm:inline">Convene</span>
+						<DirectorChairIcon class="w-4 h-4" />
 					</button>
 					<AppsCreateWithEarnest entity-type="project" />
 					<slot name="actions" />

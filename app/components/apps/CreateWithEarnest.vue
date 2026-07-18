@@ -74,7 +74,7 @@ function run(a: CreateAction) {
       @click="toggle"
     >
       <EarnestIcon class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline">{{ label || 'Create with Earnest' }}</span>
+      <span class="hidden sm:inline">{{ label || 'Create' }}</span>
       <Icon v-if="actions.length > 1" :name="open ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
     </button>
 

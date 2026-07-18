@@ -468,7 +468,7 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__modeswitch { display: flex; gap: 3px; padding: 4px; border-radius: 999px; border: 1px solid rgba(238,242,248,.12); background: rgba(255,255,255,.04); backdrop-filter: blur(12px); }
 .coach__modeswitch button { border: 0; background: transparent; color: rgba(238,242,248,.5); cursor: pointer; font: inherit; font-size: 12px; letter-spacing: .04em; padding: 5px 13px; border-radius: 999px; transition: color .25s, background .25s; display: inline-flex; align-items: center; gap: 6px; }
 .coach__modeswitch button[data-on="true"] { color: #eef2f8; background: rgba(255,255,255,.10); }
-.coach__badge { font-size: 10px; padding: 0 6px; border-radius: 999px; background: #f3c465; color: #06121f; font-weight: 600; }
+.coach__badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; line-height: 1; border-radius: 999px; background: #f3c465; color: #06121f; font-weight: 600; }
 .coach__close { width: 38px; height: 38px; border-radius: 50%; border: 0; background: transparent; color: rgba(238,242,248,.7); cursor: pointer; display: grid; place-items: center; transition: background .2s, color .2s; }
 .coach__close:hover { background: rgba(255,255,255,.08); color: #eef2f8; }
 

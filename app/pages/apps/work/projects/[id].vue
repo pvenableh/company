@@ -62,6 +62,19 @@ function onProjectDeleted() {
   router.push('/apps/work');
 }
 
+// Scope the Earnest panel + Focus mode to THIS project immediately on mount and
+// on any client-side route change — don't wait for the workspace's async
+// @loaded (which may not re-fire when the component is reused across
+// navigations, leaving the panel stuck on a stale/app-level scope). The real
+// title is filled in by onWorkspaceLoaded once the data lands.
+if (import.meta.client) {
+  watch(
+    () => route.params.id,
+    (id) => { if (id) setEntity('project', String(id), project.value?.title || 'Project'); },
+    { immediate: true },
+  );
+}
+
 onUnmounted(() => clearEntity());
 </script>
 
