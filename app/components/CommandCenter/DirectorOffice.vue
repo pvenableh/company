@@ -1219,19 +1219,22 @@ const vReveal = {
               <!-- Agenda: boardroom table (default) or card outline -->
               <div v-else>
                 <div class="flex items-end justify-between mb-2 gap-2">
-                  <div class="min-w-0 relative">
+                  <div class="min-w-0">
                     <!-- Back out of a focused department — app-standard back link.
-                         Absolutely positioned above the label so it never reflows
-                         the header when it appears/disappears. -->
-                    <button
-                      v-if="activeSubject"
-                      type="button"
-                      data-no-press
-                      class="absolute bottom-full left-0 mb-0.5 inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors"
-                      @click="backToBoard"
-                    >
-                      <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
-                    </button>
+                         A fixed-height slot always holds it, so it never reflows
+                         the header (nor gets clipped by the scroll container the
+                         way an absolutely-positioned one did). -->
+                    <div class="h-4">
+                      <button
+                        v-if="activeSubject"
+                        type="button"
+                        data-no-press
+                        class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
+                        @click="backToBoard"
+                      >
+                        <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
+                      </button>
+                    </div>
                     <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground">
                       <UIcon name="i-lucide-gavel" class="w-3 h-3 text-muted-foreground shrink-0" />
                       Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
