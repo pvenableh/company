@@ -1035,8 +1035,8 @@ const vReveal = {
       >
         <!-- Living aura — the immersive backdrop (pointer-events:none) -->
         <EarnestAura :presence="doPresence" class="director-aura" />
-        <section class="director-office relative z-[3] flex flex-col h-full w-full max-w-3xl mx-auto px-4 sm:px-8 text-foreground">
-          <!-- Boardroom header -->
+        <section class="director-office director-scroll relative z-[3] flex flex-col h-full w-full max-w-3xl mx-auto px-4 sm:px-8 text-foreground overflow-y-auto">
+          <!-- Boardroom header — scrolls with the content -->
           <header class="relative flex items-start justify-between gap-3 pt-5 pb-3 shrink-0">
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
@@ -1136,7 +1136,7 @@ const vReveal = {
             </div>
           </header>
 
-          <div class="flex-1 min-h-0 overflow-y-auto space-y-5 py-3 pr-1">
+          <div class="space-y-5 py-3">
             <!-- Live: who's at the table -->
             <div v-if="liveActive" class="flex items-center gap-2.5 flex-wrap rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5">
               <UIcon name="i-lucide-users-round" class="w-4 h-4 text-primary shrink-0" />
@@ -1235,11 +1235,10 @@ const vReveal = {
                         <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
                       </button>
                     </div>
-                    <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground leading-none">
-                      <UIcon name="i-lucide-gavel" class="w-3 h-3 text-muted-foreground shrink-0" />
+                    <p class="text-[11px] uppercase tracking-wider font-semibold text-foreground leading-none">
                       Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
                     </p>
-                    <p class="text-[11px] text-muted-foreground truncate mt-0.5 pl-[18px]">Focused on {{ focusLabel }}</p>
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground truncate mt-0.5">Focused on <span class="font-semibold text-foreground">{{ focusLabel }}</span></p>
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
@@ -1939,6 +1938,9 @@ const vReveal = {
 
 /* Immersive dark canvas + the living aura as the full backdrop (Focus language). */
 .director-canvas { background: radial-gradient(140% 120% at 50% 8%, #0c1424 0%, #070b14 52%, #04060c 100%); }
+/* The whole panel scrolls as one; hide its scrollbar. */
+.director-scroll { scrollbar-width: none; }
+.director-scroll::-webkit-scrollbar { display: none; }
 .director-aura { position: absolute; inset: 0; opacity: 0.9; z-index: 0; }
 
 /* Half-circle board — departments fanned around the Director (you). Seats are
