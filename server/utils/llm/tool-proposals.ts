@@ -20,6 +20,8 @@
 import { readUsers, readItem } from '@directus/sdk';
 import { logAiAction } from '~~/server/utils/ai-actions';
 import { UPDATE_FIELD_ALLOWLIST } from '~~/server/utils/ai-action-executors';
+import { decideAiAction } from '~~/server/utils/ai-action-decide';
+import { shouldAutoApprove } from '~~/server/utils/ai-autonomy';
 import type { ToolHandlerResult } from './tool-handlers';
 
 /** Normalize the various assignee shapes a task tool may emit into a uuid list. */
@@ -122,13 +124,69 @@ export interface ProposalContext {
   sessionId?: string | null;
   entityType?: string | null;
   entityId?: string | null;
+  /** The acting user's trust-dial tier (0–3). Governs which proposals auto-run. */
+  autonomyTier?: number;
+}
+
+// Auto-run summaries — accurate framing when the trust dial executes a proposal
+// straight away instead of queuing it (still fully in the Activity audit trail).
+const AUTO_RUN_VERB: Record<string, string> = {
+  create_ticket: 'Created the ticket',
+  add_event: 'Added the phase',
+  create_project: 'Set up the project',
+  create_content_plan: 'Drafted the content plan',
+  draft_social_posts: 'Drafted the social posts',
+  create_campaign: 'Started the campaign',
+};
+function autoRunSummary(toolName: string, fallback: string): string {
+  const verb = AUTO_RUN_VERB[toolName];
+  return verb
+    ? `${verb} — done automatically. It's in your Activity if you'd like to review or undo it.`
+    : fallback;
 }
 
 /**
- * Translate an outbound tool call into a pending ai_actions row. Returns a
- * ToolHandlerResult describing the proposal (never actually performs the effect).
+ * Translate an outbound tool call into a pending ai_actions row (the proposal),
+ * then — if the user's trust dial covers this action type and it's not on the
+ * hard safety floor — approve + execute it immediately via the same proven path
+ * a manual approval uses. Any auto-run failure falls back to leaving the row
+ * pending, so autonomy can never silently drop an action.
  */
 export async function proposeToolCall(
+  toolName: string,
+  input: Record<string, any>,
+  ctx: ProposalContext,
+): Promise<ToolHandlerResult> {
+  const result = await proposeOne(toolName, input, ctx);
+
+  if (result.success && result.data?.actionId && shouldAutoApprove(toolName, ctx.autonomyTier ?? 0)) {
+    try {
+      const decided = await decideAiAction({
+        id: String(result.data.actionId),
+        decision: 'approve',
+        userId: ctx.userId,
+        verifyOrg: async (orgId) => {
+          if (String(orgId) !== String(ctx.organizationId)) {
+            throw createError({ statusCode: 403, message: 'Organization mismatch' });
+          }
+        },
+      });
+      if (decided.status === 'executed') {
+        return {
+          success: true,
+          summary: autoRunSummary(toolName, result.summary),
+          data: { ...result.data, ...(decided.result || {}), status: 'executed', autoApproved: true },
+        };
+      }
+    } catch {
+      /* auto-run failed — keep the pending proposal so it can be approved by hand */
+    }
+  }
+
+  return result;
+}
+
+async function proposeOne(
   toolName: string,
   input: Record<string, any>,
   ctx: ProposalContext,
