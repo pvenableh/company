@@ -3,35 +3,40 @@
  * <EarnestPresenceDot> — a tiny living presence, sized for a button or chip.
  *
  * The full <EarnestAura> is a viewport-scale Focus backdrop (its orbs are sized
- * in vmax), so shrunk into a 36px circle it just fills solid. This is the small
+ * in vmax), so shrunk into a small circle it just fills solid. This is the small
  * counterpart: two or three soft, blurred brand-blue orbs that FLOAT and breathe
- * inside their circle — Earnest's presence, distilled to a dot. GSAP owns the
- * drift (per the motion policy); reduced motion settles it to a calm centre.
+ * — Earnest's presence, distilled to a dot. It floats free (no clipping circle,
+ * no chrome) so it can sit bare in the app. GSAP owns the drift (per the motion
+ * policy); reduced motion settles it to a calm centre.
  *
- *   <button class="relative size-9 rounded-full overflow-hidden">
- *     <EarnestPresenceDot />
+ *   <button class="group relative size-9 flex items-center justify-center">
+ *     <EarnestPresenceDot aperture />
  *   </button>
  *
- * Renders on a light OR dark surface (normal blend, real opacity) — no dark
- * ground required. Pointer-transparent; the host button owns interaction.
+ * With `aperture`, a faint iris sits over the orb — almost invisible at rest,
+ * easing in on hover of the host (host must carry Tailwind's `group` class). It
+ * shares the orb's blue + a soft blur, so it reads as the presence coming into
+ * focus, not a hard icon.
  */
 import { gsap } from 'gsap';
 
 const props = withDefaults(defineProps<{
 	/** Overall liveliness of the drift (1 = calm float; >1 = livelier). */
 	pace?: number;
-}>(), { pace: 1 });
+	/** Show a faint iris over the orb that sharpens on host hover. */
+	aperture?: boolean;
+}>(), { pace: 1, aperture: false });
 
 const rootEl = ref<HTMLElement | null>(null);
 let tweens: gsap.core.Tween[] = [];
 let reduce = false;
 
 // Deterministic orbs (no Math.random → SSR/hydration stable). Positions +
-// drifts are in % / px, tuned to float within the circle without ever leaving.
+// drifts are in % / px, tuned to float as one soft blob roughly centred.
 const ORBS = [
-	{ w: 74, l: 14, t: 10, from: '#38bdf8', dx: 3.2, dy: 2.6, dur: 5.4, scale: 1.14, o: 0.9 },
-	{ w: 58, l: 40, t: 42, from: '#22d3ee', dx: -2.8, dy: 3.0, dur: 6.6, scale: 1.18, o: 0.72 },
-	{ w: 46, l: 26, t: 48, from: '#6a8cff', dx: 2.4, dy: -2.4, dur: 7.4, scale: 1.2, o: 0.6 },
+	{ w: 72, l: 14, t: 12, from: '#38bdf8', dx: 3.2, dy: 2.6, dur: 5.4, scale: 1.14, o: 0.9 },
+	{ w: 56, l: 34, t: 40, from: '#22d3ee', dx: -2.8, dy: 3.0, dur: 6.6, scale: 1.18, o: 0.72 },
+	{ w: 44, l: 26, t: 30, from: '#6a8cff', dx: 2.4, dy: -2.4, dur: 7.4, scale: 1.2, o: 0.6 },
 ] as const;
 
 function build() {
@@ -61,29 +66,65 @@ onBeforeUnmount(() => { kill(); if (rootEl.value) gsap.killTweensOf(rootEl.value
 
 <template>
 	<span ref="rootEl" class="pdot" aria-hidden="true">
-		<span
-			v-for="(o, i) in ORBS"
-			:key="i"
-			class="pdot__orb"
-			:style="{
-				width: o.w + '%', height: o.w + '%',
-				left: o.l + '%', top: o.t + '%',
-				opacity: o.o,
-				background: `radial-gradient(circle at 42% 40%, ${o.from}, transparent 68%)`,
-			}"
-		/>
+		<span class="pdot__field">
+			<span
+				v-for="(o, i) in ORBS"
+				:key="i"
+				class="pdot__orb"
+				:style="{
+					width: o.w + '%', height: o.w + '%',
+					left: o.l + '%', top: o.t + '%',
+					opacity: o.o,
+					background: `radial-gradient(circle at 42% 40%, ${o.from}, transparent 68%)`,
+				}"
+			/>
+		</span>
+
+		<!-- The iris: over the orb, near-invisible until the host is hovered. -->
+		<svg
+			v-if="aperture"
+			class="pdot__iris opacity-[0.14] scale-[0.82] group-hover:opacity-[0.72] group-hover:scale-100"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="#8fd0ff"
+			stroke-width="1.6"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<circle cx="12" cy="12" r="10" />
+			<path d="M14.31 8 20.05 17.94" />
+			<path d="M9.69 8h11.48" />
+			<path d="M7.38 12 13.12 2.06" />
+			<path d="M9.69 16 3.95 6.06" />
+			<path d="M14.31 16H2.83" />
+			<path d="M16.62 12 10.88 21.94" />
+		</svg>
 	</span>
 </template>
 
 <style scoped>
 .pdot {
-	position: absolute; inset: 0; overflow: hidden; border-radius: inherit;
+	position: absolute; inset: 0;
 	pointer-events: none;
-	/* soft focus — the orbs melt into one gently glowing presence */
+}
+/* the orbs live in a soft-focus field that floats free — no clip, no chrome */
+.pdot__field {
+	position: absolute; inset: 0;
 	filter: blur(2.5px) saturate(1.05);
 }
 .pdot__orb {
 	position: absolute; border-radius: 50%;
 	will-change: transform;
+}
+/* the iris eases + sharpens on host hover (host carries `group`) */
+.pdot__iris {
+	position: absolute; inset: 12%;
+	width: auto; height: auto;
+	filter: blur(0.7px);
+	transition: opacity 500ms ease, transform 500ms cubic-bezier(0.36, 0.66, 0.04, 1);
+	transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+	.pdot__iris { transition: none; }
 }
 </style>
