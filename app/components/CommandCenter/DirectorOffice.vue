@@ -1224,7 +1224,7 @@ const vReveal = {
                          A fixed-height slot always holds it, so it never reflows
                          the header (nor gets clipped by the scroll container the
                          way an absolutely-positioned one did). -->
-                    <div class="h-4">
+                    <div class="h-3.5 mb-2">
                       <button
                         v-if="activeSubject"
                         type="button"
@@ -1235,7 +1235,7 @@ const vReveal = {
                         <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
                       </button>
                     </div>
-                    <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground">
+                    <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground leading-none">
                       <UIcon name="i-lucide-gavel" class="w-3 h-3 text-muted-foreground shrink-0" />
                       Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
                     </p>
