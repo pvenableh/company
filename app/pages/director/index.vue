@@ -179,7 +179,7 @@ const filteredMeetings = computed(() => {
     <div class="flex items-start justify-between gap-4 pt-2 mb-6">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-11 h-11 rounded-2xl bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-          <ExecutiveChairIcon class="w-7 h-7" />
+          <DirectorChairIcon class="w-7 h-7" />
         </div>
         <div class="min-w-0">
           <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">The Director's Office</h1>
@@ -201,7 +201,7 @@ const filteredMeetings = computed(() => {
           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-sm ios-press"
           @click="openDirectorOffice()"
         >
-          <ExecutiveChairIcon class="w-5 h-5" />
+          <DirectorChairIcon class="w-5 h-5" />
           <span class="hidden sm:inline">Convene the board</span>
           <span class="sm:hidden">Convene</span>
         </button>

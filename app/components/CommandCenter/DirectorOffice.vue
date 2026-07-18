@@ -12,6 +12,7 @@
 -->
 <script setup lang="ts">
 import { gsap } from 'gsap';
+import { useEarnestPresence, type EarnestMood } from '~/composables/useEarnestPresence';
 const { isOpen, scope, close } = useDirectorOffice();
 const { selectedOrg, currentOrg } = useOrganization();
 const orgName = computed(() => (currentOrg.value as any)?.name || '');
@@ -932,6 +933,39 @@ function onLeave(el: Element, done: () => void) {
     .to(panel, { opacity: 0, scale: 0.965, yPercent: 1.5, filter: 'blur(8px)', duration: 0.3, ease: 'power2.in' }, 0)
     .to(scrim, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0.04);
 }
+
+// ── Living aura behind the boardroom (the shared presence language) ──────────
+// A subtle version of Earnest's Focus aura, calmly present, gathering to a warm
+// amber "think" while Earnest is reviewing the business or drafting the plan.
+const doPresence = useEarnestPresence({ initial: 'present' });
+const doMood = computed<EarnestMood>(() => (loadingAgenda.value || planning.value) ? 'think' : 'present');
+watch(doMood, (m) => doPresence.setMood(m), { immediate: true });
+
+// ── Stagger reveal (GSAP) ────────────────────────────────────────────────────
+// A per-item rise-in so cards + seats flow into place instead of snapping. The
+// `.fade` modifier is opacity-only for transform-positioned nodes (the table
+// seats center via translateX — never clear their transform). transition:none
+// during the tween stops the cards' CSS `transition-all` from double-animating.
+const vReveal = {
+  mounted(el: HTMLElement, binding: { value?: number; modifiers: Record<string, boolean> }) {
+    if (reduceMotionDO) return;
+    const i = typeof binding.value === 'number' ? binding.value : 0;
+    const fadeOnly = !!binding.modifiers.fade;
+    const prevTransition = el.style.transition;
+    el.style.transition = 'none';
+    gsap.from(el, {
+      opacity: 0,
+      ...(fadeOnly ? {} : { y: 14 }),
+      duration: fadeOnly ? 0.6 : 0.5,
+      delay: Math.min(i, 8) * 0.055,
+      ease: 'power2.out',
+      onComplete() {
+        el.style.transition = prevTransition;
+        gsap.set(el, { clearProps: fadeOnly ? 'opacity' : 'transform,opacity' });
+      },
+    });
+  },
+};
 </script>
 
 <template>
@@ -939,15 +973,17 @@ function onLeave(el: Element, done: () => void) {
     <Transition :css="false" @enter="onEnter" @leave="onLeave">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:p-8"
+        class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/40 backdrop-blur-sm p-4 sm:p-8"
         @click.self="onClose"
       >
-        <section class="director-office w-full max-w-3xl my-auto rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
+        <!-- Subtle living aura behind the boardroom (pointer-events:none) -->
+        <EarnestAura :presence="doPresence" class="director-aura" />
+        <section class="director-office relative w-full max-w-3xl my-auto rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
           <!-- Boardroom header -->
           <header class="relative flex items-start justify-between gap-3 px-6 py-4 border-b border-border bg-gradient-to-br from-primary/10 via-muted/30 to-transparent">
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-                <ExecutiveChairIcon class="w-6 h-6" />
+                <DirectorChairIcon class="w-6 h-6" />
               </div>
               <div class="min-w-0">
                 <h2 class="text-base font-semibold leading-tight">
@@ -1205,8 +1241,9 @@ function onLeave(el: Element, done: () => void) {
                   </Transition>
 
                   <button
-                    v-for="seat in agendaSeats"
+                    v-for="(seat, idx) in agendaSeats"
                     :key="seat.g.subject"
+                    v-reveal.fade="idx"
                     type="button"
                     class="group absolute -translate-x-1/2 flex flex-col items-center gap-1.5 w-[92px]"
                     :style="{ left: seat.left, top: seat.top }"
@@ -1253,7 +1290,7 @@ function onLeave(el: Element, done: () => void) {
                     </div>
 
                     <div class="flex flex-col items-center">
-                      <ExecutiveChairIcon class="w-16 h-16 drop-shadow-sm" />
+                      <DirectorChairIcon class="w-16 h-16 drop-shadow-sm" />
                       <span class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-foreground">{{ directorName }}</span>
                       <span class="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground leading-none whitespace-nowrap">{{ directorTitle }}<template v-if="orgName"> @ {{ orgName }}</template></span>
                     </div>
@@ -1283,10 +1320,11 @@ function onLeave(el: Element, done: () => void) {
                 <!-- Card outline — mobile always; desktop when toggled to outline -->
                 <div class="grid gap-2 sm:grid-cols-2" :class="agendaView === 'table' ? 'sm:hidden' : ''">
                   <button
-                    v-for="g in visibleAgendaGroups"
+                    v-for="(g, i) in visibleAgendaGroups"
                     :key="g.subject"
+                    v-reveal="i"
                     type="button"
-                    class="group text-left rounded-2xl border p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
+                    class="do-spring group text-left rounded-2xl border p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
                     :class="activeSubject === g.subject ? 'border-primary/60 bg-primary/5' : 'border-border bg-background'"
                     @click="draftPlan(g.subject)"
                   >
@@ -1369,10 +1407,11 @@ function onLeave(el: Element, done: () => void) {
                 </p>
                 <div class="grid gap-2 sm:grid-cols-2">
                   <button
-                    v-for="m in recentMeetings"
+                    v-for="(m, i) in recentMeetings"
                     :key="m.id"
+                    v-reveal="i"
                     type="button"
-                    class="group text-left rounded-2xl border border-border bg-background p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
+                    class="do-spring group text-left rounded-2xl border border-border bg-background p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
                     @click="openRecent(m)"
                   >
                     <div class="flex items-start gap-2.5">
@@ -1544,6 +1583,7 @@ function onLeave(el: Element, done: () => void) {
                   <div
                     v-for="(step, i) in steps"
                     :key="step.id"
+                    v-reveal="i"
                     class="rounded-xl border border-border p-3"
                     :class="step.status === 'rejected' ? 'opacity-60' : ''"
                   >
@@ -1799,6 +1839,22 @@ function onLeave(el: Element, done: () => void) {
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
+
+/* Living aura behind the boardroom — subtle; the opaque panel sits over it so it
+   reads as a soft, breathing glow around the edges, not a busy backdrop. */
+.director-aura {
+  position: absolute;
+  inset: 0;
+  opacity: 0.72;
+  z-index: 0;
+}
+
+/* Liquid card micro-interaction: retime the existing hover lift to a gentle
+   spring (overshoot ease) so cards feel buoyant, not mechanical. */
+.do-spring {
+  transition-duration: 0.34s !important;
+  transition-timing-function: cubic-bezier(0.34, 1.4, 0.5, 1) !important;
+}
 
 .director-fade-enter-active,
 .director-fade-leave-active {
