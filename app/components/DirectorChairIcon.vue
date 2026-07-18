@@ -1,14 +1,28 @@
 <!--
-  DirectorChairIcon — an executive (CEO) office chair, drawn as a single-colour
-  glyph that inherits `currentColor` so it sits cleanly on the Director's Office
-  buttons (bg-foreground / text-background) and in the boardroom header. Sized by
-  the consumer via a class (e.g. `w-4 h-4`).
+  DirectorChairIcon — an executive (high-back) office chair, drawn as a stroke
+  OUTLINE in the lucide weight (24×24, stroke 2, round joins, no fill) so it sits
+  in the app dock beside the other outline app icons instead of reading as a
+  filled blob. Inherits `currentColor`, so it also works on the dark Director's
+  Office / boardroom buttons. Sized by the consumer via a class (e.g. `w-4 h-4`).
 -->
 <template>
-  <svg viewBox="0 0 256 256" fill="none" aria-hidden="true">
-    <path
-      fill="currentColor"
-      d="M248 128a8 8 0 0 1-8 8h-16.67A48.08 48.08 0 0 1 176 176h-40v24h24a32 32 0 0 1 32 32a8 8 0 0 1-16 0a16 16 0 0 0-16-16h-24v16a8 8 0 0 1-16 0v-16H96a16 16 0 0 0-16 16a8 8 0 0 1-16 0a32 32 0 0 1 32-32h24v-24H80a48.08 48.08 0 0 1-47.33-40H16a8 8 0 0 1 0-16h24a8 8 0 0 1 8 8a32 32 0 0 0 32 32h96a32 32 0 0 0 32-32a8 8 0 0 1 8-8h24a8 8 0 0 1 8 8M80 144h96a16 16 0 0 0 15.84-18.26l-13.72-96A16.08 16.08 0 0 0 162.28 16H93.72a16.08 16.08 0 0 0-15.84 13.74l-13.72 96A16 16 0 0 0 80 144"
-    />
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <!-- high padded back + seat cushion -->
+    <rect x="6.5" y="2.75" width="11" height="11.5" rx="2.5" />
+    <!-- the line where the back meets the seat -->
+    <path d="M6.5 10.25h11" />
+    <!-- pedestal post -->
+    <path d="M12 14.25v3.75" />
+    <!-- five-star wheeled base -->
+    <path d="M7 20.75 12 18l5 2.75" />
+    <path d="M12 18v3.25" />
   </svg>
 </template>

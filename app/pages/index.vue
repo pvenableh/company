@@ -126,9 +126,8 @@ const orgTeamGoalCount = computed(() => {
 // flips this ref. Lazy v-if keeps the modal tree out of the SSR payload.
 const checkinOpen = ref(false);
 
-// ── Director's Office (org-wide command center overlay) ──
-const { open: openDirectorOffice } = useDirectorOffice();
-const { open: openCoaching } = useCoachingMode();
+// Director's Office + Focus mode entries moved to the global chrome (dock +
+// top-bar), so the dashboard no longer opens them directly.
 
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
@@ -399,29 +398,9 @@ const goTo = (route: string) => {
 					<div class="flex items-center gap-2 shrink-0">
 						<!-- Mine/All now lives as a local toggle on Priority Actions (below),
 						     not the global chrome; band order is fixed. -->
-						<!-- Director's Office — convene an org-wide working meeting where
-						     Earnest reviews the business and proposes a plan you approve
-						     step by step. -->
-						<UTooltip text="Director's office" :popper="{ placement: 'bottom' }">
-							<button
-								@click="openDirectorOffice()"
-								aria-label="Director's office"
-								class="flex items-center justify-center size-9 bg-card text-foreground border border-border rounded-full shadow-sm transition-all duration-200 ios-press hover:bg-muted"
-							>
-								<DirectorChairIcon class="w-5 h-5" />
-							</button>
-						</UTooltip>
-						<!-- Focus mode — a calm, full-screen Earnest walkthrough for when
-						     the command center feels like too much. -->
-						<UTooltip text="Focus mode" :popper="{ placement: 'bottom' }">
-							<button
-								@click="openCoaching({ mode: 'org' })"
-								aria-label="Focus mode"
-								class="group relative flex items-center justify-center size-9 transition-transform duration-200 ios-press"
-							>
-								<EarnestPresenceDot aperture />
-							</button>
-						</UTooltip>
+						<!-- Director's Office now lives in the dock, and Focus mode in the
+						     top-bar chrome — both reachable from every page, so they're no
+						     longer duplicated in this dashboard header. -->
 						<button
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
 							aria-label="Earnest"

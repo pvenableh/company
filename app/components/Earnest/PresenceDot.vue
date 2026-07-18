@@ -80,14 +80,15 @@ onBeforeUnmount(() => { kill(); if (rootEl.value) gsap.killTweensOf(rootEl.value
 			/>
 		</span>
 
-		<!-- The iris: over the orb, near-invisible until the host is hovered. -->
+		<!-- The iris: the Focus glyph in the foreground, the orb glowing behind it.
+		     Legible at rest so the button reads as "Focus"; sharpens on host hover. -->
 		<svg
 			v-if="aperture"
-			class="pdot__iris opacity-[0.14] scale-[0.82] group-hover:opacity-[0.72] group-hover:scale-100"
+			class="pdot__iris opacity-[0.62] scale-[0.96] group-hover:opacity-100 group-hover:scale-100"
 			viewBox="0 0 24 24"
 			fill="none"
-			stroke="#8fd0ff"
-			stroke-width="1.6"
+			stroke="#4ba3e6"
+			stroke-width="1.7"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		>
@@ -118,10 +119,10 @@ onBeforeUnmount(() => { kill(); if (rootEl.value) gsap.killTweensOf(rootEl.value
 }
 /* the iris eases + sharpens on host hover (host carries `group`) */
 .pdot__iris {
-	position: absolute; inset: 12%;
+	position: absolute; inset: 13%;
 	width: auto; height: auto;
-	filter: blur(0.7px);
-	transition: opacity 500ms ease, transform 500ms cubic-bezier(0.36, 0.66, 0.04, 1);
+	filter: blur(0.4px);
+	transition: opacity 450ms ease, transform 450ms cubic-bezier(0.36, 0.66, 0.04, 1);
 	transform-origin: center;
 }
 @media (prefers-reduced-motion: reduce) {

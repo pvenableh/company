@@ -66,7 +66,7 @@ onBeforeUnmount(() => { if (revealTimer) clearTimeout(revealTimer); });
 				<p class="focus-nudge__sub">Step into Focus and take it one honest thing at a time.</p>
 				<div class="focus-nudge__actions">
 					<button type="button" class="focus-nudge__go" @click="enter">
-						<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+						<Icon name="lucide:aperture" class="w-3.5 h-3.5" />
 						Enter Focus
 					</button>
 					<button type="button" class="focus-nudge__later" @click="dismiss">Not now</button>
