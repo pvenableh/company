@@ -1196,12 +1196,14 @@ const vReveal = {
               <!-- Agenda: boardroom table (default) or card outline -->
               <div v-else>
                 <div class="flex items-end justify-between mb-2 gap-2">
-                  <div class="min-w-0">
-                    <!-- Back out of a focused department — app-standard back link -->
+                  <div class="min-w-0 relative">
+                    <!-- Back out of a focused department — app-standard back link.
+                         Absolutely positioned above the label so it never reflows
+                         the header when it appears/disappears. -->
                     <button
                       v-if="activeSubject"
                       type="button"
-                      class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors mb-0.5"
+                      class="absolute bottom-full left-0 mb-0.5 inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors"
                       @click="activeSubject = null"
                     >
                       <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> Whole business
@@ -1273,7 +1275,7 @@ const vReveal = {
                   </svg>
                   <button
                     v-for="s in arcSeats" :key="s.g.subject"
-                    type="button" class="do-seat"
+                    type="button" class="do-seat" data-no-press
                     :style="{ left: s.left, top: s.top, '--seat-accent': s.accent }"
                     :data-dim="activeSubject && activeSubject !== s.g.subject ? 'true' : 'false'"
                     :data-active="activeSubject === s.g.subject ? 'true' : 'false'"
@@ -1907,9 +1909,12 @@ const vReveal = {
 /* Half-circle board — departments fanned around the Director (you). Seats are
    anchored to their CHIP CENTRE (translate -30px = half the 60px chip) so the
    connector lines land dead-centre; label + priority flow below. */
-.do-seat { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; background: transparent; border: 0; cursor: pointer; transition: opacity .3s; }
+/* Seats + director sit ABOVE the connector <svg> (z:1) and use an OPAQUE base so
+   the dotted lines are occluded where they pass under a chip — the lines read as
+   coming out from behind each department, never over it. */
+.do-seat { position: absolute; z-index: 1; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; background: transparent; border: 0; cursor: pointer; transition: opacity .3s; }
 .do-seat[data-dim="true"] { opacity: .38; }
-.do-seat__chip { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14); background: color-mix(in oklab, var(--seat-accent) 16%, rgba(255,255,255,.05)); color: color-mix(in oklab, var(--seat-accent), white 22%); backdrop-filter: blur(12px); box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); transition: transform .34s cubic-bezier(.34,1.5,.5,1), box-shadow .3s, border-color .25s; }
+.do-seat__chip { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14); background: color-mix(in oklab, var(--seat-accent) 20%, #0c1526); color: color-mix(in oklab, var(--seat-accent), white 22%); box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); transition: transform .34s cubic-bezier(.34,1.5,.5,1), box-shadow .3s, border-color .25s; }
 .do-seat:hover .do-seat__chip { transform: translateY(-4px) scale(1.06); border-color: color-mix(in oklab, var(--seat-accent), white 20%); }
 .do-seat[data-active="true"] .do-seat__chip { border-color: var(--seat-accent); box-shadow: 0 0 0 2px var(--seat-accent), 0 14px 34px -12px color-mix(in oklab, var(--seat-accent) 60%, transparent); }
 .do-seat__badge { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #06121f; background: var(--seat-accent); box-shadow: 0 2px 8px -2px rgba(0,0,0,.6); }
@@ -1919,8 +1924,8 @@ const vReveal = {
 .do-seat__label { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: #eef2f8; }
 .do-seat__pri { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: rgba(238,242,248,.42); margin-top: -3px; }
 
-.do-director { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.do-director__chair { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #eef2f8; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(14px); box-shadow: 0 0 44px -6px rgba(120,150,220,.5); }
+.do-director { position: absolute; z-index: 1; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.do-director__chair { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #eef2f8; background: color-mix(in oklab, #6a86dc 12%, #101a2e); border: 1px solid rgba(255,255,255,.2); box-shadow: 0 0 44px -6px rgba(120,150,220,.5); }
 .do-director__label { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(238,242,248,.6); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .do-attendees { display: flex; margin-top: 3px; }
 .do-att { width: 23px; height: 23px; border-radius: 50%; object-fit: cover; margin-left: -7px; border: 2px solid #0a1220; box-shadow: 0 2px 6px -2px rgba(0,0,0,.6); }
