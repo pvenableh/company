@@ -14,6 +14,29 @@ import { gsap } from 'gsap';
 import { ensureEarnestGsap } from '~/composables/useEarnestPresence';
 
 const { tier, load, setTier, TIERS } = useAiAutonomy();
+const { selectedOrg } = useOrganization();
+
+// "Trust compounds" — count the actions this user has approved that Earnest ran
+// cleanly (vs rejected), and nudge toward more autonomy once enough is earned.
+const signal = ref<{ approved: number; rejected: number } | null>(null);
+const NUDGE_THRESHOLD = [3, 10, 25] as const; // approvals to suggest leaving tier 0 / 1 / 2
+async function loadSignal() {
+	const organizationId = selectedOrg.value;
+	if (!organizationId) return;
+	try {
+		signal.value = await $fetch('/api/ai/actions/trust', { query: { organizationId } });
+	} catch {
+		signal.value = null;
+	}
+}
+const nudge = computed(() => {
+	const s = signal.value;
+	const t = clamp(tier.value);
+	if (!s || t >= 3) return null;
+	if (s.approved < NUDGE_THRESHOLD[t]!) return null;
+	if (s.approved < s.rejected * 2) return null; // mostly-clean history only
+	return { next: (t + 1) as number, nextInfo: TIERS[t + 1]!, approved: s.approved };
+});
 
 // Gauge geometry: four notches over a bottom-open 270° arc (0 = top, clockwise).
 const ANGLES = [-135, -45, 45, 135] as const; // tier 0 → 3
@@ -79,6 +102,7 @@ onMounted(async () => {
 	preview.value = tier.value;
 	rotateTo(tier.value, true);
 	wireDrag();
+	loadSignal();
 });
 onBeforeUnmount(() => { drag?.kill?.(); if (pointerEl.value) gsap.killTweensOf(pointerEl.value); });
 </script>
@@ -124,6 +148,17 @@ onBeforeUnmount(() => { drag?.kill?.(); if (pointerEl.value) gsap.killTweensOf(p
 			<Icon name="lucide:shield-check" class="w-3 h-3" />
 			Email, money &amp; meetings always ask first.
 		</p>
+
+		<!-- trust compounds: surfaced only once it's been earned -->
+		<Transition name="td-nudge">
+			<button v-if="nudge" type="button" class="trustdial__nudge" @click="commit(nudge.next)">
+				<Icon name="lucide:trending-up" class="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+				<span>
+					Earnest has handled <b>{{ nudge.approved }}</b> of your approvals cleanly.
+					Trust it with more? <span class="trustdial__nudge-cta">Raise to “{{ nudge.nextInfo.label }}”</span>
+				</span>
+			</button>
+		</Transition>
 	</div>
 </template>
 
@@ -204,6 +239,19 @@ onBeforeUnmount(() => { drag?.kill?.(); if (pointerEl.value) gsap.killTweensOf(p
 	margin: 0; display: inline-flex; align-items: center; gap: 5px;
 	font-size: 10.5px; color: hsl(var(--muted-foreground) / 0.75);
 }
+
+.trustdial__nudge {
+	margin-top: 2px; display: flex; align-items: flex-start; gap: 7px; text-align: left;
+	max-width: 260px; padding: 9px 12px; border-radius: 14px;
+	border: 1px solid color-mix(in oklab, var(--tier-color), transparent 70%);
+	background: color-mix(in oklab, var(--tier-color), transparent 92%);
+	font-size: 11.5px; line-height: 1.4; color: hsl(var(--foreground));
+	cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease;
+}
+.trustdial__nudge:hover { background: color-mix(in oklab, var(--tier-color), transparent 86%); }
+.trustdial__nudge-cta { font-weight: 600; color: var(--tier-color); white-space: nowrap; }
+.td-nudge-enter-active, .td-nudge-leave-active { transition: opacity 0.35s ease, transform 0.35s ease; }
+.td-nudge-enter-from, .td-nudge-leave-to { opacity: 0; transform: translateY(6px); }
 
 @media (prefers-reduced-motion: reduce) {
 	.trustdial__notch-dot { transition: none; }
