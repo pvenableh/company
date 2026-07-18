@@ -428,6 +428,7 @@ export default defineEventHandler(async (event) => {
                   sessionId: chatSessionId ? String(chatSessionId) : null,
                   entityType,
                   entityId,
+                  autonomyTier: await getUserAutonomyTier(userId),
                 })
               : await executeToolCall(tc.name, tc.input, { organizationId, userId, entityType, entityId, directus });
 

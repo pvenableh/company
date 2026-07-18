@@ -5370,6 +5370,8 @@ export interface DirectusUser {
 	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
 	/** @description Per-user palette for the apps shell (default | oceanic | royal). */
 	app_palette?: 'default' | 'oceanic' | 'royal' | null;
+	/** @description Earnest trust dial (0–3): how much of Earnest's proposed work auto-runs for this user. Email/money/meetings always stay gated. */
+	ai_autonomy_tier?: number | null;
 	/** @description Command Center lens preference — controls band emphasis on /. (me | org) */
 	view_lens?: 'me' | 'org' | null;
 	/** @description List of /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */

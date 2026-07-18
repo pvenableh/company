@@ -518,8 +518,13 @@ function formatSessionTime(iso?: string): string {
 					</div>
 				</div>
 
-				<!-- Activity tab: org-wide AI actions audit log -->
+				<!-- Activity tab: the trust dial (how much bypasses this queue) + the
+				     org-wide ai_actions audit log -->
 				<div v-if="activeTab === 'activity'" class="flex-1 overflow-y-auto px-4 py-3">
+					<section class="mb-4 rounded-2xl border border-border/60 bg-muted/20 px-4 py-4">
+						<p class="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-3">How much Earnest handles on its own</p>
+						<EarnestTrustDial />
+					</section>
 					<AiActivityList show-filters />
 				</div>
 
