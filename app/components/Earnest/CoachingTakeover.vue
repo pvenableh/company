@@ -640,7 +640,7 @@ watch(mounted, (m) => {
 
 /* Composer — liquifies in */
 .coach__composer-wrap { padding: 4px clamp(16px, 4vw, 40px) 20px; }
-.coach__composer { max-width: 720px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; padding: 8px; border-radius: 26px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(20px); box-shadow: 0 18px 60px -22px rgba(0,0,0,.7); animation: coach-composer-in .7s cubic-bezier(.2,.7,.2,1) both; }
+.coach__composer { max-width: 720px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; padding: 8px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(20px); box-shadow: 0 18px 60px -22px rgba(0,0,0,.7); animation: coach-composer-in .7s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes coach-composer-in { 0% { opacity: 0; transform: translateY(16px) scaleX(.86); filter: blur(8px); border-radius: 40px; } 100% { opacity: 1; transform: none; filter: blur(0); } }
 .coach__composer textarea { flex: 1; resize: none; border: 0; background: transparent; color: #eef2f8; font: inherit; font-size: 15px; line-height: 1.5; padding: 9px 10px; max-height: 140px; outline: none; }
 .coach__composer textarea::placeholder { color: rgba(238,242,248,.4); }
