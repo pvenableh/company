@@ -59,6 +59,17 @@
 						</button>
 					</div>
 					<div class="apps-shell__chrome-right">
+						<!-- One-tap Focus entry: Earnest's living presence (floats free; the
+						     iris eases in on hover). Another Earnest altitude, by the brand. -->
+						<button
+							type="button"
+							class="group relative flex items-center justify-center w-7 h-7 shrink-0 ios-press"
+							aria-label="Focus mode"
+							title="Focus mode"
+							@click="handleOpenFocus"
+						>
+							<EarnestPresenceDot aperture />
+						</button>
 						<!-- Search is desktop-chrome only; below sm it moves into the
 						     user-menu dropdown. Wrapper carries the responsive hide so
 						     the utility isn't out-specified by the scoped button rule. -->
@@ -182,6 +193,11 @@ useAppSlideOverStackUrlSync();
 
 // The unified Earnest panel self-derives entity vs route context.
 const handleOpenAI = () => openEarnestPanel();
+
+// Global one-tap Focus entry (org-scoped) — reachable from any page, so you can
+// step out of the noise exactly when a busy screen is what's overwhelming you.
+const { open: openCoaching } = useCoachingMode();
+const handleOpenFocus = () => openCoaching({ mode: 'org' });
 
 // Pending AI actions (HITL queue) badge on the assistant launcher.
 const { pendingCount: aiPendingCount, refresh: refreshAiPending } = useAiPendingActions();
