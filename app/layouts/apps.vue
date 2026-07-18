@@ -59,8 +59,8 @@
 						</button>
 					</div>
 					<div class="apps-shell__chrome-right">
-						<!-- One-tap Focus entry: Earnest's living presence (floats free; the
-						     iris eases in on hover). Another Earnest altitude, by the brand. -->
+						<!-- One-tap Focus entry: the lucide focus glyph over Earnest's soft
+						     blurred living presence. Reachable from every page. -->
 						<button
 							type="button"
 							class="group relative flex items-center justify-center w-7 h-7 shrink-0 ios-press"
@@ -68,7 +68,8 @@
 							title="Focus mode"
 							@click="handleOpenFocus"
 						>
-							<EarnestPresenceDot aperture />
+							<EarnestPresenceDot />
+							<Icon name="lucide:focus" class="relative w-4 h-4 text-foreground/75" />
 						</button>
 						<!-- Search is desktop-chrome only; below sm it moves into the
 						     user-menu dropdown. Wrapper carries the responsive hide so
