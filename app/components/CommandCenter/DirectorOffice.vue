@@ -1221,19 +1221,22 @@ const vReveal = {
                 <div class="flex items-end justify-between mb-2 gap-2">
                   <div class="min-w-0">
                     <!-- Back out of a focused department — app-standard back link.
-                         A fixed-height slot always holds it, so it never reflows
-                         the header (nor gets clipped by the scroll container the
-                         way an absolutely-positioned one did). -->
-                    <div class="h-3.5 mb-2">
-                      <button
-                        v-if="activeSubject"
-                        type="button"
-                        data-no-press
-                        class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
-                        @click="backToBoard"
-                      >
-                        <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
-                      </button>
+                         A fixed-height slot always holds it (never reflows the
+                         header, never clipped by the scroll container), with a
+                         fade/slide as it shows + hides. Extra bottom space so it
+                         reads as its own element above the meeting title. -->
+                    <div class="h-3.5 mb-3.5">
+                      <Transition name="backlink">
+                        <button
+                          v-if="activeSubject"
+                          type="button"
+                          data-no-press
+                          class="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
+                          @click="backToBoard"
+                        >
+                          <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
+                        </button>
+                      </Transition>
                     </div>
                     <p class="text-[11px] uppercase tracking-wider font-semibold text-foreground leading-none">
                       Board meeting<span v-if="meetingLabel" class="font-normal text-muted-foreground">&nbsp;· {{ meetingLabel }}</span>
@@ -1298,7 +1301,7 @@ const vReveal = {
                      to convene on just that subject. Live teammates cluster around
                      your chair; the presenter's subject pulses. -->
                 <div v-if="agendaLayout === 'arc'" class="relative mx-auto w-full max-w-[620px]" :style="{ height: ARC_H + 'px' }">
-                  <svg class="absolute inset-0 w-full h-full pointer-events-none" :viewBox="`0 0 100 ${ARC_H}`" preserveAspectRatio="none" aria-hidden="true">
+                  <svg v-reveal.fade="0" class="absolute inset-0 w-full h-full pointer-events-none" :viewBox="`0 0 100 ${ARC_H}`" preserveAspectRatio="none" aria-hidden="true">
                     <line
                       v-for="s in arcSeats" :key="s.g.subject"
                       :x1="s.xPct" :y1="s.yPx" :x2="DIRECTOR_POS.xPct" :y2="DIRECTOR_POS.yPx"
@@ -1308,7 +1311,8 @@ const vReveal = {
                     />
                   </svg>
                   <button
-                    v-for="s in arcSeats" :key="s.g.subject"
+                    v-for="(s, i) in arcSeats" :key="s.g.subject"
+                    v-reveal.fade="i"
                     type="button" class="do-seat" data-no-press
                     :style="{ left: s.left, top: s.top, '--seat-accent': s.accent }"
                     :data-dim="activeSubject && activeSubject !== s.g.subject ? 'true' : 'false'"
@@ -1324,7 +1328,7 @@ const vReveal = {
                     <span class="do-seat__label">{{ s.g.label }}</span>
                     <span class="do-seat__pri">{{ s.g.topPriority }}</span>
                   </button>
-                  <div class="do-director" :style="{ left: DIRECTOR_POS.xPct + '%', top: DIRECTOR_POS.yPx + 'px' }">
+                  <div class="do-director" v-reveal.fade="arcSeats.length" :style="{ left: DIRECTOR_POS.xPct + '%', top: DIRECTOR_POS.yPx + 'px' }">
                     <span class="do-director__chair"><DirectorChairIcon class="w-8 h-8" /></span>
                     <span class="do-director__label">{{ directorName }}</span>
                     <div v-if="otherAttendees.length" class="do-attendees">
@@ -1941,6 +1945,11 @@ const vReveal = {
 /* The whole panel scrolls as one; hide its scrollbar. */
 .director-scroll { scrollbar-width: none; }
 .director-scroll::-webkit-scrollbar { display: none; }
+
+/* Back link fades + slides in/out (it lives in a fixed-height slot, so this
+   never reflows the title below it). */
+.backlink-enter-active, .backlink-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.backlink-enter-from, .backlink-leave-to { opacity: 0; transform: translateX(-5px); }
 .director-aura { position: absolute; inset: 0; opacity: 0.9; z-index: 0; }
 
 /* Half-circle board — departments fanned around the Director (you). Seats are
