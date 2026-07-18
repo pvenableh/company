@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { gsap } from 'gsap';
 import { useEarnestPresence, type EarnestMood } from '~/composables/useEarnestPresence';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 const { isOpen, scope, close } = useDirectorOffice();
 const { selectedOrg, currentOrg } = useOrganization();
 const orgName = computed(() => (currentOrg.value as any)?.name || '');
@@ -286,6 +287,23 @@ const focusLabel = computed(() => {
   if (scope.value?.mode === 'entity') return scopeLabel.value;
   return 'the whole organization';
 });
+// The back link's label reflects where you land: the board or the agenda list.
+const backLabel = computed(() => (agendaLayout.value === 'arc' ? 'Back to board room' : 'Back to agenda'));
+// Un-focus the department AND clear the drafted plan → a clean board.
+function backToBoard() {
+  activeSubject.value = null;
+  planning.value = false;
+  steps.value = [];
+  planId.value = null;
+  planIntro.value = '';
+  finance.value = null;
+  opportunity.value = null;
+  clientRating.value = null;
+  briefingSavedAt.value = null;
+  qaThread.value = [];
+  qaInput.value = '';
+  topicInput.value = '';
+}
 
 // The Director at the head of the table — the current user. Name from the
 // session; job title needs the full user record (session omits it).
@@ -1027,11 +1045,16 @@ const vReveal = {
               <div class="min-w-0">
                 <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
                   The Director's Office
-                  <UIcon
-                    name="i-lucide-info"
-                    class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0"
-                    :title="`Earnest reviewed ${scopeLabel} and drafted the work below — you approve each step; nothing runs on its own.`"
-                  />
+                  <TooltipProvider :delay-duration="150">
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span class="inline-flex cursor-help"><UIcon name="i-lucide-info" class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors shrink-0" /></span>
+                      </TooltipTrigger>
+                      <TooltipContent :side-offset="6" class="z-[95] max-w-xs">
+                        Earnest reviewed {{ scopeLabel }} and drafted the work below — you approve each step; nothing runs on its own.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </h2>
                 <p class="text-xs text-muted-foreground truncate">Approve each step — nothing runs on its own.</p>
               </div>
@@ -1203,10 +1226,11 @@ const vReveal = {
                     <button
                       v-if="activeSubject"
                       type="button"
+                      data-no-press
                       class="absolute bottom-full left-0 mb-0.5 inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors"
-                      @click="activeSubject = null"
+                      @click="backToBoard"
                     >
-                      <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> Whole business
+                      <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
                     </button>
                     <p class="text-[11px] uppercase tracking-wider font-semibold flex items-center gap-1.5 text-foreground">
                       <UIcon name="i-lucide-gavel" class="w-3 h-3 text-muted-foreground shrink-0" />
@@ -1238,14 +1262,22 @@ const vReveal = {
                       <UIcon name="i-lucide-x" class="w-3 h-3" />
                     </button>
                   </span>
-                  <button
-                    v-if="!tagOpen"
-                    type="button"
-                    class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                    @click="openTag"
-                  >
-                    <UIcon name="i-lucide-tag" class="w-3 h-3" /> Add tag
-                  </button>
+                  <TooltipProvider v-if="!tagOpen" :delay-duration="150">
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                          @click="openTag"
+                        >
+                          <UIcon name="i-lucide-tag" class="w-3 h-3" /> Add tag
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent :side-offset="6" class="z-[95] max-w-xs">
+                        Label this meeting (e.g. “weekly”, “Q3-planning”) so you can find it again in Past meetings.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <input
                     v-else
                     ref="tagInputEl"

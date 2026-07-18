@@ -99,6 +99,20 @@ const subjectTitle = computed(() => {
 function labelForType(t: string): string {
   return { create_tasks: 'Create tasks', update_field: 'Update', send_email: 'Send email', reschedule_project: 'Reschedule' }[t] || t;
 }
+// The action type is shown as its own subtitle, so drop a redundant
+// "Create task(s):" prefix from the step title; and if the title is SHOUTING
+// (mostly uppercase, as some are generated), soften it back to sentence case so
+// it reads as a description, not a headline.
+function stepTitle(step: any): string {
+  let t = String(step?.title || '').trim();
+  t = t.replace(/^\s*create\s+tasks?\s*:?\s*/i, '');
+  const letters = t.replace(/[^a-z]/gi, '');
+  const uppers = t.replace(/[^A-Z]/g, '');
+  if (letters.length > 3 && uppers.length / letters.length > 0.7) {
+    t = t.toLowerCase().replace(/^(\s*[a-z])/, (m) => m.toUpperCase());
+  }
+  return t;
+}
 function iconForType(t: string): string {
   return {
     create_tasks: 'i-lucide-list-plus', update_field: 'i-lucide-pencil',
@@ -400,14 +414,16 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
 
         <!-- ACTION -->
         <div :key="`act-${index}`" v-else-if="current?.kind === 'action'" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <p class="text-sm sm:text-base uppercase tracking-[0.2em] text-indigo-300">Proposed action {{ current.n }} of {{ steps.length }}</p>
-            <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-              <UIcon :name="iconForType(current.step.action_type)" class="w-3 h-3" />
+          <p class="text-[11px] uppercase tracking-[0.2em] text-indigo-300/60">Proposed action {{ current.n }} of {{ steps.length }}</p>
+          <div>
+            <!-- Action type as an uppercase subtitle, the task/description below in normal case -->
+            <p class="inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.16em] font-semibold text-indigo-300">
+              <UIcon :name="iconForType(current.step.action_type)" class="w-3.5 h-3.5" />
               {{ labelForType(current.step.action_type) }}
-            </span>
+            </p>
+            <!-- inline text-transform beats the global `[data-style] h3 { uppercase }` heading rule -->
+            <h3 class="text-lg sm:text-xl font-medium text-white leading-snug mt-1.5" style="text-transform: none">{{ stepTitle(current.step) }}</h3>
           </div>
-          <h3 class="text-2xl font-semibold text-white leading-snug">{{ current.step.title }}</h3>
 
           <div v-if="current.step.action_type === 'send_email' && current.step.preview" class="rounded-xl bg-white/5 ring-1 ring-white/10 p-3 text-sm text-white/70 space-y-0.5">
             <p><span class="text-white/45">To:</span> {{ current.step.preview.to || 'contact' }}</p>
