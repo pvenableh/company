@@ -218,7 +218,9 @@ const loadingAgenda = ref(false);
 const agendaError = ref<string | null>(null);
 // Agenda presentation: the boardroom "table" (chairs = agenda items) by default,
 // or the plain card outline. Desktop only — mobile always shows the cards.
-const agendaView = ref<'table' | 'outline'>('table');
+const agendaView = ref<'table' | 'outline'>('outline');
+// Immersive skin: the half-circle board (default) vs the detail agenda cards.
+const agendaLayout = ref<'arc' | 'cards'>('arc');
 
 // In a live meeting the host may have curated which advisors are in the room —
 // everyone (host included) only sees those. Solo/off-live shows all.
@@ -247,6 +249,34 @@ const agendaSeats = computed(() => {
 // App-rail accent ids in gradient order (bright cyan → dark blue) — reused to
 // tint the boardroom chairs the same chromatic way the rail tints its apps.
 const CHAIR_ACCENT_IDS = ['clients', 'work', 'money', 'marketing', 'director', 'organization', 'account'];
+
+// ── Immersive "board" — departments fanned in a half-circle around the Director,
+// no table. Each seat = an agenda group; click convenes on that subject. The
+// yPx / xPct mark the CHIP CENTRE so the connector lines land dead-centre.
+const ARC_H = 300;
+const DIRECTOR_POS = { xPct: 50, yPx: 234 };
+const arcSeats = computed(() => {
+  const gs = visibleAgendaGroups.value;
+  const n = gs.length;
+  const startDeg = 156, endDeg = 24;
+  return gs.map((g, i) => {
+    const t = n <= 1 ? 0.5 : i / (n - 1);
+    const deg = startDeg + (endDeg - startDeg) * t;
+    const rad = (deg * Math.PI) / 180;
+    const xPct = 50 + 40 * Math.cos(rad);
+    const yPx = 198 - 150 * Math.sin(rad);
+    const accent = `var(--app-${CHAIR_ACCENT_IDS[i % CHAIR_ACCENT_IDS.length]}-icon, hsl(200 71% 40%))`;
+    return { g, xPct, yPx, left: `${xPct}%`, top: `${yPx}px`, accent };
+  });
+});
+// During a live session the presenter drives a shared subject — pulse that seat.
+const presentingSubject = computed(() => (liveActive.value ? activeSubject.value : null));
+const presenterAvatar = computed(() => {
+  const pid = liveSession.value?.presenterId;
+  if (!pid) return null;
+  const p = livePresentNow.value.find((x) => String(x.userId) === String(pid));
+  return p ? { name: p.name, src: avatarFor(p) } : null;
+});
 
 // The Director at the head of the table — the current user. Name from the
 // session; job title needs the full user record (session omits it).
@@ -973,14 +1003,14 @@ const vReveal = {
     <Transition :css="false" @enter="onEnter" @leave="onLeave">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/40 backdrop-blur-sm p-4 sm:p-8"
+        class="dark director-canvas fixed inset-0 z-[80] flex justify-center overflow-hidden"
         @click.self="onClose"
       >
-        <!-- Subtle living aura behind the boardroom (pointer-events:none) -->
+        <!-- Living aura — the immersive backdrop (pointer-events:none) -->
         <EarnestAura :presence="doPresence" class="director-aura" />
-        <section class="director-office relative w-full max-w-3xl my-auto rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
+        <section class="director-office relative z-[3] flex flex-col h-full w-full max-w-3xl mx-auto px-4 sm:px-8 text-foreground">
           <!-- Boardroom header -->
-          <header class="relative flex items-start justify-between gap-3 px-6 py-4 border-b border-border bg-gradient-to-br from-primary/10 via-muted/30 to-transparent">
+          <header class="relative flex items-start justify-between gap-3 pt-5 pb-3 shrink-0">
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
                 <DirectorChairIcon class="w-6 h-6" />
@@ -1047,6 +1077,14 @@ const vReveal = {
                   <span class="hidden sm:inline">{{ liveIsHost ? 'End' : 'Leave' }}</span>
                 </button>
               </template>
+              <NuxtLink
+                to="/director"
+                class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                title="Past meetings — open the Director's Office history"
+                @click="onClose"
+              >
+                <UIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Past meetings
+              </NuxtLink>
               <button
                 type="button"
                 class="text-muted-foreground hover:text-foreground p-1 disabled:opacity-40"
@@ -1063,7 +1101,7 @@ const vReveal = {
             </div>
           </header>
 
-          <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
+          <div class="flex-1 min-h-0 overflow-y-auto space-y-5 py-3 pr-1">
             <!-- Live: who's at the table -->
             <div v-if="liveActive" class="flex items-center gap-2.5 flex-wrap rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5">
               <UIcon name="i-lucide-users-round" class="w-4 h-4 text-primary shrink-0" />
@@ -1147,27 +1185,27 @@ const vReveal = {
               <div v-else>
                 <div class="flex items-center justify-between mb-2 gap-2">
                   <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1.5 min-w-0">
-                    <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5 shrink-0" /> Agenda
+                    <UIcon name="i-lucide-clipboard-list" class="w-3.5 h-3.5 shrink-0" />
+                    {{ agendaLayout === 'arc' ? 'The board · pick a department, or take the lot' : 'Agenda' }}
                     <span v-if="meetingLabel" class="font-normal text-muted-foreground/70 truncate">· meeting · {{ meetingLabel }}</span>
                   </p>
-                  <!-- Table / Outline toggle — desktop only (mobile is always cards) -->
-                  <div class="hidden sm:inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                  <div class="flex items-center gap-2 shrink-0">
                     <button
+                      v-if="activeSubject"
                       type="button"
-                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors"
-                      :class="agendaView === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-                      @click="agendaView = 'table'"
+                      class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
+                      @click="activeSubject = null"
                     >
-                      <UIcon name="i-lucide-armchair" class="w-3.5 h-3.5" /> Table
+                      <UIcon name="i-lucide-arrow-left" class="w-3 h-3" /> Whole business
                     </button>
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors"
-                      :class="agendaView === 'outline' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-                      @click="agendaView = 'outline'"
-                    >
-                      <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
-                    </button>
+                    <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'arc' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'arc'">
+                        <UIcon name="i-lucide-users-round" class="w-3.5 h-3.5" /> Board
+                      </button>
+                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'cards' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'cards'">
+                        <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Agenda
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1204,11 +1242,47 @@ const vReveal = {
                   />
                 </div>
 
-                <!-- Boardroom table — each agenda item is a member seated around
-                     the table. UPPERCASE title above; a subtle theme-tinted circle
-                     with an ALERT-colour border; the chair in the app's theme colour,
-                     angled toward the table. The subject icon + label reveal on hover.
-                     The Director sits at the head. Desktop only. -->
+                <!-- Immersive board — departments fanned in a half-circle around
+                     the Director (you), no table. Each seat is a department; click
+                     to convene on just that subject. Live teammates cluster around
+                     your chair; the presenter's subject pulses. -->
+                <div v-if="agendaLayout === 'arc'" class="relative mx-auto w-full max-w-[620px]" :style="{ height: ARC_H + 'px' }">
+                  <svg class="absolute inset-0 w-full h-full pointer-events-none" :viewBox="`0 0 100 ${ARC_H}`" preserveAspectRatio="none" aria-hidden="true">
+                    <line
+                      v-for="s in arcSeats" :key="s.g.subject"
+                      :x1="s.xPct" :y1="s.yPx" :x2="DIRECTOR_POS.xPct" :y2="DIRECTOR_POS.yPx"
+                      :stroke="s.accent"
+                      :stroke-opacity="activeSubject === s.g.subject ? 0.7 : (activeSubject ? 0.06 : 0.16)"
+                      stroke-width="1.5" stroke-dasharray="4 6" stroke-linecap="round" vector-effect="non-scaling-stroke"
+                    />
+                  </svg>
+                  <button
+                    v-for="s in arcSeats" :key="s.g.subject"
+                    type="button" class="do-seat"
+                    :style="{ left: s.left, top: s.top, '--seat-accent': s.accent }"
+                    :data-dim="activeSubject && activeSubject !== s.g.subject ? 'true' : 'false'"
+                    :data-active="activeSubject === s.g.subject ? 'true' : 'false'"
+                    :data-presenting="presentingSubject === s.g.subject ? 'true' : 'false'"
+                    @click="draftPlan(s.g.subject)"
+                  >
+                    <span class="do-seat__chip">
+                      <UIcon :name="iconForSubject(s.g)" class="w-6 h-6" />
+                      <span v-if="s.g.notices.length" class="do-seat__badge">{{ s.g.notices.length }}</span>
+                      <img v-if="presentingSubject === s.g.subject && presenterAvatar" :src="presenterAvatar.src" :alt="presenterAvatar.name" :title="`${presenterAvatar.name} is presenting`" class="do-seat__presenter" />
+                    </span>
+                    <span class="do-seat__label">{{ s.g.label }}</span>
+                    <span class="do-seat__pri">{{ s.g.topPriority }}</span>
+                  </button>
+                  <div class="do-director" :style="{ left: DIRECTOR_POS.xPct + '%', top: DIRECTOR_POS.yPx + 'px' }">
+                    <span class="do-director__chair"><DirectorChairIcon class="w-8 h-8" /></span>
+                    <span class="do-director__label">{{ directorName }}</span>
+                    <div v-if="otherAttendees.length" class="do-attendees">
+                      <img v-for="p in otherAttendees.slice(0, 5)" :key="p.id" :src="avatarFor(p)" :alt="p.name" :title="p.name" class="do-att" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Legacy boardroom table (retained, never rendered — agendaView is 'outline') -->
                 <div
                   v-if="agendaView === 'table'"
                   class="hidden sm:block relative mx-auto w-full max-w-[600px] mb-1"
@@ -1317,8 +1391,8 @@ const vReveal = {
                   </div>
                 </div>
 
-                <!-- Card outline — mobile always; desktop when toggled to outline -->
-                <div class="grid gap-2 sm:grid-cols-2" :class="agendaView === 'table' ? 'sm:hidden' : ''">
+                <!-- Detail agenda cards (the "Agenda" view option) -->
+                <div v-if="agendaLayout === 'cards'" class="grid gap-2 sm:grid-cols-2">
                   <button
                     v-for="(g, i) in visibleAgendaGroups"
                     :key="g.subject"
@@ -1400,37 +1474,8 @@ const vReveal = {
                 </div>
               </div>
 
-              <!-- Recent meetings — pick up prior work without leaving the office -->
-              <div v-if="!meetingActive && recentMeetings.length">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
-                  <UIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Recent meetings
-                </p>
-                <div class="grid gap-2 sm:grid-cols-2">
-                  <button
-                    v-for="(m, i) in recentMeetings"
-                    :key="m.id"
-                    v-reveal="i"
-                    type="button"
-                    class="do-spring group text-left rounded-2xl border border-border bg-background p-3 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
-                    @click="openRecent(m)"
-                  >
-                    <div class="flex items-start gap-2.5">
-                      <span class="mt-0.5 w-8 h-8 rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center shrink-0 transition-colors">
-                        <UIcon :name="recentIcon(m)" class="w-4 h-4" />
-                      </span>
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="text-sm font-medium truncate">{{ recentLabel(m) }}</span>
-                          <span class="text-[10px] text-muted-foreground shrink-0">{{ relTime(m.date_created) }}</span>
-                        </div>
-                        <p class="text-xs text-muted-foreground mt-0.5">
-                          <span v-if="m.step_count">{{ m.step_count }} step{{ m.step_count === 1 ? '' : 's' }} · </span>Reopen to continue
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
+              <!-- Recent meetings moved out of the overlay → the "Past meetings"
+                   link in the header opens the Director's Office page. -->
 
               <!-- Active meeting: plan / analysis for the chosen subject or topic -->
               <div v-if="meetingActive" class="rounded-2xl border border-border bg-background p-4 space-y-3">
@@ -1840,14 +1885,31 @@ const vReveal = {
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
-/* Living aura behind the boardroom — subtle; the opaque panel sits over it so it
-   reads as a soft, breathing glow around the edges, not a busy backdrop. */
-.director-aura {
-  position: absolute;
-  inset: 0;
-  opacity: 0.72;
-  z-index: 0;
-}
+/* Immersive dark canvas + the living aura as the full backdrop (Focus language). */
+.director-canvas { background: radial-gradient(140% 120% at 50% 8%, #0c1424 0%, #070b14 52%, #04060c 100%); }
+.director-aura { position: absolute; inset: 0; opacity: 0.9; z-index: 0; }
+
+/* Half-circle board — departments fanned around the Director (you). Seats are
+   anchored to their CHIP CENTRE (translate -30px = half the 60px chip) so the
+   connector lines land dead-centre; label + priority flow below. */
+.do-seat { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; background: transparent; border: 0; cursor: pointer; transition: opacity .3s; }
+.do-seat[data-dim="true"] { opacity: .38; }
+.do-seat__chip { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14); background: color-mix(in oklab, var(--seat-accent) 16%, rgba(255,255,255,.05)); color: color-mix(in oklab, var(--seat-accent), white 22%); backdrop-filter: blur(12px); box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); transition: transform .34s cubic-bezier(.34,1.5,.5,1), box-shadow .3s, border-color .25s; }
+.do-seat:hover .do-seat__chip { transform: translateY(-4px) scale(1.06); border-color: color-mix(in oklab, var(--seat-accent), white 20%); }
+.do-seat[data-active="true"] .do-seat__chip { border-color: var(--seat-accent); box-shadow: 0 0 0 2px var(--seat-accent), 0 14px 34px -12px color-mix(in oklab, var(--seat-accent) 60%, transparent); }
+.do-seat__badge { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #06121f; background: var(--seat-accent); box-shadow: 0 2px 8px -2px rgba(0,0,0,.6); }
+.do-seat__presenter { position: absolute; bottom: -5px; left: -5px; width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 2px solid #0a1220; }
+.do-seat[data-presenting="true"] .do-seat__chip::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--seat-accent); animation: do-ring 1.9s ease-out infinite; pointer-events: none; }
+@keyframes do-ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.42); opacity: 0; } }
+.do-seat__label { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: #eef2f8; }
+.do-seat__pri { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: rgba(238,242,248,.42); margin-top: -3px; }
+
+.do-director { position: absolute; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.do-director__chair { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #eef2f8; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(14px); box-shadow: 0 0 44px -6px rgba(120,150,220,.5); }
+.do-director__label { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(238,242,248,.6); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.do-attendees { display: flex; margin-top: 3px; }
+.do-att { width: 23px; height: 23px; border-radius: 50%; object-fit: cover; margin-left: -7px; border: 2px solid #0a1220; box-shadow: 0 2px 6px -2px rgba(0,0,0,.6); }
+.do-att:first-child { margin-left: 0; }
 
 /* Liquid card micro-interaction: retime the existing hover lift to a gentle
    spring (overshoot ease) so cards feel buoyant, not mechanical. */
