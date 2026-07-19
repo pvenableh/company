@@ -127,6 +127,9 @@ watch(isStreaming, (now, was) => {
 // ── Mode switching (the `mode` ref lives up top, for the mood machine) ────────
 function setMode(m: FocusMode) { mode.value = m; nextTick(scrollToBottom); }
 
+// A Mirror insight's lever → step out of the Mirror and take it up in the chat.
+function onMirrorLever(prompt: string) { setMode('companion'); send(prompt); }
+
 // The conversation turning to "doing" pulls us into the Working Table.
 const WORK_INTENT = /\b(plan|steps?|break (?:it |this )?down|to-?dos?|task|checklist|get (?:it |this )?done|work through|next move|prioriti[sz]e|organi[sz]e)\b/i;
 
@@ -357,8 +360,9 @@ const markRef = ref<{ expand: () => void } | null>(null);
 
 				<!-- Body: conversation (+ task rail in Working mode), or the Mirror -->
 				<div class="coach__body" :class="{ 'coach__body--working': mode === 'working' }">
-					<!-- Mirror mode: a read-only reflection of how you actually work -->
-					<EarnestMirror v-if="mode === 'mirror'" :active="mode === 'mirror'" />
+					<!-- Mirror mode: a read-only reflection of how you actually work.
+					     A lever on an insight drops you into the conversation with it. -->
+					<EarnestMirror v-if="mode === 'mirror'" :active="mode === 'mirror'" @lever="onMirrorLever" />
 
 					<div v-show="mode !== 'mirror'" ref="scroller" class="coach__convo">
 						<div class="coach__convo-wrap">
