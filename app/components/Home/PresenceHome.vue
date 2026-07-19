@@ -320,20 +320,26 @@ function renderMarkdown(text: string): string {
 	padding: clamp(28px, 7vh, 84px) 20px clamp(20px, 4vh, 40px);
 	overflow: hidden;
 }
+/* The living presence wash. Centered on the hero and sized so its radial fades
+   fully to transparent BEFORE the section edges — that way `.ph { overflow:
+   hidden }` (kept to stop the wide glow from causing horizontal scroll on
+   mobile) clips only already-transparent pixels, so there's no hard edge. The
+   old top:-10% / 520px box pushed the still-opaque top of the glow past the
+   clip and showed a flat cut line above the mark. */
 .ph__glow {
-	position: absolute; left: 50%; top: -10%;
-	width: min(760px, 120%); height: 520px;
-	transform: translateX(-50%);
-	background: radial-gradient(circle at 50% 40%, hsl(var(--primary) / 0.16), transparent 62%);
-	filter: blur(20px);
+	position: absolute; left: 50%; top: 50%;
+	width: min(880px, 132%); height: 118%;
+	transform: translate(-50%, -50%);
+	background: radial-gradient(closest-side circle at 50% 46%, hsl(var(--primary) / 0.2), transparent 74%);
+	filter: blur(34px);
 	animation: ph-breathe 7s ease-in-out infinite;
 	pointer-events: none;
 }
 /* Calm settles as the conversation takes focus. */
 .ph--conversing .ph__glow { opacity: 0.5; }
 @keyframes ph-breathe {
-	0%, 100% { opacity: 0.75; transform: translateX(-50%) scale(1); }
-	50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+	0%, 100% { opacity: 0.72; transform: translate(-50%, -50%) scale(1); }
+	50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
 }
 
 .ph__inner {
