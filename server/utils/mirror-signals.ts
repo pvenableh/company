@@ -17,7 +17,7 @@ const DAY = 86_400_000;
 
 export interface MirrorInsight {
 	id: string;
-	kind: 'avoidance' | 'latency' | 'overdue' | 'outlier';
+	kind: 'avoidance' | 'latency' | 'overdue' | 'outlier' | 'overload' | 'slowdown';
 	/** 0–100, higher = surface first. */
 	severity: number;
 	/** The sharp, specific observation. */
@@ -227,7 +227,48 @@ export async function computeMirrorSignals(directus: any, orgId: string, userId:
 		});
 	}
 
-	insights.sort((a, b) => b.severity - a.severity);
+	// Overload — carrying more than the throughput can clear.
+	const weeklyClose = completions.length / (60 / 7); // completions per week over the window
+	const weeksOfBacklog = weeklyClose >= 0.25 ? Math.round(openNow / weeklyClose) : (openNow > 0 ? 99 : 0);
+	if (openNow >= 12 && weeksOfBacklog >= 5) {
+		const rate = weeklyClose >= 1 ? `about ${Math.round(weeklyClose)} a week` : 'fewer than one a week';
+		insights.push({
+			id: 'overload',
+			kind: 'overload',
+			severity: Math.min(80, 42 + Math.min(28, weeksOfBacklog)),
+			headline: `You're carrying ${openNow} open tasks and clearing ${rate} — more is coming in than going out.`,
+			evidence: weeksOfBacklog >= 99 ? 'At this rate the list only grows.' : `That's roughly ${weeksOfBacklog} weeks of work backed up.`,
+			lever: {
+				label: 'Triage the load',
+				prompt: `I'm carrying ${openNow} open tasks and only clearing ${rate}. Help me triage the whole list — what to drop, what to hand off, and the few things worth committing to this week.`,
+			},
+		});
+	}
 
-	return { signals, insights, completions };
+	// Slowdown — closing tasks slower than you used to (recent vs earlier halves;
+	// `completed` is recent-first, so latencies are too).
+	if (latencies.length >= 8) {
+		const half = Math.floor(latencies.length / 2);
+		const recent = median(latencies.slice(0, half));
+		const earlier = median(latencies.slice(half));
+		if (recent != null && earlier != null && recent >= 7 && recent >= earlier * 1.5) {
+			insights.push({
+				id: 'slowdown',
+				kind: 'slowdown',
+				severity: 40 + Math.min(20, recent - earlier),
+				headline: `You're closing tasks slower than you used to — lately ${humanDays(recent)}, earlier it was ${humanDays(earlier)}.`,
+				evidence: 'The same kind of work is taking longer to land.',
+				lever: {
+					label: 'What changed?',
+					prompt: `My tasks used to close in about ${earlier} days and now take around ${recent}. Help me figure out what changed — more on my plate, harder work, more waiting on others — and one thing to do about it.`,
+				},
+			});
+		}
+	}
+
+	// Surface the strongest few — a mirror, not a wall of cards.
+	insights.sort((a, b) => b.severity - a.severity);
+	const top = insights.slice(0, 4);
+
+	return { signals, insights: top, completions };
 }

@@ -221,6 +221,8 @@ function fireLever(prompt: string) { emit('lever', prompt); }
 .mirror__insight[data-kind="overdue"] { --k: #e0757a; }
 .mirror__insight[data-kind="outlier"] { --k: #d9b45a; }
 .mirror__insight[data-kind="latency"] { --k: #5aa8d9; }
+.mirror__insight[data-kind="overload"] { --k: #c98adf; }
+.mirror__insight[data-kind="slowdown"] { --k: #7d9bd6; }
 .mirror__insight:nth-child(2) { animation-delay: .06s; }
 .mirror__insight:nth-child(3) { animation-delay: .12s; }
 .mirror__insight:nth-child(4) { animation-delay: .18s; }
