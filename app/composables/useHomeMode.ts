@@ -35,6 +35,9 @@ export function useHomeMode() {
 		mode.value = next; // optimistic
 		try {
 			await updateMe({ home_mode: next });
+			// Adoption signal: presence↔classic is the clearest read on whether the
+			// calm home is landing (are people opting out, and back in?).
+			useProductEvent().track('home.mode_flipped', { source: 'home', props: { from: prev, to: next } });
 		} catch {
 			mode.value = prev;
 			const { toast } = await import('vue-sonner');

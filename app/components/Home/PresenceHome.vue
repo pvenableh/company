@@ -48,6 +48,7 @@ const {
 	setRoute,
 } = useContextualChat();
 const { openEarnestPanel } = useEarnestPanel();
+const { track } = useProductEvent();
 
 // Calm first, always. The home ALWAYS opens on the calm greeting, even when a
 // prior "route:home" thread hydrates in the background (that thread is kept so
@@ -67,14 +68,15 @@ const resumed = ref(false);
 // weren't reactive the computed would track no deps and never re-evaluate.
 const captured = ref(false);
 
-// A prior home thread counts as "recent" (worth a Continue chip) for a rolling
-// 18h window — the same working day plus an overnight return, but a days-old
-// thread won't nag. Older threads stay reachable via Expand.
-const RECENT_WINDOW_MS = 18 * 60 * 60 * 1000;
+// A prior home thread counts as "recent" (worth a Continue chip) while it's
+// younger than a learned window (default 18h — a working day plus an overnight
+// return — but it widens when the user resumes and narrows when they ignore it;
+// see useHomeContinueWindow). Older threads stay reachable via Expand.
+const { windowMs, recordResumed, recordIgnored } = useHomeContinueWindow();
 function isRecent(iso?: string): boolean {
 	if (!iso) return false;
 	const t = new Date(iso).getTime();
-	return Number.isFinite(t) && Date.now() - t < RECENT_WINDOW_MS;
+	return Number.isFinite(t) && Date.now() - t < windowMs.value;
 }
 function captureBaseline() {
 	if (captured.value) return;
@@ -120,8 +122,20 @@ const visibleMessages = computed(() =>
 const canResume = computed(() => !conversing.value && priorRecent.value && baseline.value > 0);
 function resumeThread() {
 	resumed.value = true;
+	recordResumed(); // they picked the thread back up — worth offering for longer
+	track('home.continue_resumed', { source: 'presence-home' });
 	scrollThread();
 }
+
+// ── Adoption instrumentation (fire-and-forget; see useProductEvent) ──────────
+// One signal per session: did the Continue chip get offered, and did the user
+// hold a conversation here? Together with home.mode_flipped these answer "is the
+// calm home landing, and is the Continue chip earning its place?"
+let shownTracked = false;
+watch(canResume, (can) => {
+	if (can && !shownTracked) { shownTracked = true; track('home.continue_shown', { source: 'presence-home' }); }
+});
+let convoTracked = false;
 
 const input = ref('');
 const openers = [
@@ -140,6 +154,10 @@ function autogrow() {
 function send(text?: string) {
 	const t = (text ?? input.value).trim();
 	if (!t || isSending.value) return;
+	// The Continue chip was offered and they started a fresh line instead — a
+	// vote that a thread this old wasn't worth resuming, so narrow the window.
+	if (canResume.value) recordIgnored();
+	if (!convoTracked) { convoTracked = true; track('home.conversation_started', { source: 'presence-home' }); }
 	input.value = '';
 	nextTick(autogrow); // collapse the textarea back to one line
 	sendMessage(t, { scope: 'dashboard', routeFocus: 'the home dashboard — the top of their day' });

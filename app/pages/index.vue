@@ -11,7 +11,7 @@ const config = useRuntimeConfig();
 // when navigating here.
 
 // ── Productivity Engine (existing) ──
-const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze, loadModule } = useAIProductivityEngine();
+const { suggestions, metrics, isAnalyzing, greeting, subtitle, primeGreeting, analyze, loadModule } = useAIProductivityEngine();
 
 // Typed-in greeting. The heading slot is height-reserved in the template, so
 // nothing shifts when this advances. We only animate once per "value change"
@@ -247,6 +247,7 @@ const presenceTopAction = computed(() => {
 // Earnest pre-reveals it (autoRevealed) — and a "start calm" override lets that
 // habit decay. Purely device-local (useHomeTendency / localStorage).
 const tendency = useHomeTendency();
+const { track } = useProductEvent();
 const autoRevealed = ref(false);
 
 function scrollToPresence() {
@@ -274,6 +275,7 @@ async function revealCommandCenter(opts: { auto?: boolean } = {}) {
 		}
 	} else {
 		tendency.recordReveal(); // a genuine reach counts toward the habit
+		track('home.reveal', { source: 'presence-home' }); // reached for density
 	}
 	page.scrollTo({ top: target(), behavior: 'smooth' });
 }
@@ -289,6 +291,9 @@ function onPresenceOpenTop() {
 }
 
 onMounted(async () => {
+	// Paint the deterministic greeting immediately — before loadHomeMode / the
+	// analysis fetches — so the hero never flashes an empty heading on login.
+	primeGreeting();
 	await loadHomeMode();
 	if (!isPresence.value) return;
 	if (tendency.prefersDensity()) {
