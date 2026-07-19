@@ -60,10 +60,18 @@ const openers = [
 	'Draft my morning',
 ];
 
+const inputEl = ref<HTMLTextAreaElement | null>(null);
+function autogrow() {
+	const el = inputEl.value;
+	if (!el) return;
+	el.style.height = 'auto';
+	el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+}
 function send(text?: string) {
 	const t = (text ?? input.value).trim();
 	if (!t || isSending.value) return;
 	input.value = '';
+	nextTick(autogrow); // collapse the textarea back to one line
 	sendMessage(t, { scope: 'dashboard', routeFocus: 'the home dashboard — the top of their day' });
 }
 function onKeydown(e: KeyboardEvent) {
@@ -94,8 +102,12 @@ onMounted(async () => {
 	try {
 		const r = await $fetch<{ read?: string }>('/api/home/read', { query: { orgId } });
 		const read = (r?.read || '').trim();
-		if (read) deeperRead.value = read;
-		try { localStorage.setItem(cacheKey, read); } catch { /* quota */ }
+		// Only cache a real read — an empty result (token gate / transient error)
+		// must not blank the deeper read for the rest of the day; retry next visit.
+		if (read) {
+			deeperRead.value = read;
+			try { localStorage.setItem(cacheKey, read); } catch { /* quota */ }
+		}
 	} catch { /* deterministic read stands on its own */ }
 });
 // Show the deeper read once it lands, else the instant deterministic read.
@@ -174,10 +186,12 @@ function renderMarkdown(text: string): string {
 			<!-- ── The composer (shared by both states) ─────────────────────── -->
 			<div class="ph__composer">
 				<textarea
+					ref="inputEl"
 					v-model="input"
 					rows="1"
 					class="ph__input"
 					:placeholder="conversing ? 'Reply to Earnest…' : 'Tell Earnest what\'s on your mind, or just start…'"
+					@input="autogrow"
 					@keydown="onKeydown"
 				/>
 				<button
