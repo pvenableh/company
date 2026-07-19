@@ -43,15 +43,85 @@ const {
 	messages,
 	isStreaming,
 	isSending,
+	isLoadingHistory,
 	sendMessage,
 	setRoute,
 } = useContextualChat();
 const { openEarnestPanel } = useEarnestPanel();
 
-onMounted(() => setRoute('dashboard', 'home'));
-onActivated(() => setRoute('dashboard', 'home'));
+// Calm first, always. The home ALWAYS opens on the calm greeting, even when a
+// prior "route:home" thread hydrates in the background (that thread is kept so
+// the conversation stays continuous and Expand can still show it in full).
+// `conversing` is gated on engagement THIS session — a fresh send or an explicit
+// "Continue where you left off" — never on the mere presence of yesterday's
+// transcript. That's what keeps the first impression calm on the next login.
+//
+//   baseline    — how many messages were already loaded when we landed (the
+//                 prior thread); these stay folded away unless resumed.
+//   resumed     — the user tapped "Continue where you left off" → show it all.
+//   priorRecent — was that prior thread recent enough to bother offering?
+const baseline = ref(0);
+const priorRecent = ref(false);
+const resumed = ref(false);
+// Reactive on purpose: `startedThisSession` short-circuits on this, so if it
+// weren't reactive the computed would track no deps and never re-evaluate.
+const captured = ref(false);
 
-const conversing = computed(() => messages.value.length > 0);
+// A prior home thread counts as "recent" (worth a Continue chip) for a rolling
+// 18h window — the same working day plus an overnight return, but a days-old
+// thread won't nag. Older threads stay reachable via Expand.
+const RECENT_WINDOW_MS = 18 * 60 * 60 * 1000;
+function isRecent(iso?: string): boolean {
+	if (!iso) return false;
+	const t = new Date(iso).getTime();
+	return Number.isFinite(t) && Date.now() - t < RECENT_WINDOW_MS;
+}
+function captureBaseline() {
+	if (captured.value) return;
+	const msgs = messages.value;
+	baseline.value = msgs.length;
+	priorRecent.value = isRecent(msgs[msgs.length - 1]?.date_created);
+	captured.value = true;
+}
+
+function hydrateHome() {
+	setRoute('dashboard', 'home');
+	// If nothing needs hydrating (already loaded, or a clean slate) the loading
+	// flag never toggles — capture the baseline right away. Otherwise the watcher
+	// below captures it the instant hydration settles.
+	nextTick(() => { if (!isLoadingHistory.value) captureBaseline(); });
+}
+onMounted(hydrateHome);
+onActivated(hydrateHome);
+
+// Snapshot the prior thread the moment hydration settles (loading true→false).
+watch(isLoadingHistory, (loading, was) => {
+	if (was && !loading) captureBaseline();
+});
+
+// A fresh exchange this session = anything appended past the hydrated baseline.
+// Read `len` unconditionally so the computed always tracks message growth, even
+// before the baseline is captured (a bare `captured.value && …` would short-
+// circuit and register no dependency on the message count).
+const startedThisSession = computed(() => {
+	const len = messages.value.length;
+	return captured.value && len > baseline.value;
+});
+const conversing = computed(() => resumed.value || startedThisSession.value);
+
+// What the inline thread renders: the whole thread once resumed, otherwise only
+// this session's fresh exchange (the prior transcript stays folded away — the
+// LLM still receives the full history server-side, so Earnest keeps its memory).
+const visibleMessages = computed(() =>
+	resumed.value ? messages.value : messages.value.slice(baseline.value),
+);
+
+// Offer to bring back the prior thread only while calm and only if it's recent.
+const canResume = computed(() => !conversing.value && priorRecent.value && baseline.value > 0);
+function resumeThread() {
+	resumed.value = true;
+	scrollThread();
+}
 
 const input = ref('');
 const openers = [
@@ -167,9 +237,9 @@ function renderMarkdown(text: string): string {
 					</button>
 				</div>
 
-				<div ref="threadEl" class="ph__thread">
+				<div ref="threadEl" class="ph__thread" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with Earnest">
 					<div
-						v-for="m in messages"
+						v-for="m in visibleMessages"
 						:key="m.key || m.id"
 						class="ph__msg"
 						:class="m.role === 'user' ? 'ph__msg--user' : 'ph__msg--earnest'"
@@ -204,6 +274,13 @@ function renderMarkdown(text: string): string {
 					<Icon name="lucide:arrow-up" class="w-4 h-4" />
 				</button>
 			</div>
+
+			<!-- A recent thread is waiting — offer to pick it back up rather than
+			     dumping yesterday's transcript over today's calm greeting. -->
+			<button v-if="canResume" type="button" class="ph__resume" @click="resumeThread">
+				Continue where you left off
+				<Icon name="lucide:arrow-right" class="w-3.5 h-3.5" />
+			</button>
 
 			<div v-if="!conversing" class="ph__openers">
 				<button v-for="o in openers" :key="o" type="button" class="ph__opener" @click="send(o)">{{ o }}</button>
@@ -359,6 +436,16 @@ function renderMarkdown(text: string): string {
 }
 .ph__send:hover:not(:disabled) { transform: scale(1.06); }
 .ph__send:disabled { opacity: 0.4; cursor: default; }
+
+/* Quiet invitation to resume a recent thread — a text-link, not a loud button,
+   so the calm greeting still leads. */
+.ph__resume {
+	display: inline-flex; align-items: center; gap: 5px;
+	margin-top: 2px; padding: 4px 6px; border: 0; background: none; cursor: pointer;
+	font: inherit; font-size: 13px; color: hsl(var(--primary));
+	opacity: 0.85; transition: opacity 0.2s ease, gap 0.2s ease;
+}
+.ph__resume:hover { opacity: 1; gap: 8px; }
 
 .ph__openers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .ph__opener {

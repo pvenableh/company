@@ -252,9 +252,30 @@ const autoRevealed = ref(false);
 function scrollToPresence() {
 	document.querySelector('.apps-shell__page')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
-function revealCommandCenter(opts: { auto?: boolean } = {}) {
-	commandCenterEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	if (!opts.auto) tendency.recordReveal(); // a genuine reach counts toward the habit
+async function revealCommandCenter(opts: { auto?: boolean } = {}) {
+	const el = commandCenterEl.value;
+	const page = document.querySelector('.apps-shell__page') as HTMLElement | null;
+	if (!el || !page) return;
+	// Marker's absolute offset within the scroll container (its final position is
+	// stable — set by the fixed-height hero above it — so this is safe to read
+	// once the wait below clears). We scroll `.apps-shell__page` directly rather
+	// than via scrollIntoView: this is the app's scroller (see scrollToPresence),
+	// and scrollTo is the reliable smooth path for a nested custom container.
+	const target = () => el.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop;
+	if (opts.auto) {
+		// Auto-reveal fires on cold mount while the priority queue is still loading;
+		// until the command center has laid out its height the container has nowhere
+		// to scroll the marker to, and the reveal silently no-ops. Poll (frame-
+		// bounded) until the marker is genuinely reachable — the loop exits the
+		// instant it is, so the common case (~1–2s: loadHomeMode + the ~12-read
+		// runAnalysis) is fast; the ~3s cap is just a best-effort backstop.
+		for (let i = 0; i < 180 && page.scrollHeight - page.clientHeight < target() - 8; i++) {
+			await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+		}
+	} else {
+		tendency.recordReveal(); // a genuine reach counts toward the habit
+	}
+	page.scrollTo({ top: target(), behavior: 'smooth' });
 }
 function onPresenceStartCalm() {
 	autoRevealed.value = false;
