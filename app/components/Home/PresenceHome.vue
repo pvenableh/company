@@ -48,6 +48,7 @@ const {
 	setRoute,
 } = useContextualChat();
 const { openEarnestPanel } = useEarnestPanel();
+const { track } = useProductEvent();
 
 // Calm first, always. The home ALWAYS opens on the calm greeting, even when a
 // prior "route:home" thread hydrates in the background (that thread is kept so
@@ -122,8 +123,19 @@ const canResume = computed(() => !conversing.value && priorRecent.value && basel
 function resumeThread() {
 	resumed.value = true;
 	recordResumed(); // they picked the thread back up — worth offering for longer
+	track('home.continue_resumed', { source: 'presence-home' });
 	scrollThread();
 }
+
+// ── Adoption instrumentation (fire-and-forget; see useProductEvent) ──────────
+// One signal per session: did the Continue chip get offered, and did the user
+// hold a conversation here? Together with home.mode_flipped these answer "is the
+// calm home landing, and is the Continue chip earning its place?"
+let shownTracked = false;
+watch(canResume, (can) => {
+	if (can && !shownTracked) { shownTracked = true; track('home.continue_shown', { source: 'presence-home' }); }
+});
+let convoTracked = false;
 
 const input = ref('');
 const openers = [
@@ -145,6 +157,7 @@ function send(text?: string) {
 	// The Continue chip was offered and they started a fresh line instead — a
 	// vote that a thread this old wasn't worth resuming, so narrow the window.
 	if (canResume.value) recordIgnored();
+	if (!convoTracked) { convoTracked = true; track('home.conversation_started', { source: 'presence-home' }); }
 	input.value = '';
 	nextTick(autogrow); // collapse the textarea back to one line
 	sendMessage(t, { scope: 'dashboard', routeFocus: 'the home dashboard — the top of their day' });

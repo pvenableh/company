@@ -4863,6 +4863,22 @@ export interface UpsellEvent {
 	date_created?: string | null;
 }
 
+export interface ProductEvent {
+	/** @primaryKey */
+	id: string;
+	/** @description Namespaced event slug, e.g. home.mode_flipped */
+	event?: string;
+	/** @description UI surface, e.g. presence-home */
+	source?: string | null;
+	/** @description directus_users id of who triggered it */
+	user?: string | null;
+	/** @description organizations id */
+	organization?: string | null;
+	/** @description Small event payload, e.g. { from, to } */
+	props?: Record<string, unknown> | null;
+	date_created?: string | null;
+}
+
 export interface UserPresence {
 	/** @primaryKey */
 	id: string;
@@ -5801,6 +5817,7 @@ export interface Schema {
 	tickets_services: TicketsService[];
 	time_entries: TimeEntry[];
 	token_purchases: TokenPurchase[];
+	product_events: ProductEvent[];
 	upsell_events: UpsellEvent[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
@@ -6066,6 +6083,7 @@ export enum CollectionNames {
 	tickets_services = 'tickets_services',
 	time_entries = 'time_entries',
 	token_purchases = 'token_purchases',
+	product_events = 'product_events',
 	upsell_events = 'upsell_events',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',
