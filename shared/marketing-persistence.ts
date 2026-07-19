@@ -25,6 +25,7 @@ export type MarketingCardType =
 	| 'service_promo'
 	| 'campaign_clone'
 	| 'partner_anniversary'
+	| 'referral_ask'
 	| 'event_teaser';
 
 // ─── Recommendations ────────────────────────────────────────────────────────

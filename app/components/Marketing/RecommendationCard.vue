@@ -172,6 +172,13 @@ const CARD_CONFIGS: Record<MarketingCardType, CardTypeConfig> = {
 		iconColor: 'text-indigo-700 dark:text-indigo-400',
 		border: 'border-indigo-200/40 dark:border-indigo-800/30',
 	},
+	referral_ask: {
+		label: 'Ask for a referral',
+		icon: 'lucide:heart-handshake',
+		iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+		iconColor: 'text-emerald-700 dark:text-emerald-400',
+		border: 'border-emerald-200/40 dark:border-emerald-800/30',
+	},
 };
 
 const cardConfig = computed<CardTypeConfig>(
@@ -229,6 +236,10 @@ const headline = computed(() => {
 			const event = data?.signal?.event_name as string | undefined;
 			return event ? `Tease ${event}` : 'Build buzz for an upcoming event';
 		}
+		case 'referral_ask': {
+			const client = data?.signal?.client_name as string | undefined;
+			return client ? `Ask ${client} for a referral` : 'Ask a happy client for a referral';
+		}
 		default:
 			return 'Take action';
 	}
@@ -267,6 +278,10 @@ const contextHint = computed<string | null>(() => {
 		case 'service_promo': {
 			const svc = data?.signal?.service as string | undefined;
 			return svc ? `Service: ${svc}` : null;
+		}
+		case 'referral_ask': {
+			const project = data?.signal?.project_title as string | undefined;
+			return project ? `After: ${project}` : sampleLabel();
 		}
 		default:
 			return sampleLabel();

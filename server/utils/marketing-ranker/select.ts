@@ -46,6 +46,10 @@ function dedupKey(c: RecommendationCandidate): string {
 		const label = (c.candidate_data as any)?.cluster?.label || 'unknown';
 		return `lead_reengagement:${label}`;
 	}
+	if (c.card_type === 'referral_ask') {
+		const client = (c.candidate_data as any)?.signal?.client_name || (c.candidate_data as any)?.signal?.project_title || 'unknown';
+		return `referral_ask:${client}`;
+	}
 	return `${c.card_type}:${c.organization}`;
 }
 

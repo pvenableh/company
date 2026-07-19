@@ -38,6 +38,10 @@ import {
 import {
 	runLeadReengagementGenerator,
 } from '~~/server/utils/marketing-generators/lead-reengagement';
+import {
+	runReferralAskGenerator,
+	type ReferralAskCandidate,
+} from '~~/server/utils/marketing-generators/referral-ask';
 import type { LeadReengagementCandidate } from '~~/server/utils/marketing-facts/build-lead-reengagement-facts';
 import type { DraftedCampaign, DraftedTouch } from '~/composables/useMarketingDrafts';
 import type { MarketingTouch } from '~~/shared/marketing-persistence';
@@ -61,6 +65,10 @@ function deriveTitleFromCardType(cardType: string, candidate: any): string {
 			const count = data?.cluster?.size ?? audienceSize;
 			if (topic) return `Re-engage ${count} ${topic.toLowerCase()} leads`;
 			return `Re-engage ${count} quiet leads`;
+		}
+		case 'referral_ask': {
+			const client = data?.signal?.client_name as string | undefined;
+			return client ? `Ask ${client} for a referral` : 'Ask a happy client for a referral';
 		}
 		default:
 			return 'Marketing action';
@@ -251,6 +259,18 @@ export default defineEventHandler(async (event) => {
 					orgIndustry,
 					candidate,
 					facts,
+					voice,
+				});
+				break;
+			}
+			case 'referral_ask': {
+				// Compact single-touch generator — no separate facts builder; it
+				// grounds directly on the candidate's project/client signal.
+				result = await runReferralAskGenerator({
+					organizationId,
+					orgName,
+					orgIndustry,
+					candidate: candidateData as ReferralAskCandidate,
 					voice,
 				});
 				break;

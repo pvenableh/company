@@ -26,6 +26,7 @@ import { createItem, deleteItem, readItems, updateItem } from '@directus/sdk';
 import { extractDormantClientsCandidates } from '~~/server/utils/marketing-signals/dormant-clients';
 import { extractProjectCompleteCandidates } from '~~/server/utils/marketing-signals/project-complete';
 import { extractLeadReengagementCandidates } from '~~/server/utils/marketing-signals/lead-reengagement';
+import { extractReferralAskCandidates } from '~~/server/utils/marketing-signals/referral-ask';
 import { selectTopN, RANKER_PROMPT_VERSION } from '~~/server/utils/marketing-ranker/select';
 import { enrichRankedWhyNow, RANKER_LLM_VERSION } from '~~/server/utils/marketing-ranker/enrich';
 import type { RecommendationCandidate } from '~~/server/utils/marketing-signals/types';
@@ -115,7 +116,7 @@ async function runForOrg(args: {
 }> {
 	const { directus, organizationId, runId, dryRun } = args;
 
-	const [dormant, projectComplete, leadReengagement] = await Promise.all([
+	const [dormant, projectComplete, leadReengagement, referralAsk] = await Promise.all([
 		extractDormantClientsCandidates(organizationId).catch((e: any) => {
 			console.warn('[marketing/cron] dormant extractor failed:', e.message);
 			return [] as RecommendationCandidate[];
@@ -128,9 +129,13 @@ async function runForOrg(args: {
 			console.warn('[marketing/cron] lead_reengagement extractor failed:', e.message);
 			return [] as RecommendationCandidate[];
 		}),
+		extractReferralAskCandidates(organizationId).catch((e: any) => {
+			console.warn('[marketing/cron] referral_ask extractor failed:', e.message);
+			return [] as RecommendationCandidate[];
+		}),
 	]);
 
-	const all: RecommendationCandidate[] = [...dormant, ...projectComplete, ...leadReengagement];
+	const all: RecommendationCandidate[] = [...dormant, ...projectComplete, ...leadReengagement, ...referralAsk];
 	const ranked = selectTopN({ candidates: all, runId, promptVersion: RANKER_PROMPT_VERSION });
 	// LLM ranker pass: sharpen each pick's why_now (opportunity-framed, grounded)
 	// + refine urgency. Best-effort — falls back to the deterministic hook.
