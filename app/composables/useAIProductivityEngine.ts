@@ -565,7 +565,9 @@ export const useAIProductivityEngine = () => {
 			}
 
 			const invoices = await invoiceItems.list({
-				fields: ['id', 'invoice_code', 'status', 'due_date', 'total_amount', 'bill_to.name'],
+				// `bill_to` is always the current org (the biller); the COUNTERPARTY is
+				// `client` — that's what we group + label by.
+				fields: ['id', 'invoice_code', 'status', 'due_date', 'total_amount', 'client.id', 'client.name'],
 				filter: invoiceFilter,
 				sort: ['due_date'],
 				limit: 50,
@@ -574,30 +576,62 @@ export const useAIProductivityEngine = () => {
 			const t = today();
 			let pendingTotal = 0;
 
+			// Collect overdue invoices GROUPED BY the client billed, so a cluster
+			// reads as one decision ("4 unpaid invoices · Acme · $9,670") instead of
+			// four noisy rows competing at the top of the feed.
+			type OverdueItem = { invoice: any; amount: number; daysOverdue: number };
+			const overdueByClient = new Map<string, { name: string; items: OverdueItem[] }>();
 			for (const invoice of invoices) {
 				const amount = Number(invoice.total_amount) || 0;
 				pendingTotal += amount;
 
 				const dueDate = invoice.due_date ? new Date(invoice.due_date) : null;
-				const isOverdue = dueDate && dueDate < t;
-
-				if (isOverdue && invoice.status === 'pending') {
+				if (dueDate && dueDate < t && invoice.status === 'pending') {
 					const daysOverdue = Math.floor((t.getTime() - dueDate.getTime()) / 86400000);
+					const name = invoice.client?.name || 'a client';
+					const key = String(invoice.client?.id ?? name);
+					const g = overdueByClient.get(key) || { name, items: [] as OverdueItem[] };
+					g.items.push({ invoice, amount, daysOverdue });
+					overdueByClient.set(key, g);
+				}
+			}
+
+			for (const { name, items } of overdueByClient.values()) {
+				if (items.length === 1) {
+					// Lone overdue invoice — keep the individual card + its inline
+					// "Mark paid" quick-action (`amount` is the full pending balance).
+					const { invoice, amount, daysOverdue } = items[0]!;
 					results.push({
 						id: `invoice-overdue-${invoice.id}`,
 						type: 'action',
 						priority: 'urgent',
 						icon: 'i-heroicons-banknotes',
 						title: `Unpaid Invoice: ${invoice.invoice_code}`,
-						description: `$${amount.toLocaleString()} from ${invoice.bill_to?.name || 'Unknown'} is ${daysOverdue} days past due`,
+						description: `$${amount.toLocaleString()} from ${name} is ${daysOverdue} days past due`,
 						actionLabel: 'Follow Up',
 						actionRoute: `/invoices/${invoice.id}`,
 						category: 'invoices',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue, amount }),
-						// Backs the inline "Mark paid" quick-action on the card. `amount`
-						// is the full balance (these are `pending` → no prior payments).
 						entity: { collection: 'invoices', id: String(invoice.id), status: invoice.status, amount },
+					});
+				} else {
+					// Cluster — one card for the whole client. No single `entity`, so it
+					// offers "Review" (navigate) rather than a group "Mark paid".
+					const total = items.reduce((s, x) => s + x.amount, 0);
+					const maxOverdue = Math.max(...items.map((x) => x.daysOverdue));
+					results.push({
+						id: `invoice-overdue-group-${name}`,
+						type: 'action',
+						priority: 'urgent',
+						icon: 'i-heroicons-banknotes',
+						title: `${items.length} unpaid invoices · ${name}`,
+						description: `$${total.toLocaleString()} past due across ${items.length} invoices — oldest ${maxOverdue} days`,
+						actionLabel: `Review ${items.length}`,
+						actionRoute: '/invoices',
+						category: 'invoices',
+						timestamp: new Date(),
+						score: calculateScore({ type: 'action', daysOverdue: maxOverdue, amount: total }),
 					});
 				}
 			}
