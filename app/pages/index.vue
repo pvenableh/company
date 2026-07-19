@@ -204,6 +204,34 @@ const topActions = computed(() => {
 		.slice(0, actionLimit.value);
 });
 
+// One honest sentence over the whole feed — "what today is really about." Named
+// from the heaviest themes with real numbers, deterministic (no LLM on this hot
+// path) so the queue opens with a read, not just a wall of cards.
+const feedSynthesis = computed(() => {
+	const items = unhandledActions.value.filter(s => s.priority === 'urgent' || s.priority === 'high');
+	if (items.length < 3) return '';
+
+	const money = Math.round(metrics.value.pendingInvoiceTotal || 0);
+	const projects = items.filter(s => s.category === 'projects' || /project overdue/i.test(s.title)).length;
+	const overdueTickets = items
+		.filter(s => /overdue tickets? ·/i.test(s.title) || /^overdue:/i.test(s.title))
+		.reduce((n, s) => n + (parseInt(s.title, 10) || 1), 0);
+	const leads = items.filter(s => s.category === 'leads').length;
+
+	const themes: Array<{ w: number; text: string }> = [];
+	if (money >= 1000) themes.push({ w: money / 90, text: `$${money.toLocaleString()} in unpaid invoices` });
+	if (projects >= 1) themes.push({ w: 34 + projects * 7, text: `${projects} project${projects > 1 ? 's' : ''} past deadline` });
+	if (overdueTickets >= 2) themes.push({ w: 22 + overdueTickets * 2, text: `${overdueTickets} overdue tickets` });
+	if (leads >= 2) themes.push({ w: 18 + leads * 3, text: `${leads} leads to chase` });
+	if (!themes.length) return '';
+
+	themes.sort((a, b) => b.w - a.w);
+	const named = themes.slice(0, 2).map(t => t.text);
+	const more = themes.length - 2;
+	const tail = more > 0 ? `, and ${more} more thread${more > 1 ? 's' : ''}` : '';
+	return `Today's real weight — ${named.join(' and ')}${tail}.`;
+});
+
 // Several app categories come from deferred analyzers (CardDesk, deals, channels)
 // that only run when their dashboard widget scrolls into view. Selecting an app
 // pill loads that app's modules on demand so the filter is populated even if the
@@ -497,6 +525,9 @@ const goTo = (route: string) => {
 									</button>
 								</div>
 							</div>
+
+							<!-- What today is really about — one honest read over the whole feed. -->
+							<p v-if="feedSynthesis" class="text-[13px] leading-snug text-muted-foreground">{{ feedSynthesis }}</p>
 
 							<!-- App filters — narrow the list to one app. Counts reflect the
 							     full urgent/high set so you can see where attention is needed
