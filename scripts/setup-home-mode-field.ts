@@ -4,12 +4,13 @@
  *
  *   pnpm tsx scripts/setup-home-mode-field.ts
  *
- *   classic  = the command-center dashboard (default, current behavior)
- *   presence = the calm, conversational Earnest home (calm-first on login,
- *              the command center one gesture away)
+ *   presence = the calm, conversational Earnest home (default — calm-first on
+ *              login, the command center one gesture away)
+ *   classic  = the command-center dashboard (explicit opt-out)
  *
- * Additive + nullable + default 'classic', so existing users are unaffected
- * until they opt in. Mirrors the `app_palette` / `layout_mode` user-pref fields.
+ * Additive + nullable + default 'presence'. Mirrors the `app_palette` /
+ * `layout_mode` user-pref fields. (Field first shipped with default 'classic'
+ * as an opt-in; flipped to presence-for-all once validated.)
  *
  * Idempotent — a re-run hits the field-exists 400 which we treat as success.
  */
@@ -43,7 +44,7 @@ async function main() {
 					],
 				},
 			},
-			schema: { default_value: 'classic' },
+			schema: { default_value: 'presence' },
 		}),
 	});
 

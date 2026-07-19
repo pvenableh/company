@@ -237,21 +237,49 @@ const feedSynthesis = computed(() => {
 // the command center sits below the fold (revealed by scroll / the "Everything"
 // affordance). Preference is remembered per-user (directus_users.home_mode).
 const { isPresence, load: loadHomeMode, setMode: setHomeMode } = useHomeMode();
-onMounted(() => { loadHomeMode(); });
 const commandCenterEl = ref<HTMLElement | null>(null);
 const presenceTopAction = computed(() => {
 	const a = topActions.value[0];
 	return a ? { title: a.title, description: a.description, actionLabel: a.actionLabel } : null;
 });
-function onPresenceAsk(prompt: string) { openEarnestPanel(prompt); }
-function revealCommandCenter() {
+
+// Learn the user's tendency: if they consistently reach for the command center,
+// Earnest pre-reveals it (autoRevealed) — and a "start calm" override lets that
+// habit decay. Purely device-local (useHomeTendency / localStorage).
+const tendency = useHomeTendency();
+const autoRevealed = ref(false);
+
+function scrollToPresence() {
+	document.querySelector('.apps-shell__page')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function revealCommandCenter(opts: { auto?: boolean } = {}) {
 	commandCenterEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	if (!opts.auto) tendency.recordReveal(); // a genuine reach counts toward the habit
+}
+function onPresenceStartCalm() {
+	autoRevealed.value = false;
+	tendency.startCalm(); // vote against auto-reveal so the habit decays
+	scrollToPresence();
 }
 function onPresenceOpenTop() {
 	const a = topActions.value[0];
 	if (a?.actionRoute) navigateTo(a.actionRoute);
 	else revealCommandCenter();
 }
+
+onMounted(async () => {
+	await loadHomeMode();
+	if (!isPresence.value) return;
+	if (tendency.prefersDensity()) {
+		// They keep opening the command center — open it for them, and count it.
+		autoRevealed.value = true;
+		tendency.recordReveal();
+		await nextTick();
+		revealCommandCenter({ auto: true });
+	} else {
+		tendency.noteVisit(); // a calm visit; decays a stale density habit
+	}
+});
 
 // Several app categories come from deferred analyzers (CardDesk, deals, channels)
 // that only run when their dashboard widget scrolls into view. Selecting an app
@@ -439,7 +467,6 @@ const goTo = (route: string) => {
 					:subtitle="subtitle"
 					:read="feedSynthesis"
 					:top-action="presenceTopAction"
-					@ask="onPresenceAsk"
 					@open-top="onPresenceOpenTop"
 					@reveal="revealCommandCenter"
 				/>
@@ -447,10 +474,18 @@ const goTo = (route: string) => {
 
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- When presence home is on, a quiet marker back to the calm landing. -->
-				<div v-if="isPresence" ref="commandCenterEl" class="flex items-center justify-between pt-6">
-					<span class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Everything</span>
+				<div v-if="isPresence" ref="commandCenterEl" class="flex items-center justify-between gap-3 pt-6">
+					<div class="flex items-baseline gap-2 min-w-0">
+						<span class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Everything</span>
+						<!-- Shown only when Earnest opened this for you (learned tendency). -->
+						<button
+							v-if="autoRevealed"
+							class="text-[11px] text-primary/80 hover:text-primary transition-colors truncate"
+							@click="onPresenceStartCalm"
+						>Earnest opened this — start calm instead</button>
+					</div>
 					<button
-						class="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+						class="text-[12px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
 						@click="setHomeMode('classic')"
 					>Use the classic home</button>
 				</div>

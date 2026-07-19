@@ -8,12 +8,14 @@
 export type HomeMode = 'classic' | 'presence';
 
 export function useHomeMode() {
-	const mode = useState<HomeMode>('home-mode', () => 'classic');
+	// Presence is the default surface for everyone; 'classic' is the explicit
+	// opt-out. NULL/unset → presence, so new users land calm-first too.
+	const mode = useState<HomeMode>('home-mode', () => 'presence');
 	const loaded = useState<boolean>('home-mode-loaded', () => false);
 	const { readMe, updateMe } = useDirectusUsers();
 
 	function normalize(v: unknown): HomeMode {
-		return v === 'presence' ? 'presence' : 'classic';
+		return v === 'classic' ? 'classic' : 'presence';
 	}
 
 	async function load(force = false) {

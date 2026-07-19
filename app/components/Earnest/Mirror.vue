@@ -187,7 +187,7 @@ function fireLever(prompt: string) { emit('lever', prompt); }
 
 .mirror__intro { text-align: center; margin-bottom: 18px; }
 .mirror__eyebrow { margin: 0 0 6px; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: rgba(238,242,248,.5); }
-.mirror__lede { margin: 0; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-size: clamp(16px, 2.3vw, 20px); line-height: 1.4; color: rgba(238,242,248,.86); text-wrap: balance; }
+.mirror__lede { margin: 0; font-family: var(--title-font, inherit); font-size: clamp(16px, 2.3vw, 20px); line-height: 1.4; color: rgba(238,242,248,.86); text-wrap: balance; }
 
 .mirror__state { text-align: center; color: rgba(238,242,248,.6); font-size: 14px; padding: 40px 12px; line-height: 1.6; }
 .mirror__retry { margin-left: 8px; color: #eef2f8; text-decoration: underline; background: none; border: 0; cursor: pointer; font: inherit; }
@@ -195,7 +195,7 @@ function fireLever(prompt: string) { emit('lever', prompt); }
 /* Earnest's read — the hero */
 .mirror__read { margin: 0 auto 20px; max-width: 560px; text-align: center; }
 .mirror__read-text {
-	margin: 0; font-family: 'Iowan Old Style', Palatino, Georgia, serif;
+	margin: 0; font-family: var(--title-font, inherit);
 	font-size: clamp(17px, 2.6vw, 22px); line-height: 1.5; color: rgba(238,242,248,.96); text-wrap: balance;
 }
 .mirror__read-thinking { margin: 0; font-size: 14px; color: rgba(238,242,248,.5); display: inline-flex; align-items: center; gap: 7px; }

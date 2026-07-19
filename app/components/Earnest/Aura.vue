@@ -293,7 +293,7 @@ defineExpose({ bump, presence });
 /* A single mantra surfacing and sinking through the field — barely there. */
 .aura__drift {
 	position: absolute; left: 0; right: 0; top: 50%; text-align: center;
-	font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-style: italic;
+	font-family: var(--body-font, inherit); font-style: italic;
 	font-size: clamp(40px, 9vw, 110px); letter-spacing: 0.01em;
 	color: rgba(238, 242, 248, 0.06); white-space: nowrap; filter: blur(0.4px);
 }
