@@ -27,6 +27,7 @@ import { extractDormantClientsCandidates } from '~~/server/utils/marketing-signa
 import { extractProjectCompleteCandidates } from '~~/server/utils/marketing-signals/project-complete';
 import { extractLeadReengagementCandidates } from '~~/server/utils/marketing-signals/lead-reengagement';
 import { selectTopN, RANKER_PROMPT_VERSION } from '~~/server/utils/marketing-ranker/select';
+import { enrichRankedWhyNow, RANKER_LLM_VERSION } from '~~/server/utils/marketing-ranker/enrich';
 import type { RecommendationCandidate } from '~~/server/utils/marketing-signals/types';
 
 interface RefreshBody {
@@ -131,10 +132,13 @@ async function runForOrg(args: {
 
 	const all: RecommendationCandidate[] = [...dormant, ...projectComplete, ...leadReengagement];
 	const ranked = selectTopN({ candidates: all, runId, promptVersion: RANKER_PROMPT_VERSION });
+	// LLM ranker pass: sharpen each pick's why_now (opportunity-framed, grounded)
+	// + refine urgency. Best-effort — falls back to the deterministic hook.
+	await enrichRankedWhyNow(ranked);
 
 	const picks = ranked.map((r) => ({
 		card_type: r.candidate.card_type,
-		why_now: r.candidate.why_now,
+		why_now: r.rankerOutput.why_now,
 		urgency: r.rankerOutput.urgency,
 	}));
 
@@ -168,7 +172,7 @@ async function runForOrg(args: {
 					candidate_data: c.candidate_data,
 					ranker_output: r.rankerOutput,
 					ranker_run_id: runId,
-					ranker_prompt_version: RANKER_PROMPT_VERSION,
+					ranker_prompt_version: RANKER_LLM_VERSION,
 					surfaced_at: surfaced,
 					expires_at: expires,
 				}),
