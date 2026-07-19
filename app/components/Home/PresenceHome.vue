@@ -352,12 +352,14 @@ function renderMarkdown(text: string): string {
 
 .ph__greeting {
 	margin: 0;
-	/* App-native: follows the user's Appearance style (--title-font). Kept
-	   sentence-case + calm weight rather than the app's uppercase title
-	   transform — a greeting is a sentence, not a label. */
+	/* App-native: follows the user's Appearance style — family, weight AND
+	   tracking come from the title tokens (--title-font/-weight/-tracking) so the
+	   hero greeting matches the rest of the app's titles instead of hardcoding a
+	   heavier, tighter treatment of its own. */
 	font-family: var(--title-font, inherit);
-	font-size: clamp(26px, 4.4vw, 40px); font-weight: 600; line-height: 1.1;
-	letter-spacing: -0.01em;
+	font-size: clamp(26px, 4.4vw, 40px); line-height: 1.1;
+	font-weight: var(--title-weight, 400);
+	letter-spacing: var(--title-tracking, 0.1em);
 	color: hsl(var(--foreground)); text-wrap: balance;
 }
 .ph__read {
