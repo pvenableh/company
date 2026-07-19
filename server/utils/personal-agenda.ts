@@ -25,7 +25,7 @@ interface PersonalNotice {
   entityType?: string;
   entityId?: string;
 }
-interface PersonalGroup {
+export interface PersonalGroup {
   subject: string;
   label: string;
   topPriority: Priority;

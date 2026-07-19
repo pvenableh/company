@@ -475,7 +475,7 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 18px clamp(16px, 4vw, 40px) 6px; }
 .coach__brand { display: flex; align-items: center; gap: 12px; min-width: 0; color: #eef2f8; }
 .coach__focus-tag { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(238,242,248,.5); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(238,242,248,.14); }
-.coach__mantra { margin: 0; height: 1.25em; overflow: hidden; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-style: italic; font-size: 12.5px; color: rgba(238,242,248,.4); min-width: 0; }
+.coach__mantra { margin: 0; height: 1.25em; overflow: hidden; font-family: var(--body-font, inherit); font-style: italic; font-size: 12.5px; color: rgba(238,242,248,.4); min-width: 0; }
 .mantra-enter-active, .mantra-leave-active { transition: opacity .5s ease, transform .5s ease; }
 .mantra-enter-from { opacity: 0; transform: translateY(6px); }
 .mantra-leave-to { opacity: 0; transform: translateY(-6px); }
@@ -497,7 +497,7 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__body--working .coach__convo-wrap { margin: 0 auto 0 max(0px, 2vw); }
 
 .coach__opener { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 26px; }
-.coach__greeting { margin: 0; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-size: clamp(20px, 3.2vw, 29px); line-height: 1.42; white-space: pre-line; color: rgba(238,242,248,.94); max-width: 22ch; text-wrap: balance; }
+.coach__greeting { margin: 0; font-family: var(--title-font, inherit); font-size: clamp(20px, 3.2vw, 29px); line-height: 1.42; white-space: pre-line; color: rgba(238,242,248,.94); max-width: 22ch; text-wrap: balance; }
 .coach__chips { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; max-width: 540px; }
 .coach__chip { padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(238,242,248,.12); background: rgba(255,255,255,.045); color: rgba(238,242,248,.82); font: inherit; font-size: 13.5px; cursor: pointer; backdrop-filter: blur(10px); transition: background .25s, border-color .25s, transform .2s; }
 .coach__chip:hover { background: rgba(255,255,255,.10); border-color: rgba(238,242,248,.24); transform: translateY(-1px); }
