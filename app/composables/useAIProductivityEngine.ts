@@ -243,7 +243,12 @@ export const useAIProductivityEngine = () => {
 		}
 	};
 
-	// Score calculation: higher = more urgent/important
+	// Score = IMPACT × how actionable it is right now. The old version scored
+	// linearly on days-overdue (capped), so a $165 invoice 547 days late topped
+	// the feed forever — noise, not a productive next action. Now overdueness
+	// rides an ACTIONABLE-WINDOW curve (climbs over the first weeks, stays hot,
+	// then DECAYS — a very old item is a write-off decision, not today's live
+	// action) and amount is log-scaled so real money rises without a $1k cliff.
 	const calculateScore = (item: {
 		type: string;
 		daysOverdue?: number;
@@ -251,18 +256,33 @@ export const useAIProductivityEngine = () => {
 		isToday?: boolean;
 		isTomorrow?: boolean;
 	}): number => {
-		let score = 50;
+		let score = 40;
 
-		if (item.daysOverdue && item.daysOverdue > 0) {
-			score += Math.min(item.daysOverdue * 5, 40);
+		const d = item.daysOverdue && item.daysOverdue > 0 ? item.daysOverdue : 0;
+		if (d > 0) {
+			let w: number;
+			if (d <= 14) w = 0.35 + (d / 14) * 0.65;              // ramp up over ~2 weeks
+			else if (d <= 45) w = 1;                               // hot, still recoverable
+			else if (d <= 120) w = 1 - ((d - 45) / 75) * 0.72;     // fade as it goes cold
+			else w = 0.22;                                         // stale floor — visible, never top
+			score += Math.round(36 * w);
 		}
-		if (item.isToday) score += 20;
-		if (item.isTomorrow) score += 10;
-		if (item.type === 'action') score += 10;
-		if (item.amount && item.amount > 1000) score += 15;
+		if (item.isToday) score += 22;
+		if (item.isTomorrow) score += 11;
+		if (item.type === 'action') score += 8;
+		// Log-scaled money: $200→~14, $1k→~18, $10k→cap 22. No single cliff.
+		if (item.amount && item.amount > 0) {
+			score += Math.min(22, Math.round(Math.log10(item.amount + 1) * 6));
+		}
 
-		return Math.min(score, 100);
+		return Math.max(0, Math.min(100, score));
 	};
+
+	// Priority follows the impact score, so the buckets (and the "urgent" count
+	// that drives Focus nudges) reflect true urgency — a stale, tiny, long-overdue
+	// item is no longer "urgent" merely for being late.
+	const priorityFromScore = (s: number): TaskSuggestion['priority'] =>
+		s >= 82 ? 'urgent' : s >= 64 ? 'high' : s >= 46 ? 'medium' : 'low';
 
 	// ─── Ticket Analysis ──────────────────────────────────────────────────────
 
@@ -1530,6 +1550,9 @@ export const useAIProductivityEngine = () => {
 		const all: TaskSuggestion[] = [];
 		for (const arr of _moduleResults.values()) all.push(...arr);
 		all.push(...generateBusinessSuggestions());
+		// Re-derive priority from the impact score so a stale, long-overdue trifle
+		// stops sitting in the "urgent" bucket just for being late.
+		for (const s of all) s.priority = priorityFromScore(s.score);
 		// Sort by score, then by a STABLE tiebreaker (id). Many items legitimately
 		// tie at the same score (e.g. every overdue item caps at 100); without a
 		// deterministic tiebreak the order among ties depends on which analyzer
