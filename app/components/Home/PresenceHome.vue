@@ -67,14 +67,15 @@ const resumed = ref(false);
 // weren't reactive the computed would track no deps and never re-evaluate.
 const captured = ref(false);
 
-// A prior home thread counts as "recent" (worth a Continue chip) for a rolling
-// 18h window — the same working day plus an overnight return, but a days-old
-// thread won't nag. Older threads stay reachable via Expand.
-const RECENT_WINDOW_MS = 18 * 60 * 60 * 1000;
+// A prior home thread counts as "recent" (worth a Continue chip) while it's
+// younger than a learned window (default 18h — a working day plus an overnight
+// return — but it widens when the user resumes and narrows when they ignore it;
+// see useHomeContinueWindow). Older threads stay reachable via Expand.
+const { windowMs, recordResumed, recordIgnored } = useHomeContinueWindow();
 function isRecent(iso?: string): boolean {
 	if (!iso) return false;
 	const t = new Date(iso).getTime();
-	return Number.isFinite(t) && Date.now() - t < RECENT_WINDOW_MS;
+	return Number.isFinite(t) && Date.now() - t < windowMs.value;
 }
 function captureBaseline() {
 	if (captured.value) return;
@@ -120,6 +121,7 @@ const visibleMessages = computed(() =>
 const canResume = computed(() => !conversing.value && priorRecent.value && baseline.value > 0);
 function resumeThread() {
 	resumed.value = true;
+	recordResumed(); // they picked the thread back up — worth offering for longer
 	scrollThread();
 }
 
@@ -140,6 +142,9 @@ function autogrow() {
 function send(text?: string) {
 	const t = (text ?? input.value).trim();
 	if (!t || isSending.value) return;
+	// The Continue chip was offered and they started a fresh line instead — a
+	// vote that a thread this old wasn't worth resuming, so narrow the window.
+	if (canResume.value) recordIgnored();
 	input.value = '';
 	nextTick(autogrow); // collapse the textarea back to one line
 	sendMessage(t, { scope: 'dashboard', routeFocus: 'the home dashboard — the top of their day' });

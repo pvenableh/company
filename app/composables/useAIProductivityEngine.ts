@@ -214,6 +214,19 @@ export const useAIProductivityEngine = () => {
 		return pool[(dayOfYear + 1) % pool.length];
 	};
 
+	// Seed the deterministic greeting/subtitle immediately (client-only) so the
+	// hero never paints an empty <h1> during the window before analyze() runs —
+	// on the home page analyze() is gated behind a couple of network fetches, so
+	// without this the greeting flashes empty and then shifts layout when it
+	// lands. Cheap + synchronous (time/name/persona only); the richer AI greeting
+	// still refines it later. Client-only to avoid an SSR text mismatch on a
+	// value that is inherently clock- and session-dependent.
+	const primeGreeting = () => {
+		if (import.meta.server) return;
+		if (!greeting.value) greeting.value = getGreeting();
+		if (!subtitle.value) subtitle.value = getSubtitle();
+	};
+
 	// Fetch AI-generated greeting if personalizations are enabled
 	const fetchAIGreeting = async () => {
 		if (import.meta.server) return;
@@ -1741,6 +1754,7 @@ export const useAIProductivityEngine = () => {
 		isAnalyzing: readonly(isAnalyzing),
 		greeting,
 		subtitle,
+		primeGreeting,
 		analyze,
 		loadModule,
 	};
