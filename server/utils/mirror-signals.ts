@@ -17,7 +17,7 @@ const DAY = 86_400_000;
 
 export interface MirrorInsight {
 	id: string;
-	kind: 'avoidance' | 'latency' | 'overdue' | 'outlier' | 'overload' | 'slowdown';
+	kind: 'avoidance' | 'latency' | 'overdue' | 'outlier' | 'overload' | 'slowdown' | 'reliability';
 	/** 0–100, higher = surface first. */
 	severity: number;
 	/** The sharp, specific observation. */
@@ -84,7 +84,7 @@ export async function computeMirrorSignals(directus: any, orgId: string, userId:
 		completed = (await directus.request(
 			(readItems as any)('tasks', {
 				filter: { _and: [orgFilter, { status: { _eq: 'completed' } }, mine] },
-				fields: ['date_created', 'date_completed', 'date_updated'],
+				fields: ['date_created', 'date_completed', 'date_updated', 'due_date'],
 				sort: ['-date_updated'],
 				limit: 500,
 			}),
@@ -93,12 +93,18 @@ export async function computeMirrorSignals(directus: any, orgId: string, userId:
 
 	const latencies: number[] = [];
 	const completions: string[] = [];
+	let dueDated = 0, finishedLate = 0; // deadline reliability: hit the date you set?
 	for (const t of completed) {
 		const done = t.date_completed || t.date_updated;
 		if (done && new Date(done).getTime() >= now - 60 * DAY) completions.push(done);
 		if (t.date_created && done) {
 			const lat = Math.round((new Date(done).getTime() - new Date(t.date_created).getTime()) / DAY);
 			if (lat >= 0 && lat < 400) latencies.push(lat);
+		}
+		if (t.due_date && done) {
+			dueDated++;
+			// a full day past the date you set = late (same-day grace).
+			if (new Date(done).getTime() > new Date(t.due_date).getTime() + DAY) finishedLate++;
 		}
 	}
 	const medianLatencyDays = median(latencies);
@@ -261,6 +267,26 @@ export async function computeMirrorSignals(directus: any, orgId: string, userId:
 				lever: {
 					label: 'What changed?',
 					prompt: `My tasks used to close in about ${earlier} days and now take around ${recent}. Help me figure out what changed — more on my plate, harder work, more waiting on others — and one thing to do about it.`,
+				},
+			});
+		}
+	}
+
+	// Deadline reliability — of the tasks you finished, how many landed after the
+	// date YOU set? A personal honesty check on how your estimates hold up.
+	if (dueDated >= 6) {
+		const lateRate = finishedLate / dueDated;
+		if (lateRate >= 0.4 && finishedLate >= 3) {
+			const pct = Math.round(lateRate * 100);
+			insights.push({
+				id: 'reliability',
+				kind: 'reliability',
+				severity: 36 + Math.min(24, Math.round(lateRate * 30)),
+				headline: `You closed ${dueDated} dated tasks, but ${finishedLate} landed after the date you set — your estimates run optimistic.`,
+				evidence: `That's ${pct}% finished late — the dates are slipping, not the work.`,
+				lever: {
+					label: 'Set dates I\'ll hit',
+					prompt: `${pct}% of the tasks I put a due date on, I finished late. Help me figure out why my estimates run short and set dates I'll actually hit.`,
 				},
 			});
 		}
