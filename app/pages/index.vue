@@ -232,6 +232,27 @@ const feedSynthesis = computed(() => {
 	return `Today's real weight — ${named.join(' and ')}${tail}.`;
 });
 
+// ── Presence home — the opt-in calm conversational landing ───────────────────
+// Calm first, density on demand: when on, login lands on the presence home and
+// the command center sits below the fold (revealed by scroll / the "Everything"
+// affordance). Preference is remembered per-user (directus_users.home_mode).
+const { isPresence, load: loadHomeMode, setMode: setHomeMode } = useHomeMode();
+onMounted(() => { loadHomeMode(); });
+const commandCenterEl = ref<HTMLElement | null>(null);
+const presenceTopAction = computed(() => {
+	const a = topActions.value[0];
+	return a ? { title: a.title, description: a.description, actionLabel: a.actionLabel } : null;
+});
+function onPresenceAsk(prompt: string) { openEarnestPanel(prompt); }
+function revealCommandCenter() {
+	commandCenterEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function onPresenceOpenTop() {
+	const a = topActions.value[0];
+	if (a?.actionRoute) navigateTo(a.actionRoute);
+	else revealCommandCenter();
+}
+
 // Several app categories come from deferred analyzers (CardDesk, deals, channels)
 // that only run when their dashboard widget scrolls into view. Selecting an app
 // pill loads that app's modules on demand so the filter is populated even if the
@@ -408,9 +429,34 @@ const goTo = (route: string) => {
 			<!-- Apps Layout per-app header — shows the dashboard accent
 			     chip + page title, matching the rest of /apps/*. -->
 			<AppHeader title="Dashboard" />
+
+			<!-- Presence home: the calm conversational landing (opt-in via home_mode).
+			     The command center below is "everything," one gesture down. -->
+			<div v-if="isPresence" class="min-h-[84vh] flex items-center">
+				<HomePresenceHome
+					class="w-full"
+					:greeting="greeting || typedGreeting"
+					:subtitle="subtitle"
+					:read="feedSynthesis"
+					:top-action="presenceTopAction"
+					@ask="onPresenceAsk"
+					@open-top="onPresenceOpenTop"
+					@reveal="revealCommandCenter"
+				/>
+			</div>
+
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
-				<!-- Greeting + Lens Toggle + Assistant Button -->
-				<div class="flex items-end justify-between gap-3 pt-6 sm:pt-8">
+				<!-- When presence home is on, a quiet marker back to the calm landing. -->
+				<div v-if="isPresence" ref="commandCenterEl" class="flex items-center justify-between pt-6">
+					<span class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Everything</span>
+					<button
+						class="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+						@click="setHomeMode('classic')"
+					>Use the classic home</button>
+				</div>
+
+				<!-- Greeting + Lens Toggle + Assistant Button (classic home only) -->
+				<div v-if="!isPresence" class="flex items-end justify-between gap-3 pt-6 sm:pt-8">
 					<div class="min-w-0">
 						<!-- Reserve a single-line slot for the greeting so the
 						     dashboard doesn't jump when the AI greeting resolves.
@@ -424,11 +470,13 @@ const goTo = (route: string) => {
 						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
-						<!-- Mine/All now lives as a local toggle on Priority Actions (below),
-						     not the global chrome; band order is fixed. -->
-						<!-- Director's Office now lives in the dock, and Focus mode in the
-						     top-bar chrome — both reachable from every page, so they're no
-						     longer duplicated in this dashboard header. -->
+						<!-- Opt into the calm conversational home (remembered per-user). -->
+						<button
+							class="hidden sm:inline-flex items-center h-8 px-3 rounded-full text-[12px] font-medium text-muted-foreground border border-border hover:text-foreground hover:border-primary/40 transition-colors"
+							@click="setHomeMode('presence')"
+						>
+							Try the calm home
+						</button>
 						<button
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
 							aria-label="Earnest"
