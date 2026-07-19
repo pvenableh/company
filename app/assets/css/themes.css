@@ -291,13 +291,13 @@
    white-on-white Apple aesthetic, gallery feel  */
 :root,
 [data-style='modern'] {
-	--title-font: var(--font-proxima-regular);
+	--title-font: var(--font-proxima-light);
 	--title-transform: uppercase;
-	/* Uppercase display titles want to breathe — tracked out for the
-	   gallery/Apple large-title feel. Applies app-wide to h1/h2/h3 in the
-	   Modern (default) style, including AppHeader page titles. */
-	--title-tracking: 0.1em;
-	--title-weight: 500;
+	/* Uppercase display titles want to breathe — a light weight + tracked out
+	   for the gallery/Apple large-title feel. Applies app-wide to h1/h2/h3 in
+	   the Modern (default) style, including AppHeader page titles. */
+	--title-tracking: 0.14em;
+	--title-weight: 400;
 	--body-font: var(--font-proxima-regular);
 	--label-transform: uppercase;
 	--label-tracking: 0.04em;
@@ -338,10 +338,10 @@
 [data-style='modern'] h1,
 [data-style='modern'] h2,
 [data-style='modern'] h3 {
-	font-family: var(--font-proxima-regular);
+	font-family: var(--title-font);
 	text-transform: uppercase;
 	letter-spacing: var(--title-tracking, 0.04em);
-	font-weight: 500;
+	font-weight: var(--title-weight, 400);
 }
 [data-style='modern'] h1 { font-size: 1.25rem; }
 [data-style='modern'] h4,
