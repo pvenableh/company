@@ -286,12 +286,61 @@ export const useAIProductivityEngine = () => {
 
 	// ─── Ticket Analysis ──────────────────────────────────────────────────────
 
+	// Collapse same-client (or same-project) OVERDUE clusters: one item → its own
+	// card; 2+ → a single grouped card ("3 overdue tickets · Acme"). Keeps the
+	// individual card's inline status action (via `entity`); the group offers a
+	// "Review" navigate instead. Mirrors the invoice grouping.
+	type ClusterItem = { id: string; title: string; overdue: number; status?: string };
+	const clusterOverdue = (
+		groups: Map<string, { name: string; items: ClusterItem[] }>,
+		cfg: {
+			collection: 'tickets' | 'tasks';
+			noun: string; // 'tickets' | 'tasks'
+			icon: string;
+			route: (id: string) => string;
+			groupRoute: string;
+			singleTitle: (title: string) => string;
+			singleDesc: (name: string, overdue: number) => string;
+			singleAction: string;
+		},
+	): TaskSuggestion[] => {
+		const out: TaskSuggestion[] = [];
+		for (const { name, items } of groups.values()) {
+			if (items.length === 1) {
+				const it = items[0]!;
+				out.push({
+					id: `${cfg.collection}-overdue-${it.id}`,
+					type: 'action', priority: 'urgent', icon: cfg.icon,
+					title: cfg.singleTitle(it.title),
+					description: cfg.singleDesc(name, it.overdue),
+					actionLabel: cfg.singleAction, actionRoute: cfg.route(it.id),
+					category: 'tasks', entity: { collection: cfg.collection, id: it.id, status: it.status },
+					timestamp: new Date(), score: calculateScore({ type: 'action', daysOverdue: it.overdue }),
+				});
+			} else {
+				const maxOverdue = Math.max(...items.map((x) => x.overdue));
+				out.push({
+					id: `${cfg.collection}-overdue-group-${name}`,
+					type: 'action', priority: 'urgent', icon: cfg.icon,
+					title: `${items.length} overdue ${cfg.noun} · ${name}`,
+					description: `${items.length} ${cfg.noun} past due for ${name} — oldest ${maxOverdue} day${maxOverdue !== 1 ? 's' : ''}`,
+					actionLabel: `Review ${items.length}`, actionRoute: cfg.groupRoute,
+					category: 'tasks', timestamp: new Date(),
+					score: calculateScore({ type: 'action', daysOverdue: maxOverdue }),
+				});
+			}
+		}
+		return out;
+	};
+
 	const analyzeTickets = async (): Promise<TaskSuggestion[]> => {
 		const results: TaskSuggestion[] = [];
 
 		try {
 			const tickets = await ticketItems.list({
-				fields: ['id', 'title', 'status', 'priority', 'due_date', 'assigned_to', 'organization.name'],
+				// `client` is the counterparty (group + label by it); `organization`
+				// is the owning org, same trap as invoices' bill_to.
+				fields: ['id', 'title', 'status', 'priority', 'due_date', 'assigned_to', 'client.id', 'client.name'],
 				filter: {
 					_and: [
 						{ status: { _nin: ['Completed', 'Archived'] } },
@@ -307,6 +356,10 @@ export const useAIProductivityEngine = () => {
 			const t = today();
 			let completedToday = 0;
 
+			// Overdue tickets are collected by client and clustered after the loop;
+			// due-today reminders stay individual.
+			const overdueByClient = new Map<string, { name: string; items: ClusterItem[] }>();
+
 			for (const ticket of tickets) {
 				// Skip any closed status regardless of casing (filter excludes
 				// 'Completed'/'Archived'; this catches lowercase variants too).
@@ -318,20 +371,11 @@ export const useAIProductivityEngine = () => {
 				const daysOverdue = dueDate ? Math.floor((t.getTime() - dueDate.getTime()) / 86400000) : 0;
 
 				if (isOverdue) {
-					results.push({
-						id: `ticket-overdue-${ticket.id}`,
-						type: 'action',
-						priority: 'urgent',
-						icon: 'i-heroicons-exclamation-triangle',
-						title: `Overdue: ${ticket.title}`,
-						description: `This ticket is ${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue${ticket.organization?.name ? ` for ${ticket.organization.name}` : ''}`,
-						actionLabel: 'Complete Now',
-						actionRoute: `/tickets/${ticket.id}`,
-						category: 'tasks',
-						entity: { collection: 'tickets', id: ticket.id, status: ticket.status },
-						timestamp: new Date(),
-						score: calculateScore({ type: 'action', daysOverdue }),
-					});
+					const name = ticket.client?.name || 'a client';
+					const key = String(ticket.client?.id ?? name);
+					const g = overdueByClient.get(key) || { name, items: [] as ClusterItem[] };
+					g.items.push({ id: String(ticket.id), title: ticket.title, overdue: daysOverdue, status: ticket.status });
+					overdueByClient.set(key, g);
 				} else if (isDueToday) {
 					results.push({
 						id: `ticket-today-${ticket.id}`,
@@ -349,6 +393,16 @@ export const useAIProductivityEngine = () => {
 					});
 				}
 			}
+
+			// Cluster the overdue tickets (single → individual + inline action;
+			// 2+ for one client → one grouped card).
+			results.push(...clusterOverdue(overdueByClient, {
+				collection: 'tickets', noun: 'tickets', icon: 'i-heroicons-exclamation-triangle',
+				route: (id) => `/tickets/${id}`, groupRoute: '/tickets',
+				singleTitle: (title) => `Overdue: ${title}`,
+				singleDesc: (name, overdue) => `This ticket is ${overdue} day${overdue !== 1 ? 's' : ''} overdue${name !== 'a client' ? ` for ${name}` : ''}`,
+				singleAction: 'Complete Now',
+			}));
 
 			// Count completed today for metrics
 			try {
@@ -483,7 +537,7 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const tasks = await taskItems.list({
-				fields: ['id', 'title', 'status', 'due_date', 'assigned_to.directus_users_id.first_name', 'project_event_id.id'],
+				fields: ['id', 'title', 'status', 'due_date', 'assigned_to.directus_users_id.first_name', 'project_event_id.id', 'project_id.id', 'project_id.title'],
 				filter: {
 					_and: [
 						{ status: { _neq: 'completed' } },
@@ -497,6 +551,10 @@ export const useAIProductivityEngine = () => {
 			const t = today();
 			let pendingCount = 0;
 
+			// Overdue tasks cluster by PROJECT (tasks with no project get a unique
+			// key → they stay individual). Due-today reminders stay individual.
+			const overdueByProject = new Map<string, { name: string; items: ClusterItem[] }>();
+
 			for (const task of tasks) {
 				pendingCount++;
 				const dueDate = task.due_date ? new Date(task.due_date) : null;
@@ -505,20 +563,12 @@ export const useAIProductivityEngine = () => {
 
 				if (isOverdue) {
 					const daysOver = Math.floor((t.getTime() - dueDate.getTime()) / 86400000);
-					results.push({
-						id: `task-overdue-${task.id}`,
-						type: 'action',
-						priority: 'urgent',
-						icon: 'i-heroicons-clipboard-document-check',
-						title: `Overdue Task: ${task.title}`,
-						description: `${daysOver} day${daysOver > 1 ? 's' : ''} overdue`,
-						actionLabel: 'Complete',
-						actionRoute: '/tasks',
-						category: 'tasks',
-						entity: { collection: 'tasks', id: task.id, status: task.status },
-						timestamp: new Date(),
-						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
-					});
+					const proj = task.project_id;
+					const key = proj?.id ? String(proj.id) : `solo-${task.id}`;
+					const name = proj?.title || '';
+					const g = overdueByProject.get(key) || { name, items: [] as ClusterItem[] };
+					g.items.push({ id: String(task.id), title: task.title, overdue: daysOver, status: task.status });
+					overdueByProject.set(key, g);
 				} else if (isDueToday) {
 					results.push({
 						id: `task-today-${task.id}`,
@@ -536,6 +586,15 @@ export const useAIProductivityEngine = () => {
 					});
 				}
 			}
+
+			// Cluster the overdue tasks (2+ in one project → one grouped card).
+			results.push(...clusterOverdue(overdueByProject, {
+				collection: 'tasks', noun: 'tasks', icon: 'i-heroicons-clipboard-document-check',
+				route: () => '/tasks', groupRoute: '/tasks',
+				singleTitle: (title) => `Overdue Task: ${title}`,
+				singleDesc: (_name, overdue) => `${overdue} day${overdue !== 1 ? 's' : ''} overdue`,
+				singleAction: 'Complete',
+			}));
 
 			metrics.value.pendingTasks = pendingCount;
 		} catch (e) {
