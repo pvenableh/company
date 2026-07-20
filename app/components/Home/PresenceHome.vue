@@ -31,6 +31,10 @@ const props = defineProps<{
 		description?: string;
 		actionLabel?: string;
 	} | null;
+	/** True while the productivity engine is still resolving (drives skeletons). */
+	analyzing?: boolean;
+	/** Which greeting is on screen — 'ai' means the personalized one landed. */
+	greetingSource?: 'none' | 'local' | 'ai';
 }>();
 
 const emit = defineEmits<{
@@ -198,8 +202,88 @@ onMounted(async () => {
 		}
 	} catch { /* deterministic read stands on its own */ }
 });
-// Show the deeper read once it lands, else the instant deterministic read.
-const shownRead = computed(() => deeperRead.value || props.read || '');
+// ── Settled text — say one thing, once ───────────────────────────────────────
+// The greeting and the read each have TWO sources: an instant deterministic
+// value and a slower LLM upgrade (the greeting endpoint, the deeper read). When
+// the upgrade landed a minute later it visibly rewrote the sentence under the
+// user — the page reading as if it changed its mind. So each line settles:
+// during a short grace window the better value may still win (a warm cache
+// usually lands inside it); once that window closes the sentence on screen is
+// latched for the session and never swaps again.
+function useSettledText(source: () => string, graceMs: number) {
+	const shown = ref('');
+	let locked = false;
+	let graceOver = false;
+
+	const commit = (raw: string) => {
+		const next = (raw || '').trim();
+		if (locked || !next) return;
+		shown.value = next;
+		// After the grace window the first real sentence sticks.
+		if (graceOver) locked = true;
+	};
+
+	watch(source, (v) => commit(v), { immediate: true });
+
+	if (import.meta.client) {
+		onMounted(() => {
+			setTimeout(() => {
+				graceOver = true;
+				if (shown.value) locked = true; // keep what's on screen
+				else commit(source()); // nothing yet — next real value wins and locks
+			}, graceMs);
+		});
+	}
+
+	return shown;
+}
+
+// ── Greeting: wait for the personalized one, don't swap ──────────────────────
+// The generated greeting is the good part, so the hero HOLDS a "Thinking…"
+// placeholder for it rather than showing the basic deterministic line and
+// rewriting it a beat later. If it can't make it (personalizations off, token
+// gate, slow cold call), the deterministic greeting takes over after a patient
+// window — and whichever wins is then locked for the session.
+const GREETING_PATIENCE_MS = 12000;
+const greetingFallbackDue = ref(false);
+const shownGreeting = ref('');
+
+watchEffect(() => {
+	if (shownGreeting.value) return; // already settled — never swap
+	const g = (props.greeting || '').trim();
+	if (!g) return;
+	if (props.greetingSource === 'ai' || greetingFallbackDue.value) {
+		shownGreeting.value = g;
+	}
+});
+
+if (import.meta.client) {
+	onMounted(() => {
+		setTimeout(() => { greetingFallbackDue.value = true; }, GREETING_PATIENCE_MS);
+	});
+}
+
+// Read priority: deeper LLM read → deterministic synthesis → the soft subtitle.
+const readSource = computed(() => deeperRead.value || props.read || props.subtitle || '');
+const shownRead = useSettledText(() => readSource.value, 2200);
+// Style the line softly only when what settled is the subtitle placeholder.
+const readIsSoft = computed(() => !!props.subtitle && shownRead.value === props.subtitle.trim());
+
+// ── "The one thing" slot ─────────────────────────────────────────────────────
+// The slot must hold its height from FIRST PAINT, not just once `analyzing`
+// flips true — the engine's analysis is itself gated behind other fetches, so
+// there's a window where nothing is loading yet and the card would otherwise
+// pop in later and shove the page down. So: reserve until we actually know the
+// answer, and only collapse if the analysis settled with no action to show.
+const analysisSettled = ref(false);
+watch(() => props.analyzing, (now, before) => {
+	if (before && !now) analysisSettled.value = true; // true → false = a finished pass
+});
+if (import.meta.client) {
+	// Safety: never reserve the space forever if the engine never reports.
+	onMounted(() => { setTimeout(() => { analysisSettled.value = true; }, 20000); });
+}
+const showTopSlot = computed(() => !!props.topAction || !analysisSettled.value);
 
 // ── Markdown (mirror of the panel's lightweight renderer) ────────────────────
 function renderMarkdown(text: string): string {
@@ -228,19 +312,43 @@ function renderMarkdown(text: string): string {
 					<EarnestPresenceMark :height="26" class="text-foreground/85" />
 				</div>
 
-				<h1 class="ph__greeting">{{ greeting }}</h1>
-				<Transition name="ph-fade" mode="out-in">
-					<p v-if="shownRead" :key="shownRead" class="ph__read">{{ shownRead }}</p>
-					<p v-else-if="subtitle" class="ph__read ph__read--soft">{{ subtitle }}</p>
-				</Transition>
+				<!-- Greeting + read hold their own height from first paint, so the
+				     hero never re-centres when the words arrive. -->
+				<h1 class="ph__greeting">
+					<Transition name="ph-fade">
+						<span v-if="shownGreeting" :key="shownGreeting">{{ shownGreeting }}</span>
+						<span v-else key="thinking" class="ph__thinking">
+							<span class="ph__thinking-word">Thinking</span>
+							<span class="ph__dots" aria-hidden="true"><i /><i /><i /></span>
+							<span class="sr-only">Earnest is writing your greeting</span>
+						</span>
+					</Transition>
+				</h1>
 
-				<!-- the single next move -->
-				<button v-if="topAction" type="button" class="ph__top" @click="emit('openTop')">
-					<span class="ph__top-eyebrow">The one thing</span>
-					<span class="ph__top-title">{{ topAction.title }}</span>
-					<span v-if="topAction.description" class="ph__top-desc">{{ topAction.description }}</span>
-					<Icon name="lucide:arrow-right" class="ph__top-arrow w-4 h-4" />
-				</button>
+				<p class="ph__read" :class="{ 'ph__read--soft': readIsSoft }">
+					<Transition name="ph-fade">
+						<span v-if="shownRead" :key="shownRead">{{ shownRead }}</span>
+						<span v-else class="ph__sk ph__sk--read" aria-hidden="true" />
+					</Transition>
+				</p>
+
+				<!-- the single next move — the slot keeps its height while the
+				     engine decides, so the card doesn't shove the page down. -->
+				<div v-if="showTopSlot" class="ph__top-slot">
+					<Transition name="ph-rise">
+						<button v-if="topAction" key="card" type="button" class="ph__top" @click="emit('openTop')">
+							<span class="ph__top-eyebrow">The one thing</span>
+							<span class="ph__top-title">{{ topAction.title }}</span>
+							<span v-if="topAction.description" class="ph__top-desc">{{ topAction.description }}</span>
+							<Icon name="lucide:arrow-right" class="ph__top-arrow w-4 h-4" />
+						</button>
+						<div v-else key="sk" class="ph__top ph__top--loading" aria-hidden="true">
+							<span class="ph__sk ph__sk--eyebrow" />
+							<span class="ph__sk ph__sk--title" />
+							<span class="ph__sk ph__sk--desc" />
+						</div>
+					</Transition>
+				</div>
 			</template>
 
 			<!-- ── CONVERSING: slim header + in-place thread ─────────────────── -->
@@ -361,17 +469,92 @@ function renderMarkdown(text: string): string {
 	font-weight: var(--title-weight, 400);
 	letter-spacing: var(--title-tracking, 0.1em);
 	color: hsl(var(--foreground)); text-wrap: balance;
+	/* Hold TWO lines from first paint. The generated greeting is usually a
+	   two-line sentence ("Morning, Peter — hope you slept well"), so reserving
+	   a single line still let it push the hero down when it landed. */
+	min-height: calc(clamp(26px, 4.4vw, 40px) * 1.1 * 2);
+	display: grid; place-items: center;
 }
 .ph__read {
 	margin: 0; max-width: 34ch;
 	font-family: var(--body-font, inherit);
 	font-size: clamp(15px, 2.2vw, 18px); line-height: 1.5;
 	color: hsl(var(--muted-foreground)); text-wrap: balance;
+	/* Two lines reserved — the read is 1–2 lines, so it never reflows the page
+	   when the longer sentence settles. */
+	min-height: calc(clamp(15px, 2.2vw, 18px) * 1.5 * 2);
+	display: grid; place-items: center;
 }
 .ph__read--soft { font-style: italic; }
 
-.ph-fade-enter-active, .ph-fade-leave-active { transition: opacity 0.5s ease; }
+/* Cross-fade in place: both nodes share the same grid cell, so the leaving
+   line never collapses the block's height (the old `mode="out-in"` guaranteed
+   a 0.5s zero-height gap that shoved everything below it up and back down). */
+.ph__greeting > *, .ph__read > * { grid-area: 1 / 1; }
+.ph-fade-enter-active, .ph-fade-leave-active { transition: opacity 0.45s ease; }
 .ph-fade-enter-from, .ph-fade-leave-to { opacity: 0; }
+
+/* ── Loading placeholders ─────────────────────────────────────────────────── */
+.ph__sk {
+	display: block; border-radius: 999px;
+	background: hsl(var(--foreground) / 0.07);
+	animation: ph-sk-pulse 1.6s ease-in-out infinite;
+}
+.ph__sk--greeting { width: min(320px, 62vw); height: calc(clamp(26px, 4.4vw, 40px) * 0.62); }
+
+/* "Thinking…" — held in the greeting's own type while the personalized
+   greeting is being written, so the good line arrives once instead of
+   replacing a basic one. */
+.ph__thinking {
+	display: inline-flex; align-items: baseline; gap: 0.3em;
+	color: hsl(var(--muted-foreground) / 0.75);
+}
+.ph__thinking-word { animation: ph-sk-pulse 2s ease-in-out infinite; }
+.ph__dots { display: inline-flex; align-items: baseline; gap: 0.18em; }
+.ph__dots i {
+	width: 0.14em; height: 0.14em; min-width: 3px; min-height: 3px;
+	border-radius: 50%; background: currentColor; display: inline-block;
+	animation: ph-dot 1.4s ease-in-out infinite;
+}
+.ph__dots i:nth-child(2) { animation-delay: 0.18s; }
+.ph__dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes ph-dot {
+	0%, 100% { opacity: 0.25; transform: translateY(0); }
+	50% { opacity: 1; transform: translateY(-0.12em); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.ph__thinking-word, .ph__dots i { animation: none; }
+}
+.ph__sk--read { width: min(280px, 56vw); height: 12px; }
+.ph__sk--eyebrow { width: 76px; height: 8px; }
+.ph__sk--title { width: 62%; height: 13px; }
+.ph__sk--desc { width: 84%; height: 11px; }
+@keyframes ph-sk-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* The "one thing" slot reserves the card's height while the engine decides. */
+.ph__top-slot {
+	/* 96px = the real card's height. The skeleton and the card must measure the
+	   same, or the swap nudges the page by the difference. */
+	width: 100%; max-width: 460px; margin-top: 6px; min-height: 96px;
+	/* Stack the card and its placeholder in one cell so the swap cross-fades
+	   in place instead of collapsing the slot. */
+	display: grid;
+}
+.ph__top-slot > * { grid-area: 1 / 1; }
+/* The card settles in rather than snapping — it's the one thing, it should
+   arrive with a little intent. */
+.ph-rise-enter-active { transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.36, 0.66, 0.04, 1); }
+.ph-rise-leave-active { transition: opacity 0.25s ease; }
+.ph-rise-enter-from { opacity: 0; transform: translateY(6px); }
+.ph-rise-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+	.ph-rise-enter-active, .ph-rise-leave-active { transition: opacity 0.2s ease; }
+	.ph-rise-enter-from { transform: none; }
+}
+/* The slot owns the offset now — drop the card's own margin so it isn't doubled. */
+.ph__top-slot .ph__top { margin-top: 0; }
+.ph__top--loading { cursor: default; pointer-events: none; align-content: center; }
+.ph__top--loading:hover { transform: none; box-shadow: none; }
 
 .ph__top {
 	position: relative; width: 100%; max-width: 460px; margin-top: 6px;
@@ -383,8 +566,16 @@ function renderMarkdown(text: string): string {
 }
 .ph__top:hover { transform: translateY(-1px); box-shadow: 0 12px 34px -16px hsl(var(--foreground) / 0.3); }
 .ph__top-eyebrow { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: hsl(var(--primary)); }
-.ph__top-title { font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
-.ph__top-desc { font-size: 13px; color: hsl(var(--muted-foreground)); }
+/* Single-line clamps keep the card a FIXED height whatever the action is, so
+   the reserved slot always matches and a long title can't reflow the hero. */
+.ph__top-title {
+	font-size: 15px; font-weight: 600; color: hsl(var(--foreground));
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ph__top-desc {
+	font-size: 13px; color: hsl(var(--muted-foreground));
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .ph__top-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: hsl(var(--muted-foreground)); }
 
 /* ── Conversation ─────────────────────────────────────────────────────────── */
