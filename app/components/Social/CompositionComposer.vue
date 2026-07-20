@@ -554,8 +554,8 @@ async function save() {
       <UCard>
         <template #header>
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white">Media</h2>
-            <span v-if="derivedPostType === 'text'" class="text-xs text-gray-400">Optional — text-only post</span>
+            <h2 class="font-semibold text-foreground">Media</h2>
+            <span v-if="derivedPostType === 'text'" class="text-xs text-muted-foreground">Optional — text-only post</span>
           </div>
         </template>
 
@@ -575,7 +575,7 @@ async function save() {
             :animation="150"
           >
             <template #item="{ element, index }">
-              <div class="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden group">
+              <div class="relative aspect-square bg-muted rounded-lg overflow-hidden group">
                 <img
                   v-if="element.type === 'image'"
                   :src="element.url"
@@ -583,7 +583,7 @@ async function save() {
                   class="w-full h-full object-cover"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center">
-                  <Icon name="lucide:video" class="w-8 h-8 text-gray-400" />
+                  <Icon name="lucide:video" class="w-8 h-8 text-muted-foreground" />
                 </div>
                 <div
                   v-if="mediaUrls.length > 1"
@@ -618,8 +618,8 @@ async function save() {
       <UCard>
         <template #header>
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white">Add a Link</h2>
-            <span class="text-xs text-gray-400">Optional</span>
+            <h2 class="font-semibold text-foreground">Add a Link</h2>
+            <span class="text-xs text-muted-foreground">Optional</span>
           </div>
         </template>
         <div class="space-y-3">
@@ -632,7 +632,7 @@ async function save() {
         <template #header>
           <div class="flex items-center gap-2">
             <Icon name="logos:linkedin-icon" class="w-4 h-4 shrink-0" />
-            <h2 class="font-semibold text-gray-900 dark:text-white">LinkedIn Options</h2>
+            <h2 class="font-semibold text-foreground">LinkedIn Options</h2>
           </div>
         </template>
         <div class="flex gap-2">
@@ -660,14 +660,14 @@ async function save() {
       <UCard>
         <template #header>
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white">Post To</h2>
+            <h2 class="font-semibold text-foreground">Post To</h2>
             <UBadge v-if="selectedAccounts.length > 0" color="primary" variant="subtle">
               {{ selectedAccounts.length }} selected
             </UBadge>
           </div>
         </template>
         <div v-if="accounts.length === 0" class="text-center py-4">
-          <p class="text-sm text-gray-500 dark:text-gray-400">No accounts connected yet.</p>
+          <p class="text-sm text-muted-foreground">No accounts connected yet.</p>
         </div>
         <div v-else class="space-y-3 max-h-[260px] overflow-y-auto">
           <div v-for="group in accountGroups" :key="group.clientId ?? 'house'">
@@ -682,7 +682,7 @@ async function save() {
                 :class="
                   selectedAccounts.includes(account.id)
                     ? 'bg-primary/10'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    : 'hover:bg-muted'
                 "
               >
                 <UCheckbox
@@ -696,10 +696,10 @@ async function save() {
                   size="xs"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p class="text-sm font-medium text-foreground truncate">
                     {{ account.account_name }}
                   </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p class="text-xs text-muted-foreground truncate">
                     @{{ account.account_handle }}
                   </p>
                 </div>
@@ -711,7 +711,7 @@ async function save() {
 
       <UCard>
         <template #header>
-          <h2 class="font-semibold text-gray-900 dark:text-white">{{ socialPublishingEnabled ? 'Schedule' : 'Plan date' }}</h2>
+          <h2 class="font-semibold text-foreground">{{ socialPublishingEnabled ? 'Schedule' : 'Plan date' }}</h2>
         </template>
         <div class="space-y-3">
           <UInput v-model="scheduledAt" type="datetime-local" />
@@ -726,7 +726,7 @@ async function save() {
       </UCard>
 
       <div v-if="selectedAccountDetails.length > 0">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-3">Preview</h2>
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Preview</h2>
         <SocialPostPreview
           :caption="caption"
           :variants="captionVariants"

@@ -380,8 +380,8 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             <div class="flex items-center gap-3">
               <UIcon :name="platformConfig[platform].icon" class="w-9 h-9 shrink-0" />
               <div>
-                <h2 class="font-semibold text-gray-900 dark:text-white">{{ platformConfig[platform].label }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+                <h2 class="font-semibold text-foreground">{{ platformConfig[platform].label }}</h2>
+                <p class="text-sm text-muted-foreground">
                   {{ accountsForPlatform(platform).length }} account{{ accountsForPlatform(platform).length !== 1 ? 's' : '' }} connected
                 </p>
               </div>
@@ -394,13 +394,13 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
 
         <div v-if="accountsForPlatform(platform).length === 0" class="text-center py-8">
           <UIcon :name="platformConfig[platform].icon" class="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p class="text-gray-500 dark:text-gray-400 mb-4">No {{ platformConfig[platform].label }} accounts connected</p>
+          <p class="text-muted-foreground mb-4">No {{ platformConfig[platform].label }} accounts connected</p>
           <UButton :to="platformConfig[platform].connectPath" external variant="soft">
             {{ platformConfig[platform].connectLabel }}
           </UButton>
         </div>
 
-        <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
+        <div v-else class="divide-y divide-border">
           <div v-for="account in accountsForPlatform(platform)" :key="account.id" class="flex items-center gap-4 py-4">
             <div class="relative shrink-0">
               <UAvatar
@@ -412,12 +412,12 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
               <UIcon
                 v-if="account.profile_picture_url"
                 :name="platformConfig[platform].icon"
-                class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-md bg-white dark:bg-gray-800 ring-2 ring-white dark:ring-gray-800"
+                class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-md bg-card ring-2 ring-card"
               />
             </div>
             <div class="flex-1 min-w-0">
-              <p class="font-medium text-gray-900 dark:text-white">{{ account.account_name }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">@{{ account.account_handle }}</p>
+              <p class="font-medium text-foreground">{{ account.account_name }}</p>
+              <p class="text-sm text-muted-foreground">@{{ account.account_handle }}</p>
             </div>
             <USelectMenu
               :model-value="account.client ?? 'house'"
@@ -452,7 +452,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             >
               <button
                 type="button"
-                class="shrink-0 p-1.5 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+                class="shrink-0 p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"
                 aria-label="Account options"
               >
                 <UIcon
@@ -465,7 +465,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         </div>
 
         <template v-if="platformConfig[platform].footerNote" #footer>
-          <div class="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div class="flex items-start gap-2 text-sm text-muted-foreground">
             <UIcon name="i-lucide-info" class="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p>{{ platformConfig[platform].footerNote }}</p>
           </div>
@@ -476,9 +476,9 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
     <section id="setup-guide" class="mt-12 scroll-mt-24">
       <div class="flex items-center gap-2 mb-4">
         <UIcon name="i-lucide-book-open" class="w-5 h-5 text-muted-foreground" />
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Setup Guide</h2>
+        <h2 class="text-lg font-semibold text-foreground">Setup Guide</h2>
       </div>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <p class="text-sm text-muted-foreground mb-6">
         Configure these env vars and OAuth settings on each platform's developer console before connecting an account.
       </p>
 
@@ -493,7 +493,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
           >
             <div class="flex items-center gap-3">
               <UIcon :name="platformConfig[platform].icon" class="w-6 h-6 shrink-0" />
-              <span class="font-medium text-gray-900 dark:text-white">
+              <span class="font-medium text-foreground">
                 {{ platformConfig[platform].label }} setup
               </span>
             </div>
@@ -553,7 +553,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
 
             <div v-if="setupGuides[platform].notes?.length">
               <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Notes</p>
-              <ul class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+              <ul class="list-disc pl-5 space-y-1 text-foreground">
                 <li v-for="(note, i) in setupGuides[platform].notes" :key="i">{{ note }}</li>
               </ul>
             </div>
@@ -576,14 +576,14 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       :subtitle="accountToBackfill?.account_name"
     >
       <div class="space-y-4">
-        <p class="text-gray-600 dark:text-gray-300">
+        <p class="text-muted-foreground">
           Pull daily account-level metrics and insights for up to
           <strong>{{ backfillDays }} days</strong> of history on
           <strong>{{ accountToBackfill?.account_name }}</strong>.
         </p>
 
         <div>
-          <label class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+          <label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
             Days to fetch
           </label>
           <div class="flex gap-2">
@@ -626,7 +626,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       title="Disconnect Account"
       :subtitle="accountToDelete?.account_name"
     >
-      <p class="text-gray-600 dark:text-gray-300">
+      <p class="text-muted-foreground">
         Are you sure you want to disconnect <strong>{{ accountToDelete?.account_name }}</strong>?
         You'll need to reconnect to post to this account again.
       </p>

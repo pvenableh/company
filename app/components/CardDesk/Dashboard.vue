@@ -417,23 +417,23 @@ onMounted(async () => {
 		<CardDeskInstallPromo />
 
 		<!-- XP Bar -->
-		<div v-if="stats.xp.totalXp > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 mb-6">
+		<div v-if="stats.xp.totalXp > 0" class="bg-card rounded-xl p-4 border border-border mb-6">
 			<div class="flex items-center gap-4">
 				<div class="flex items-center gap-2">
 					<span class="text-xl">⚡</span>
-					<span class="text-sm font-bold text-gray-700 dark:text-gray-200">Level {{ stats.xp.level }}</span>
-					<span class="text-xs text-gray-400">{{ stats.xp.levelTitle }}</span>
+					<span class="text-sm font-bold text-foreground">Level {{ stats.xp.level }}</span>
+					<span class="text-xs text-muted-foreground">{{ stats.xp.levelTitle }}</span>
 				</div>
-				<div class="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+				<div class="flex-1 h-3 bg-muted rounded-full overflow-hidden">
 					<div
 						class="h-full bg-gradient-to-r from-[#00ff87] to-[#4da6ff] rounded-full transition-all duration-500"
 						:style="{ width: `${stats.xp.progress}%` }"
 					/>
 				</div>
-				<span class="text-xs text-gray-400 whitespace-nowrap">
+				<span class="text-xs text-muted-foreground whitespace-nowrap">
 					{{ stats.xp.totalXp.toLocaleString() }} / {{ stats.xp.nextLevelXp.toLocaleString() }} XP
 				</span>
-				<div v-if="stats.xp.streak > 0" class="flex items-center gap-1 text-xs text-gray-500 border-l pl-4 ml-2">
+				<div v-if="stats.xp.streak > 0" class="flex items-center gap-1 text-xs text-muted-foreground border-l pl-4 ml-2">
 					<span class="text-warning">🔥</span>
 					<span class="font-medium">{{ stats.xp.streak }}-day streak</span>
 				</div>
@@ -445,7 +445,7 @@ onMounted(async () => {
 		<button
 			v-if="false"
 			type="button"
-			class="w-full flex items-center gap-3 mb-6 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left"
+			class="w-full flex items-center gap-3 mb-6 p-4 rounded-xl border border-border bg-card hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left"
 			@click="jamOpen = true"
 		>
 			<span class="w-11 h-11 rounded-full flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shrink-0">
@@ -453,18 +453,18 @@ onMounted(async () => {
 			</span>
 			<span class="flex-1 min-w-0">
 				<span class="block text-sm font-semibold">Picture Jam</span>
-				<span class="block text-xs text-gray-400">Blast blocks to uncover a contact who's gone quiet — then reconnect.</span>
+				<span class="block text-xs text-muted-foreground">Blast blocks to uncover a contact who's gone quiet — then reconnect.</span>
 			</span>
-			<Icon name="lucide:play" class="size-4 text-gray-400 shrink-0" />
+			<Icon name="lucide:play" class="size-4 text-muted-foreground shrink-0" />
 		</button>
 
 		<!-- Main Content -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 			<!-- Contact List (2/3) -->
 			<div class="lg:col-span-2">
-				<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+				<div class="bg-card rounded-xl border border-border overflow-hidden">
 					<!-- Tabs + Search -->
-					<div class="p-4 border-b border-gray-100 dark:border-gray-700">
+					<div class="p-4 border-b border-border">
 						<UTabs
 							v-model="activeTab"
 							:items="tabItems"
@@ -474,31 +474,31 @@ onMounted(async () => {
 							v-model="searchQuery"
 							type="text"
 							placeholder="Search contacts..."
-							class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50"
+							class="w-full px-3 py-2 text-sm glass-field rounded-lg focus:outline-none"
 						/>
 					</div>
 
 					<!-- Contact Rows -->
 					<div v-if="contactsLoading" class="p-4 space-y-3">
-						<div v-for="n in 5" :key="n" class="h-14 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+						<div v-for="n in 5" :key="n" class="h-14 bg-muted rounded-lg animate-pulse" />
 					</div>
 
-					<div v-else-if="contacts.length === 0" class="p-8 text-center text-gray-400">
+					<div v-else-if="contacts.length === 0" class="p-8 text-center text-muted-foreground">
 						<UIcon name="i-heroicons-identification" class="w-10 h-10 mx-auto mb-2" />
 						<p class="text-sm">No contacts found</p>
 					</div>
 
-					<div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+					<div v-else class="divide-y divide-border">
 						<button
 							v-for="contact in contacts"
 							:key="contact.id"
-							class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+							class="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
 							:class="{ 'bg-blue-50 dark:bg-blue-900/20': selectedContact?.id === contact.id }"
 							@click="openContact(contact)"
 						>
 							<!-- Avatar -->
-							<div class="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-								<span class="text-xs font-medium text-gray-600 dark:text-gray-300">
+							<div class="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+								<span class="text-xs font-medium text-muted-foreground">
 									{{ (contactDisplayName(contact).charAt(0) || '?').toUpperCase() }}
 								</span>
 							</div>
@@ -514,7 +514,7 @@ onMounted(async () => {
 										Client
 									</span>
 								</div>
-								<div class="flex items-center gap-2 text-xs text-gray-400">
+								<div class="flex items-center gap-2 text-xs text-muted-foreground">
 									<span v-if="contact.company" class="truncate">{{ contact.company }}</span>
 									<span v-if="contact.title && contact.company"> · </span>
 									<span v-if="contact.title" class="truncate">{{ contact.title }}</span>
@@ -540,20 +540,20 @@ onMounted(async () => {
 							<span
 								v-if="contact.rating"
 								class="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize flex-shrink-0"
-								:class="ratingColors[contact.rating] || 'bg-gray-100 text-gray-600'"
+								:class="ratingColors[contact.rating] || 'bg-muted text-muted-foreground'"
 							>
 								{{ contact.rating }}
 							</span>
 
 							<!-- Date -->
-							<span class="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
+							<span class="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
 								{{ formatRelative(contact.date_created) }}
 							</span>
 						</button>
 					</div>
 
 					<!-- Pagination -->
-					<div class="flex items-center justify-between p-3 border-t border-gray-100 dark:border-gray-700">
+					<div class="flex items-center justify-between p-3 border-t border-border">
 						<button
 							:disabled="currentPage <= 1"
 							class="text-xs text-primary hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
@@ -561,7 +561,7 @@ onMounted(async () => {
 						>
 							&larr; Previous
 						</button>
-						<span class="text-xs text-gray-400">Page {{ currentPage }}</span>
+						<span class="text-xs text-muted-foreground">Page {{ currentPage }}</span>
 						<button
 							:disabled="contacts.length < 25"
 							class="text-xs text-primary hover:underline disabled:opacity-30 disabled:cursor-not-allowed"
@@ -576,8 +576,8 @@ onMounted(async () => {
 			<!-- Detail Panel (1/3) -->
 			<div>
 				<!-- Contact Detail -->
-				<div v-if="selectedContact" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-					<div class="p-4 border-b border-gray-100 dark:border-gray-700">
+				<div v-if="selectedContact" class="bg-card rounded-xl border border-border overflow-hidden">
+					<div class="p-4 border-b border-border">
 						<div class="flex items-center justify-between mb-3 gap-2">
 							<h3 class="text-sm font-semibold truncate">{{ contactDisplayName(selectedContact) }}</h3>
 							<div class="flex items-center gap-1.5 shrink-0">
@@ -591,13 +591,13 @@ onMounted(async () => {
 									<Icon name="lucide:external-link" class="size-3" />
 									Card Desk
 								</a>
-								<button @click="closeDetail" class="text-gray-400 hover:text-gray-600">
+								<button @click="closeDetail" class="text-muted-foreground hover:text-foreground">
 									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 								</button>
 							</div>
 						</div>
 
-						<div class="space-y-1.5 text-xs text-gray-500">
+						<div class="space-y-1.5 text-xs text-muted-foreground">
 							<div v-if="selectedContact.company" class="flex items-center gap-2">
 								<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.company }}</span>
@@ -620,7 +620,7 @@ onMounted(async () => {
 								<select
 									:value="selectedContact.industry || ''"
 									:disabled="savingPatch"
-									class="max-w-[190px] -my-0.5 cursor-pointer rounded-md border border-border bg-transparent px-1.5 py-0.5 text-xs text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40 dark:text-gray-400"
+									class="max-w-[190px] -my-0.5 cursor-pointer rounded-md glass-field px-1.5 py-0.5 text-xs text-muted-foreground focus:outline-none disabled:opacity-40"
 									@change="changeIndustry(($event.target as HTMLSelectElement).value)"
 								>
 									<option value="">Set industry…</option>
@@ -638,7 +638,7 @@ onMounted(async () => {
 							<span v-if="selectedContact.is_client" class="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">
 								Client since {{ formatDate(selectedContact.client_at) }}
 							</span>
-							<span v-if="selectedContact.hibernated" class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+							<span v-if="selectedContact.hibernated" class="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
 								Hibernated
 							</span>
 						</div>
@@ -665,7 +665,7 @@ onMounted(async () => {
 									type="text"
 									maxlength="80"
 									placeholder="e.g. Sign a small-business design package"
-									class="w-full text-xs rounded-lg border border-border bg-card px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+									class="w-full text-xs rounded-lg glass-field px-2.5 py-2 focus:outline-none"
 									@keyup.enter="saveObjective"
 									@keyup.esc="objectiveEditing = false"
 								>
@@ -707,7 +707,7 @@ onMounted(async () => {
 						<!-- Inline editors: rating + state toggles -->
 						<div class="mt-4 space-y-3">
 							<div>
-								<div class="text-[10px] uppercase font-semibold text-gray-400 mb-1.5 tracking-wider">
+								<div class="text-[10px] uppercase font-semibold text-muted-foreground mb-1.5 tracking-wider">
 									Rating
 								</div>
 								<div class="inline-flex items-center gap-1 rounded-full bg-muted/50 p-1 border border-border">
@@ -755,15 +755,15 @@ onMounted(async () => {
 							</div>
 						</div>
 
-						<p v-if="selectedContact.notes" class="mt-3 text-xs text-gray-500 italic border-t pt-2">
+						<p v-if="selectedContact.notes" class="mt-3 text-xs text-muted-foreground italic border-t pt-2">
 							{{ selectedContact.notes }}
 						</p>
 					</div>
 
 					<!-- Plans & Tasks — CardDesk follow-up plan (read-only), grouped. -->
-					<div v-if="plansLoading || taskGroups.length" class="p-4 border-b border-gray-100 dark:border-gray-700">
+					<div v-if="plansLoading || taskGroups.length" class="p-4 border-b border-border">
 						<div class="flex items-center justify-between mb-3">
-							<h4 class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider flex items-center gap-1.5">
+							<h4 class="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider flex items-center gap-1.5">
 								<UIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
 								Plans &amp; Tasks
 							</h4>
@@ -774,7 +774,7 @@ onMounted(async () => {
 						</div>
 
 						<div v-if="plansLoading" class="space-y-2">
-							<div v-for="n in 2" :key="n" class="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+							<div v-for="n in 2" :key="n" class="h-8 bg-muted rounded animate-pulse" />
 						</div>
 
 						<div v-else class="space-y-4">
@@ -790,13 +790,13 @@ onMounted(async () => {
 										<UIcon
 											:name="t.status === 'done' ? 'i-heroicons-check-circle' : t.status === 'skipped' ? 'i-heroicons-no-symbol' : (taskChannelIcons[t.channel || 'other'] || taskChannelIcons.other)"
 											class="w-3.5 h-3.5 shrink-0 mt-0.5"
-											:class="t.status === 'done' ? 'text-success' : 'text-gray-400'"
+											:class="t.status === 'done' ? 'text-success' : 'text-muted-foreground'"
 										/>
 										<div class="flex-1 min-w-0">
 											<p class="font-medium text-foreground" :class="{ 'line-through': t.status !== 'pending' }">
 												{{ t.title || 'Untitled task' }}
 											</p>
-											<p v-if="t.note" class="text-gray-400 mt-0.5 line-clamp-2">{{ t.note }}</p>
+											<p v-if="t.note" class="text-muted-foreground mt-0.5 line-clamp-2">{{ t.note }}</p>
 										</div>
 										<span
 											v-if="formatTaskDue(t.due_at)"
@@ -814,7 +814,7 @@ onMounted(async () => {
 					<!-- Activity Timeline -->
 					<div class="p-4">
 						<div class="flex items-center justify-between mb-3">
-							<h4 class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">Activity Timeline</h4>
+							<h4 class="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Activity Timeline</h4>
 							<button
 								v-if="!activityFormOpen"
 								type="button"
@@ -846,13 +846,13 @@ onMounted(async () => {
 								v-model="activityForm.label"
 								type="text"
 								placeholder="Short label (e.g. Sent intro email)"
-								class="w-full px-2 py-1.5 text-xs border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+								class="w-full px-2 py-1.5 text-xs glass-field rounded-md focus:outline-none"
 							/>
 							<textarea
 								v-model="activityForm.note"
 								placeholder="Optional note…"
 								rows="2"
-								class="w-full px-2 py-1.5 text-xs border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+								class="w-full px-2 py-1.5 text-xs glass-field rounded-md focus:outline-none resize-none"
 							/>
 							<div class="flex items-center justify-end gap-2">
 								<button
@@ -874,10 +874,10 @@ onMounted(async () => {
 						</div>
 
 						<div v-if="activitiesLoading" class="space-y-2">
-							<div v-for="n in 3" :key="n" class="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+							<div v-for="n in 3" :key="n" class="h-8 bg-muted rounded animate-pulse" />
 						</div>
 
-						<div v-else-if="contactActivities.length === 0" class="text-center py-4 text-xs text-gray-400">
+						<div v-else-if="contactActivities.length === 0" class="text-center py-4 text-xs text-muted-foreground">
 							No activities recorded
 						</div>
 
@@ -888,22 +888,22 @@ onMounted(async () => {
 								class="flex gap-2.5 text-xs"
 							>
 								<div class="flex flex-col items-center">
-									<div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+									<div class="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
 										<Icon
 											:name="activityIcon(act.type)"
-											class="size-3.5 text-gray-500"
+											class="size-3.5 text-muted-foreground"
 										/>
 									</div>
-									<div class="w-px flex-1 bg-gray-200 dark:bg-gray-600 mt-1" />
+									<div class="w-px flex-1 bg-border mt-1" />
 								</div>
 								<div class="pb-3 flex-1 min-w-0">
 									<div class="flex items-center gap-2">
 										<span class="font-medium capitalize">{{ act.type }}</span>
 										<span v-if="act.is_response" class="text-[9px] bg-success/10 text-success px-1 rounded">replied</span>
-										<span class="text-gray-400 ml-auto whitespace-nowrap">{{ formatDate(act.date) }}</span>
+										<span class="text-muted-foreground ml-auto whitespace-nowrap">{{ formatDate(act.date) }}</span>
 									</div>
-									<p v-if="act.label" class="text-gray-500 mt-0.5">{{ act.label }}</p>
-									<p v-if="act.note" class="text-gray-400 mt-0.5 italic">{{ act.note }}</p>
+									<p v-if="act.label" class="text-muted-foreground mt-0.5">{{ act.label }}</p>
+									<p v-if="act.note" class="text-muted-foreground mt-0.5 italic">{{ act.note }}</p>
 									<p v-if="act.is_response && act.response_note" class="text-success dark:text-success mt-0.5">
 										↩ {{ act.response_note }}
 									</p>
@@ -917,7 +917,7 @@ onMounted(async () => {
 				     actionable follow-up list, then the conversion metric, then activity. -->
 				<div v-else class="space-y-4">
 					<!-- Needs Follow-up — the "who to reconnect with" list leads the panel. -->
-					<div v-if="stats.needsFollowUp.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+					<div v-if="stats.needsFollowUp.length > 0" class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
 							<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
 							Needs Follow-up
@@ -926,7 +926,7 @@ onMounted(async () => {
 							<button
 								v-for="contact in stats.needsFollowUp.slice(0, 6)"
 								:key="contact.id"
-								class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+								class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
 								@click="openContact(contact)"
 							>
 								<div class="flex items-center gap-2 min-w-0">
@@ -936,33 +936,33 @@ onMounted(async () => {
 									/>
 									<span class="text-xs font-medium truncate">{{ contact.name }}</span>
 								</div>
-								<span class="text-[10px] text-gray-400 whitespace-nowrap ml-2">{{ contact.daysSinceContact }}d ago</span>
+								<span class="text-[10px] text-muted-foreground whitespace-nowrap ml-2">{{ contact.daysSinceContact }}d ago</span>
 							</button>
 						</div>
 					</div>
 
 					<!-- Conversion Stats -->
-					<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+					<div class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
 							<UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-success" />
 							Conversion Tracking
 						</h3>
 						<div class="space-y-3">
 							<div class="flex items-center justify-between">
-								<span class="text-xs text-gray-500">Cards → Contacts</span>
+								<span class="text-xs text-muted-foreground">Cards → Contacts</span>
 								<span class="text-sm font-bold">{{ stats.totalContacts }}</span>
 							</div>
 							<div class="flex items-center justify-between">
-								<span class="text-xs text-gray-500">Contacts → Clients</span>
+								<span class="text-xs text-muted-foreground">Contacts → Clients</span>
 								<span class="text-sm font-bold text-success">{{ stats.convertedClients }}</span>
 							</div>
 							<div v-if="stats.totalContacts > 0" class="flex items-center justify-between">
-								<span class="text-xs text-gray-500">Conversion Rate</span>
+								<span class="text-xs text-muted-foreground">Conversion Rate</span>
 								<span class="text-sm font-bold text-success">
 									{{ Math.round((stats.convertedClients / stats.totalContacts) * 100) }}%
 								</span>
 							</div>
-							<div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
+							<div class="h-2 bg-muted rounded-full overflow-hidden mt-2">
 								<div
 									class="h-full bg-success rounded-full transition-all"
 									:style="{ width: stats.totalContacts > 0 ? `${Math.round((stats.convertedClients / stats.totalContacts) * 100)}%` : '0%' }"
@@ -972,7 +972,7 @@ onMounted(async () => {
 					</div>
 
 					<!-- Recent Activity -->
-					<div v-if="stats.recentActivity.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+					<div v-if="stats.recentActivity.length > 0" class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
 							<UIcon name="i-heroicons-clock" class="w-4 h-4 text-blue-500" />
 							Recent Activity
@@ -981,14 +981,14 @@ onMounted(async () => {
 							<div
 								v-for="act in stats.recentActivity.slice(0, 5)"
 								:key="act.id"
-								class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+								class="flex items-center gap-2 text-xs text-muted-foreground"
 							>
 								<Icon :name="activityIcon(act.type)" class="size-3.5 shrink-0" />
 								<span class="truncate">
 									{{ act.type }}{{ act.contactName ? ` with ${act.contactName}` : '' }}
 								</span>
 								<span v-if="act.isResponse" class="text-[9px] bg-success/10 text-success px-1 rounded">replied</span>
-								<span class="text-[10px] text-gray-400 ml-auto whitespace-nowrap">{{ formatRelative(act.date) }}</span>
+								<span class="text-[10px] text-muted-foreground ml-auto whitespace-nowrap">{{ formatRelative(act.date) }}</span>
 							</div>
 						</div>
 					</div>

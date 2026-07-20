@@ -93,16 +93,16 @@ function goToDemo() {
 			<div class="flex items-center gap-3 mb-5">
 				<div
 					class="w-10 h-10 rounded-xl flex items-center justify-center"
-					:class="hasOwnWorkspace ? 'bg-gray-100' : 'bg-info/10'"
+					:class="hasOwnWorkspace ? 'bg-muted' : 'bg-info/10'"
 				>
-					<Building2 v-if="hasOwnWorkspace" class="size-5 text-gray-500" />
+					<Building2 v-if="hasOwnWorkspace" class="size-5 text-muted-foreground" />
 					<Sparkles v-else class="size-5 text-[var(--cyan)]" />
 				</div>
 				<div>
-					<h2 class="text-lg font-semibold text-gray-900">
+					<h2 class="text-lg font-semibold text-foreground">
 						{{ hasMultiple ? 'Switch Organization' : 'Run your business on Earnest' }}
 					</h2>
-					<p class="text-sm text-gray-500">
+					<p class="text-sm text-muted-foreground">
 						<template v-if="hasMultiple">Pick which workspace to use.</template>
 						<template v-else>A workspace built for studios, agencies, and operators.</template>
 					</p>
@@ -121,7 +121,7 @@ function goToDemo() {
 					:class="[
 						selectedOrg === org.id
 							? 'border-[var(--cyan)] bg-info/10'
-							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+							: 'border-border hover:border-foreground/20 hover:bg-muted',
 					]"
 					@click="handleSelectOrg(org.id)"
 					@keydown.enter.prevent="handleSelectOrg(org.id)"
@@ -135,11 +135,11 @@ function goToDemo() {
 					</Avatar>
 
 					<div class="flex-1 text-left min-w-0">
-						<p class="text-sm font-medium text-gray-900 truncate">{{ org.name }}</p>
+						<p class="text-sm font-medium text-foreground truncate">{{ org.name }}</p>
 						<div class="flex items-center gap-1.5 mt-1 flex-wrap">
 							<span
 								v-if="roleLabel(org)"
-								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground bg-muted px-1.5 py-0.5 rounded"
 							>
 								<UserCog class="size-3" />
 								{{ roleLabel(org) }}
@@ -167,14 +167,14 @@ function goToDemo() {
 			<!-- Upsell — only when the user doesn't already have their own
 			     workspace. Pitches "be like {activeOrg} and run your own". -->
 			<template v-if="!hasOwnWorkspace">
-				<div class="rounded-xl border border-gray-200 bg-gray-50/50 p-4 mb-3">
+				<div class="rounded-xl border border-border bg-muted/50 p-4 mb-3">
 					<div class="flex items-center gap-2 mb-2">
-						<Building2 class="size-4 text-gray-400" />
-						<span class="text-xs uppercase tracking-wider text-gray-500 font-medium">
+						<Building2 class="size-4 text-muted-foreground" />
+						<span class="text-xs uppercase tracking-wider text-muted-foreground font-medium">
 							{{ activeOrgName || 'This team' }} is using Earnest
 						</span>
 					</div>
-					<p class="text-sm text-gray-700 leading-relaxed">
+					<p class="text-sm text-foreground leading-relaxed">
 						You can be like {{ activeOrgName || 'them' }} — sign up for your own Earnest
 						workspace and run your business with the same tools: projects, tickets,
 						invoices, contracts, marketing, and more.
@@ -190,39 +190,39 @@ function goToDemo() {
 				</button>
 
 				<button
-					class="w-full mt-2 flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 hover:border-[var(--cyan)] hover:bg-info/10 transition-colors group"
+					class="w-full mt-2 flex items-center justify-between gap-3 p-3 rounded-xl border border-border hover:border-[var(--cyan)] hover:bg-info/10 transition-colors group"
 					@click="goToDemo"
 				>
 					<div class="flex items-center gap-2">
-						<PlayCircle class="size-4 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
+						<PlayCircle class="size-4 text-muted-foreground group-hover:text-[var(--cyan)] transition-colors" />
 						<div class="text-left">
-							<div class="text-sm font-medium text-gray-700">Try a live demo first</div>
-							<div class="text-[11px] text-gray-400">Solo or agency workspace, pre-loaded with sample data</div>
+							<div class="text-sm font-medium text-foreground">Try a live demo first</div>
+							<div class="text-[11px] text-muted-foreground">Solo or agency workspace, pre-loaded with sample data</div>
 						</div>
 					</div>
-					<ArrowRight class="size-4 text-gray-400 shrink-0 group-hover:text-[var(--cyan)] group-hover:translate-x-0.5 transition-all" />
+					<ArrowRight class="size-4 text-muted-foreground shrink-0 group-hover:text-[var(--cyan)] group-hover:translate-x-0.5 transition-all" />
 				</button>
 			</template>
 
 			<!-- Has own workspace already — replace the upsell with a discreet
 			     "Register new organization" footer that mirrors OrgSwitcher. -->
-			<div v-else class="border-t border-gray-200 pt-4">
+			<div v-else class="border-t border-border pt-4">
 				<button
-					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
+					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-border hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
 					@click="goToSignup"
 				>
-					<div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
-						<Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
+					<div class="w-10 h-10 rounded-full bg-muted group-hover:bg-info/10 flex items-center justify-center transition-colors">
+						<Plus class="size-5 text-muted-foreground group-hover:text-[var(--cyan)] transition-colors" />
 					</div>
 					<div class="text-left">
-						<p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Register New Organization</p>
-						<p class="text-xs text-gray-400">Requires a new subscription</p>
+						<p class="text-sm font-medium text-foreground">Register New Organization</p>
+						<p class="text-xs text-muted-foreground">Requires a new subscription</p>
 					</div>
 				</button>
 			</div>
 
 			<button
-				class="w-full mt-2 p-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+				class="w-full mt-2 p-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
 				@click="isOpen = false"
 			>
 				Close

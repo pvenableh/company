@@ -75,12 +75,12 @@ const handleRegisterOrg = () => {
 	<UModal v-model="isOpen" :ui="{ width: 'max-w-md' }">
 		<div class="p-6">
 			<div class="flex items-center gap-3 mb-6">
-				<div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-					<Building2 class="size-5 text-gray-500" />
+				<div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+					<Building2 class="size-5 text-muted-foreground" />
 				</div>
 				<div>
-					<h2 class="text-lg font-semibold text-gray-900">Switch Organization</h2>
-					<p class="text-sm text-gray-500">Select which organization to work in</p>
+					<h2 class="text-lg font-semibold text-foreground">Switch Organization</h2>
+					<p class="text-sm text-muted-foreground">Select which organization to work in</p>
 				</div>
 			</div>
 
@@ -95,7 +95,7 @@ const handleRegisterOrg = () => {
 					:class="[
 						selectedOrg === org.id
 							? 'border-[var(--cyan)] bg-info/10'
-							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+							: 'border-border hover:border-foreground/20 hover:bg-muted',
 						org.archived_at && 'opacity-70',
 					]"
 					@click="handleSelectOrg(org.id)"
@@ -110,7 +110,7 @@ const handleRegisterOrg = () => {
 					</Avatar>
 
 					<div class="flex-1 text-left min-w-0">
-						<p class="text-sm font-medium text-gray-900 truncate flex items-center gap-1.5">
+						<p class="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
 							{{ org.name }}
 							<span
 								v-if="org.archived_at"
@@ -124,7 +124,7 @@ const handleRegisterOrg = () => {
 							<!-- Role badges: shows context the user enters this org with -->
 							<span
 								v-if="roleLabel(org)"
-								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground bg-muted px-1.5 py-0.5 rounded"
 							>
 								<UserCog class="size-3" />
 								{{ roleLabel(org) }}
@@ -136,10 +136,10 @@ const handleRegisterOrg = () => {
 								<ExternalLink class="size-3" />
 								Client Portal
 							</span>
-							<span v-if="org.ticketsCount > 0" class="text-[10px] text-gray-400">
+							<span v-if="org.ticketsCount > 0" class="text-[10px] text-muted-foreground">
 								{{ org.ticketsCount }} ticket{{ org.ticketsCount !== 1 ? 's' : '' }}
 							</span>
-							<span v-if="org.projectsCount > 0" class="text-[10px] text-gray-400">
+							<span v-if="org.projectsCount > 0" class="text-[10px] text-muted-foreground">
 								{{ org.projectsCount }} project{{ org.projectsCount !== 1 ? 's' : '' }}
 							</span>
 							<span v-if="org.plan" class="text-[10px] text-[var(--cyan)] uppercase">
@@ -150,11 +150,11 @@ const handleRegisterOrg = () => {
 
 					<NuxtLink
 						:to="`/organization`"
-						class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+						class="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
 						title="Organization settings"
 						@click.stop="isOpen = false; setOrganization(org.id)"
 					>
-						<Settings class="size-4 text-gray-400 hover:text-gray-600" />
+						<Settings class="size-4 text-muted-foreground hover:text-foreground" />
 					</NuxtLink>
 					<Check
 						v-if="selectedOrg === org.id"
@@ -162,18 +162,18 @@ const handleRegisterOrg = () => {
 					/>
 				</div>
 
-				<p v-if="visibleOrganizations.length === 0" class="text-center text-xs text-gray-400 py-4">
+				<p v-if="visibleOrganizations.length === 0" class="text-center text-xs text-muted-foreground py-4">
 					{{ hasArchivedOrgs ? 'All organizations are archived. Toggle below to view.' : 'No organizations.' }}
 				</p>
 			</div>
 
 			<!-- Show-archived toggle (only when archived orgs exist) -->
 			<div v-if="hasArchivedOrgs" class="mb-4 px-1">
-				<label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+				<label class="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
 					<input
 						v-model="showArchived"
 						type="checkbox"
-						class="rounded border-gray-300 text-[var(--cyan)] focus:ring-[var(--cyan)]"
+						class="rounded border-border text-[var(--cyan)] focus:ring-[var(--cyan)]"
 					/>
 					<span class="flex items-center gap-1">
 						<Archive class="size-3" />
@@ -183,17 +183,17 @@ const handleRegisterOrg = () => {
 			</div>
 
 			<!-- Register new organization -->
-			<div class="border-t border-gray-200 pt-4">
+			<div class="border-t border-border pt-4">
 				<button
-					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
+					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-border hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
 					@click="handleRegisterOrg"
 				>
-					<div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
-						<Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
+					<div class="w-10 h-10 rounded-full bg-muted group-hover:bg-info/10 flex items-center justify-center transition-colors">
+						<Plus class="size-5 text-muted-foreground group-hover:text-[var(--cyan)] transition-colors" />
 					</div>
 					<div class="text-left">
-						<p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Register New Organization</p>
-						<p class="text-xs text-gray-400">Requires a new subscription</p>
+						<p class="text-sm font-medium text-foreground">Register New Organization</p>
+						<p class="text-xs text-muted-foreground">Requires a new subscription</p>
 					</div>
 				</button>
 			</div>
