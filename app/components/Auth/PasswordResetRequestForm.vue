@@ -80,8 +80,8 @@ const onSubmit = handleSubmit(async (values) => {
                 type="email"
                 placeholder="you@example.com"
                 v-bind="field"
-                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-                :class="errors.length ? 'border-destructive/30' : 'border-border'"
+                class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none transition-shadow"
+                :aria-invalid="errors.length > 0"
               />
               <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
             </div>

@@ -132,12 +132,12 @@ const onSubmit = handleSubmit(async (values) => {
   });
 });
 
-const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow";
+const inputClass = "w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none transition-shadow";
 </script>
 
 <template>
   <div :class="cn('flex flex-col gap-6 w-full max-w-md', props.class)">
-    <div class="glass rounded-2xl border border-white/40 shadow-lg backdrop-blur-xl p-8">
+    <div class="glass-surface glass-surface--strong rounded-2xl p-8">
       <!-- Header -->
       <div class="text-center mb-6">
         <h3 class="text-xl font-semibold">Create an account</h3>
@@ -154,9 +154,10 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
                 id="firstName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+                :class="inputClass"
+                :aria-invalid="errors.length > 0"
               />
-              <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+              <UiFieldMessage :message="errors[0]" />
             </div>
           </VeeField>
 
@@ -167,9 +168,10 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
                 id="lastName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+                :class="inputClass"
+                :aria-invalid="errors.length > 0"
               />
-              <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+              <UiFieldMessage :message="errors[0]" />
             </div>
           </VeeField>
         </div>
@@ -182,9 +184,10 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
               type="email"
               placeholder="you@example.com"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+              :class="inputClass"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" />
           </div>
         </VeeField>
 
@@ -196,10 +199,13 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
               type="text"
               placeholder="Your company or team name"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+              :class="inputClass"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
-            <p v-else class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
+            <UiFieldMessage :message="errors[0]" />
+            <!-- Was `v-else` paired with the old inline error <p>; UiFieldMessage
+                 replaced that sibling, so this needs its own condition. -->
+            <p v-if="!errors.length" class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
           </div>
         </VeeField>
 
@@ -210,9 +216,10 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
               id="reg-password"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+              :class="inputClass"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" />
 
             <template v-if="showPasswordRequirements">
               <div class="mt-1.5 space-y-0.5">
@@ -238,9 +245,10 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
               id="confirmPassword"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
+              :class="inputClass"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" />
           </div>
         </VeeField>
 
@@ -260,7 +268,7 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
                 <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>.
               </span>
             </label>
-            <p v-if="errors.length" class="text-xs text-destructive ml-6">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" class="ml-6" />
           </div>
         </VeeField>
 
@@ -281,7 +289,7 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
                 <span class="w-full border-t border-border/50" />
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="bg-white/80 dark:bg-card/80 px-3 text-muted-foreground rounded">or</span>
+                <span class="bg-card/80 px-3 text-muted-foreground rounded">or</span>
               </div>
             </div>
 
@@ -296,7 +304,7 @@ const inputClass = "w-full rounded-full border bg-background px-3 py-2.5 text-sm
             <button
               type="button"
               :disabled="isGoogleRegistering || isSubmitting"
-              class="w-full flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors disabled:opacity-40"
+              class="w-full flex items-center justify-center gap-2 rounded-full glass-field px-4 py-2.5 text-sm font-medium hover:bg-muted/60 transition-colors disabled:opacity-40"
               @click="registerWithGoogle"
             >
               <Loader2 v-if="isGoogleRegistering" class="h-4 w-4 animate-spin" />

@@ -107,8 +107,8 @@ const onSubmit = handleSubmit(async (values) => {
                   id="password"
                   type="password"
                   v-bind="field"
-                  class="flex h-10 w-full rounded-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  :class="{ 'border-destructive': errors.length }"
+                  class="flex h-10 w-full rounded-full glass-field px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  :aria-invalid="errors.length > 0"
                 />
                 <p v-if="errors.length" class="text-sm text-destructive">
                   {{ errors[0] }}
@@ -143,8 +143,8 @@ const onSubmit = handleSubmit(async (values) => {
                   id="confirmPassword"
                   type="password"
                   v-bind="field"
-                  class="flex h-10 w-full rounded-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  :class="{ 'border-destructive': errors.length }"
+                  class="flex h-10 w-full rounded-full glass-field px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  :aria-invalid="errors.length > 0"
                 />
                 <p v-if="errors.length" class="text-sm text-destructive">
                   {{ errors[0] }}

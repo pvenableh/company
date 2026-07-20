@@ -88,7 +88,7 @@ const onSubmit = handleSubmit(async (values) => {
 
 <template>
   <div :class="cn('flex flex-col gap-6 w-full max-w-sm', props.class)">
-    <div class="glass rounded-2xl border border-white/40 shadow-lg backdrop-blur-xl p-8">
+    <div class="glass-surface glass-surface--strong rounded-2xl p-8">
       <!-- Header -->
       <div class="text-center mb-6">
         <h3 class="text-xl font-semibold">Welcome back</h3>
@@ -123,10 +123,10 @@ const onSubmit = handleSubmit(async (values) => {
               placeholder="you@example.com"
               v-bind="field"
               @input="clearFormError"
-              class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-              :class="errors.length ? 'border-destructive/30' : 'border-border'"
+              class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none transition-shadow"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" />
           </div>
         </VeeField>
 
@@ -147,10 +147,10 @@ const onSubmit = handleSubmit(async (values) => {
               type="password"
               v-bind="field"
               @input="clearFormError"
-              class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-              :class="errors.length ? 'border-destructive/30' : 'border-border'"
+              class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none transition-shadow"
+              :aria-invalid="errors.length > 0"
             />
-            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
+            <UiFieldMessage :message="errors[0]" />
           </div>
         </VeeField>
 
@@ -171,14 +171,14 @@ const onSubmit = handleSubmit(async (values) => {
                 <span class="w-full border-t border-border/50" />
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="bg-white/80 dark:bg-card/80 px-3 text-muted-foreground rounded">or</span>
+                <span class="bg-card/80 px-3 text-muted-foreground rounded">or</span>
               </div>
             </div>
 
             <div :class="ssoProviders.apple ? 'grid grid-cols-2 gap-2' : ''">
               <a
                 :href="ssoProviders.google"
-                class="flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
+                class="flex items-center justify-center gap-2 rounded-full glass-field px-4 py-2.5 text-sm font-medium hover:bg-muted/60 transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -191,7 +191,7 @@ const onSubmit = handleSubmit(async (values) => {
               <a
                 v-if="ssoProviders.apple"
                 :href="ssoProviders.apple"
-                class="flex items-center justify-center gap-2 rounded-full border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
+                class="flex items-center justify-center gap-2 rounded-full glass-field px-4 py-2.5 text-sm font-medium hover:bg-muted/60 transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>

@@ -31,20 +31,12 @@
 @reference "~/assets/css/tailwind.css";
 
 .auth-layout {
-	--background: 0 0% 100%;
-	--foreground: 0 0% 9%;
-	--card: 0 0% 100%;
-	--card-foreground: 0 0% 9%;
-	--primary: 0 0% 9%;
-	--primary-foreground: 0 0% 98%;
-	--secondary: 0 0% 96%;
-	--secondary-foreground: 0 0% 9%;
-	--muted: 0 0% 96%;
-	--muted-foreground: 0 0% 45%;
-	--accent: 0 0% 96%;
-	--accent-foreground: 0 0% 9%;
-	--border: 0 0% 90%;
-	--input: 0 0% 90%;
+	/* Previously this layout re-declared the ENTIRE token set (and a second
+	   neutral-grey `:is(.dark)` copy), so the sign-in screen was a private
+	   theme that drifted from the app the moment the real tokens changed —
+	   which is exactly what happened when dark mode moved onto the aura
+	   ground. It now inherits themes.css like every other surface; only the
+	   teal focus ring is genuinely auth-specific. */
 	--ring: 180 50% 50%;
 
 	position: relative;
@@ -55,23 +47,6 @@
 	color: hsl(var(--foreground));
 	-webkit-font-smoothing: antialiased;
 	overflow: hidden;
-}
-
-:is(.dark) .auth-layout {
-	--background: 0 0% 5%;
-	--foreground: 0 0% 93%;
-	--card: 0 0% 8%;
-	--card-foreground: 0 0% 93%;
-	--primary: 0 0% 93%;
-	--primary-foreground: 0 0% 5%;
-	--secondary: 0 0% 12%;
-	--secondary-foreground: 0 0% 93%;
-	--muted: 0 0% 15%;
-	--muted-foreground: 0 0% 55%;
-	--accent: 0 0% 15%;
-	--accent-foreground: 0 0% 93%;
-	--border: 0 0% 18%;
-	--input: 0 0% 18%;
 }
 
 .auth-content {
