@@ -59,6 +59,10 @@ const { transition: pageTransition } = useDirectionalPageTransition();
 	<NuxtLoadingIndicator
 		color="linear-gradient(to right, #000000 0%, hsl(191, 100%, 50%) 100%)"
 	/>
+	<!-- Toast status is a LEFT ACCENT BAR (`!border-l-4 !border-l-*`), not a
+	     full border: `.glass-surface` now sets `border: 0`, so the old
+	     `!border-*/40` coloured a zero-width edge and every toast looked
+	     identical. `border-l-4`'s `!important` re-adds width on one side. -->
 	<Toaster
 		position="bottom-center"
 		:toast-options="{
@@ -69,10 +73,10 @@ const { transition: pageTransition } = useDirectionalPageTransition();
 				actionButton: 'bg-primary text-primary-foreground rounded-lg',
 				cancelButton: 'bg-muted text-muted-foreground rounded-lg',
 				closeButton: 'glass-surface text-foreground',
-				success: '!border-success/40',
-				error: '!border-destructive/40',
-				warning: '!border-warning/40',
-				info: '!border-blue-500/40',
+				success: '!border-l-4 !border-l-success',
+				error: '!border-l-4 !border-l-destructive',
+				warning: '!border-l-4 !border-l-warning',
+				info: '!border-l-4 !border-l-info',
 			},
 		}"
 		rich-colors

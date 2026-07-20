@@ -62,13 +62,16 @@ const sizeClasses = computed(() => {
 
 const textareaClasses = computed(() =>
   cn(
-    "flex w-full rounded-2xl border border-input bg-background text-foreground",
-    "ring-offset-background placeholder:text-muted-foreground",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    // Shared glass material; textareas keep rounded-2xl per the pill
+    // convention. See UInput for why the border + ring utilities are dropped.
+    "flex w-full rounded-2xl text-foreground",
+    props.variant !== "none" && "glass-field",
+    "placeholder:text-muted-foreground",
+    "focus-visible:outline-none",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "resize-y",
     sizeClasses.value,
-    props.variant === "none" && "border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+    props.variant === "none" && "border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
     props.autoresize && "resize-none overflow-hidden",
     props.class,
     props.ui?.base

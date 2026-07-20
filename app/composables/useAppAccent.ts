@@ -840,6 +840,13 @@ export function applyPaletteToDocument(paletteId: AppPaletteId): void {
 		set(`--app-${id}-icon`, formatIconColor(a));
 	}
 
+	// 3b. Publish the palette id so CSS can scope to it. The liquid-glass
+	//     system needs this: Mono is achromatic by intent, so it neutralises
+	//     `--aura-ground` and the accent focus ring in themes.css. Only
+	//     genuinely palette-dependent MATERIAL belongs behind this attribute
+	//     — per-token colour still flows through the inline vars above.
+	root.setAttribute('data-palette', paletteId);
+
 	// 4. Chrome attribute drives AppRail's chip-mode CSS branch.
 	const chrome = palette.chrome ?? { chipMode: 'palette' };
 	root.setAttribute('data-chip-mode', chrome.chipMode);

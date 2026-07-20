@@ -55,8 +55,7 @@
 				<UCard
 					v-for="team in displayTeams"
 					:key="team.id"
-					class="border-2"
-					:ui="{ border: { color: selectedTeam === team.id ? 'primary' : 'gray-200' } }"
+					:class="selectedTeam === team.id ? 'ring-2 ring-primary' : ''"
 				>
 					<template #header>
 						<div class="flex items-center justify-between">

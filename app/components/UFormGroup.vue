@@ -55,6 +55,26 @@ const resolvedError = computed(() => {
 
 const hasError = computed(() => !!props.error || !!(props.name && formErrors.value[props.name]))
 
+// Propagate the error state to the slotted control as `aria-invalid`. The
+// control lives in the default slot, so we can't bind the attribute directly
+// — instead we find the first form control in the container and set it
+// reactively. This is what makes the field itself react to an error (the
+// destructive ring on `.glass-field[aria-invalid='true']`, plus screen-reader
+// announcement), where before only the label + message text changed. We only
+// TOGGLE the attribute when we own the error state, so a consumer that already
+// manages its own `aria-invalid` is left alone when there's no error.
+const controlContainer = ref<HTMLElement | null>(null)
+watchEffect(() => {
+  const el = controlContainer.value
+  if (!el) return
+  const control = el.querySelector<HTMLElement>(
+    'input, select, textarea, [role="combobox"], [contenteditable="true"]',
+  )
+  if (!control) return
+  if (hasError.value) control.setAttribute('aria-invalid', 'true')
+  else if (control.getAttribute('aria-invalid') === 'true') control.removeAttribute('aria-invalid')
+})
+
 const labelSizeClasses = computed(() => {
   const sizes: Record<string, string> = {
     xs: 'text-xs',
@@ -98,7 +118,7 @@ const labelSizeClasses = computed(() => {
     </p>
 
     <!-- Input Container -->
-    <div :class="props.ui?.container">
+    <div ref="controlContainer" :class="props.ui?.container">
       <slot />
     </div>
 

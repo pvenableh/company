@@ -23,6 +23,12 @@ const modelValue = useVModel(props, "modelValue", emits, {
   <textarea
     v-model="modelValue"
     data-slot="textarea"
-    :class="cn('border-input placeholder:text-muted-foreground focus-visible:border-[hsl(var(--app-accent-h,220)_80%_55%/0.7)] focus-visible:shadow-[0_0_0_3px_hsl(var(--app-accent-h,220)_80%_55%/0.18)] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-2xl border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow,border-color] outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm', props.class)"
+    :class="cn(
+      'placeholder:text-muted-foreground flex field-sizing-content min-h-16 w-full rounded-2xl px-3 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+      // Same glass material as Input; textareas keep the rounded-2xl shape
+      // per the pill convention (only inputs/selects go rounded-full).
+      'glass-field',
+      props.class,
+    )"
   />
 </template>

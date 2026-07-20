@@ -78,14 +78,21 @@ const hasTrailingIcon = computed(() => props.trailingIcon || props.loading);
 
 const inputClasses = computed(() =>
   cn(
-    "flex w-full rounded-full border border-input bg-background text-foreground",
-    "ring-offset-background placeholder:text-muted-foreground",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    "flex w-full rounded-full text-foreground",
+    // Shared liquid-glass material + refracted rim. Was `border border-input
+    // bg-background` + a Tailwind `focus-visible:ring-2` — the ring/border are
+    // now the rim + accent focus from `.glass-field`, whose own unlayered
+    // :focus-visible rule beats any utility ring, so drop those utilities.
+    // `variant: 'none'` opts OUT of the material for inputs embedded in other
+    // chrome (search boxes inside a styled shell).
+    props.variant !== "none" && "glass-field",
+    "placeholder:text-muted-foreground",
+    "focus-visible:outline-none",
     "disabled:cursor-not-allowed disabled:opacity-50",
     sizeClasses.value,
     hasLeadingIcon.value && "pl-9",
     hasTrailingIcon.value && "pr-9",
-    props.variant === "none" && "border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+    props.variant === "none" && "border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
     props.inputClass,
     props.ui?.base
   )
