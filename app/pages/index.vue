@@ -11,7 +11,7 @@ const config = useRuntimeConfig();
 // when navigating here.
 
 // ── Productivity Engine (existing) ──
-const { suggestions, metrics, isAnalyzing, greeting, subtitle, primeGreeting, analyze, loadModule } = useAIProductivityEngine();
+const { suggestions, metrics, isAnalyzing, greeting, subtitle, greetingSource, primeGreeting, analyze, loadModule } = useAIProductivityEngine();
 
 // Typed-in greeting. The heading slot is height-reserved in the template, so
 // nothing shifts when this advances. We only animate once per "value change"
@@ -493,6 +493,8 @@ const goTo = (route: string) => {
 					:subtitle="subtitle"
 					:read="feedSynthesis"
 					:top-action="presenceTopAction"
+					:analyzing="isAnalyzing"
+					:greeting-source="greetingSource"
 					@open-top="onPresenceOpenTop"
 					@reveal="revealCommandCenter"
 				/>

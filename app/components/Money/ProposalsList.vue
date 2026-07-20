@@ -184,6 +184,12 @@ function openPanel(id: string, ev?: MouseEvent) {
 			<p class="text-xs text-muted-foreground">
 				{{ search || statusFilter ? 'No proposals match your filters.' : 'No proposals yet.' }}
 			</p>
+			<NuxtLink v-if="!search && !statusFilter" to="/proposals/draft" class="mt-1">
+				<button class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm transition-colors">
+					<Icon name="lucide:sparkles" class="w-3 h-3" />
+					Draft with Earnest
+				</button>
+			</NuxtLink>
 		</div>
 
 		<!-- List -->

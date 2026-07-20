@@ -95,6 +95,15 @@ export const useAIProductivityEngine = () => {
 	const isAnalyzing = ref(false);
 	const greeting = ref('');
 	const subtitle = ref("Here's what needs your attention");
+	/**
+	 * Which greeting is currently on screen:
+	 *   'none'  — nothing yet
+	 *   'local' — the instant deterministic greeting (time/name/persona)
+	 *   'ai'    — the personalized LLM greeting has landed
+	 * Surfaces use this to hold a "Thinking…" placeholder for the smart
+	 * greeting instead of showing the basic one and swapping it later.
+	 */
+	const greetingSource = ref<'none' | 'local' | 'ai'>('none');
 
 	const ticketItems = useDirectusItems('tickets');
 	const invoiceItems = useDirectusItems('invoices');
@@ -225,6 +234,7 @@ export const useAIProductivityEngine = () => {
 		if (import.meta.server) return;
 		if (!greeting.value) greeting.value = getGreeting();
 		if (!subtitle.value) subtitle.value = getSubtitle();
+		if (greetingSource.value === 'none') greetingSource.value = 'local';
 	};
 
 	// Fetch AI-generated greeting if personalizations are enabled
@@ -247,6 +257,7 @@ export const useAIProductivityEngine = () => {
 
 			if (result?.greeting) {
 				greeting.value = result.greeting;
+				greetingSource.value = 'ai';
 			}
 			if (result?.subtitle) {
 				subtitle.value = result.subtitle;
@@ -1702,14 +1713,21 @@ export const useAIProductivityEngine = () => {
 	const analyze = async (enabledModules?: Set<string>) => {
 		// Don't make any API calls without active authentication
 		if (!user.value) {
-			greeting.value = getGreeting();
-			subtitle.value = getSubtitle();
+			// Never clobber a personalized greeting that already landed.
+			if (greetingSource.value !== 'ai') {
+				greeting.value = getGreeting();
+				subtitle.value = getSubtitle();
+				if (greetingSource.value === 'none') greetingSource.value = 'local';
+			}
 			return;
 		}
 
 		isAnalyzing.value = true;
-		greeting.value = getGreeting();
-		subtitle.value = getSubtitle();
+		if (greetingSource.value !== 'ai') {
+			greeting.value = getGreeting();
+			subtitle.value = getSubtitle();
+			if (greetingSource.value === 'none') greetingSource.value = 'local';
+		}
 
 		// Default: all modules enabled. Tickets is force-included so the
 		// `metrics.value.overdueItems` / `tasksCompletedToday` side-effects
@@ -1754,6 +1772,7 @@ export const useAIProductivityEngine = () => {
 		isAnalyzing: readonly(isAnalyzing),
 		greeting,
 		subtitle,
+		greetingSource: readonly(greetingSource),
 		primeGreeting,
 		analyze,
 		loadModule,

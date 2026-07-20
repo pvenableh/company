@@ -220,7 +220,7 @@ function applyMonoPalette(hue: number) {
   --radius: 0.75rem;
 ${lightVars}
 }
-[data-theme='mono'] .dark {
+[data-theme='mono'].dark {
 ${darkVars}
 }`;
 }
@@ -353,7 +353,7 @@ function applyChromaticPalette(hue: number) {
   --radius: 0.75rem;
 ${lightVars}
 }
-[data-theme='chromatic'] .dark {
+[data-theme='chromatic'].dark {
 ${darkVars}
 }`;
 }

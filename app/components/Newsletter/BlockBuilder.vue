@@ -58,13 +58,22 @@
           <span class="hidden sm:inline">Blocks</span>
         </button>
 
-        <!-- Earnest Generate -->
+        <!-- Earnest Generate (form wizard) -->
         <button
           class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400 ios-press inline-flex items-center gap-1 transition-colors"
           @click="showAIWizard = true"
         >
           <EarnestIcon class="w-3 h-3" />
           <span class="hidden sm:inline">Earnest</span>
+        </button>
+
+        <!-- Draft with Earnest (conversational canvas) -->
+        <button
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 ios-press inline-flex items-center gap-1 transition-colors"
+          @click="showEarnestCanvas = true"
+        >
+          <Icon name="lucide:sparkles" class="w-3 h-3" />
+          <span class="hidden sm:inline">Draft with Earnest</span>
         </button>
 
         <!-- HTML dropdown -->
@@ -456,6 +465,21 @@
       @apply="handleAIApply"
     />
 
+    <!-- Draft with Earnest — conversational Generative Canvas overlay. Seeds
+         from the current blocks; applies as AI sections back into the builder. -->
+    <Teleport to="body">
+      <div v-if="showEarnestCanvas" class="fixed inset-0 z-[75] p-2 sm:p-6 bg-black/50 backdrop-blur-sm">
+        <div class="h-full">
+          <NewsletterEmailGenerativeCanvas
+            embedded
+            :initial-blocks="earnestSeedBlocks"
+            @apply="onEarnestCanvasApply"
+            @close="showEarnestCanvas = false"
+          />
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Paste HTML/MJML Modal — z-[70] so it lands above the
          AppSlideOverStack (z-60) when the editor is hosted inside the
          EmailTemplatePanel slide-over. -->
@@ -679,6 +703,23 @@ async function handleCustomBlockCreated(block: NewsletterBlock) {
 async function handleAIApply(result: { subject: string; previewText: string; sections: any[] }) {
   showAIWizard.value = false;
   builder.populateFromAI(result.sections, blockLibrary.value);
+  showPreview.value = true;
+  await builder.refreshPreview();
+}
+
+// ── Draft with Earnest — conversational Generative Canvas (embedded) ──────────
+const showEarnestCanvas = ref(false);
+// Seed the canvas from the builder's current blocks so refinement keeps context.
+const earnestSeedBlocks = computed(() =>
+  builder.canvas.value.map((cb: any) => ({
+    id: cb.instanceId,
+    slug: cb.block?.slug,
+    variables: cb.variables || {},
+  })).filter((b: any) => b.slug),
+);
+async function onEarnestCanvasApply(sections: Array<{ blockCategory: string; blockName: string; variables: Record<string, any> }>) {
+  showEarnestCanvas.value = false;
+  builder.populateFromAI(sections, blockLibrary.value);
   showPreview.value = true;
   await builder.refreshPreview();
 }
