@@ -87,6 +87,13 @@ const zoom = useCompositionZoom();
 // lift the segmented control entirely.
 const canvasLens = computed(() => view.value);
 
+// Draft with Earnest — the conversational Generative Canvas. Kept as its own
+// full-surface route (SocialGenerativeCanvas) rather than a depth-zoom lens so
+// it doesn't fight the CompositionCanvas; the hero action is the entry point.
+function openDraftWithEarnest() {
+  router.push('/apps/marketing/studio-draft');
+}
+
 /**
  * Canvas composer saved a post. Update the in-memory list so the river
  * leaf re-renders with the new caption / schedule / variants — no full
@@ -804,6 +811,15 @@ onMounted(() => {
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <!-- Draft with Earnest — conversational Generative Canvas entry.
+               Speaks an intent, watches Earnest draft the posts live. -->
+          <UiActionButton
+            icon="lucide:sparkles"
+            aria-label="Draft posts with Earnest"
+            @click="openDraftWithEarnest"
+          >
+            Draft with Earnest
+          </UiActionButton>
           <!-- Overview button — gesture-free way to reach the z=0
                lens-grid (P4.4 Item D). Sibling of the LensChip since
                both navigate the lens axis. Hides at z=0 (the grid is

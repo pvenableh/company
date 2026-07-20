@@ -88,6 +88,16 @@ function onProposalUpdated(updated: any) {
   emit('loaded', proposal.value);
 }
 
+// Draft with Earnest — conversational Generative Canvas, embedded. It seeds
+// from the current blocks and hands edited blocks back; our existing sticky
+// Save bar persists them (nothing is written until the user hits Save).
+const showEarnestDraft = ref(false);
+function onEarnestApply(entries: any[]) {
+  blocks.value = entries;
+  blocksDirty.value = true;
+  showEarnestDraft.value = false;
+}
+
 function onProposalDeleted() {
   if (props.compact) {
     emit('back');
@@ -453,7 +463,16 @@ if (!props.compact) {
         </div>
 
         <div class="space-y-4" :class="{ 'lg:col-span-2': !compact }">
-          <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Proposal Content</p>
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Proposal Content</p>
+            <button
+              class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+              @click="showEarnestDraft = true"
+            >
+              <Icon name="lucide:sparkles" class="w-3 h-3" />
+              Draft with Earnest
+            </button>
+          </div>
           <DocumentsBlockComposer
             :model-value="blocks"
             applies-to="proposals"
@@ -483,5 +502,31 @@ if (!props.compact) {
       />
     </template>
 
+    <!-- Draft with Earnest — full-screen Generative Canvas overlay. Seeds from
+         the current blocks and applies edited blocks back into the composer. -->
+    <Teleport to="body">
+      <div v-if="showEarnestDraft" class="pw-earnest-overlay">
+        <DocumentsDocumentGenerativeCanvas
+          embedded
+          :initial-blocks="blocks"
+          :brief="proposal?.title ? `Proposal: ${proposal.title}` : undefined"
+          @apply="onEarnestApply"
+          @close="showEarnestDraft = false"
+        />
+      </div>
+    </Teleport>
+
   </div>
 </template>
+
+<style scoped>
+.pw-earnest-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  padding: clamp(0.5rem, 2vw, 1.5rem);
+  background: rgba(6, 10, 18, 0.55);
+  backdrop-filter: blur(4px);
+}
+.pw-earnest-overlay > * { height: 100%; }
+</style>

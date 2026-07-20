@@ -171,6 +171,12 @@ onUnmounted(() => clearEntity());
 						Import CSV
 					</button>
 				</NuxtLink>
+				<NuxtLink to="/email/draft">
+					<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
+						<Icon name="lucide:sparkles" class="w-3 h-3" />
+						Draft with Earnest
+					</button>
+				</NuxtLink>
 				<button
 					class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm transition-colors"
 					@click="showNewTemplate = true; startMethod = null"
