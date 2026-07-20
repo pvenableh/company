@@ -493,7 +493,7 @@ async function handleFinish() {
                 v-model="orgName"
                 type="text"
                 placeholder="e.g. Acme Creative Agency"
-                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none"
                 autofocus
                 @keydown.enter="canProceed && nextStep()"
               />
@@ -505,15 +505,16 @@ async function handleFinish() {
                 <button
                   v-for="ind in industries"
                   :key="ind.id"
-                  class="px-3 py-2.5 rounded-lg text-[11px] font-medium text-left transition-all border"
+                  class="px-4 py-2.5 rounded-full text-[11px] font-medium text-left transition-all border"
                   :class="selectedIndustry === ind.id
                     ? 'border-[var(--cyan)] bg-info/10 text-foreground'
-                    : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600 hover:text-foreground'"
+                    : 'border-border bg-card hover:border-foreground/30 text-muted-foreground hover:text-foreground'"
                   @click="selectedIndustry = ind.id"
                 >
                   {{ ind.name }}
                 </button>
               </div>
+              <p class="mt-2 text-[11px] text-muted-foreground">Optional — you can skip this or change it later.</p>
             </div>
           </div>
         </div>
@@ -611,7 +612,7 @@ async function handleFinish() {
                 v-model="orgLocation"
                 type="text"
                 placeholder="e.g. Miami, FL"
-                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none"
               />
             </div>
 
@@ -621,7 +622,7 @@ async function handleFinish() {
                 v-model="orgWebsite"
                 type="text"
                 placeholder="e.g. https://yourcompany.com"
-                class="w-full rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="w-full rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none"
               />
             </div>
 
@@ -637,7 +638,7 @@ async function handleFinish() {
                   type="text"
                   placeholder="#000000"
                   maxlength="7"
-                  class="w-full rounded-full border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                  class="w-full rounded-full glass-field px-3 py-2.5 text-sm font-mono focus:outline-none"
                 />
               </div>
             </div>
@@ -788,12 +789,12 @@ async function handleFinish() {
                 v-model="newInviteEmail"
                 type="email"
                 placeholder="team@example.com"
-                class="flex-1 rounded-full border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="flex-1 rounded-full glass-field px-3 py-2.5 text-sm focus:outline-none"
                 @keydown.enter.prevent="addInvite"
               />
               <select
                 v-model="newInviteRole"
-                class="rounded-lg border bg-background px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent"
+                class="rounded-lg glass-field px-2 py-2.5 text-sm focus:outline-none"
               >
                 <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option>
               </select>
@@ -844,7 +845,7 @@ async function handleFinish() {
           <!-- Back / Cancel (only for steps 2-4 pre-payment; step 5+ is post-commit) -->
           <button
             v-if="currentStep > 1 && currentStep <= 4 && !subscriptionClientSecret"
-            class="flex items-center gap-1 px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
             <ChevronLeft class="w-4 h-4" />
@@ -852,7 +853,7 @@ async function handleFinish() {
           </button>
           <button
             v-else-if="currentStep === 1"
-            class="flex items-center gap-1 px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="router.back()"
           >
             Cancel
@@ -863,7 +864,7 @@ async function handleFinish() {
           <!-- Skip (step 3 only — details are optional) -->
           <button
             v-if="currentStep === 3"
-            class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             @click="nextStep"
           >
             Skip
@@ -872,7 +873,7 @@ async function handleFinish() {
           <!-- Steps 1-3: Continue -->
           <button
             v-if="currentStep < 4"
-            class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+            class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="!canProceed"
             @click="nextStep"
           >
@@ -883,7 +884,7 @@ async function handleFinish() {
           <!-- Step 4: pre-payment OR Elements view -->
           <template v-else-if="currentStep === 4 && !subscriptionClientSecret">
             <button
-              class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="creating || checkingOut"
               @click="handleSkipFree"
             >
@@ -891,7 +892,7 @@ async function handleFinish() {
               Skip — Start Free
             </button>
             <button
-              class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+              class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="creating || checkingOut || !termsReaffirmed"
               @click="handleContinueToPayment"
             >
@@ -904,7 +905,7 @@ async function handleFinish() {
           <!-- Step 4: Elements form — Pay button -->
           <template v-else-if="currentStep === 4 && subscriptionClientSecret">
             <button
-              class="flex items-center justify-center gap-1 w-full px-6 py-3 rounded-lg text-sm font-semibold bg-[var(--cyan)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
+              class="flex items-center justify-center gap-1 w-full px-6 py-3 rounded-full text-sm font-semibold bg-[var(--cyan)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="submittingPayment"
               @click="handleSubmitPayment"
             >
@@ -917,14 +918,14 @@ async function handleFinish() {
           <!-- Step 5: Add-ons (skip / subscribe) -->
           <template v-else-if="currentStep === 5">
             <button
-              class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="subscribingAddons"
               @click="handleSkipAddons"
             >
               Skip add-ons
             </button>
             <button
-              class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+              class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="subscribingAddons"
               @click="handleSubscribeAddons"
             >
@@ -937,7 +938,7 @@ async function handleFinish() {
           <!-- Step 6: Finish -->
           <button
             v-else-if="currentStep === 6"
-            class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+            class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="creating"
             @click="handleFinish"
           >
