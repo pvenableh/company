@@ -23,8 +23,11 @@ import {
 } from '~/composables/useAppAccent';
 
 const props = withDefaults(
-  defineProps<{ density?: 'compact' | 'comfortable' }>(),
-  { density: 'comfortable' },
+  // `showSidebarToggle` is false in the client portal — the desktop sidebar is
+  // a staff-app affordance (it swaps the AppSidebar for the dock); the portal
+  // uses PortalRail, so the toggle would be a dead switch there.
+  defineProps<{ density?: 'compact' | 'comfortable'; showSidebarToggle?: boolean }>(),
+  { density: 'comfortable', showSidebarToggle: true },
 );
 
 const { railShowLabels, setRailShowLabels, desktopSidebar, setDesktopSidebar } = useAppsMode();
@@ -95,20 +98,22 @@ const isCompact = computed(() => props.density === 'compact');
 <template>
   <div :class="isCompact ? 'rail-panel rail-panel--compact' : 'rail-panel rail-panel--comfortable'">
     <!-- ── Section: Desktop sidebar ──────────────────────────────── -->
-    <div class="rail-panel__toggle" @click="setDesktopSidebar(!desktopSidebar)">
-      <Icon name="lucide:panel-left" class="rail-panel__toggle-icon" />
-      <div class="rail-panel__toggle-body">
-        <div class="rail-panel__toggle-title">Desktop sidebar</div>
-        <div class="rail-panel__toggle-hint">Show a labeled navigation sidebar on large screens (replaces the bottom app dock).</div>
+    <template v-if="showSidebarToggle">
+      <div class="rail-panel__toggle" @click="setDesktopSidebar(!desktopSidebar)">
+        <Icon name="lucide:panel-left" class="rail-panel__toggle-icon" />
+        <div class="rail-panel__toggle-body">
+          <div class="rail-panel__toggle-title">Desktop sidebar</div>
+          <div class="rail-panel__toggle-hint">Show a labeled navigation sidebar on large screens (replaces the bottom app dock).</div>
+        </div>
+        <Switch
+          :model-value="desktopSidebar"
+          class="shrink-0"
+          @update:model-value="setDesktopSidebar"
+          @click.stop
+        />
       </div>
-      <Switch
-        :model-value="desktopSidebar"
-        class="shrink-0"
-        @update:model-value="setDesktopSidebar"
-        @click.stop
-      />
-    </div>
-    <div class="rail-panel__divider" aria-hidden="true" />
+      <div class="rail-panel__divider" aria-hidden="true" />
+    </template>
 
     <!-- ── Section: Show labels ──────────────────────────────────── -->
     <div

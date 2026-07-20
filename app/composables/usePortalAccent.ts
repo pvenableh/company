@@ -49,6 +49,7 @@ export type PortalAppId =
 	| 'performance'
 	| 'messages'
 	| 'book'
+	| 'feedback'
 	| 'account';
 
 export interface PortalAppAccent {
@@ -97,6 +98,7 @@ const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
 	performance: { id: 'performance', name: 'Performance', shortName: 'Perf', icon: 'ph:chart-line-up-duotone', to: '/portal/performance', availabilityKey: 'performance' },
 	messages:    { id: 'messages',    name: 'Messages',    shortName: 'Msgs', icon: 'lucide:messages-square',   to: '/portal/messages',    availabilityKey: 'messages',    notificationCategories: ['conversations'] },
 	book:        { id: 'book',        name: 'Book',        shortName: 'Book', icon: 'ph:calendar-plus-duotone', to: '/portal/book' },
+	feedback:    { id: 'feedback',    name: 'Feedback',    shortName: 'Rate', icon: 'lucide:message-square-heart', to: '/portal/feedback' },
 	account:     { id: 'account',     name: 'Account',     shortName: 'Me',   icon: 'lucide:circle-user-round', to: '/portal/account' },
 };
 
@@ -114,7 +116,7 @@ export const PORTAL_ORDER: PortalAppId[] = [
 	'book',
 ];
 
-export const PORTAL_FOOTER_ORDER: PortalAppId[] = ['account'];
+export const PORTAL_FOOTER_ORDER: PortalAppId[] = ['feedback', 'account'];
 
 /** Visual order: main group + footer concatenated. Drives pickGappy's
  *  spread so chip 0 always wears the brightest source colour. */
@@ -129,6 +131,7 @@ const PORTAL_CHIP_IDS: readonly PortalAppId[] = [...PORTAL_ORDER, ...PORTAL_FOOT
  */
 const PORTAL_APP_PREFIXES: Array<{ id: PortalAppId; prefixes: string[] }> = [
 	{ id: 'account',     prefixes: ['/portal/account'] },
+	{ id: 'feedback',    prefixes: ['/portal/feedback'] },
 	{ id: 'progress',    prefixes: ['/portal/progress', '/portal/projects', '/portal/tasks', '/portal/tickets'] },
 	{ id: 'billing',     prefixes: ['/portal/billing', '/portal/invoices', '/portal/proposals', '/portal/contracts'] },
 	{ id: 'performance', prefixes: ['/portal/performance', '/portal/social', '/portal/marketing'] },

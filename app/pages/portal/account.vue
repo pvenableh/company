@@ -54,7 +54,7 @@ const panel = ref<PanelKey>(initialPanel);
 					<ThemeSwitcher />
 					<div class="mt-8 pt-6 border-t border-border/40">
 						<ClientOnly>
-							<LayoutAppRailSettingsPanel />
+							<LayoutAppRailSettingsPanel :show-sidebar-toggle="false" />
 						</ClientOnly>
 					</div>
 				</div>

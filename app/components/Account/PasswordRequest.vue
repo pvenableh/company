@@ -54,7 +54,8 @@ const resetFormState = () => {
 <template>
 	<div class="w-full max-w-md">
 		<div v-if="!resetSent">
-			<h3 class="text-lg font-medium mb-4">Reset Your Password</h3>
+			<!-- Section title is owned by the account page's <h2> (matches the
+			     other tabs); no second heading here. -->
 			<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
 				Enter your email address below and we'll send you a link to reset your password.
 			</p>
