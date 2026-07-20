@@ -3,7 +3,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'Portal Projects | Earnest' });
+useHead({ title: 'Projects | Client Portal' });
 
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
@@ -178,8 +178,29 @@ const projectSegments: Array<{ key: ViewMode; label: string; icon: string }> = [
 	{ key: 'list',   label: 'List',     icon: 'lucide:list' },
 ];
 
-onMounted(() => loadProjects());
-watch(() => selectedOrg.value, () => loadProjects());
+// Deep-link support: /portal/projects?highlight=<id> opens that project's
+// slide-over once projects have loaded (same effect as a list-row click).
+// Fires once per id so a later reload/org-switch doesn't re-pop it.
+const route = useRoute();
+const highlightHandledFor = ref<string | null>(null);
+function maybeOpenHighlighted() {
+	const id = route.query.highlight ? String(route.query.highlight) : null;
+	if (!id || highlightHandledFor.value === id) return;
+	const match = projects.value.find((p) => String(p.id) === id);
+	if (match) {
+		highlightHandledFor.value = id;
+		openProject(match);
+	}
+}
+
+onMounted(async () => {
+	await loadProjects();
+	maybeOpenHighlighted();
+});
+watch(() => selectedOrg.value, async () => {
+	await loadProjects();
+	maybeOpenHighlighted();
+});
 </script>
 
 <template>
@@ -380,7 +401,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 										</div>
 										<span
 											v-if="evt.approval === 'Approved'"
-											class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10 shrink-0"
+											class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full text-success bg-success/10 shrink-0"
 										>
 											Approved
 										</span>

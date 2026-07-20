@@ -202,6 +202,17 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	/**
+	 * Optional custom mention-user source. When provided, it REPLACES the default
+	 * org/team/client lookup — the composer calls it (once) to get the list of
+	 * mentionable users as `{ id, first_name, last_name, email, avatar }` rows.
+	 * The client portal uses this to scope @mentions to the account team only,
+	 * rather than exposing the full org roster.
+	 */
+	mentionFetch: {
+		type: Function,
+		default: null,
+	},
 });
 
 // Modal state
@@ -402,11 +413,18 @@ const CustomMention = Mention.configure({
 				const teamId = props.teamId || selectedTeam.value;
 				const clientId = props.clientId || null;
 
-				// Fetch users based on organization, team, and client context
-				await fetchFilteredUsers(orgId, teamId, clientId);
+				// Fetch mentionable users. A custom `mentionFetch` (e.g. the portal
+				// account-team source) fully replaces the org/team/client lookup.
+				let sourceUsers;
+				if (props.mentionFetch) {
+					sourceUsers = (await props.mentionFetch()) || [];
+				} else {
+					await fetchFilteredUsers(orgId, teamId, clientId);
+					sourceUsers = filteredUsers.value;
+				}
 
 				// Filter out the current user and apply the search query
-				const mentionUsers = filteredUsers.value
+				const mentionUsers = sourceUsers
 					.filter((user) => user.id !== currentUser.value.id)
 					.filter((user) => {
 						const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();

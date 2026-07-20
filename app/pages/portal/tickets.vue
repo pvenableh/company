@@ -5,7 +5,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'Portal Tickets | Earnest' });
+useHead({ title: 'Tickets | Client Portal' });
 
 // Slide-over for portal-friendly ticket detail (comments + reactions live here).
 // TicketsBoard emits `view-ticket` when a card is clicked in portal mode.
@@ -16,6 +16,13 @@ function openTicket(ticket: any) {
 	selectedTicket.value = ticket;
 	showDetail.value = true;
 }
+
+// Deep-link support: /portal/tickets?highlight=<id> auto-opens that ticket's
+// detail once the board finishes loading. The board owns ticket data, so it
+// resolves the id and emits `view-ticket` (the same path as a card click). It
+// fires once per id, so a later board refresh won't re-pop the slide-over.
+const route = useRoute();
+const highlightId = computed(() => (route.query.highlight ? String(route.query.highlight) : null));
 
 function onTicketRated(p: { rating: number; comment: string | null; submitted_at: string }) {
 	if (!selectedTicket.value) return;
@@ -68,7 +75,7 @@ const priorityBadge: Record<string, string> = {
 		<!-- Board — reuses agency TicketsBoard in portal mode for visual parity.
 			 Card click bubbles `view-ticket` because portal users can't open
 			 the agency edit form. -->
-		<TicketsBoard portal @view-ticket="openTicket" />
+		<TicketsBoard portal :highlight="highlightId" @view-ticket="openTicket" />
 
 		<!-- Ticket Detail Slide-over -->
 		<Teleport to="body">

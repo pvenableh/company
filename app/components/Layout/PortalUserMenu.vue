@@ -102,6 +102,11 @@ function handleLogout() {
 				<span>Account</span>
 			</DropdownMenuItem>
 
+			<DropdownMenuItem @select="goTo('/portal/account?section=appearance')">
+				<Icon name="lucide:palette" class="size-4 mr-2 shrink-0" />
+				<span>Appearance</span>
+			</DropdownMenuItem>
+
 			<DropdownMenuSeparator />
 
 			<DropdownMenuItem

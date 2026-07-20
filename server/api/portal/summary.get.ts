@@ -270,7 +270,7 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
       type: 'ticket',
       label: (t.title as string) ?? 'Open ticket',
       detail: 'High priority — open',
-      href: `/portal/tickets/${t.id}`,
+      href: `/portal/tickets?highlight=${t.id}`,
       severity: 'info',
     });
   }
@@ -324,7 +324,7 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
       type: 'ticket',
       title: (t.title as string) ?? 'Ticket',
       detail: `${labelize(t.status as string)}${t.priority ? ` · ${labelize(t.priority as string)} priority` : ''}`,
-      href: `/portal/tickets/${t.id}`,
+      href: `/portal/tickets?highlight=${t.id}`,
       timestamp: (t.date_updated as string) ?? '',
     });
   }
@@ -335,7 +335,7 @@ export default defineEventHandler(async (event): Promise<SummaryResponse> => {
       type: 'project',
       title: (p.title as string) ?? 'Project',
       detail: labelize(p.status as string),
-      href: `/portal/projects/${p.id}`,
+      href: `/portal/projects?highlight=${p.id}`,
       timestamp: (p.date_updated as string) ?? '',
     });
   }

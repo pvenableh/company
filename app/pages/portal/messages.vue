@@ -5,7 +5,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'Portal Messages | Earnest' });
+useHead({ title: 'Messages | Client Portal' });
 
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const { clientScope } = useOrgRole();
@@ -94,15 +94,34 @@ async function loadMessages() {
 	}
 }
 
+// Mentionable users = the agency account team (assigned to this client's
+// projects). Scoped server-side so clients never see the full org roster.
+// Cached after first fetch; the TipTap composer calls this on each '@'.
+const accountTeam = ref<any[] | null>(null);
+async function fetchAccountTeam() {
+	if (accountTeam.value) return accountTeam.value;
+	try {
+		accountTeam.value = await $fetch<any[]>('/api/portal/account-team');
+	} catch {
+		accountTeam.value = [];
+	}
+	return accountTeam.value;
+}
+
+// Strip HTML to detect an "empty" TipTap doc (e.g. "<p></p>").
+function isBlankHtml(html: string): boolean {
+	return !html || !html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+}
+
 async function sendMessage() {
-	if (!newMessage.value.trim() || !selectedChannel.value) return;
+	if (isBlankHtml(newMessage.value) || !selectedChannel.value || sending.value) return;
 	sending.value = true;
 
 	try {
-		await $fetch('/api/messages', {
+		await $fetch('/api/portal/message', {
 			method: 'POST',
 			body: {
-				text: newMessage.value.trim(),
+				text: newMessage.value,
 				channel: selectedChannel.value.id,
 			},
 		});
@@ -279,32 +298,47 @@ watch(() => selectedOrg.value, () => {
 									? 'bg-primary text-primary-foreground rounded-tr-sm'
 									: 'bg-muted/60 rounded-tl-sm'"
 							>
-								{{ message.text }}
+								<div class="msg-text" v-html="message.text" />
 							</div>
 						</div>
 					</div>
 				</template>
 			</div>
 
-			<!-- Message Input -->
+			<!-- Message Input — TipTap composer (HTML formatting + @mentions),
+			     matching the Earnest channels surface. Mentions are scoped to the
+			     account team via :mention-fetch. -->
 			<div class="p-3 border-t border-border/40 shrink-0">
-				<form class="flex gap-2" @submit.prevent="sendMessage">
-					<input
+				<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
+					<LazyFormTiptap
 						v-model="newMessage"
-						type="text"
-						placeholder="Type a message..."
-						class="flex-1 rounded-xl border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-						:disabled="sending"
+						:show-toolbar="true"
+						:disabled="sending || !selectedChannel"
+						:organization-id="selectedOrg"
+						:mention-fetch="fetchAccountTeam"
+						:enter-to-send="true"
+						height="min-h-[36px]"
+						custom-classes="px-2 py-1.5"
+						:character-limit="0"
+						:show-char-count="false"
+						:allow-uploads="true"
+						:context="{ collection: 'messages', itemId: selectedChannel?.id }"
+						class="flex-1 channel-tiptap"
+						@submit="sendMessage"
 					/>
 					<button
-						type="submit"
-						class="p-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-						:disabled="sending || !newMessage.trim()"
+						v-if="!isBlankHtml(newMessage)"
+						class="shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors mb-1 disabled:opacity-50"
+						:disabled="sending || !selectedChannel"
+						@click="sendMessage"
 					>
-						<Icon v-if="sending" name="lucide:loader-2" class="w-5 h-5 animate-spin" />
-						<Icon v-else name="lucide:send" class="w-5 h-5" />
+						<Icon name="lucide:arrow-up" class="w-4 h-4 text-primary-foreground" />
 					</button>
-				</form>
+				</div>
+				<p class="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
+					<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Enter</kbd> to send,
+					<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Shift + Enter</kbd> for new line.
+				</p>
 			</div>
 		</div>
 
@@ -333,4 +367,41 @@ watch(() => selectedOrg.value, () => {
 .portal-messages-body {
 	@apply flex flex-1 min-h-0;
 }
+
+/* Rendered message HTML (formatting + @mentions), mirroring the Earnest
+ * channels surface. `color: inherit` keeps text readable inside the coloured
+ * own-message bubble. */
+.msg-text { font-size: 14px; line-height: 1.6; color: inherit; }
+.msg-text :deep(p) { margin: 0; }
+.msg-text :deep(a) { text-decoration: underline; }
+.msg-text :deep(ul), .msg-text :deep(ol) { margin: 0.3em 0; padding-left: 1.1em; }
+.msg-text :deep(.mention) {
+	background: hsl(var(--primary) / 0.12);
+	color: hsl(var(--primary));
+	border-radius: 4px;
+	padding: 1px 6px;
+	font-weight: 600;
+	font-size: 0.9em;
+}
+/* On the primary-coloured own-message bubble, tint mentions for contrast. */
+.bg-primary .msg-text :deep(.mention) {
+	background: hsl(var(--primary-foreground) / 0.18);
+	color: hsl(var(--primary-foreground));
+}
+
+/* Neutralise the inner Tiptap chrome so the outer .channel-input owns the
+ * focus ring — identical to the Earnest ChannelThread composer. */
+.channel-tiptap :deep(.tiptap-wrapper) { border: none !important; box-shadow: none !important; }
+.channel-tiptap :deep(.tiptap-container) {
+	border: none !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	max-height: 160px;
+}
+.channel-tiptap :deep(.toolbar) {
+	border: none !important;
+	border-top: 1px solid hsl(var(--border) / 0.2) !important;
+	border-radius: 0 !important;
+}
+.channel-tiptap :deep(.tiptap-container .ProseMirror) { font-size: 0.875rem; line-height: 1.625; min-height: 24px; }
 </style>

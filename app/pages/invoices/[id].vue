@@ -1,8 +1,13 @@
 <script setup>
+// Public payment surface — no app chrome. The global apps-layout middleware
+// wraps every in-app route in the apps shell (nav rail, dock, assistant), which
+// an unauthenticated payer should never see. `blank` still inherits the root
+// theme (dark-default colorMode + data-theme/data-style + palette applied on
+// <html> by app.vue), so the page stays on-brand without the internal nav.
+definePageMeta({ layout: 'blank' });
 useHead({ title: 'Invoice | Earnest' });
 
 const { params } = useRoute();
-const invoiceItems = useDirectusItems('invoices', { requireAuth: false });
 
 // Archive any unread bell rows for this invoice on mount.
 useMarkItemRead('invoices', () => params.id);
@@ -31,11 +36,16 @@ if (loggedIn.value) {
 }
 const isStaffViewer = computed(() => viewerMode.value === 'staff');
 
-const invoice = await invoiceItems.get(params.id, {
-	fields: [
-		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,billing_email,billing_name,billing_address,emails,bill_to.id,bill_to.name,bill_to.email,bill_to.emails,bill_to.stripe_customer_id,bill_to.address,bill_to.phone,bill_to.website,bill_to.logo,bill_to.plan,bill_to.whitelabel,bill_to.document_theme,bill_to.document_accent,client.id,client.name,client.billing_name,client.billing_email,client.billing_address,client.billing_contacts,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name,payments.*,melio',
-	],
-});
+// The Directus Public policy no longer grants anonymous `read` on `invoices`,
+// so we can't hit the generic items proxy here (it 403s for logged-out payers).
+// Instead fetch via the admin-token public endpoint — the invoice UUID is the
+// capability, and the collection stays unlistable. Logged-in staff/unrelated
+// viewers use the same route (server returns the single invoice by id).
+const { data: invoiceData, error: invoiceError } = await useFetch(`/api/public/invoice/${params.id}`);
+if (invoiceError.value || !invoiceData.value) {
+	throw createError({ statusCode: 404, statusMessage: 'Invoice not found' });
+}
+const invoice = invoiceData.value;
 
 const anonymousUser = ref(null);
 const showAnonymousForm = computed(() => {

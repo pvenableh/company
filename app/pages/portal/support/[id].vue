@@ -3,7 +3,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'Report | Earnest' });
+useHead({ title: 'Report | Client Portal' });
 
 const route = useRoute();
 const id = computed(() => String(route.params.id));

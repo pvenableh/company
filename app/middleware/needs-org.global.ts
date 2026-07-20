@@ -55,7 +55,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { loggedIn } = useUserSession();
   if (!loggedIn.value) return;
 
-  const allowedPrefixes = ['/organization/new', '/auth', '/account', '/contracts/sign', '/invoices'];
+  // `/portal/*` is the client-portal surface, owned by `client-portal.global.ts`.
+  // Portal users have no org_membership, so `organizations` can read empty here
+  // before `isOrgClient` resolves — without this prefix the org-setup gate races
+  // that resolution and wrongly bounces a valid portal user to /organization/new.
+  const allowedPrefixes = ['/organization/new', '/auth', '/account', '/contracts/sign', '/invoices', '/portal'];
   if (allowedPrefixes.some((p) => to.path === p || to.path.startsWith(`${p}/`))) {
     return;
   }

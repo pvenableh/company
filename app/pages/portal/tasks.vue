@@ -161,7 +161,7 @@ watch(filter, () => loadTasks());
 							<!-- Priority -->
 							<span
 								v-if="task.priority && task.priority !== 'medium'"
-								class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
+								class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
 								:class="(priorityConfig[task.priority] ?? priorityConfig.medium).classes"
 							>
 								{{ task.priority }}

@@ -95,7 +95,7 @@ const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
 	progress:    { id: 'progress',    name: 'Progress',    shortName: 'Prog', icon: 'lucide:square-kanban',     to: '/portal/progress',    availabilityKey: 'progress',    notificationCategories: ['projects', 'tickets'] },
 	billing:     { id: 'billing',     name: 'Billing',     shortName: 'Bill', icon: 'lucide:trending-up',       to: '/portal/billing',     availabilityKey: 'billing',     notificationCategories: ['invoices', 'proposals', 'contracts'] },
 	performance: { id: 'performance', name: 'Performance', shortName: 'Perf', icon: 'ph:chart-line-up-duotone', to: '/portal/performance', availabilityKey: 'performance' },
-	messages:    { id: 'messages',    name: 'Messages',    shortName: 'Msgs', icon: 'ph:chats-circle-duotone',  to: '/portal/messages',    availabilityKey: 'messages',    notificationCategories: ['conversations'] },
+	messages:    { id: 'messages',    name: 'Messages',    shortName: 'Msgs', icon: 'lucide:messages-square',   to: '/portal/messages',    availabilityKey: 'messages',    notificationCategories: ['conversations'] },
 	book:        { id: 'book',        name: 'Book',        shortName: 'Book', icon: 'ph:calendar-plus-duotone', to: '/portal/book' },
 	account:     { id: 'account',     name: 'Account',     shortName: 'Me',   icon: 'lucide:circle-user-round', to: '/portal/account' },
 };

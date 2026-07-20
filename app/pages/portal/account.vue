@@ -10,13 +10,18 @@ const { clientName } = useClientPortalUser();
 
 type PanelKey = 'profile' | 'password' | 'appearance';
 
-const panel = ref<PanelKey>('profile');
-
 const sections: Array<{ key: PanelKey; label: string; icon: string }> = [
 	{ key: 'profile', label: 'Profile', icon: 'lucide:user' },
 	{ key: 'password', label: 'Password', icon: 'lucide:lock' },
 	{ key: 'appearance', label: 'Appearance', icon: 'lucide:sun' },
 ];
+
+// Deep-linkable via ?section= (the avatar menu's "Appearance" link lands here).
+const route = useRoute();
+const initialPanel = sections.some((s) => s.key === route.query.section)
+	? (route.query.section as PanelKey)
+	: 'profile';
+const panel = ref<PanelKey>(initialPanel);
 </script>
 
 <template>

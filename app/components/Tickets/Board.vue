@@ -339,6 +339,16 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	/**
+	 * Deep-link target. When set (e.g. /portal/tickets?highlight=<id>), the
+	 * board emits `view-ticket` for the matching ticket once its data has
+	 * loaded — same effect as the user clicking that card. Fires at most once
+	 * per id so a later refresh doesn't re-open the detail.
+	 */
+	highlight: {
+		type: String,
+		default: null,
+	},
 });
 
 const emit = defineEmits(['view-ticket']);
@@ -438,6 +448,23 @@ let disconnectFunc = null;
 
 // The tickets data from our subscription
 const ticketsData = ref([]);
+
+// One-shot deep-link resolver: when `highlight` is set (portal deep-link),
+// emit `view-ticket` for the matching ticket once its data has loaded. Guarded
+// by `highlightEmittedFor` so it fires at most once per id.
+const highlightEmittedFor = ref(null);
+watch(
+	() => [props.highlight, ticketsData.value],
+	() => {
+		if (!props.highlight || highlightEmittedFor.value === props.highlight) return;
+		const match = (ticketsData.value || []).find((t) => String(t.id) === String(props.highlight));
+		if (match) {
+			highlightEmittedFor.value = props.highlight;
+			emit('view-ticket', match);
+		}
+	},
+	{ immediate: true },
+);
 
 // Due date filter options
 const dueDateOptions = ref([

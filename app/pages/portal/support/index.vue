@@ -5,7 +5,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'My reports | Earnest' });
+useHead({ title: 'My reports | Client Portal' });
 
 const { openReportModal } = useReportIssue();
 </script>

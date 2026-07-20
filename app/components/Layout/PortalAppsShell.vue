@@ -42,9 +42,10 @@
 						<div class="hidden sm:block">
 							<WalkthroughHelpMenu />
 						</div>
-						<ClientOnly>
-							<LayoutAppRailPositionPicker class="hidden sm:flex" />
-						</ClientOnly>
+						<!-- Rail/appearance settings moved out of the header: they now
+						     live behind the avatar menu's "Appearance" link
+						     (→ /portal/account?section=appearance), where the same
+						     LayoutAppRailSettingsPanel renders inline. -->
 						<ClientOnly>
 							<LayoutNotificationsMenu />
 						</ClientOnly>
