@@ -504,7 +504,7 @@
               v-model="pastedHtmlContent"
               rows="12"
               placeholder="Paste your HTML or MJML here..."
-              class="w-full rounded-2xl border border-border bg-muted/20 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
+              class="w-full glass-field rounded-2xl px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none resize-y"
             />
           </div>
           <div class="flex items-center justify-between px-5 py-3 border-t border-border/30">

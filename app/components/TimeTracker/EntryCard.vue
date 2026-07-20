@@ -1,5 +1,5 @@
 <template>
-	<div class="ios-card rounded-2xl border border-border bg-card p-4" :class="{ 'ring-2 ring-primary/30': selected }">
+	<div class="ios-card rounded-2xl bg-card p-4" :class="{ 'ring-2 ring-primary/30': selected }">
 		<div class="flex items-center gap-3">
 			<!-- Selection checkbox -->
 			<div v-if="selectable" class="shrink-0">

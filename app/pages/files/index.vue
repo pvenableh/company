@@ -382,7 +382,7 @@ onMounted(async () => {
         v-model="search"
         type="search"
         placeholder="Search files & folders..."
-        class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+        class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
       />
       <div class="flex items-center rounded-md border bg-background">
         <button
@@ -679,7 +679,7 @@ onMounted(async () => {
               v-model="newFolderName"
               autofocus
               required
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm mb-4"
+              class="w-full rounded-md glass-field px-3 py-2 text-sm mb-4"
               placeholder="Folder name"
             />
             <div class="flex justify-end gap-2">
@@ -707,7 +707,7 @@ onMounted(async () => {
               v-model="renameName"
               autofocus
               required
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm mb-4"
+              class="w-full rounded-md glass-field px-3 py-2 text-sm mb-4"
               placeholder="New name"
             />
             <div class="flex justify-end gap-2">

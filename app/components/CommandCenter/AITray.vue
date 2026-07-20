@@ -599,7 +599,7 @@ watch(quickStreamingContent, () => {
 										<textarea
 											v-model="trayCorrectionText"
 											placeholder="What was wrong? (optional)"
-											class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+											class="flex-1 text-[11px] rounded glass-field px-2 py-1 resize-none focus:outline-none"
 											rows="2"
 											@keydown.enter.ctrl="submitTrayCorrection"
 										/>
@@ -789,7 +789,7 @@ watch(quickStreamingContent, () => {
 						<input
 							v-model="trayNotesSearch"
 							placeholder="Search notes..."
-							class="w-full text-xs px-3 py-2 border border-border rounded-full bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+							class="w-full text-xs px-3 py-2 glass-field rounded-full placeholder:text-muted-foreground focus:outline-none"
 						/>
 					</div>
 

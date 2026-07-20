@@ -7,7 +7,7 @@
 				v-model="newTitle"
 				type="text"
 				placeholder="Add a task..."
-				class="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+				class="flex-1 h-9 rounded-lg glass-field px-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none transition-colors"
 				@keydown.enter="handleAdd"
 			/>
 			<button
@@ -136,7 +136,7 @@
 					<input
 						v-model="editTitle"
 						type="text"
-						class="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+						class="mt-1 w-full h-9 rounded-lg glass-field px-3 text-sm focus:outline-none"
 					/>
 				</label>
 
@@ -145,7 +145,7 @@
 					<textarea
 						v-model="editDescription"
 						rows="3"
-						class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+						class="mt-1 w-full rounded-lg glass-field px-3 py-2 text-sm focus:outline-none"
 					/>
 				</label>
 
@@ -154,7 +154,7 @@
 						<span class="text-[11px] uppercase tracking-wide text-muted-foreground">Status</span>
 						<select
 							v-model="editStatus"
-							class="mt-1 w-full h-9 rounded-lg border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+							class="mt-1 w-full h-9 rounded-lg glass-field px-2 text-sm focus:outline-none"
 						>
 							<option value="new">To Do</option>
 							<option value="in_progress">In Progress</option>
@@ -165,7 +165,7 @@
 						<span class="text-[11px] uppercase tracking-wide text-muted-foreground">Priority</span>
 						<select
 							v-model="editPriority"
-							class="mt-1 w-full h-9 rounded-lg border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+							class="mt-1 w-full h-9 rounded-lg glass-field px-2 text-sm focus:outline-none"
 						>
 							<option value="low">Low</option>
 							<option value="medium">Medium</option>
@@ -179,7 +179,7 @@
 					<input
 						v-model="editDueDate"
 						type="date"
-						class="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+						class="mt-1 w-full h-9 rounded-lg glass-field px-3 text-sm focus:outline-none"
 					/>
 				</label>
 			</form>

@@ -1335,7 +1335,7 @@ watch(() => props.clientId, () => {
 							v-model="newTaskTitle"
 							type="text"
 							placeholder="Add a task for this client…"
-							class="flex-1 h-8 rounded-full border border-border bg-background px-3 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/30"
+							class="flex-1 h-8 rounded-full glass-field px-3 text-xs placeholder:text-muted-foreground/60 focus:outline-none"
 							@keydown.enter="quickAddTask"
 						/>
 						<button

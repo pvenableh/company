@@ -494,7 +494,7 @@ const renderMarkdown = (text: string): string => {
                   <textarea
                     v-model="sidebarCorrectionText"
                     placeholder="What was wrong? (optional)"
-                    class="flex-1 text-[11px] rounded-2xl border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    class="flex-1 text-[11px] rounded-2xl glass-field px-2 py-1 resize-none focus:outline-none"
                     rows="2"
                     @keydown.enter.ctrl="submitSidebarCorrection"
                   />
@@ -551,7 +551,7 @@ const renderMarkdown = (text: string): string => {
             :placeholder="`Ask about ${entityLabel}...`"
             :disabled="isSending"
             rows="1"
-            class="flex-1 resize-none rounded-2xl border border-border bg-muted/50 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+            class="flex-1 resize-none rounded-2xl glass-field px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none transition-colors"
             style="max-height: 96px"
           />
           <button

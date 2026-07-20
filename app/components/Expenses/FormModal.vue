@@ -25,7 +25,7 @@
 				<label class="t-label text-muted-foreground">Category</label>
 				<select
 					v-model="form.category"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="glass-field w-full rounded-full px-3 py-2 text-sm"
 				>
 					<option v-for="cat in EXPENSE_CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
 				</select>
@@ -54,7 +54,7 @@
 				<label class="t-label text-muted-foreground">Status</label>
 				<select
 					v-model="currentStatus"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="glass-field w-full rounded-full px-3 py-2 text-sm"
 				>
 					<option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
 				</select>
@@ -63,7 +63,7 @@
 				<label class="t-label text-muted-foreground">Payment Method</label>
 				<select
 					v-model="form.payment_method"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="glass-field w-full rounded-full px-3 py-2 text-sm"
 				>
 					<option v-for="pm in paymentMethods" :key="pm.value" :value="pm.value">{{ pm.label }}</option>
 				</select>

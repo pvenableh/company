@@ -82,7 +82,7 @@
 				v-model="newTaskTitle"
 				type="text"
 				placeholder="Add a quick task..."
-				class="flex-1 h-9 rounded-full border border-border bg-background px-4 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+				class="flex-1 h-9 rounded-full glass-field px-4 text-xs placeholder:text-muted-foreground focus:outline-none transition-colors"
 				@keydown.enter="handleAddTask"
 			/>
 			<USelectMenu

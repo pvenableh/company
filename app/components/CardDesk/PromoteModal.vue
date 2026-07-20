@@ -70,14 +70,14 @@
             v-model="conversionReason"
             type="text"
             placeholder="What sealed it? (e.g. Project, Retainer, Referral)"
-            class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+            class="w-full text-xs rounded-lg glass-field px-2.5 py-1.5"
           />
           <input
             v-model.number="estimatedValue"
             type="number"
             min="0"
             placeholder="Estimated value (USD, optional)"
-            class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+            class="w-full text-xs rounded-lg glass-field px-2.5 py-1.5"
           />
         </div>
 
@@ -238,14 +238,14 @@
               v-model="conversionReason"
               type="text"
               placeholder="What sealed it? (e.g. Project, Retainer, Referral)"
-              class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+              class="w-full text-xs rounded-lg glass-field px-2.5 py-1.5"
             />
             <input
               v-model.number="estimatedValue"
               type="number"
               min="0"
               placeholder="Estimated value (USD, optional)"
-              class="w-full text-xs rounded-lg border border-border px-2.5 py-1.5 bg-background"
+              class="w-full text-xs rounded-lg glass-field px-2.5 py-1.5"
             />
           </div>
         </div>

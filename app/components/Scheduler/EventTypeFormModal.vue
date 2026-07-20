@@ -29,7 +29,7 @@
 					<label class="t-label text-muted-foreground">Duration</label>
 					<select
 						v-model.number="form.duration"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+						class="glass-field w-full rounded-full px-3 py-2 text-sm"
 					>
 						<option v-for="opt in DURATION_OPTIONS" :key="opt" :value="opt">{{ opt }} min</option>
 					</select>
@@ -77,7 +77,7 @@
 						/>
 						<select
 							v-model="field.type"
-							class="rounded-full border bg-background px-3 py-2 text-xs"
+							class="glass-field rounded-full px-3 py-2 text-xs"
 						>
 							<option value="text">Text</option>
 							<option value="textarea">Long text</option>
@@ -148,7 +148,7 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Scheduling</label>
-					<select v-model="form.scheduling_type" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+					<select v-model="form.scheduling_type" class="glass-field w-full rounded-full px-3 py-2 text-sm">
 						<option value="single">Just me</option>
 						<option value="round_robin">Round-robin (any free teammate)</option>
 						<option value="collective">Collective (all teammates attend)</option>
@@ -156,7 +156,7 @@
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Who can book</label>
-					<select v-model="form.audience" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+					<select v-model="form.audience" class="glass-field w-full rounded-full px-3 py-2 text-sm">
 						<option value="public">Public — anyone with the link</option>
 						<option value="client_portal">Clients — portal login required</option>
 						<option value="internal">Internal — org members only</option>

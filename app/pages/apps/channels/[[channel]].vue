@@ -769,7 +769,7 @@ const fmtModDate = (d) => {
 						v-model="channelQuery"
 						type="text"
 						placeholder="Search channels & messages"
-						class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+						class="w-full h-9 pl-9 pr-3 rounded-full glass-field text-sm placeholder:text-muted-foreground/50 focus:outline-none transition-all"
 					>
 				</div>
 			</div>
@@ -1066,7 +1066,7 @@ const fmtModDate = (d) => {
 							v-model="newChannelName"
 							type="text"
 							placeholder="e.g. general, design, launch"
-							class="w-full h-10 px-4 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+							class="w-full h-10 px-4 rounded-full glass-field text-sm focus:outline-none transition-all"
 							@keydown.enter="createChannel"
 						>
 						<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-destructive">Must be at least 3 characters.</p>
@@ -1078,7 +1078,7 @@ const fmtModDate = (d) => {
 							type="text"
 							list="channel-categories"
 							placeholder="e.g. Announcements, Ops — type a new one or pick existing"
-							class="w-full h-10 px-4 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+							class="w-full h-10 px-4 rounded-full glass-field text-sm focus:outline-none transition-all"
 							@keydown.enter="createChannel"
 						>
 						<datalist id="channel-categories">
@@ -1125,7 +1125,7 @@ const fmtModDate = (d) => {
 						<div v-if="teamOptions.length || clientOptions.length" class="flex flex-wrap gap-2">
 							<select
 								v-if="teamOptions.length"
-								class="h-9 px-3 rounded-full bg-muted/30 border border-border/50 text-xs focus:outline-none focus:border-primary/40"
+								class="h-9 px-3 rounded-full glass-field text-xs focus:outline-none"
 								:disabled="applyingShortcut"
 								@change="(e) => { applyCreateShortcut('team', e.target.value); e.target.selectedIndex = 0; }"
 							>
@@ -1134,7 +1134,7 @@ const fmtModDate = (d) => {
 							</select>
 							<select
 								v-if="clientOptions.length"
-								class="h-9 px-3 rounded-full bg-muted/30 border border-border/50 text-xs focus:outline-none focus:border-primary/40"
+								class="h-9 px-3 rounded-full glass-field text-xs focus:outline-none"
 								:disabled="applyingShortcut"
 								@change="(e) => { applyCreateShortcut('client', e.target.value); e.target.selectedIndex = 0; }"
 							>
@@ -1148,7 +1148,7 @@ const fmtModDate = (d) => {
 								v-model="memberSearch"
 								type="text"
 								placeholder="Search teammates"
-								class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+								class="w-full h-9 pl-9 pr-3 rounded-full glass-field text-sm focus:outline-none transition-all"
 							>
 						</div>
 						<div class="max-h-44 overflow-y-auto rounded-xl border border-border/50 divide-y divide-border/40 messages-scroll">
@@ -1193,7 +1193,7 @@ const fmtModDate = (d) => {
 							type="text"
 							list="channel-categories"
 							placeholder="Type a folder name, or leave blank for none"
-							class="w-full h-10 px-4 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+							class="w-full h-10 px-4 rounded-full glass-field text-sm focus:outline-none transition-all"
 							@keydown.enter="saveFolder"
 						>
 						<p class="text-[10px] text-muted-foreground/50">
@@ -1294,7 +1294,7 @@ const fmtModDate = (d) => {
 							<div v-if="teamOptions.length || clientOptions.length" class="flex flex-wrap gap-2">
 								<select
 									v-if="teamOptions.length"
-									class="h-9 px-3 rounded-full bg-muted/30 border border-border/50 text-xs focus:outline-none focus:border-primary/40"
+									class="h-9 px-3 rounded-full glass-field text-xs focus:outline-none"
 									:disabled="savingMember"
 									@change="(e) => { addShortcutMembers('team', e.target.value); e.target.selectedIndex = 0; }"
 								>
@@ -1303,7 +1303,7 @@ const fmtModDate = (d) => {
 								</select>
 								<select
 									v-if="clientOptions.length"
-									class="h-9 px-3 rounded-full bg-muted/30 border border-border/50 text-xs focus:outline-none focus:border-primary/40"
+									class="h-9 px-3 rounded-full glass-field text-xs focus:outline-none"
 									:disabled="savingMember"
 									@change="(e) => { addShortcutMembers('client', e.target.value); e.target.selectedIndex = 0; }"
 								>
@@ -1317,7 +1317,7 @@ const fmtModDate = (d) => {
 									v-model="manageSearch"
 									type="text"
 									placeholder="Search teammates"
-									class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border/50 text-sm focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+									class="w-full h-9 pl-9 pr-3 rounded-full glass-field text-sm focus:outline-none transition-all"
 								>
 							</div>
 							<div v-if="manageSearch.trim()" class="max-h-40 overflow-y-auto rounded-xl border border-border/50 divide-y divide-border/40 messages-scroll">

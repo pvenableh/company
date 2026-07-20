@@ -979,7 +979,7 @@ function onClientInvited() {
                 :key="tile.label"
                 :to="tile.to"
                 :type="tile.to ? undefined : 'button'"
-                class="ios-card p-4 flex items-start gap-3 hover:border-primary/40 transition-colors group text-left w-full"
+                class="ios-card p-4 flex items-start gap-3 hover:ring-2 hover:ring-primary/30 transition-all group text-left w-full"
                 @click="tile.onClick?.()"
               >
                 <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">

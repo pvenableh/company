@@ -211,13 +211,13 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 				v-model="form.summary"
 				type="text"
 				placeholder="Short label (e.g. Sent kickoff recap)"
-				class="w-full h-9 px-3 text-sm rounded-full border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+				class="w-full h-9 px-3 text-sm rounded-full glass-field focus:outline-none"
 			/>
 			<textarea
 				v-model="form.note"
 				rows="2"
 				placeholder="Optional note…"
-				class="w-full px-3 py-2 text-sm rounded-2xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+				class="w-full px-3 py-2 text-sm rounded-2xl glass-field focus:outline-none resize-none"
 			/>
 
 			<!-- Meta row: date + awaiting toggle + tag people -->
@@ -225,7 +225,7 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 				<input
 					v-model="form.occurred_at"
 					type="datetime-local"
-					class="h-8 px-2.5 text-xs rounded-full border border-border bg-background text-muted-foreground"
+					class="h-8 px-2.5 text-xs rounded-full glass-field text-muted-foreground"
 					title="When it happened (defaults to now)"
 				/>
 				<button
@@ -362,7 +362,7 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 							v-model="responseNote"
 							type="text"
 							placeholder="What came back? (optional)"
-							class="flex-1 h-8 px-3 text-xs rounded-full border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+							class="flex-1 h-8 px-3 text-xs rounded-full glass-field focus:outline-none"
 							@keydown.enter="confirmRespond"
 						/>
 						<button type="button" class="text-[11px] font-medium px-3 py-1.5 rounded-full bg-foreground text-background" @click="confirmRespond">Save</button>

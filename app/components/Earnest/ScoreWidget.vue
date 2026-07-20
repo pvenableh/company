@@ -1,5 +1,5 @@
 <template>
-	<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-4">
+	<div class="ios-card rounded-2xl bg-card p-4 space-y-4">
 		<!-- Header -->
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">

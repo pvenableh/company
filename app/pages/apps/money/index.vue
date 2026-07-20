@@ -1080,7 +1080,7 @@ const headerAction = computed(() => {
               v-model="invoicesSearch"
               type="search"
               placeholder="Search invoices…"
-              class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+              class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
               @input="debouncedFetchInvoices"
             />
             <UTabs
@@ -1434,18 +1434,18 @@ const headerAction = computed(() => {
               v-model="expensesSearch"
               type="search"
               placeholder="Search expenses…"
-              class="flex-1 min-w-[180px] rounded-full border bg-background px-3 py-2 text-sm"
+              class="flex-1 min-w-[180px] rounded-full glass-field px-3 py-2 text-sm"
             />
             <select
               v-model="expensesCategory"
-              class="rounded-md border bg-background px-3 py-2 text-sm"
+              class="rounded-md glass-field px-3 py-2 text-sm"
             >
               <option value="">All Categories</option>
               <option v-for="cat in EXPENSE_CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
             </select>
             <select
               v-model="expensesStatusFilter"
-              class="rounded-md border bg-background px-3 py-2 text-sm"
+              class="rounded-md glass-field px-3 py-2 text-sm"
             >
               <option value="">All Statuses</option>
               <option v-for="s in expenseStatusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>

@@ -37,7 +37,7 @@
 					<textarea
 						v-model="newStatusText"
 						rows="2"
-						class="w-full rounded-2xl border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
+						class="glass-field w-full rounded-2xl px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
 						placeholder="What's the latest on this project?"
 					/>
 					<div class="flex justify-end gap-2">

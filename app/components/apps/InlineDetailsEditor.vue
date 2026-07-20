@@ -118,9 +118,9 @@ async function saveField(f: DetailFieldDef) {
 }
 
 const inputCls =
-  'w-full rounded-lg border border-border bg-background px-2.5 h-9 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 transition-shadow';
+  'w-full rounded-lg glass-field px-2.5 h-9 text-sm focus:outline-none transition-shadow';
 const areaCls =
-  'w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 transition-shadow resize-y';
+  'w-full rounded-2xl glass-field px-3 py-2 text-sm focus:outline-none transition-shadow resize-y';
 
 function openUrl(v: string) {
   const href = /^https?:\/\//i.test(v) ? v : `https://${v}`;

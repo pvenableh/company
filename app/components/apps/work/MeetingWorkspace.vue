@@ -1246,7 +1246,7 @@ const promoteActionItem = async (idx) => {
 						v-model="noteDraft"
 						rows="2"
 						placeholder="Capture a follow-up thought or a decision the team agreed to…"
-						class="w-full text-sm resize-none rounded-lg bg-muted/30 border border-border/40 focus:border-primary/40 focus:outline-none px-3 py-2 placeholder:text-muted-foreground/60"
+						class="w-full text-sm resize-none rounded-lg glass-field focus:outline-none px-3 py-2 placeholder:text-muted-foreground/60"
 					/>
 					<div class="flex items-center gap-1.5 mt-2">
 						<button

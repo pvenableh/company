@@ -144,7 +144,7 @@ function onSave() {
 				<label class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Accent color</label>
 				<div class="mt-2 flex items-center gap-2">
 					<input v-model="draftAccent" type="color" class="h-8 w-10 rounded cursor-pointer border border-border" />
-					<input v-model="draftAccent" type="text" class="h-8 px-2 text-xs rounded-full border border-border bg-background w-24 font-mono" placeholder="#1f2937" />
+					<input v-model="draftAccent" type="text" class="glass-field h-8 px-2 text-xs rounded-full w-24 font-mono" placeholder="#1f2937" />
 				</div>
 			</div>
 
@@ -152,14 +152,14 @@ function onSave() {
 			<div class="grid grid-cols-1 gap-3">
 				<div>
 					<label class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Heading font</label>
-					<select v-model="draftConfig.headingFont" class="mt-1.5 h-8 w-full text-xs rounded-full border border-border bg-background px-3">
+					<select v-model="draftConfig.headingFont" class="glass-field mt-1.5 h-8 w-full text-xs rounded-full px-3">
 						<option :value="undefined">Theme default</option>
 						<option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">{{ f.label }}</option>
 					</select>
 				</div>
 				<div>
 					<label class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Body font</label>
-					<select v-model="draftConfig.bodyFont" class="mt-1.5 h-8 w-full text-xs rounded-full border border-border bg-background px-3">
+					<select v-model="draftConfig.bodyFont" class="glass-field mt-1.5 h-8 w-full text-xs rounded-full px-3">
 						<option :value="undefined">Theme default</option>
 						<option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">{{ f.label }}</option>
 					</select>
@@ -170,7 +170,7 @@ function onSave() {
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<label class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Labels</label>
-					<select v-model="draftConfig.metaTransform" class="mt-1.5 h-8 w-full text-xs rounded-full border border-border bg-background px-3">
+					<select v-model="draftConfig.metaTransform" class="glass-field mt-1.5 h-8 w-full text-xs rounded-full px-3">
 						<option :value="undefined">Theme default</option>
 						<option value="uppercase">UPPERCASE</option>
 						<option value="none">As typed</option>
@@ -181,7 +181,7 @@ function onSave() {
 					<input
 						v-model.number="draftConfig.metaTracking"
 						type="number" step="0.01" min="0" max="0.3" placeholder="0.06"
-						class="mt-1.5 h-8 w-full text-xs rounded-full border border-border bg-background px-3 font-mono"
+						class="glass-field mt-1.5 h-8 w-full text-xs rounded-full px-3 font-mono"
 					/>
 				</div>
 			</div>

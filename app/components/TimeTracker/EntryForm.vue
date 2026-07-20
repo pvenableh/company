@@ -12,7 +12,7 @@
 				/>
 
 				<!-- Modal content -->
-				<div class="relative w-full max-w-lg ios-card rounded-2xl border border-border bg-card p-6 shadow-xl space-y-5">
+				<div class="relative w-full max-w-lg ios-card rounded-2xl bg-card p-6 shadow-xl space-y-5">
 					<div class="flex items-center justify-between">
 						<h3 class="text-base font-semibold text-foreground">
 							{{ entry ? 'Edit Time Entry' : 'Add Manual Entry' }}

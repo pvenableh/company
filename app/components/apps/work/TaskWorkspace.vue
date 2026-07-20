@@ -311,7 +311,7 @@ function openProject() {
           <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Status</span>
           <select
             v-model="task.status"
-            class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
+            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="onStatusChange(task.status)"
           >
             <option value="new">To Do</option>
@@ -327,7 +327,7 @@ function openProject() {
           <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Type</span>
           <select
             :value="task.category || 'quick'"
-            class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
+            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="saveField('category', ($event.target as HTMLSelectElement).value)"
           >
             <option v-for="t in typeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
@@ -354,7 +354,7 @@ function openProject() {
           <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Assignee</span>
           <select
             :value="assigneeId"
-            class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
+            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="onAssigneeChange(($event.target as HTMLSelectElement).value || null)"
           >
             <option value="">Unassigned</option>
@@ -369,7 +369,7 @@ function openProject() {
           <input
             v-model="task.due_date"
             type="date"
-            class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs"
+            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="saveField('due_date', task.due_date || null)"
           />
         </div>

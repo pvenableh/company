@@ -16,7 +16,7 @@
         <select
           v-model="form.client"
           :disabled="saving || !!props.lockClientId"
-          class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-60"
+          class="w-full rounded-lg glass-field px-3 py-2 text-sm focus:outline-none disabled:opacity-60"
         >
           <option value="">Select a client...</option>
           <option v-for="c in availableClients" :key="c.id" :value="c.id">
@@ -31,7 +31,7 @@
         <select
           v-model="form.role"
           :disabled="saving"
-          class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+          class="w-full rounded-lg glass-field px-3 py-2 text-sm focus:outline-none"
         >
           <option v-for="r in CONNECTION_ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
         </select>
@@ -43,7 +43,7 @@
         <select
           v-model="form.introduced_by"
           :disabled="saving"
-          class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+          class="w-full rounded-lg glass-field px-3 py-2 text-sm focus:outline-none"
         >
           <option :value="null">&mdash;</option>
           <option v-for="i in INTRODUCED_BY_OPTIONS" :key="i.value" :value="i.value">{{ i.label }}</option>
@@ -58,7 +58,7 @@
           rows="3"
           placeholder="Optional context about this relationship..."
           :disabled="saving"
-          class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+          class="w-full rounded-lg glass-field px-3 py-2 text-sm focus:outline-none"
         />
       </div>
     </div>

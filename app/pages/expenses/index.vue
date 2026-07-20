@@ -135,18 +135,18 @@ const statusOptions = [
 				v-model="searchQuery"
 				type="text"
 				placeholder="Search expenses..."
-				class="flex-1 min-w-[180px] bg-card border border-border rounded-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+				class="flex-1 min-w-[180px] glass-field rounded-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
 			/>
 			<select
 				v-model="filterCategory"
-				class="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+				class="glass-field rounded-full px-3 py-2 text-sm text-foreground focus:outline-none"
 			>
 				<option value="">All Categories</option>
 				<option v-for="cat in EXPENSE_CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
 			</select>
 			<select
 				v-model="filterStatus"
-				class="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+				class="glass-field rounded-full px-3 py-2 text-sm text-foreground focus:outline-none"
 			>
 				<option value="">All Statuses</option>
 				<option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>

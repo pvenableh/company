@@ -25,7 +25,7 @@
 				v-model="newTitle"
 				type="text"
 				placeholder="Add a task..."
-				class="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+				class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none transition-colors"
 				@keydown.enter="handleAdd"
 			/>
 			<button

@@ -101,7 +101,7 @@ function close() {
           v-model="brief"
           :rows="3"
           :placeholder="placeholder || 'What is this post about? A sentence or two is plenty.'"
-          class="w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+          class="w-full rounded-2xl glass-field px-3 py-2 text-sm resize-none focus:outline-none"
           @keydown.meta.enter="submit"
           @keydown.ctrl.enter="submit"
         />

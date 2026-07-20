@@ -1,5 +1,5 @@
 <template>
-	<div :class="flush ? 'space-y-4' : 'ios-card rounded-2xl border border-border bg-card p-5 space-y-4'">
+	<div :class="flush ? 'space-y-4' : 'ios-card rounded-2xl bg-card p-5 space-y-4'">
 		<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 			Start Timer
 		</h3>

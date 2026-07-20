@@ -25,7 +25,7 @@
 					v-model="search"
 					type="text"
 					:placeholder="searchPlaceholder"
-					class="w-full h-9 pl-9 pr-3 rounded-full border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+					class="w-full h-9 pl-9 pr-3 rounded-full glass-field text-sm focus:outline-none"
 				/>
 			</div>
 

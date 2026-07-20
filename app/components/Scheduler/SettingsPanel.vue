@@ -704,7 +704,7 @@ onMounted(() => {
 					</div>
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 						<UFormGroup label="Event type">
-							<select v-model="embedEventTypeSlug" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+							<select v-model="embedEventTypeSlug" class="glass-field w-full rounded-full px-3 py-2 text-sm">
 								<option value="">Default (host's pick)</option>
 								<option v-for="et in eventTypes" :key="et.id" :value="et.slug">{{ et.title }}</option>
 							</select>

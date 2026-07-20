@@ -1,7 +1,7 @@
 <template>
 	<div class="space-y-6">
 		<!-- Header card -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-4">
+		<div class="ios-card rounded-2xl bg-card p-5 space-y-4">
 			<div class="flex items-center gap-4">
 				<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
 					<EarnestIcon class="w-7 h-7 text-primary" />
@@ -46,7 +46,7 @@
 		</div>
 
 		<!-- Dimensions breakdown -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-3">
+		<div class="ios-card rounded-2xl bg-card p-5 space-y-3">
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dimensions</h3>
 			<EarnestDimensionChart :dimensions="earnest.dimensions" />
 			<p class="text-[11px] text-muted-foreground pt-1 border-t border-border">
@@ -56,18 +56,18 @@
 		</div>
 
 		<!-- Badges -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-3">
+		<div class="ios-card rounded-2xl bg-card p-5 space-y-3">
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badges</h3>
 			<EarnestBadgeGrid :badges="earnest.badges" />
 		</div>
 
 		<!-- Trend -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5">
+		<div class="ios-card rounded-2xl bg-card p-5">
 			<EarnestTrendChart :history="earnest.history" />
 		</div>
 
 		<!-- Team rank -->
-		<div v-if="earnest.teamRank" class="ios-card rounded-2xl border border-border bg-card p-5 space-y-2">
+		<div v-if="earnest.teamRank" class="ios-card rounded-2xl bg-card p-5 space-y-2">
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team Standing</h3>
 			<div class="flex items-center gap-3">
 				<span class="text-2xl font-bold text-primary tabular-nums">#{{ earnest.teamRank }}</span>

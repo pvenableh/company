@@ -51,7 +51,7 @@
 				<input
 					:value="touch.email_subject ?? ''"
 					type="text"
-					class="w-full bg-transparent border border-border/40 rounded-lg px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:border-foreground/40 focus:bg-background transition-colors"
+					class="w-full glass-field rounded-lg px-3 py-2 text-sm font-medium text-foreground focus:outline-none transition-colors"
 					placeholder="Subject line"
 					@input="emitUpdate({ email_subject: ($event.target as HTMLInputElement).value })"
 				/>
@@ -63,7 +63,7 @@
 				<input
 					:value="touch.email_preview_text ?? ''"
 					type="text"
-					class="w-full bg-transparent border border-border/40 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-foreground/40 focus:bg-background transition-colors"
+					class="w-full glass-field rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none transition-colors"
 					placeholder="Inbox preview line"
 					@input="emitUpdate({ email_preview_text: ($event.target as HTMLInputElement).value })"
 				/>
@@ -75,7 +75,7 @@
 				<textarea
 					:value="touch.email_body_markdown ?? ''"
 					rows="9"
-					class="w-full bg-transparent border border-border/40 rounded-lg px-3 py-2 text-sm text-foreground leading-relaxed font-normal focus:outline-none focus:border-foreground/40 focus:bg-background transition-colors resize-none"
+					class="w-full glass-field rounded-lg px-3 py-2 text-sm text-foreground leading-relaxed font-normal focus:outline-none transition-colors resize-none"
 					placeholder="Email body — uses {{first_name}} for personalization"
 					@input="emitUpdate({ email_body_markdown: ($event.target as HTMLTextAreaElement).value })"
 				/>
@@ -122,7 +122,7 @@
 					<textarea
 						:value="touch.social_image_brief ?? ''"
 						rows="3"
-						class="w-full bg-transparent border border-border/40 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-foreground/40 focus:bg-background transition-colors resize-none"
+						class="w-full glass-field rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none transition-colors resize-none"
 						placeholder="Describe the image to generate or upload"
 						@input="emitUpdate({ social_image_brief: ($event.target as HTMLTextAreaElement).value })"
 					/>
@@ -135,7 +135,7 @@
 				<textarea
 					:value="touch.social_caption ?? ''"
 					rows="6"
-					class="w-full bg-transparent border border-border/40 rounded-lg px-3 py-2 text-sm text-foreground leading-relaxed focus:outline-none focus:border-foreground/40 focus:bg-background transition-colors resize-none"
+					class="w-full glass-field rounded-lg px-3 py-2 text-sm text-foreground leading-relaxed focus:outline-none transition-colors resize-none"
 					placeholder="Caption — first line is the feed hook"
 					@input="emitUpdate({ social_caption: ($event.target as HTMLTextAreaElement).value })"
 				/>

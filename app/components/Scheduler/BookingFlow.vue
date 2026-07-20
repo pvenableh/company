@@ -443,7 +443,7 @@ onMounted(() => {
 			<h2 class="text-base font-semibold mb-1">Confirming your payment…</h2>
 			<p class="text-xs text-muted-foreground">Don't close this page.</p>
 		</div>
-		<div v-if="paymentError && !finalizingPayment" class="ios-card p-5 mb-6 border-destructive/50">
+		<div v-if="paymentError && !finalizingPayment" class="ios-card p-5 mb-6 border-l-4 border-l-destructive">
 			<div class="flex items-start gap-3">
 				<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
 				<div class="min-w-0 flex-1">
@@ -469,7 +469,7 @@ onMounted(() => {
 					<button
 						v-for="et in eventTypes"
 						:key="et.id"
-						class="ios-card p-4 text-left hover:border-primary transition"
+						class="ios-card p-4 text-left hover:ring-2 hover:ring-primary/40 transition"
 						@click="selectEventType(et)"
 					>
 						<div class="flex items-center justify-between mb-1">
@@ -543,7 +543,7 @@ onMounted(() => {
 					<select
 						v-else-if="field.type === 'select'"
 						v-model="intakeAnswers[field.name]"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+						class="glass-field w-full rounded-full px-3 py-2 text-sm"
 					>
 						<option value="">—</option>
 						<option v-for="opt in (field.options || [])" :key="opt" :value="opt">{{ opt }}</option>

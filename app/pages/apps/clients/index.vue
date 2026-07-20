@@ -639,7 +639,7 @@ watch(view, (next) => {
             v-model="clientSearch"
             type="search"
             placeholder="Search clients..."
-            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
             @input="debouncedFetchClients"
           />
         </div>
@@ -831,12 +831,12 @@ watch(view, (next) => {
             v-model="contactSearch"
             type="search"
             placeholder="Search name, email, company..."
-            class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+            class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
             @input="debouncedFetchContacts"
           />
           <select
             v-model="contactsFilterStatus"
-            class="rounded-md border bg-background px-3 py-2 text-sm w-36"
+            class="rounded-md glass-field px-3 py-2 text-sm w-36"
           >
             <option value="">All Statuses</option>
             <option value="published">Published</option>

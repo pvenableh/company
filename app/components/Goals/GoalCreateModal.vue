@@ -111,7 +111,7 @@
 				<label class="t-label text-muted-foreground">Unit</label>
 				<select
 					v-model="form.target_unit"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="w-full rounded-full glass-field px-3 py-2 text-sm"
 				>
 					<option v-for="opt in goalUnitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
 				</select>
@@ -130,7 +130,7 @@
 				<label class="t-label text-muted-foreground">Timeframe</label>
 				<select
 					v-model="form.timeframe"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="w-full rounded-full glass-field px-3 py-2 text-sm"
 				>
 					<option value="weekly">Weekly</option>
 					<option value="monthly">Monthly</option>
@@ -143,7 +143,7 @@
 				<label class="t-label text-muted-foreground">Priority</label>
 				<select
 					v-model="form.priority"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="w-full rounded-full glass-field px-3 py-2 text-sm"
 				>
 					<option value="low">Low</option>
 					<option value="medium">Medium</option>

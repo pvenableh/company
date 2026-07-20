@@ -106,7 +106,7 @@ async function send() {
               v-model="search"
               type="text"
               placeholder="Search teammates…"
-              class="w-full rounded-full border border-border bg-background pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              class="w-full rounded-full glass-field pl-9 pr-3 py-2 text-sm focus:outline-none"
             />
           </div>
         </div>

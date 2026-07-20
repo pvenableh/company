@@ -1396,7 +1396,7 @@ watch(searchEmail, (val) => {
 										<UFormGroup label="Industry">
 											<select
 												v-model="infoForm.industry"
-												class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+												class="w-full rounded-full glass-field px-3 py-2 text-sm"
 											>
 												<option value="">Select industry...</option>
 												<option v-for="ind in industries" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
@@ -1618,7 +1618,7 @@ watch(searchEmail, (val) => {
 											<span class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Live preview</span>
 											<select
 												v-model="emailPreviewTemplate"
-												class="rounded-full border bg-background px-2 py-1 text-xs"
+												class="rounded-full glass-field px-2 py-1 text-xs"
 											>
 												<option v-for="t in emailPreviewTemplates" :key="t.value" :value="t.value">{{ t.label }}</option>
 											</select>
@@ -1770,7 +1770,7 @@ watch(searchEmail, (val) => {
 										<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Role</span>
 										<select
 											v-if="canManageOrg && member.id !== user?.id && getMemberRole(member.id).slug !== 'owner'"
-											class="text-xs rounded-full border border-border bg-transparent px-2.5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+											class="text-xs rounded-full glass-field px-2.5 py-0.5 cursor-pointer focus:outline-none"
 											:value="getMemberRole(member.id).id"
 											:disabled="changingRole"
 											@change="changeMemberRole(member.id, $event.target.value)"

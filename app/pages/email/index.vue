@@ -311,7 +311,7 @@ onUnmounted(() => clearEntity());
 						v-model="search"
 						type="search"
 						placeholder="Search name, email, company..."
-						class="w-full rounded-full border bg-muted/30 pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
+						class="w-full rounded-full glass-field pl-8 pr-3 py-2 text-xs focus:outline-none transition-all"
 						@input="debouncedFetch"
 					/>
 				</div>
@@ -474,7 +474,7 @@ onUnmounted(() => clearEntity());
 								v-model="newTemplateName"
 								type="text"
 								placeholder="e.g. March Newsletter, Welcome Email..."
-								class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+								class="w-full rounded-xl glass-field px-3 py-2.5 text-sm outline-none transition-all"
 								@keyup.enter="handleCreateTemplate"
 							/>
 						</div>
@@ -542,7 +542,7 @@ onUnmounted(() => clearEntity());
 								<input
 									v-model="newTemplateName"
 									type="text"
-									class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+									class="w-full rounded-xl glass-field px-3 py-2 text-sm outline-none transition-all"
 									@keyup.enter="handleCreateTemplate"
 								/>
 							</div>
@@ -589,7 +589,7 @@ onUnmounted(() => clearEntity());
 								<input
 									v-model="newTemplateName"
 									type="text"
-									class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+									class="w-full rounded-xl glass-field px-3 py-2 text-sm outline-none transition-all"
 									@keyup.enter="handleCreateTemplate"
 								/>
 							</div>

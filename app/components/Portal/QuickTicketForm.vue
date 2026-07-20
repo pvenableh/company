@@ -86,7 +86,7 @@ function close() {
 						v-model="form.title"
 						type="text"
 						placeholder="Brief description of your issue..."
-						class="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+						class="w-full rounded-xl glass-field px-4 py-2.5 text-sm focus:outline-none"
 						required
 					/>
 				</div>
@@ -97,7 +97,7 @@ function close() {
 						v-model="form.description"
 						rows="4"
 						placeholder="Provide additional details..."
-						class="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+						class="w-full rounded-xl glass-field px-4 py-2.5 text-sm focus:outline-none resize-none"
 					/>
 				</div>
 
@@ -105,7 +105,7 @@ function close() {
 					<label class="text-sm font-medium mb-1 block">Priority</label>
 					<select
 						v-model="form.priority"
-						class="rounded-xl border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+						class="rounded-xl glass-field px-4 py-2.5 text-sm focus:outline-none"
 					>
 						<option value="low">Low</option>
 						<option value="normal">Normal</option>

@@ -800,7 +800,7 @@ const goTo = (route: string) => {
 						/>
 
 						<!-- 30-day Earnest Score trend sparkline -->
-						<div class="ios-card rounded-2xl border border-border bg-card p-4 order-last">
+						<div class="ios-card rounded-2xl bg-card p-4 order-last">
 							<EarnestTrendChart :history="earnestState.history" />
 						</div>
 

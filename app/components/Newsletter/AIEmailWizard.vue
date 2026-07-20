@@ -65,7 +65,7 @@
                   v-model="form.topic"
                   rows="3"
                   placeholder="e.g. We're launching a new product line of eco-friendly water bottles..."
-                  class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-violet-500/30 outline-none transition-all placeholder:text-muted-foreground/50"
+                  class="w-full glass-field rounded-xl px-3 py-2.5 text-sm resize-none outline-none transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
 
@@ -78,7 +78,7 @@
                   v-model="form.keyPoints"
                   rows="2"
                   placeholder="- Free shipping on orders over $50&#10;- Available in 5 colors"
-                  class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-violet-500/30 outline-none transition-all placeholder:text-muted-foreground/50"
+                  class="w-full glass-field rounded-xl px-3 py-2.5 text-sm resize-none outline-none transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
             </div>
@@ -169,21 +169,21 @@
                     <label class="text-[10px] text-muted-foreground mb-1 block">Text</label>
                     <div class="flex items-center gap-2">
                       <input type="color" v-model="customColors.text" class="w-8 h-8 rounded-lg border cursor-pointer" />
-                      <input type="text" v-model="customColors.text" class="flex-1 rounded-full border px-2 py-1.5 text-xs font-mono bg-background" />
+                      <input type="text" v-model="customColors.text" class="flex-1 glass-field rounded-full px-2 py-1.5 text-xs font-mono" />
                     </div>
                   </div>
                   <div class="flex-1">
                     <label class="text-[10px] text-muted-foreground mb-1 block">Accent</label>
                     <div class="flex items-center gap-2">
                       <input type="color" v-model="customColors.accent" class="w-8 h-8 rounded-lg border cursor-pointer" />
-                      <input type="text" v-model="customColors.accent" class="flex-1 rounded-full border px-2 py-1.5 text-xs font-mono bg-background" />
+                      <input type="text" v-model="customColors.accent" class="flex-1 glass-field rounded-full px-2 py-1.5 text-xs font-mono" />
                     </div>
                   </div>
                   <div v-if="form.colorCount === 3" class="flex-1">
                     <label class="text-[10px] text-muted-foreground mb-1 block">Background</label>
                     <div class="flex items-center gap-2">
                       <input type="color" v-model="customColors.background" class="w-8 h-8 rounded-lg border cursor-pointer" />
-                      <input type="text" v-model="customColors.background" class="flex-1 rounded-full border px-2 py-1.5 text-xs font-mono bg-background" />
+                      <input type="text" v-model="customColors.background" class="flex-1 glass-field rounded-full px-2 py-1.5 text-xs font-mono" />
                     </div>
                   </div>
                 </div>
@@ -229,7 +229,7 @@
                     type="text"
                     v-model="form.brandColor"
                     placeholder="#6366f1"
-                    class="flex-1 rounded-full border px-3 py-2 text-sm bg-background font-mono focus:ring-1 focus:ring-violet-500/30 outline-none transition-all"
+                    class="flex-1 glass-field rounded-full px-3 py-2 text-sm font-mono outline-none transition-all"
                   />
                   <div class="flex gap-1">
                     <button

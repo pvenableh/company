@@ -6,7 +6,7 @@
 		</p>
 
 		<!-- Filters -->
-		<div class="ios-card rounded-2xl border border-border bg-card p-5">
+		<div class="ios-card rounded-2xl bg-card p-5">
 			<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 				<!-- Period presets -->
 				<div class="flex flex-wrap gap-1.5">
@@ -30,7 +30,7 @@
 					<!-- User filter -->
 					<select
 						v-model="selectedUserId"
-						class="rounded-md border bg-background px-2.5 py-1 text-xs min-w-[140px]"
+						class="rounded-md glass-field px-2.5 py-1 text-xs min-w-[140px]"
 						@change="fetchTeamData()"
 					>
 						<option value="">All Members</option>
@@ -43,14 +43,14 @@
 					<input
 						v-model="dateFrom"
 						type="date"
-						class="rounded-md border bg-background px-2.5 py-1 text-xs"
+						class="rounded-md glass-field px-2.5 py-1 text-xs"
 						@change="activePreset = null; fetchTeamData()"
 					/>
 					<span class="text-xs text-muted-foreground">→</span>
 					<input
 						v-model="dateTo"
 						type="date"
-						class="rounded-md border bg-background px-2.5 py-1 text-xs"
+						class="rounded-md glass-field px-2.5 py-1 text-xs"
 						@change="activePreset = null; fetchTeamData()"
 					/>
 				</div>
@@ -65,25 +65,25 @@
 		<template v-else>
 			<!-- Summary Cards -->
 			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
+				<div class="ios-card rounded-2xl bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team Hours</p>
 					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(summaryTotalMinutes) }}</p>
 					<p class="text-xs text-muted-foreground">{{ totalEntryCount }} entries</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
+				<div class="ios-card rounded-2xl bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billable Hours</p>
 					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(summaryBillableMinutes) }}</p>
 					<p class="text-xs text-muted-foreground">
 						{{ billablePercent }}% billable
 					</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
+				<div class="ios-card rounded-2xl bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Revenue</p>
 					<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
 						${{ formatCurrency(summaryTotalRevenue) }}
 					</p>
 				</div>
-				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
+				<div class="ios-card rounded-2xl bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Members</p>
 					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ teamSummary.length }}</p>
 					<p class="text-xs text-muted-foreground">of {{ orgMembers.length }} total</p>
@@ -91,7 +91,7 @@
 			</div>
 
 			<!-- Per-User Summary -->
-			<div v-if="teamSummary.length" class="ios-card rounded-2xl border border-border bg-card p-5">
+			<div v-if="teamSummary.length" class="ios-card rounded-2xl bg-card p-5">
 				<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
 					<Icon name="lucide:users" class="w-4 h-4 text-muted-foreground" />
 					Hours by Team Member
@@ -133,7 +133,7 @@
 			</div>
 
 			<!-- Entries List with Selection -->
-			<div class="ios-card rounded-2xl border border-border bg-card p-5">
+			<div class="ios-card rounded-2xl bg-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="font-medium text-sm flex items-center gap-2">
 						<Icon name="lucide:list" class="w-4 h-4 text-muted-foreground" />

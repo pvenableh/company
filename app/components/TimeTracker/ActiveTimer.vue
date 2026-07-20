@@ -1,7 +1,7 @@
 <template>
 	<div
 		v-if="isTimerRunning && activeTimer"
-		class="ios-card rounded-2xl border border-border bg-card overflow-hidden"
+		class="ios-card rounded-2xl bg-card overflow-hidden"
 	>
 		<!-- Accent border left edge -->
 		<div class="flex">

@@ -10,7 +10,7 @@
 					<label class="t-label text-muted-foreground">From Stage</label>
 					<select
 						v-model="form.from_stage"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+						class="w-full rounded-full glass-field px-3 py-2 text-sm"
 					>
 						<option :value="null">Any stage</option>
 						<option v-for="(label, id) in stageOptions" :key="id" :value="id">
@@ -22,7 +22,7 @@
 					<label class="t-label text-muted-foreground">To Stage <span class="text-destructive">*</span></label>
 					<select
 						v-model="form.to_stage"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+						class="w-full rounded-full glass-field px-3 py-2 text-sm"
 					>
 						<option v-for="(label, id) in stageOptions" :key="id" :value="id">
 							{{ label }}
@@ -36,7 +36,7 @@
 				<label class="t-label text-muted-foreground">Add to list</label>
 				<select
 					v-model="form.add_to_list"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="w-full rounded-full glass-field px-3 py-2 text-sm"
 				>
 					<option :value="null">— None —</option>
 					<option v-for="list in mailingLists" :key="list.id" :value="list.id">
@@ -48,7 +48,7 @@
 				<label class="t-label text-muted-foreground">Remove from list</label>
 				<select
 					v-model="form.remove_from_list"
-					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					class="w-full rounded-full glass-field px-3 py-2 text-sm"
 				>
 					<option :value="null">— None —</option>
 					<option v-for="list in mailingLists" :key="list.id" :value="list.id">

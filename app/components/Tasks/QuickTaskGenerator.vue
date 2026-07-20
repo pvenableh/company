@@ -45,7 +45,7 @@
 					v-model="newTaskTitle"
 					type="text"
 					placeholder="Add a task..."
-					class="w-full h-9 rounded-full border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+					class="w-full h-9 rounded-full glass-field px-3 text-sm placeholder:text-muted-foreground focus:outline-none transition-colors"
 					:class="{ 'pr-8': !selectedAssignee, 'pr-[120px]': selectedAssignee }"
 					@keydown.enter="handleAddTask"
 					@input="handleInputChange"
@@ -188,7 +188,7 @@
 						v-model="aiPrompt"
 						type="text"
 						placeholder="What are you working on? (optional)"
-						class="flex-1 h-8 rounded-full border border-border bg-muted/30 px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+						class="flex-1 h-8 rounded-full glass-field px-3 text-xs placeholder:text-muted-foreground focus:outline-none transition-colors"
 						@keydown.enter="fetchAiSuggestions"
 					/>
 					<button

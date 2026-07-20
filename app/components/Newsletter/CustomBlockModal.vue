@@ -24,14 +24,14 @@
               v-model="name"
               type="text"
               placeholder="My Custom Block"
-              class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+              class="w-full glass-field rounded-xl px-3 py-2 text-sm outline-none transition-all"
             />
           </div>
           <div class="space-y-1.5">
             <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</label>
             <select
               v-model="category"
-              class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+              class="w-full glass-field rounded-xl px-3 py-2 text-sm outline-none transition-all"
             >
               <option value="content">Content</option>
               <option value="header">Header</option>
@@ -56,7 +56,7 @@
             v-model="description"
             type="text"
             placeholder="A brief description of what this block does"
-            class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+            class="w-full glass-field rounded-xl px-3 py-2 text-sm outline-none transition-all"
           />
         </div>
 
@@ -92,7 +92,7 @@
               ref="codeRef"
               v-model="mjmlSource"
               rows="14"
-              class="w-full rounded-xl border px-3 py-2.5 text-xs bg-background font-mono resize-y leading-relaxed focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+              class="w-full glass-field rounded-xl px-3 py-2.5 text-xs font-mono resize-y leading-relaxed outline-none transition-all"
               placeholder="<mj-section>
   <mj-column>
     <mj-text>Your content here</mj-text>
@@ -131,11 +131,11 @@
                 v-model="variable.label"
                 type="text"
                 placeholder="Label"
-                class="flex-1 rounded-lg border px-2 py-1 text-xs bg-background"
+                class="flex-1 glass-field rounded-lg px-2 py-1 text-xs"
               />
               <select
                 v-model="variable.type"
-                class="rounded-lg border px-2 py-1 text-xs bg-background w-24"
+                class="glass-field rounded-lg px-2 py-1 text-xs w-24"
               >
                 <option value="text">Text</option>
                 <option value="color">Color</option>
@@ -148,7 +148,7 @@
                 v-model="variable.default"
                 type="text"
                 placeholder="Default"
-                class="w-24 rounded-lg border px-2 py-1 text-xs bg-background"
+                class="w-24 glass-field rounded-lg px-2 py-1 text-xs"
               />
             </div>
           </div>

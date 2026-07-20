@@ -203,7 +203,7 @@ onMounted(loadEvent);
 							v-model="changesComment"
 							placeholder="Describe the changes you'd like..."
 							rows="3"
-							class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+							class="w-full rounded-xl glass-field px-3 py-2 text-sm resize-none focus:outline-none"
 						/>
 						<div class="flex items-center gap-2 mt-3">
 							<UButton

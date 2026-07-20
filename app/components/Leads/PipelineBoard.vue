@@ -41,7 +41,7 @@
 				<select
 					v-if="availableTags.length"
 					v-model="tagFilter"
-					class="h-8 rounded-full border bg-background px-3 text-[11px] uppercase tracking-wider text-foreground"
+					class="h-8 rounded-full glass-field px-3 text-[11px] uppercase tracking-wider text-foreground"
 				>
 					<option value="">All tags</option>
 					<option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>

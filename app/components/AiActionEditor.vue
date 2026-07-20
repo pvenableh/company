@@ -187,7 +187,7 @@ async function save() {
   }
 }
 
-const inputCls = 'w-full rounded-lg border border-border bg-background px-2.5 h-8 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30';
+const inputCls = 'w-full rounded-lg glass-field px-2.5 h-8 text-xs focus:outline-none';
 </script>
 
 <template>

@@ -743,7 +743,7 @@ onUnmounted(() => {
 								<textarea
 									v-model="correctionText"
 									placeholder="What was wrong? (optional)"
-									class="flex-1 text-xs rounded-lg border border-border bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+									class="flex-1 text-xs rounded-lg glass-field px-2.5 py-1.5 resize-none focus:outline-none"
 									rows="2"
 									@keydown.enter.ctrl="submitCorrection"
 								/>
@@ -793,7 +793,7 @@ onUnmounted(() => {
 						:disabled="isSending"
 						placeholder="Ask about a client, project, or invoice..."
 						rows="1"
-						class="flex-1 resize-none text-sm border border-border rounded-2xl px-3 py-2.5 bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+						class="flex-1 resize-none text-sm glass-field rounded-2xl px-3 py-2.5 text-foreground focus:outline-none placeholder:text-muted-foreground"
 					/>
 					<button
 						@click="sendMessage"

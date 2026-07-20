@@ -95,7 +95,7 @@ const createChannel = async () => {
 		</div>
 
 		<!-- Error -->
-		<div v-if="error" class="ios-card p-3 flex items-center gap-2 border-destructive/30 dark:border-destructive">
+		<div v-if="error" class="ios-card p-3 flex items-center gap-2 border-l-4 border-l-destructive">
 			<div class="w-7 h-7 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
 				<Icon name="lucide:alert-circle" class="w-3.5 h-3.5 text-destructive" />
 			</div>
@@ -112,7 +112,7 @@ const createChannel = async () => {
 					type="text"
 					placeholder="e.g. design-feedback"
 					:disabled="creating"
-					class="flex-1 h-9 rounded-full border border-border/50 bg-muted/30 px-4 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+					class="flex-1 h-9 rounded-full glass-field px-4 text-sm placeholder:text-muted-foreground/50 focus:outline-none transition-all"
 					@keydown.enter="createChannel"
 				>
 				<Button size="sm" class="h-9 shrink-0" :disabled="!isValid || creating" @click="createChannel">

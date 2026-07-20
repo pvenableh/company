@@ -205,7 +205,7 @@ const formatTokens = (n: number) => {
 					<select
 						:value="digestCadence"
 						@change="(e) => digestCadence = (e.target as HTMLSelectElement).value as any"
-						class="text-[11px] rounded-full bg-background border border-border px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+						class="text-[11px] rounded-full glass-field px-2.5 py-1 focus:outline-none"
 					>
 						<option value="daily">Daily</option>
 						<option value="weekly">Weekly</option>

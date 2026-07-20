@@ -368,7 +368,7 @@ onMounted(() => {
 				</button>
 				<select
 					v-model="selectedYear"
-					class="text-xs rounded-full border bg-background px-3 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+					class="text-xs rounded-full glass-field px-3 py-1 focus:outline-none"
 				>
 					<option :value="currentYear - 1">{{ currentYear - 1 }}</option>
 					<option :value="currentYear">{{ currentYear }}</option>
@@ -388,7 +388,7 @@ onMounted(() => {
 						type="number"
 						min="0"
 						step="1000"
-						class="w-full text-sm border border-input rounded-md px-2 py-1 bg-transparent text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+						class="w-full text-sm glass-field rounded-md px-2 py-1 text-foreground focus:outline-none"
 						placeholder="0"
 					/>
 				</div>

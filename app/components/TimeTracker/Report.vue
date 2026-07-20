@@ -25,7 +25,7 @@
 				<select
 					v-if="teamMode"
 					v-model="selectedUserId"
-					class="rounded-md border bg-background px-2.5 py-1 text-xs min-w-[140px]"
+					class="rounded-md glass-field px-2.5 py-1 text-xs min-w-[140px]"
 					@change="fetchReport()"
 				>
 					<option value="">All Members</option>
@@ -39,14 +39,14 @@
 					<input
 						v-model="dateFrom"
 						type="date"
-						class="rounded-md border bg-background px-2.5 py-1 text-xs"
+						class="rounded-md glass-field px-2.5 py-1 text-xs"
 						@change="activePreset = null; fetchReport()"
 					/>
 					<span class="text-xs text-muted-foreground">→</span>
 					<input
 						v-model="dateTo"
 						type="date"
-						class="rounded-md border bg-background px-2.5 py-1 text-xs"
+						class="rounded-md glass-field px-2.5 py-1 text-xs"
 						@change="activePreset = null; fetchReport()"
 					/>
 				</div>
@@ -92,7 +92,7 @@
 			</div>
 
 			<!-- Daily Trend Chart -->
-			<div class="ios-card rounded-2xl border border-border bg-card p-5">
+			<div class="ios-card rounded-2xl bg-card p-5">
 				<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
 					<Icon name="lucide:bar-chart-3" class="w-4 h-4 text-muted-foreground" />
 					Daily Hours
@@ -136,7 +136,7 @@
 			<!-- Breakdowns: Client + Project -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				<!-- By Client -->
-				<div class="ios-card rounded-2xl border border-border bg-card p-5">
+				<div class="ios-card rounded-2xl bg-card p-5">
 					<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
 						<Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground" />
 						Hours by Client
@@ -172,7 +172,7 @@
 				</div>
 
 				<!-- By Project -->
-				<div class="ios-card rounded-2xl border border-border bg-card p-5">
+				<div class="ios-card rounded-2xl bg-card p-5">
 					<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
 						<Icon name="lucide:folder" class="w-4 h-4 text-muted-foreground" />
 						Hours by Project
@@ -253,7 +253,7 @@
 			</div>
 
 			<!-- Team Member Breakdown (team mode only) -->
-			<div v-if="teamMode && teamBreakdown.length" class="ios-card rounded-2xl border border-border bg-card p-5">
+			<div v-if="teamMode && teamBreakdown.length" class="ios-card rounded-2xl bg-card p-5">
 				<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
 					<Icon name="lucide:users" class="w-4 h-4 text-muted-foreground" />
 					Hours by Team Member

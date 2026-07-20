@@ -96,7 +96,7 @@
 						<input
 							v-model="invoiceDate"
 							type="date"
-							class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+							class="w-full rounded-md glass-field px-3 py-2 text-sm"
 						/>
 					</div>
 					<div>
@@ -104,7 +104,7 @@
 						<input
 							v-model="dueDate"
 							type="date"
-							class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+							class="w-full rounded-md glass-field px-3 py-2 text-sm"
 						/>
 					</div>
 				</div>

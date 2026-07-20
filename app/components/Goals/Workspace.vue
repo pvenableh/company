@@ -397,7 +397,7 @@ const viewTabs = [
 								v-model="aiContext"
 								type="text"
 								placeholder="Optional: describe your focus (e.g., 'grow revenue', 'expand network')"
-								class="flex-1 bg-card border border-border rounded-full px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+								class="flex-1 glass-field rounded-full px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
 								@keydown.enter="fetchAISuggestions"
 							/>
 							<button
@@ -575,7 +575,7 @@ const viewTabs = [
 					<input
 						v-model.number="progressValue"
 						type="number"
-						class="w-full bg-card border border-border rounded-full px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+						class="w-full glass-field rounded-full px-3 py-2 text-sm text-foreground focus:outline-none"
 					/>
 					<p class="text-xs text-muted-foreground mt-1">
 						Target: {{ progressGoal.target_value }} {{ progressGoal.target_unit }}
@@ -587,7 +587,7 @@ const viewTabs = [
 						v-model="progressNotes"
 						rows="2"
 						placeholder="What changed?"
-						class="w-full bg-card border border-border rounded-2xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+						class="w-full glass-field rounded-2xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none resize-none"
 					/>
 				</div>
 

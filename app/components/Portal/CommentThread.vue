@@ -199,7 +199,7 @@ watch(() => props.itemId, load);
 							v-model="replyText"
 							rows="1"
 							placeholder="Write a reply…"
-							class="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+							class="flex-1 rounded-xl glass-field px-3 py-1.5 text-xs focus:outline-none resize-none"
 							@keydown.enter.exact.prevent="submitReply"
 						/>
 						<button
@@ -229,7 +229,7 @@ watch(() => props.itemId, load);
 					v-model="text"
 					rows="1"
 					placeholder="Leave a comment…"
-					class="flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+					class="flex-1 rounded-xl glass-field px-3 py-2 text-sm focus:outline-none resize-none"
 					@keydown.enter.exact.prevent="submit"
 				/>
 				<button

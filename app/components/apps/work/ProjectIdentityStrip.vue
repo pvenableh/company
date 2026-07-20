@@ -124,11 +124,11 @@ function saveDates() {
 				<PopoverContent align="start" class="w-60 p-3 space-y-3">
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Start date</label>
-						<input v-model="editStart" type="date" class="w-full h-8 rounded-lg border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" />
+						<input v-model="editStart" type="date" class="w-full h-8 rounded-lg glass-field px-2 text-sm focus:outline-none" />
 					</div>
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Due date</label>
-						<input v-model="editDue" type="date" class="w-full h-8 rounded-lg border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" />
+						<input v-model="editDue" type="date" class="w-full h-8 rounded-lg glass-field px-2 text-sm focus:outline-none" />
 					</div>
 					<div class="flex justify-end gap-2 pt-1">
 						<Button variant="ghost" size="sm" @click="datesOpen = false">Cancel</Button>

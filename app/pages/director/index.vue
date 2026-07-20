@@ -290,7 +290,7 @@ const filteredMeetings = computed(() => {
           v-model="search"
           type="text"
           placeholder="Search meetings…"
-          class="w-44 sm:w-64 rounded-full border border-border bg-background pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          class="w-44 sm:w-64 rounded-full glass-field pl-8 pr-3 py-1.5 text-sm focus:outline-none"
         />
       </div>
     </div>

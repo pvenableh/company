@@ -90,14 +90,14 @@
               <select
                 v-if="seg.type === 'lead_stage'"
                 v-model="seg.stage"
-                class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] focus:ring-1 focus:ring-primary/30 outline-none"
+                class="glass-field rounded-full px-2 py-0.5 text-[10px] outline-none"
               >
                 <option v-for="s in leadStages" :key="s" :value="s">{{ s.replace('_', ' ') }}</option>
               </select>
               <select
                 v-if="seg.type === 'contact_category'"
                 v-model="seg.category"
-                class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] focus:ring-1 focus:ring-primary/30 outline-none"
+                class="glass-field rounded-full px-2 py-0.5 text-[10px] outline-none"
               >
                 <option v-for="c in contactCategories" :key="c" :value="c">{{ c }}</option>
               </select>
@@ -156,7 +156,7 @@
                 v-model="recipientSearch"
                 type="text"
                 placeholder="Filter recipients…"
-                class="w-full pl-7 pr-3 py-1.5 rounded-full border border-border bg-background text-[12px] focus:ring-1 focus:ring-primary/30 outline-none"
+                class="w-full pl-7 pr-3 py-1.5 glass-field rounded-full text-[12px] outline-none"
               >
             </div>
 

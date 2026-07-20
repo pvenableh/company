@@ -414,7 +414,7 @@ const hideMessage = async () => {
 			<div class="p-4 space-y-4">
 				<div>
 					<label class="block text-xs font-medium text-foreground mb-1.5">Reason</label>
-					<select v-model="reportReason" class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+					<select v-model="reportReason" class="w-full rounded-lg glass-field px-3 py-2 text-sm">
 						<option value="" disabled>Select a reason</option>
 						<option v-for="r in reportReasons" :key="r.value" :value="r.value">{{ r.label }}</option>
 					</select>
@@ -423,7 +423,7 @@ const hideMessage = async () => {
 					<label class="block text-xs font-medium text-foreground mb-1.5">
 						Details <span class="text-muted-foreground">(optional)</span>
 					</label>
-					<textarea v-model="reportDetails" rows="3" placeholder="Add more context..." class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none" />
+					<textarea v-model="reportDetails" rows="3" placeholder="Add more context..." class="w-full rounded-lg glass-field px-3 py-2 text-sm resize-none" />
 				</div>
 			</div>
 			<template #footer>

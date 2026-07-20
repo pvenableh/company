@@ -127,7 +127,7 @@ function resetToDefault(key: keyof EmailDesignSettings) {
                   type="text"
                   :value="designSettings.body_background"
                   placeholder="#f4f4f4"
-                  class="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                  class="flex-1 glass-field rounded-xl px-3 py-2 text-sm font-mono outline-none transition-all"
                   @change="emit('update:design', 'body_background', ($event.target as HTMLInputElement).value)"
                 >
               </div>
@@ -155,7 +155,7 @@ function resetToDefault(key: keyof EmailDesignSettings) {
                   type="text"
                   :value="designSettings.text_color"
                   placeholder="#333333"
-                  class="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                  class="flex-1 glass-field rounded-xl px-3 py-2 text-sm font-mono outline-none transition-all"
                   @change="emit('update:design', 'text_color', ($event.target as HTMLInputElement).value)"
                 >
               </div>
@@ -174,7 +174,7 @@ function resetToDefault(key: keyof EmailDesignSettings) {
               </div>
               <select
                 :value="designSettings.font_family"
-                class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                class="w-full glass-field rounded-xl px-3 py-2 text-sm outline-none transition-all"
                 @change="emit('update:design', 'font_family', ($event.target as HTMLSelectElement).value)"
               >
                 <option v-for="f in FONT_OPTIONS" :key="f.label" :value="f.value">{{ f.label }}</option>

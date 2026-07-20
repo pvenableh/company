@@ -15,7 +15,7 @@
             v-model="email"
             type="email"
             placeholder="test@example.com"
-            class="w-full rounded-xl border px-3 py-2.5 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+            class="w-full glass-field rounded-xl px-3 py-2.5 text-sm outline-none transition-all"
           />
         </div>
 

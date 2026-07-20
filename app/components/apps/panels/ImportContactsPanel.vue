@@ -217,7 +217,7 @@ Jane,Smith,jane@acme.com,CEO,Acme Corp,Technology,"123 Main St, Miami FL 33101",
       <div class="mt-6 space-y-3">
         <div>
           <label class="block text-sm font-medium mb-1">Add to mailing list (optional)</label>
-          <select v-model="targetListId" class="rounded-md border bg-background px-3 py-2 text-sm w-full">
+          <select v-model="targetListId" class="rounded-full glass-field px-3 py-2 text-sm w-full">
             <option :value="null">-- No list --</option>
             <option v-for="list in lists" :key="list.id" :value="list.id">{{ list.name }}</option>
           </select>
