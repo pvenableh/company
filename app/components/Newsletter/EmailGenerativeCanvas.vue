@@ -312,21 +312,21 @@ const assistantLine = computed(() => {
 </template>
 
 <style scoped>
-.egc { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 100%; overflow: hidden; background: #0a1220; color: #e8eef7; border-radius: 1.25rem; }
+.egc { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 100%; overflow: hidden; background: hsl(var(--aura-ground)); color: hsl(var(--aura-foreground)); border-radius: 1.25rem; }
 .egc__aura { position: absolute; inset: 0; z-index: 0; opacity: 0.45; pointer-events: none; }
 .egc__inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 0.85rem; height: 100%; padding: 1.25rem clamp(1rem, 3vw, 2rem); }
 .egc__head { display: flex; align-items: center; gap: 0.85rem; }
 .egc__mark { position: relative; width: 2.25rem; height: 2.25rem; flex: none; display: flex; align-items: center; justify-content: center; }
 .egc__head-copy { flex: 1; min-width: 0; }
 .egc__eyebrow { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: #7e93b0; }
-.egc__note { margin: 0.15rem 0 0; font-size: 0.95rem; line-height: 1.45; color: #cdd8ea; max-width: 60ch; }
+.egc__note { margin: 0.15rem 0 0; font-size: 0.95rem; line-height: 1.45; color: hsl(var(--aura-foreground-muted)); max-width: 60ch; }
 .egc__note-live { color: #9fb4d6; }
 .egc__save { flex: none; border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600; color: #06210f; background: linear-gradient(180deg, #6fe3a6, #3fbe82); border: none; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease; }
 .egc__save:hover { transform: translateY(-1px); }
 .egc__save:disabled { opacity: 0.6; cursor: default; }
-.egc__close { flex: none; width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: #cdd8ea; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); cursor: pointer; font-size: 1rem; transition: background 0.15s ease; }
-.egc__close:hover { background: rgba(255,255,255,0.14); }
-.egc__title { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.12); color: #f2f6fc; font-size: 1.35rem; font-weight: 600; padding: 0.2rem 0 0.5rem; outline: none; }
+.egc__close { flex: none; width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: hsl(var(--aura-foreground-muted)); background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); cursor: pointer; font-size: 1rem; transition: background 0.15s ease; }
+.egc__close:hover { background: hsl(var(--aura-glass-3)); }
+.egc__title { width: 100%; background: transparent; border: none; border-bottom: 1px solid hsl(var(--aura-rim)); color: hsl(var(--aura-foreground)); font-size: 1.35rem; font-weight: 600; padding: 0.2rem 0 0.5rem; outline: none; }
 .egc__title::placeholder { color: #64769a; }
 .egc__canvas {
   flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0.35rem 0.1rem 0.75rem; scrollbar-width: thin;
@@ -335,22 +335,22 @@ const assistantLine = computed(() => {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
 }
 .egc__stack { display: flex; flex-direction: column; gap: 0.7rem; max-width: 620px; margin: 0 auto; width: 100%; }
-.egc__block { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 0.85rem; padding: 0.9rem 1.05rem; will-change: transform, opacity; }
+.egc__block { background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); border-radius: 0.85rem; padding: 0.9rem 1.05rem; will-change: transform, opacity; }
 .egc__block-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
 .egc__cat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.12rem 0.5rem; border-radius: 9999px; color: #f3f7fd; background: color-mix(in srgb, var(--tint) 55%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 70%, transparent); }
 .egc__bname { font-size: 0.8rem; color: #97a8c4; }
-.egc__line { margin: 0.15rem 0; font-size: 0.9rem; line-height: 1.45; color: #cdd8ea; }
+.egc__line { margin: 0.15rem 0; font-size: 0.9rem; line-height: 1.45; color: hsl(var(--aura-foreground-muted)); }
 .egc__line--lead { font-size: 1rem; font-weight: 600; color: #eef3fa; }
 .egc__line--muted { color: #7b8ba6; font-style: italic; }
 .egc__empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.4rem; padding: 2.5rem 1rem; max-width: 640px; margin: 1.5rem auto 0; }
 .egc__empty-title { margin: 0; font-size: 1.15rem; font-weight: 600; color: #dfe8f6; }
 .egc__empty-sub { margin: 0; color: #9fb0cc; font-size: 0.9rem; line-height: 1.5; }
 .egc__suggestions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; width: 100%; }
-.egc__chip { text-align: left; padding: 0.7rem 1rem; border-radius: 1rem; font-size: 0.86rem; line-height: 1.4; color: #d7e2f2; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); cursor: pointer; transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease; }
-.egc__chip:hover:not(:disabled) { background: rgba(255,255,255,0.09); border-color: rgba(120,200,160,0.45); transform: translateY(-1px); }
+.egc__chip { text-align: left; padding: 0.7rem 1rem; border-radius: 1rem; font-size: 0.86rem; line-height: 1.4; color: hsl(var(--aura-foreground-muted)); background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); cursor: pointer; transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease; }
+.egc__chip:hover:not(:disabled) { background: hsl(var(--aura-glass-2)); border-color: rgba(120,200,160,0.45); transform: translateY(-1px); }
 .egc__chip:disabled { opacity: 0.5; cursor: default; }
 .egc__error { margin: 0; font-size: 0.85rem; color: #ff9a9a; }
-.egc__bar { display: flex; align-items: flex-end; gap: 0.6rem; padding: 0.55rem 0.6rem 0.55rem 1rem; border-radius: 1.25rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+.egc__bar { display: flex; align-items: flex-end; gap: 0.6rem; padding: 0.55rem 0.6rem 0.55rem 1rem; border-radius: 1.25rem; background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); backdrop-filter: blur(10px); }
 .egc__input { flex: 1; resize: none; max-height: 140px; background: transparent; border: none; outline: none; color: #eaf1fb; font-size: 0.95rem; line-height: 1.5; padding: 0.35rem 0; font-family: inherit; }
 .egc__input::placeholder { color: #8093ad; }
 .egc__input:disabled { opacity: 0.6; }

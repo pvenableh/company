@@ -43,8 +43,16 @@ export interface EarnestMoodTokens {
 /**
  * The ground the orbs are mixed toward — the deep base of the Focus canvas.
  * Mixing each mood colour a little toward this is what makes them "quieter".
+ *
+ * Now a reference to the shared `--aura-ground` token (themes.css) rather
+ * than a private `#0a1220`, which was duplicated across six files and drifted
+ * from the app's dark surfaces. Both consumers (Aura.vue's `color-mix()`
+ * gradient string and CreateWithEarnest's `backgroundColor` binding) are CSS
+ * contexts, so a `var()` resolves correctly — but note this is NOT a plain
+ * hex any more: anything needing a literal colour (canvas/WebGL) must read
+ * the computed value instead.
  */
-export const EARNEST_GROUND = '#0a1220';
+export const EARNEST_GROUND = 'hsl(var(--aura-ground))';
 
 /**
  * Mood → light. Palettes are deliberately softer than raw brand hues:

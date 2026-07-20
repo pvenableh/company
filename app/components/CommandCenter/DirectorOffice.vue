@@ -1957,21 +1957,21 @@ const vReveal = {
    coming out from behind each department, never over it. */
 .do-seat { position: absolute; z-index: 1; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; background: transparent; border: 0; cursor: pointer; transition: opacity .3s; }
 .do-seat[data-dim="true"] { opacity: .38; }
-.do-seat__chip { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14); background: color-mix(in oklab, var(--seat-accent) 20%, #0c1526); color: color-mix(in oklab, var(--seat-accent), white 22%); box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); transition: transform .34s cubic-bezier(.34,1.5,.5,1), box-shadow .3s, border-color .25s; }
+.do-seat__chip { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 1px solid hsl(var(--aura-rim)); background: color-mix(in oklab, var(--seat-accent) 20%, #0c1526); color: color-mix(in oklab, var(--seat-accent), white 22%); box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); transition: transform .34s cubic-bezier(.34,1.5,.5,1), box-shadow .3s, border-color .25s; }
 .do-seat:hover .do-seat__chip { transform: translateY(-4px) scale(1.06); border-color: color-mix(in oklab, var(--seat-accent), white 20%); }
 .do-seat[data-active="true"] .do-seat__chip { border-color: var(--seat-accent); box-shadow: 0 0 0 2px var(--seat-accent), 0 14px 34px -12px color-mix(in oklab, var(--seat-accent) 60%, transparent); }
 .do-seat__badge { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #06121f; background: var(--seat-accent); box-shadow: 0 2px 8px -2px rgba(0,0,0,.6); }
-.do-seat__presenter { position: absolute; bottom: -5px; left: -5px; width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 2px solid #0a1220; }
+.do-seat__presenter { position: absolute; bottom: -5px; left: -5px; width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 2px solid hsl(var(--aura-ground)); }
 .do-seat[data-presenting="true"] .do-seat__chip::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--seat-accent); animation: do-ring 1.9s ease-out infinite; pointer-events: none; }
 @keyframes do-ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.42); opacity: 0; } }
-.do-seat__label { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: #eef2f8; }
+.do-seat__label { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: hsl(var(--aura-foreground)); }
 .do-seat__pri { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: rgba(238,242,248,.42); margin-top: -3px; }
 
 .do-director { position: absolute; z-index: 1; transform: translate(-50%, -30px); display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.do-director__chair { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #eef2f8; background: color-mix(in oklab, #6a86dc 12%, #101a2e); border: 1px solid rgba(255,255,255,.2); box-shadow: 0 0 44px -6px rgba(120,150,220,.5); }
+.do-director__chair { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: hsl(var(--aura-foreground)); background: color-mix(in oklab, #6a86dc 12%, #101a2e); border: 1px solid rgba(255,255,255,.2); box-shadow: 0 0 44px -6px rgba(120,150,220,.5); }
 .do-director__label { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(238,242,248,.6); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .do-attendees { display: flex; margin-top: 3px; }
-.do-att { width: 23px; height: 23px; border-radius: 50%; object-fit: cover; margin-left: -7px; border: 2px solid #0a1220; box-shadow: 0 2px 6px -2px rgba(0,0,0,.6); }
+.do-att { width: 23px; height: 23px; border-radius: 50%; object-fit: cover; margin-left: -7px; border: 2px solid hsl(var(--aura-ground)); box-shadow: 0 2px 6px -2px rgba(0,0,0,.6); }
 .do-att:first-child { margin-left: 0; }
 
 /* Liquid card micro-interaction: retime the existing hover lift to a gentle

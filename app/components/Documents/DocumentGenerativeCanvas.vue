@@ -328,8 +328,8 @@ const assistantLine = computed(() => {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
-  background: #0a1220;
-  color: #e8eef7;
+  background: hsl(var(--aura-ground));
+  color: hsl(var(--aura-foreground));
   border-radius: 1.25rem;
 }
 .dgc__aura { position: absolute; inset: 0; z-index: 0; opacity: 0.45; pointer-events: none; }
@@ -346,7 +346,7 @@ const assistantLine = computed(() => {
 .dgc__mark { position: relative; width: 2.25rem; height: 2.25rem; flex: none; display: flex; align-items: center; justify-content: center; }
 .dgc__head-copy { flex: 1; min-width: 0; }
 .dgc__eyebrow { margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: #7e93b0; }
-.dgc__note { margin: 0.15rem 0 0; font-size: 0.95rem; line-height: 1.45; color: #cdd8ea; max-width: 60ch; }
+.dgc__note { margin: 0.15rem 0 0; font-size: 0.95rem; line-height: 1.45; color: hsl(var(--aura-foreground-muted)); max-width: 60ch; }
 .dgc__note-live { color: #9fb4d6; }
 .dgc__save {
   flex: none; border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600;
@@ -357,17 +357,17 @@ const assistantLine = computed(() => {
 .dgc__save:disabled { opacity: 0.6; cursor: default; }
 .dgc__close {
   flex: none; width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
-  color: #cdd8ea; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+  color: hsl(var(--aura-foreground-muted)); background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); cursor: pointer;
   font-size: 1rem; transition: background 0.15s ease;
 }
-.dgc__close:hover { background: rgba(255,255,255,0.14); }
+.dgc__close:hover { background: hsl(var(--aura-glass-3)); }
 
 .dgc__title {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-  color: #f2f6fc;
+  border-bottom: 1px solid hsl(var(--aura-rim));
+  color: hsl(var(--aura-foreground));
   font-size: 1.35rem;
   font-weight: 600;
   padding: 0.2rem 0 0.5rem;
@@ -419,15 +419,15 @@ const assistantLine = computed(() => {
 .dgc__suggestions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; width: 100%; }
 .dgc__chip {
   text-align: left; padding: 0.7rem 1rem; border-radius: 1rem; font-size: 0.86rem; line-height: 1.4;
-  color: #d7e2f2; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); cursor: pointer;
+  color: hsl(var(--aura-foreground-muted)); background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
-.dgc__chip:hover { background: rgba(255,255,255,0.09); border-color: rgba(120,200,160,0.45); transform: translateY(-1px); }
+.dgc__chip:hover { background: hsl(var(--aura-glass-2)); border-color: rgba(120,200,160,0.45); transform: translateY(-1px); }
 .dgc__error { margin: 0; font-size: 0.85rem; color: #ff9a9a; }
 
 .dgc__bar {
   display: flex; align-items: flex-end; gap: 0.6rem; padding: 0.55rem 0.6rem 0.55rem 1rem;
-  border-radius: 1.25rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+  border-radius: 1.25rem; background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); backdrop-filter: blur(10px);
 }
 .dgc__input {
   flex: 1; resize: none; max-height: 140px; background: transparent; border: none; outline: none;

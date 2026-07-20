@@ -299,8 +299,8 @@ const assistantLine = computed(() => {
   min-height: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0a1220;
-  color: #e8eef7;
+  background: hsl(var(--aura-ground));
+  color: hsl(var(--aura-foreground));
   border-radius: 1.25rem;
 }
 .sgc__aura {
@@ -347,7 +347,7 @@ const assistantLine = computed(() => {
   margin: 0.15rem 0 0;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: #cdd8ea;
+  color: hsl(var(--aura-foreground-muted));
   max-width: 60ch;
 }
 .sgc__note-live { color: #9fb4d6; }
@@ -367,10 +367,10 @@ const assistantLine = computed(() => {
 .sgc__save:disabled { opacity: 0.6; cursor: default; }
 .sgc__close {
   flex: none; width: 2rem; height: 2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
-  color: #cdd8ea; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+  color: hsl(var(--aura-foreground-muted)); background: hsl(var(--aura-glass-1)); border: 1px solid hsl(var(--aura-rim)); cursor: pointer;
   font-size: 1rem; transition: background 0.15s ease;
 }
-.sgc__close:hover { background: rgba(255,255,255,0.14); }
+.sgc__close:hover { background: hsl(var(--aura-glass-3)); }
 
 /* Canvas */
 .sgc__canvas {
@@ -397,8 +397,8 @@ const assistantLine = computed(() => {
   gap: 0.65rem;
   padding: 1rem 1.05rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: hsl(var(--aura-glass-1));
+  border: 1px solid hsl(var(--aura-rim));
   backdrop-filter: blur(8px);
   will-change: transform, opacity;
 }
@@ -429,7 +429,7 @@ const assistantLine = computed(() => {
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.5;
-  color: #e8eef7;
+  color: hsl(var(--aura-foreground));
   white-space: pre-wrap;
 }
 .sgc__tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
@@ -470,14 +470,14 @@ const assistantLine = computed(() => {
   border-radius: 1rem;
   font-size: 0.86rem;
   line-height: 1.4;
-  color: #d7e2f2;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: hsl(var(--aura-foreground-muted));
+  background: hsl(var(--aura-glass-1));
+  border: 1px solid hsl(var(--aura-rim));
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .sgc__chip:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: hsl(var(--aura-glass-2));
   border-color: rgba(120, 200, 160, 0.45);
   transform: translateY(-1px);
 }
@@ -495,8 +495,8 @@ const assistantLine = computed(() => {
   gap: 0.6rem;
   padding: 0.55rem 0.6rem 0.55rem 1rem;
   border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: hsl(var(--aura-glass-1));
+  border: 1px solid hsl(var(--aura-rim));
   backdrop-filter: blur(10px);
 }
 .sgc__input {
