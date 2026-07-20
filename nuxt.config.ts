@@ -468,9 +468,14 @@ export default defineNuxtConfig({
 		componentDir: './components/ui',
 	},
 
-	// Color mode for dark theme support
+	// Color mode. DEFAULT = dark: the presence layer (Focus, the aura, the
+	// Generative Canvases) is built on a fixed dark ground, so dark is the
+	// app's native register — `system` meant most users met a light shell
+	// wrapped around dark surfaces. Users can still switch in Account →
+	// Appearance (the preference persists per browser); light is NOT removed.
 	colorMode: {
-		preference: 'system',
+		preference: 'dark',
+		fallback: 'dark',
 		classSuffix: '',
 	},
 

@@ -113,7 +113,11 @@
 	--app-work-l: 61%;
 }
 
-[data-theme='glass'] .dark,
+/* NOTE: `data-theme` and `.dark` both live on <html>, so the theme-scoped dark
+   selector must be COMPOUND (`[data-theme='x'].dark`), not a descendant
+   (`[data-theme='x'] .dark`) — the latter never matches anything. Glass only
+   appeared to work because of the bare `.dark` fallback below. */
+[data-theme='glass'].dark,
 .dark {
 	--background: 0 0% 5%;
 	--foreground: 0 0% 93%;
@@ -157,6 +161,32 @@
 	--sidebar-accent-foreground: 0 0% 93%;
 	--sidebar-border: 0 0% 15%;
 	--sidebar-ring: 0 0% 93%;
+
+	/* Semantic + status colours tuned FOR a dark ground. Previously these fell
+	   through to their light values, where full-saturation greens/ambers glare
+	   against a near-black background. Lower saturation, lift lightness so they
+	   stay legible without shouting. */
+	--success: 142 45% 55%;
+	--success-foreground: 0 0% 8%;
+	--warning: 38 70% 60%;
+	--warning-foreground: 0 0% 8%;
+	--info: 199 65% 62%;
+	--status-active: 160 40% 58%;
+	--status-scheduled: 199 65% 62%;
+
+	/* Tag ramp: the light ramp is a pastel scale that disappears on dark, and
+	   its deep violets (7–8) go nearly invisible. Rebalanced to mid-lightness so
+	   all eight stay distinguishable against the ground. NOTE: the per-user
+	   palette system (useAppAccent) writes --tag-N inline on <html>, which wins
+	   over these — this is the fallback ramp only. */
+	--tag-1: 163 55% 62%;
+	--tag-2: 171 50% 60%;
+	--tag-3: 188 48% 60%;
+	--tag-4: 194 52% 62%;
+	--tag-5: 202 52% 64%;
+	--tag-6: 213 55% 66%;
+	--tag-7: 261 48% 68%;
+	--tag-8: 278 50% 68%;
 }
 
 /* ──────────────────────────────────────────────
@@ -234,7 +264,7 @@
 	--status-scheduled: 199 89% 48%;
 }
 
-[data-theme='ink'] .dark {
+[data-theme='ink'].dark {
 	--background: 30 12% 6%;
 	--foreground: 38 15% 90%;
 

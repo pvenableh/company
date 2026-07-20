@@ -43,8 +43,15 @@ async function generatePDF() {
 		// Strip page-controls (e.g. action buttons in document headers)
 		clone.querySelectorAll('[data-pdf-strip]').forEach((b) => b.remove());
 
-		// Get computed background of the source element so the PDF matches the theme
-		const bg = window.getComputedStyle(el).backgroundColor || '#ffffff';
+		// A document is a PRINTED artifact — it is always light, whatever the app
+		// theme is. Documents render inside `.doc-shell`, which owns its own
+		// light token set (--doc-bg), so we take the background from there.
+		// Never from the app chrome: with dark mode on, the computed background
+		// of a node outside .doc-shell is near-black and the PDF came out dark.
+		const shell = el.closest('.doc-shell') || el.querySelector('.doc-shell');
+		const shellBg = shell ? window.getComputedStyle(shell).backgroundColor : '';
+		const isUsable = (c: string) => !!c && c !== 'transparent' && !/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/.test(c);
+		const bg = isUsable(shellBg) ? shellBg : '#ffffff';
 
 		// Style the clone for capture: fixed width, no shadow/border, off-screen
 		clone.style.cssText = `
