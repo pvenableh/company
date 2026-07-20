@@ -25,10 +25,14 @@ defineEmits<{ (e: 'toggle'): void }>();
 		:aria-pressed="pinned ? 'true' : 'false'"
 		@click.stop="$emit('toggle')"
 	>
+		<!-- @nuxt/icon renders as a masked span (no fillable SVG), so `fill-*`
+		     is a no-op — a "solid" pin needs a FILLED glyph. Active = mdi:pin
+		     (solid pushpin) tinted red via currentColor; inactive = the
+		     lucide:pin outline. -->
 		<Icon
-			name="lucide:pin"
+			:name="pinned ? 'mdi:pin' : 'lucide:pin'"
 			class="w-3.5 h-3.5 transition-transform"
-			:class="pinned ? 'fill-current -rotate-45' : ''"
+			:class="pinned ? 'text-red-500' : ''"
 		/>
 	</button>
 </template>

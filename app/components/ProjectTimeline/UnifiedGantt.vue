@@ -38,6 +38,13 @@ const {
 } = useUnifiedTimeline({ portal: props.portal });
 
 const { projects, loading: projectsLoading, error, fetchProjects, fetchProjectDetails, showAllCompleted, toggleShowAllCompleted } = useProjectTimeline({ portal: props.portal });
+// Pin-to-top: same optimistic composable ProjectWorkspace + the carousel use.
+// Portal mode is read-only, so the toggle is hidden there.
+const { togglePin } = usePinnable('projects');
+async function onTogglePinProject(projectId: string) {
+	const project = projects.value.find((p) => p.id === projectId);
+	if (project) await togglePin(project as { id: string; pinned?: boolean });
+}
 const { user: authUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
@@ -207,6 +214,11 @@ const sortedProjects = computed(() => {
 			return s !== 'completed' && s !== 'done' && s !== 'archived';
 		})
 		.sort((a, b) => {
+			// Pinned projects always float to the top, regardless of status or
+			// date. Within the pinned group (and within the unpinned group) the
+			// existing status → recency order still applies.
+			const pin = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+			if (pin !== 0) return pin;
 			const sp = statusPriority(a.status) - statusPriority(b.status);
 			if (sp !== 0) return sp;
 			return getEarliestDate(b) - getEarliestDate(a); // newest first within group
@@ -252,6 +264,8 @@ interface GanttRow {
 	link?: string;
 	hasChildren?: boolean;
 	expanded?: boolean;
+	/** Project rows only — drives the pin toggle + pinned-first ordering. */
+	pinned?: boolean;
 }
 
 const rows = computed<GanttRow[]>(() => {
@@ -282,6 +296,7 @@ const rows = computed<GanttRow[]>(() => {
 				endDate: project.completion_date,
 				hasChildren: childCount > 0 || !detailLoaded,
 				expanded: isExpanded,
+				pinned: !!project.pinned,
 				link: props.portal ? undefined : `/projects/${project.id}`,
 			});
 
@@ -347,6 +362,7 @@ const rows = computed<GanttRow[]>(() => {
 				status: project.status,
 				startDate: project.start_date,
 				endDate: project.completion_date,
+				pinned: !!project.pinned,
 				link: props.portal ? undefined : `/projects/${project.id}`,
 			});
 		}
@@ -1077,7 +1093,7 @@ const showUndated = ref(false);
 				<div
 					v-for="(row, i) in filteredRows"
 					:key="row.id"
-					class="gantt__row"
+					class="gantt__row group"
 					:class="{ 'gantt__row--alt': i % 2 === 1 }"
 				>
 					<!-- Label (sticky left) -->
@@ -1121,6 +1137,17 @@ const showUndated = ref(false);
 							:style="{ paddingLeft: row.depth === 0 ? '20px' : '4px' }"
 							:title="row.label"
 						>{{ row.label }}</span>
+						<!-- Pin toggle — real project rows only (not the synthetic
+						     "My Tasks" section), and never in the read-only portal.
+						     Pinned projects float to the top; the button reveals on
+						     row hover, stays visible (red) once pinned. -->
+						<PinButton
+							v-if="!props.portal && row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section'"
+							:pinned="row.pinned"
+							size="xs"
+							class="mr-1"
+							@toggle="onTogglePinProject(row.id)"
+						/>
 					</div>
 
 					<!-- Track -->
@@ -1736,21 +1763,30 @@ const showUndated = ref(false);
 	color: hsl(var(--muted-foreground));
 	margin-bottom: 4px;
 }
+/* Project-detail modal fields wear the shared liquid-glass material instead
+ * of a hard 1px border, matching the converted `.glass-field` controls. The
+ * rim + focus ring come from the global `--glass-*` tokens (theme.css). */
 .gantt-modal-input {
 	width: 100%;
 	height: 32px;
 	border-radius: 8px;
-	border: 1px solid hsl(var(--border));
-	background: hsl(var(--background));
+	border: 0;
+	background: hsl(var(--card) / 0.55);
+	backdrop-filter: blur(10px) saturate(130%);
+	-webkit-backdrop-filter: blur(10px) saturate(130%);
+	box-shadow: var(--glass-rim-shadow);
 	padding: 0 12px;
 	font-size: 13px;
 	color: hsl(var(--foreground));
-	transition: border-color 0.15s;
+	transition: box-shadow 0.15s;
+}
+:is(.dark) .gantt-modal-input {
+	background: hsl(var(--card) / 0.45);
 }
 .gantt-modal-input:focus {
 	outline: none;
-	border-color: hsl(var(--primary) / 0.4);
-	box-shadow: 0 0 0 2px hsl(var(--primary) / 0.08);
+	box-shadow: var(--glass-rim-shadow),
+		0 0 0 3px hsl(var(--app-accent-h, 220) var(--glass-focus-s) 55% / 0.2);
 }
 
 /* ── Fade transition ── */

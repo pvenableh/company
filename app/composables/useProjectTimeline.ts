@@ -73,6 +73,7 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     'title',
     'status',
     'color',
+    'pinned',
     'start_date',
     'due_date',
     'completion_date',
