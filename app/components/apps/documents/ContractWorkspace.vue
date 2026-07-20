@@ -446,7 +446,7 @@ if (!props.compact) {
       <!-- Save bar (sticky) when editing blocks -->
       <div
         v-if="mode === 'edit' && blocksDirty"
-        class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-warning/10 dark:bg-warning/30 border-warning/40"
+        class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-warning/10 dark:bg-warning/30 border-l-4 border-l-warning"
       >
         <p class="text-xs text-warning">Unsaved changes to contract blocks.</p>
         <button

@@ -121,11 +121,11 @@ const subtitle = computed(() => {
 				</button>
 			</div>
 
-			<div v-if="campaignError" class="ios-card border-destructive/30 bg-destructive/5 p-3 text-center">
+			<div v-if="campaignError" class="ios-card border-l-4 border-l-destructive bg-destructive/5 p-3 text-center">
 				<p class="text-xs text-destructive">{{ campaignError }}</p>
 			</div>
 
-			<div v-if="!campaign && !generatingCampaign && !campaignError" class="ios-card border-dashed border-border/50 p-6 text-center">
+			<div v-if="!campaign && !generatingCampaign && !campaignError" class="ios-card border-2 border-dashed border-border/50 p-6 text-center">
 				<Icon name="lucide:rocket" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
 				<p class="text-xs text-muted-foreground">
 					Tell Earnest what you want this campaign to do.

@@ -89,7 +89,7 @@
 					<button
 						v-for="b in filteredBlocks"
 						:key="b.id"
-						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
+						class="text-left ios-card p-4 hover:ring-2 hover:ring-primary/30 transition-all"
 						:class="b.status === 'archived' ? 'opacity-60' : ''"
 						@click="openEditBlock(b)"
 					>
@@ -134,7 +134,7 @@
 					<button
 						v-for="t in offerings"
 						:key="t.id"
-						class="text-left ios-card p-4 hover:border-primary/40 transition-colors"
+						class="text-left ios-card p-4 hover:ring-2 hover:ring-primary/30 transition-all"
 						:class="t.status === 'archived' ? 'opacity-60' : ''"
 						@click="openEditOffering(t)"
 					>

@@ -396,7 +396,7 @@
 						</button>
 					</div>
 
-					<div v-if="campaignError" class="mt-3 ios-card border-destructive/30 bg-destructive/5 p-3 text-center">
+					<div v-if="campaignError" class="mt-3 ios-card border-l-4 border-l-destructive bg-destructive/5 p-3 text-center">
 						<p class="text-xs text-destructive">{{ campaignError }}</p>
 					</div>
 

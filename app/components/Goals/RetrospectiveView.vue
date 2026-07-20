@@ -234,7 +234,7 @@ function progressColor(p: number): string {
 		</div>
 
 		<!-- Error -->
-		<div v-if="retroError" class="ios-card border-destructive/20 bg-destructive/5 p-4 mb-4 text-sm text-destructive">
+		<div v-if="retroError" class="ios-card border-l-4 border-l-destructive bg-destructive/5 p-4 mb-4 text-sm text-destructive">
 			{{ retroError }}
 		</div>
 

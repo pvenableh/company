@@ -400,7 +400,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 		</div>
 
 		<!-- Empty state -->
-		<div v-if="payload.phases.length === 0" class="ios-card p-6 text-center border-dashed">
+		<div v-if="payload.phases.length === 0" class="ios-card p-6 text-center border-2 border-dashed border-border">
 			<UIcon name="lucide:layout-template" class="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-sm text-muted-foreground mb-3">No phases yet. Add the first one to start mapping the scope.</p>
 			<div ref="addMenuRef" class="relative inline-block">

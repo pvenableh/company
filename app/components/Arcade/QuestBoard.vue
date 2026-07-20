@@ -14,8 +14,8 @@
 				<div
 					v-for="q in group.quests"
 					:key="q.id"
-					class="ios-card rounded-2xl border border-border bg-card p-4 flex items-center gap-3 transition-colors"
-					:class="q.done && !claimedIds.has(q.id) ? 'border-primary/40 bg-primary/5' : ''"
+					class="ios-card rounded-2xl bg-card p-4 flex items-center gap-3 transition-colors"
+					:class="q.done && !claimedIds.has(q.id) ? 'ring-1 ring-primary/40 bg-primary/5' : ''"
 				>
 					<!-- Icon -->
 					<div
