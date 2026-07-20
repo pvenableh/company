@@ -205,14 +205,18 @@ watch(() => props.modelValue, () => nextTick(measure));
 	@apply leading-none;
 }
 
-/* Active state: just color the text white — the gradient pill is the
- * sliding thumb behind, not the button's own background. */
+/* Active state: text sits on the sliding thumb (the pill behind, not the
+ * button's own background), so it must contrast with the thumb's fill. The
+ * thumb is `--primary` in the neutral/glass modes below, and `--primary`
+ * flips to near-WHITE under the Mono palette — a hardcoded `white` text then
+ * vanished (white-on-white). `--primary-foreground` is the correct on-primary
+ * colour in every theme: white on cyan (Default), dark ink on white (Mono). */
 .app-floor-strip__item--active {
-	color: white;
+	color: hsl(var(--primary-foreground));
 }
 
 .app-floor-strip__item--active:hover {
-	color: white;
+	color: hsl(var(--primary-foreground));
 }
 
 /* Neutral palette + Glass-toggle override — per-app accent vars are flat

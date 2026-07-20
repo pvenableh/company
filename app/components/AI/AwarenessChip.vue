@@ -96,7 +96,7 @@ const open = ref(false);
 	transition: all 0.15s ease;
 }
 .aware-toggle.on {
-	@apply bg-primary border-primary text-white;
+	@apply bg-primary border-primary text-primary-foreground;
 }
 .aware-note {
 	@apply flex items-center gap-1 px-2 pt-1 text-[9px] text-muted-foreground/70;

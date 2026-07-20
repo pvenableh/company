@@ -148,29 +148,24 @@ export function iconColorForAccent(h: number, s: number, l: number): string {
 }
 
 /**
- * Sister to `iconColorForAccent` — returns the *bright end* of the icon
- * gradient. The icon overlay fades from this colour at the bottom up
- * toward the base colour at the top, producing a deep-top → bright-bottom
- * gradient inside the SVG glyph that reverses the chip's light-top →
- * dark-bottom background. The opposing ramps push contrast at every
- * vertical position.
+ * Sister to `iconColorForAccent` — the "bright" glyph variant used by the
+ * dark-mode neutral rail (AppRail + PortalRail swap `--rail-icon` for
+ * `--rail-icon-bright` on dark frosted discs; it's the only live consumer).
+ *
+ * Returns a consistently-bright tone in the chip's OWN hue, at a *fixed*
+ * lightness, so the whole rail reads as one coherent scale: Default's
+ * sky→navy ramp becomes a bright cyan→blue set, Mono's near-greys become a
+ * uniform light grey. The previous two-branch logic keyed off perceived
+ * lightness — light chips stayed chromatic while deep chips snapped to
+ * near-white — so a single palette's dock came out half-coloured,
+ * half-white (the "some white, some chromatic" bug). Keeping hue + a fixed
+ * lightness removes that split; capping saturation keeps bright cyans from
+ * going fluorescent while Mono's ~6% greys pass through untouched (stay
+ * achromatic).
  */
 export function iconHighlightForAccent(h: number, s: number, l: number): string {
-	let perceived = l;
-	if (h >= 50 && h <= 90) perceived += 22;
-	else if (h >= 90 && h <= 160) perceived += 6;
-	else if (h >= 160 && h <= 200) perceived += 8;
-
-	if (perceived > 50) {
-		// Light tile, deep base icon → bright same-hue tone for the
-		// bottom of the glyph. Sits well below 100% lightness so it
-		// stays in the accent family rather than becoming flat white.
-		const hiS = Math.min(85, s);
-		const hiL = Math.min(72, l + 5);
-		return `hsl(${h} ${hiS}% ${hiL}%)`;
-	}
-	// Dark tile, light base icon → near-white tinted glow at the bottom.
-	return `hsl(${h} ${Math.min(s, 15)}% 94%)`;
+	const hiS = Math.min(60, s);
+	return `hsl(${h} ${hiS}% 72%)`;
 }
 
 /**
@@ -838,6 +833,13 @@ export function applyPaletteToDocument(paletteId: AppPaletteId): void {
 		set(`--app-${id}-s`, `${a.s}%`);
 		set(`--app-${id}-l`, `${a.l}%`);
 		set(`--app-${id}-icon`, formatIconColor(a));
+		// Bright variant — the dark-mode neutral rail swaps to this so glyphs
+		// lift off the dark frosted disc. Chips built in the AppRail loop derive
+		// it inline via `iconHighlightForAccent`; the Director tile (bespoke
+		// markup, outside the loop) reads this var instead so it stays in
+		// lockstep with the rest of the dock rather than rendering its deep
+		// plain-icon colour on a dark disc.
+		set(`--app-${id}-icon-bright`, iconHighlightForAccent(a.h, a.s, a.l));
 	}
 
 	// 3b. Publish the palette id so CSS can scope to it. The liquid-glass

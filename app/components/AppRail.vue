@@ -58,6 +58,12 @@ function badgeLabel(count: number) {
 
 const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => accents.value[id]));
 const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => accents.value[id]));
+// The Director's Office tile is bespoke markup outside the `apps`/`footer`
+// loops, but it still gets its accent from the SAME reactive `accents` map so
+// `styleFor(director)` derives its glyph colours inline (like every other chip)
+// — no dependency on the `--app-director-*` html vars, which only re-emit on a
+// full reload (applyPaletteToDocument) and left the glyph stale after HMR.
+const director = computed<AppAccent>(() => accents.value.director);
 
 const activeId = computed(() => appIdForPath(route.path));
 
@@ -314,13 +320,7 @@ function chipMagnifyStyle(appId: string) {
 								to="/director"
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': route.path.startsWith('/director') }"
-								:style="[{
-									'--rail-h': 'var(--app-director-h, 222)',
-									'--rail-s': 'var(--app-director-s, 12%)',
-									'--rail-l': 'var(--app-director-l, 24%)',
-									'--rail-icon': 'var(--app-director-icon, hsl(0 0% 60%))',
-									'--rail-icon-bright': 'var(--app-director-icon, hsl(0 0% 92%))',
-								}, itemMagnifyStyle('director')]"
+								:style="[styleFor(director), itemMagnifyStyle('director')]"
 								data-app-id="director"
 								aria-label="Director's Office"
 								@click="hapticTap()"

@@ -675,3 +675,48 @@
 	   `accentStyle`, which wins over this. */
 	--app-accent-s: 12%;
 }
+
+/* Mono + DARK surface tokens. The dark `.dark` block pins every surface to a
+   HUE-218 blue-black (`--card: 218 40% 11%` → rgb(17,25,39), plus popover /
+   secondary / muted / accent / border / input / sidebar) so app chrome reads as
+   one cool material with Earnest's presence. Under Mono that cool tint is the
+   wrong language — Mono wants greyscale — and the base mono block above only
+   neutralised `--aura-ground`, not these shadcn tokens, so cards/widgets stayed
+   visibly blue. Re-pin them to hue 220 at a whisper of saturation (matches the
+   MONO_SOURCE ramp: near-grey, a touch of cool so glass reads "frosted" not
+   "dirty"). Needs the `.dark` compound to tie the `[data-theme='glass'].dark,
+   .dark` selector's (0,2,0) specificity and sits AFTER it to win — see the
+   "palette-block specificity trap" note above. */
+[data-palette='mono'].dark {
+	--card: 220 8% 11%;
+	--popover: 220 8% 11%;
+	--secondary: 220 7% 16%;
+	--muted: 220 7% 16%;
+	--muted-foreground: 220 6% 60%;
+	--accent: 220 7% 16%;
+	--border: 220 7% 20%;
+	--input: 220 7% 20%;
+	--sidebar-background: 220 8% 9%;
+	--sidebar-accent: 220 7% 16%;
+	--sidebar-border: 220 7% 20%;
+	--glass-shadow-h: 220;
+}
+
+/* Focus mode (CoachingTakeover) under Mono. The neutral `--aura-ground` above
+   already flattens the stage, but Earnest's presence — the aura orbs, the warm
+   core, the mood-tinted send button and the gold task accents — is painted from
+   hardcoded mood HEX (EARNEST_MOOD_TOKENS / --accent1/2 / #f3c465), not the
+   semantic tokens Mono controls, so it stayed chromatic. Mono is "colour only
+   where it means something", so we strip the hue at the render layer with
+   saturate(0): the presence keeps all its living MOTION and brightness, it just
+   goes achromatic. Scoped to `.coach` so only the Focus instance is affected —
+   the same <EarnestAura> elsewhere (Director's Office, the generative canvases,
+   the presence dot) is untouched. User content under `.coach__convo` (avatars,
+   pasted media) is deliberately left in colour. */
+[data-palette='mono'] .coach .aura,
+[data-palette='mono'] .coach__send,
+[data-palette='mono'] .coach__badge,
+[data-palette='mono'] .coach__tasks-count,
+[data-palette='mono'] .coach__task-check {
+	filter: saturate(0);
+}

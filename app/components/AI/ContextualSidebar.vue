@@ -434,7 +434,7 @@ const renderMarkdown = (text: string): string => {
           <template v-for="msg in messages" :key="msg.key || msg.id">
             <!-- User message -->
             <div v-if="msg.role === 'user'" class="msg-row flex justify-end">
-              <div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-white text-xs leading-relaxed">
+              <div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-primary-foreground text-xs leading-relaxed">
                 {{ msg.content }}
               </div>
             </div>
@@ -562,7 +562,7 @@ const renderMarkdown = (text: string): string => {
               isStreaming
                 ? 'bg-destructive hover:bg-destructive text-white'
                 : newMessage.trim()
-                  ? 'bg-primary hover:bg-primary/90 text-white'
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
                   : 'bg-muted text-muted-foreground/70'
             "
           >

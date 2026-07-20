@@ -144,7 +144,7 @@
                   <div
                     class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all"
                     :class="isSelected(file.id)
-                      ? 'bg-primary text-white shadow ring-2 ring-white'
+                      ? 'bg-primary text-primary-foreground shadow ring-2 ring-white'
                       : 'bg-white/80 text-transparent ring-1 ring-gray-300 group-hover:ring-primary/60 backdrop-blur-sm'"
                   >
                     <span v-if="isSelected(file.id) && selected.length > 1">

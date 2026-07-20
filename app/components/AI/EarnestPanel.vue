@@ -637,7 +637,7 @@ function formatSessionTime(iso?: string): string {
 					<template v-else>
 						<template v-for="msg in messages" :key="msg.key || msg.id">
 							<div v-if="msg.role === 'user'" class="flex justify-end">
-								<div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-white text-xs leading-relaxed whitespace-pre-wrap break-words">
+								<div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-primary-foreground text-xs leading-relaxed whitespace-pre-wrap break-words">
 									{{ msg.content }}
 								</div>
 							</div>
@@ -730,7 +730,7 @@ function formatSessionTime(iso?: string): string {
 							@click="isStreaming ? cancelStream() : handleSend()"
 							:disabled="!isStreaming && (!newMessage.trim() || isSending)"
 							class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-							:class="isStreaming ? 'bg-destructive text-white' : newMessage.trim() ? 'bg-primary hover:bg-primary/90 text-white' : 'bg-muted text-muted-foreground/70'"
+							:class="isStreaming ? 'bg-destructive text-white' : newMessage.trim() ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-muted text-muted-foreground/70'"
 						>
 							<Icon :name="isStreaming ? 'lucide:square' : 'lucide:arrow-up'" class="w-3.5 h-3.5" />
 						</button>

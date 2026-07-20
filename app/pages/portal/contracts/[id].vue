@@ -163,7 +163,7 @@ function formatTotal(n: number | null | undefined) {
 			<NuxtLink
 				v-if="contract.contract_status === 'sent'"
 				to="/portal/contracts"
-				class="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 transition-colors px-4 py-2 rounded-full"
+				class="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors px-4 py-2 rounded-full"
 				data-pdf-strip
 			>
 				<Icon name="lucide:pen-tool" class="w-3.5 h-3.5" />

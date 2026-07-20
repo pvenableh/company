@@ -744,7 +744,7 @@ watch(quickStreamingContent, () => {
 								@click="filterCategory = cat.value"
 								:class="[
 									filterCategory === cat.value
-										? 'bg-primary text-white'
+										? 'bg-primary text-primary-foreground'
 										: 'bg-muted text-muted-foreground',
 								]"
 								class="text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition-colors font-medium flex items-center gap-1"

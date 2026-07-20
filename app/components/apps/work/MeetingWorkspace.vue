@@ -1473,7 +1473,7 @@ const promoteActionItem = async (idx) => {
 								</a>
 								<button
 									type="button"
-									class="inline-flex items-center gap-1 text-xs font-medium text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-full"
+									class="inline-flex items-center gap-1 text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-full"
 									@click="() => { const id = selectedAttendee.contact.id; closeAttendeeInsight(); openContact(id); }"
 								>
 									Open contact

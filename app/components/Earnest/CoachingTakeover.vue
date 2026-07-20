@@ -464,7 +464,13 @@ const markRef = ref<{ expand: () => void } | null>(null);
 	position: fixed; inset: 0; z-index: 85;
 	display: flex; flex-direction: column;
 	color: hsl(var(--aura-foreground));
-	background: radial-gradient(140% 120% at 50% 8%, #0c1424 0%, #070b14 52%, #04060c 100%);
+	/* Ground is the palette's aura ground (blue-black under Default, neutral
+	   near-black under Mono) with a radial vignette darkening toward the
+	   bottom — so Focus shares ONE material with the app chrome instead of
+	   a hardcoded blue-black that ignored the active palette. */
+	background:
+		radial-gradient(140% 120% at 50% 8%, transparent 0%, hsl(0 0% 0% / 0.4) 52%, hsl(0 0% 0% / 0.72) 100%),
+		hsl(var(--aura-ground));
 	--accent1: #2f8a84; --accent2: #356299;
 	transition: --accent1 1.2s ease, --accent2 1.2s ease;
 }

@@ -179,7 +179,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 				<div class="shrink-0 flex items-center gap-1.5">
 					<button
 						v-if="contract.contract_status === 'sent'"
-						class="text-xs font-medium text-white bg-primary hover:bg-primary/90 transition-colors px-3 py-1.5 rounded-full"
+						class="text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors px-3 py-1.5 rounded-full"
 						@click="openSign(contract, $event)"
 					>
 						Sign
@@ -253,7 +253,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 								Cancel
 							</button>
 							<button
-								class="text-xs font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 transition-colors px-4 py-1.5 rounded-full"
+								class="text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition-colors px-4 py-1.5 rounded-full"
 								:disabled="!signForm.name.trim() || !signForm.email.trim() || !signForm.affirm || signing"
 								@click="submitSign"
 							>

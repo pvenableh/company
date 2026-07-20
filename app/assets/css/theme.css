@@ -150,6 +150,20 @@
   background: hsl(218 40% 10% / 0.88);
 }
 
+/* Mono neutralises the hue-218 glass ladder to greyscale, same reasoning as the
+ * shadcn surface tokens in themes.css — the cool tint is the wrong language for
+ * the "ink & glass" palette. `[data-palette='mono'].dark .glass*` is (0,3,0), so
+ * it beats the `.dark .glass*` (0,2,0) rules above regardless of source order. */
+[data-palette='mono'].dark .glass {
+  background: hsl(220 7% 14% / 0.88);
+}
+[data-palette='mono'].dark .glass-thin {
+  background: hsl(220 7% 12% / 0.5);
+}
+[data-palette='mono'].dark .glass-ultra {
+  background: hsl(220 8% 10% / 0.88);
+}
+
 /* Legacy alias */
 .glass-container {
   background: rgba(255, 255, 255, 0.08);
