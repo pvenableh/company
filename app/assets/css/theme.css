@@ -122,10 +122,14 @@
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 .dark .glass {
-  /* Lifted to compose to ~hsl(0 0% 13%) over the hsl(0 0% 5%) body so
-   * the apps-shell toolbar (and any other .glass surface) reads as a
-   * distinct plinth in dark mode instead of melting into the page. */
-  background: rgba(40, 40, 40, 0.88);
+  /* Lifted so the apps-shell toolbar (and any other .glass surface) reads
+   * as a distinct plinth instead of melting into the page.
+   *
+   * Was a NEUTRAL rgba(40,40,40,.88), which visibly clashed once the dark
+   * ground moved onto the cool `--aura-ground`: the toolbar read brown-grey
+   * against a blue-black page. The whole ladder now sits on the aura hue so
+   * app chrome and Focus are one material. */
+  background: hsl(218 30% 14% / 0.88);
 }
 
 .glass-thin {
@@ -134,7 +138,7 @@
   -webkit-backdrop-filter: saturate(150%) blur(12px);
 }
 .dark .glass-thin {
-  background: rgba(30, 30, 30, 0.45);
+  background: hsl(218 32% 12% / 0.5);
 }
 
 .glass-ultra {
@@ -143,24 +147,258 @@
   -webkit-backdrop-filter: saturate(200%) blur(30px);
 }
 .dark .glass-ultra {
-  background: rgba(20, 20, 20, 0.85);
+  background: hsl(218 40% 10% / 0.88);
 }
 
 /* Legacy alias */
 .glass-container {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  /* Was `border: 1px solid rgba(255,255,255,0.12)` — the last hard line left
+   * in the glass ladder. Now the same refracted rim as everything else. */
+  border: 0;
+  box-shadow: var(--glass-rim-shadow);
   padding: 0.75rem 1.5rem;
 }
 
-/* ---- iOS card style ---- */
-.ios-card {
-  @apply bg-card rounded-2xl border border-border/50 shadow-sm;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+/* ============================================
+   Liquid-glass EDGE — the universal rim
+   ============================================
+ * One treatment shared by every widget, card, container and form control.
+ * The edge is deliberately NOT a 1px solid border — it reads as light
+ * refracting along the rim of a glass pane:
+ *
+ *   1. a hairline light rim, brightest along the top-lit edge, fading to
+ *      nothing at the bottom
+ *   2. a shade ring that does the defining work in LIGHT mode (a white rim
+ *      on a near-white card is invisible by design)
+ *   3. a soft outer elevation shadow for lift
+ *
+ * All alphas/hues come from the --glass-* tokens in themes.css, so themes
+ * and palettes tune the material without touching a single component.
+ *
+ * `.glass-edge` is box-shadow-only ON PURPOSE: <input>, <select> and
+ * <textarea> are replaced elements and cannot render ::before, so a
+ * pseudo-element rim would silently skip every form control. Containers
+ * get the richer true-gradient rim on top via `.glass-refract` below.
+ */
+:root {
+  /* The rim itself, with no elevation — for surfaces that sit flush. */
+  --glass-rim-shadow:
+    /* top-lit hairline — the brightest part of the rim */
+    inset 0 1px 0 0 hsl(var(--glass-rim-top)),
+    /* full ring at mid intensity */
+    inset 0 0 0 1px hsl(var(--glass-rim-mid)),
+    /* the rim has fallen off to nothing by the bottom edge */
+    inset 0 -1px 0 0 hsl(var(--glass-rim-bottom)),
+    /* shade ring — carries the edge in light mode, transparent in dark */
+    inset 0 0 0 1px hsl(var(--glass-shade));
+  /* Soft outer elevation for lift. */
+  --glass-lift-shadow:
+    0 1px 2px -1px
+      hsl(var(--glass-shadow-h) var(--glass-shadow-s) var(--glass-shadow-l) /
+        var(--glass-shadow-near)),
+    0 12px 32px -16px
+      hsl(var(--glass-shadow-h) var(--glass-shadow-s) var(--glass-shadow-l) /
+        var(--glass-shadow-far));
+  /* The full treatment — what almost everything wants. */
+  --glass-edge-shadow: var(--glass-rim-shadow), var(--glass-lift-shadow);
 }
-.ios-card:hover {
-  @apply shadow-md;
+
+/* These live in `@layer components` ON PURPOSE. theme.css is imported
+ * UNLAYERED, so an unlayered `border: 0` here beats every Tailwind
+ * utility (utilities are layered) — which silently killed deliberate
+ * state borders on ~25 `.ios-card` call sites (`border-warning/30`,
+ * `hover:border-primary/40`, destructive outlines). Layering these puts
+ * them BELOW the utilities layer, so the rim is the default and any
+ * component can still override it on purpose. */
+@layer components {
+  .glass-edge {
+    border: 0;
+    box-shadow: var(--glass-edge-shadow);
+  }
+  /* Flush variant — rim only, no lift. For surfaces docked to an edge
+   * (toolbars, slide-overs) where a drop shadow would look detached. */
+  .glass-edge--flush {
+    border: 0;
+    box-shadow: var(--glass-rim-shadow);
+  }
+
+  /* True gradient rim — a 1px band whose colour actually travels from the
+   * bright top-lit edge down to nothing, masked to the border ring only.
+   * Additive over `.glass-edge`; containers only (needs ::before). */
+  @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+    .glass-refract {
+      position: relative;
+    }
+    .glass-refract::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* Inherit whatever radius the host chose — pill, 2xl, squared slide-over */
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(
+        to bottom,
+        hsl(var(--glass-rim-top)) 0%,
+        hsl(var(--glass-rim-mid)) 45%,
+        hsl(var(--glass-rim-bottom)) 100%
+      );
+      /* Punch out the interior so only the 1px ring paints. */
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+  }
+
+  /* Glass BODY — blur + saturate, tokenised so the ladder tunes centrally. */
+  .glass-body {
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+
+  /* Form controls: same material as the containers they sit in. Shapes follow
+   * the existing pill convention (inputs/selects rounded-full, textareas
+   * rounded-2xl) — `.glass-field` sets material only, never radius. */
+  .glass-field {
+    background: hsl(var(--card) / 0.55);
+    backdrop-filter: blur(10px) saturate(130%);
+    -webkit-backdrop-filter: blur(10px) saturate(130%);
+    border: 0;
+    /* Controls sit IN a surface rather than floating above it, so they take
+     * the rim without the drop shadow — plus a whisper of inner depth so the
+     * field reads as recessed glass, not a raised pane. */
+    box-shadow: var(--glass-rim-shadow),
+      inset 0 1px 3px -1px
+        hsl(var(--glass-shadow-h) var(--glass-shadow-s) var(--glass-shadow-l) / 0.10);
+    transition: box-shadow 200ms cubic-bezier(0.36, 0.66, 0.04, 1);
+  }
+  .dark .glass-field {
+    background: hsl(var(--card) / 0.45);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-body,
+    .glass-field {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .glass-field {
+      background: hsl(var(--card));
+    }
+  }
+
+  /* ---- iOS card style ---- */
+  .ios-card {
+    @apply bg-card rounded-2xl;
+    /* Was `border border-border/50 shadow-sm` — a hard 1px line. Now the same
+     * refracted rim every other surface wears. */
+    border: 0;
+    box-shadow: var(--glass-edge-shadow);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .ios-card:hover {
+    box-shadow: var(--glass-rim-shadow), var(--glass-lift-shadow),
+      0 18px 40px -18px
+        hsl(var(--glass-shadow-h) var(--glass-shadow-s) var(--glass-shadow-l) /
+          var(--glass-shadow-far));
+  }
+
+}
+
+/* Focus ring for glass form controls.
+
+NOTE: these focus rules are deliberately OUTSIDE `@layer components`.
+They must beat the unlayered global `*:focus-visible { outline: 2px }`
+in main.css — and unlayered always beats layered regardless of
+specificity — so the field shows ONE indicator (its accent ring), not
+an outline stacked on top of a ring. */
+/* Focus keeps the rim and ADDS the accent ring — a Tailwind `shadow-[…]`
+ * utility would replace the whole stack and wipe the edge out. */
+.glass-field:focus,
+.glass-field:focus-visible,
+.glass-field:focus-within {
+  outline: none;
+  /* `var(--app-accent-h)` is referenced DIRECTLY here, not via a token
+   * declared at :root — see the note in themes.css. Indirecting it through
+   * a root-level custom property bakes the 220 fallback and the ring stops
+   * tracking the active app's accent. */
+  box-shadow: var(--glass-rim-shadow),
+    /* crisp inner edge — gives the eye a hard boundary to land on */
+    inset 0 0 0 1px
+      hsl(var(--app-accent-h, 220) var(--glass-focus-s) var(--glass-focus-l) /
+        var(--glass-focus-edge)),
+    /* soft outer halo */
+    0 0 0 3px
+      hsl(var(--app-accent-h, 220) var(--glass-focus-s) var(--glass-focus-l) /
+        var(--glass-focus-halo));
+}
+.glass-field[aria-invalid='true'] {
+  box-shadow: var(--glass-rim-shadow),
+    0 0 0 3px hsl(var(--destructive) / 0.28);
+}
+
+/* ---- Field validation message ----
+ * Validation text used to mount/unmount, which shoved everything below it
+ * down the instant a message appeared. The slot RESERVES one line's height
+ * permanently and the message is absolutely positioned inside it, so
+ * showing/hiding never reflows the form.
+ *
+ * The message element stays mounted and animates via a data attribute
+ * rather than <Transition> — per the repo motion policy, and because an
+ * unmounted element cannot animate OUT.
+ *
+ * ⚠️ TRADE-OFF: a message long enough to wrap to two lines will overflow
+ * the reserved slot rather than push the next field. The slot sits in the
+ * gap above the next control so a second line still reads, but a very long
+ * message could crowd it. Validation copy here is short by design; if that
+ * stops being true, swap `position: absolute` for `min-height` on the slot
+ * and accept a small shift on the rare two-line case.
+ */
+/* Reserving space for the message was tried and REVERTED: forms where
+ * nothing is invalid — the normal case — read far too open with a
+ * permanent gap under every input. The message now takes up no room at all
+ * until it exists, and pushes the content below it when it appears.
+ *
+ * The push is ANIMATED rather than instant: the slot is a 1-row grid that
+ * transitions 0fr → 1fr, which is the only way to animate to an intrinsic
+ * (unknown) height in CSS. The message keeps `overflow: hidden` so it
+ * clips cleanly while the row opens.
+ *
+ * The element stays MOUNTED — an unmounted node cannot animate out — and
+ * collapses to exactly 0 height when hidden. */
+.field-error-slot {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.field-error-slot[data-show='true'] {
+  grid-template-rows: 1fr;
+}
+.field-error {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition:
+    opacity 200ms cubic-bezier(0.36, 0.66, 0.04, 1),
+    transform 200ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.field-error-slot[data-show='true'] .field-error {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .field-error-slot,
+  .field-error {
+    transition: none;
+    transform: none;
+  }
 }
 
 /* ---- Liquid glass surface ----
@@ -182,15 +420,39 @@
       hsl(calc(var(--glass-h) + 35) var(--glass-s) 55% / 0.08) 100%
     ),
     hsl(var(--card) / 0.65);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid hsl(var(--glass-h) 40% 70% / 0.18);
-  box-shadow:
-    0 1px 0 0 hsl(0 0% 100% / 0.10) inset,
-    0 12px 32px -16px hsl(var(--glass-h) 40% 25% / 0.30),
-    0 2px 6px -2px hsl(var(--glass-h) 30% 20% / 0.10);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  /* No hard border-color line anywhere — the edge is the refracted rim. */
+  border: 0;
+  box-shadow: var(--glass-edge-shadow);
   transition: box-shadow 240ms cubic-bezier(0.36, 0.66, 0.04, 1),
               transform 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+/* True gradient rim on top of the box-shadow rim (containers can host
+ * ::before; see `.glass-refract`). */
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .glass-surface::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--glass-rim-top)) 0%,
+      hsl(var(--glass-rim-mid)) 45%,
+      hsl(var(--glass-rim-bottom)) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
 }
 .dark .glass-surface {
   background:
@@ -201,21 +463,20 @@
       hsl(calc(var(--glass-h) + 35) var(--glass-s) 50% / 0.10) 100%
     ),
     hsl(var(--card) / 0.55);
-  border-color: hsl(var(--glass-h) 30% 60% / 0.22);
-  box-shadow:
-    0 1px 0 0 hsl(var(--glass-h) 60% 80% / 0.08) inset,
-    0 16px 40px -16px hsl(0 0% 0% / 0.50),
-    0 2px 6px -2px hsl(0 0% 0% / 0.30);
+  /* Rim + lift now come from the --glass-* tokens (dark values give the
+   * brighter top highlight and the deeper drop shadow). */
 }
 .glass-surface--hoverable {
   cursor: pointer;
 }
 .glass-surface--hoverable:hover {
   transform: translateY(-1px);
-  box-shadow:
-    0 1px 0 0 hsl(0 0% 100% / 0.14) inset,
-    0 18px 40px -16px hsl(var(--glass-h) 40% 25% / 0.40),
-    0 3px 8px -2px hsl(var(--glass-h) 30% 20% / 0.14);
+  /* Lift harder on hover; the rim is unchanged so the material reads
+   * consistent — only the elevation moves. */
+  box-shadow: var(--glass-rim-shadow), var(--glass-lift-shadow),
+    0 20px 44px -18px
+      hsl(var(--glass-shadow-h) var(--glass-shadow-s) var(--glass-shadow-l) /
+        var(--glass-shadow-far));
 }
 .glass-surface--strong {
   backdrop-filter: blur(24px) saturate(160%);

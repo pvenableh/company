@@ -59,10 +59,17 @@ html[data-standalone='true'] .select-text {
   -webkit-touch-callout: default;
 }
 
-*:focus {
-  outline: 0 !important;
-  box-shadow: none !important;
-}
+/* Suppress the browser's default focus ring for POINTER focus only.
+ *
+ * There used to be a blanket `*:focus { outline: 0 !important; box-shadow:
+ * none !important }` above this rule. It was redundant with the
+ * `:not(:focus-visible)` version below AND actively harmful: being
+ * `!important` and unlayered, it beat the `*:focus-visible` outline rule
+ * further down, so KEYBOARD focus had no indicator anywhere in the app.
+ * It also silently voided every box-shadow-based focus ring, including
+ * the accent ring on form controls (verified: an inline
+ * `box-shadow: 0 0 0 5px red` computed to `none` the moment the element
+ * took focus). Keep the `:not(:focus-visible)` form only. */
 *:focus:not(:focus-visible) {
   outline: 0 !important;
   box-shadow: none !important;

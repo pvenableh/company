@@ -572,6 +572,10 @@ export default defineNuxtConfig({
 	// 	},
 	// },
 
+	// NOTE: DevTools bundles VueUse's useColorMode, which stamps the <html>
+	// class from the OS and overrides @nuxtjs/color-mode in dev. Set this to
+	// `false` (and fully restart the dev server) before verifying theme work,
+	// or you'll chase a colour-mode bug that isn't in the app.
 	devtools: { enabled: true },
 
 	// Pin the dev server to IPv4 127.0.0.1. Without this, Nitro's HMR

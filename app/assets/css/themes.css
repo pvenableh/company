@@ -111,6 +111,73 @@
 	--app-work-h: 188;
 	--app-work-s: 70%;
 	--app-work-l: 61%;
+
+	/* ── Aura ground ──────────────────────────────────────────────
+	   The dark ground Earnest's presence surfaces are painted on
+	   (Focus/coaching takeover, Director's Office, the three Generative
+	   Canvases). Was hardcoded as #0a1220 in six files; promoted here so
+	   the app chrome and Focus share ONE material.
+
+	   These are DELIBERATELY dark in both modes — the aura surfaces are
+	   always a dark stage, even when the app around them is light. The
+	   `.dark` block below points --background/--card at this same ground
+	   so dark mode and Focus stop reading as two different languages.
+
+	   --aura-glass-1..3 is the white-tint ladder that sits ON the ground
+	   (1 = resting block/chip, 2 = hover/active, 3 = raised composer). */
+	--aura-ground: 218 52% 8%;
+	--aura-glass-1: 0 0% 100% / 0.05;
+	--aura-glass-2: 0 0% 100% / 0.09;
+	--aura-glass-3: 0 0% 100% / 0.14;
+	--aura-foreground: 216 48% 94%;
+	--aura-foreground-muted: 216 30% 78%;
+	--aura-rim: 0 0% 100% / 0.12;
+
+	/* ── Liquid-glass edge ────────────────────────────────────────
+	   Drives the .glass-edge / .glass-surface rim in theme.css. The edge
+	   is NOT a solid border — it's a rim that brightens at the top and
+	   fades toward the bottom, plus an outer elevation shadow.
+
+	   LIGHT is restrained: a white rim on a near-white card is almost
+	   invisible by design, so the edge is carried mostly by the shade
+	   ring + drop shadow (refraction, not a drawn line). */
+	--glass-rim-top: 0 0% 100% / 0.75;
+	--glass-rim-mid: 0 0% 100% / 0.30;
+	--glass-rim-bottom: 0 0% 100% / 0.04;
+	/* Shade ring — the half of the rim that does the work in light mode. */
+	--glass-shade: 220 25% 40% / 0.14;
+	--glass-shadow-h: 220;
+	--glass-shadow-s: 30%;
+	--glass-shadow-l: 25%;
+	--glass-shadow-near: 0.10;
+	--glass-shadow-far: 0.20;
+	--glass-blur: 18px;
+	--glass-saturate: 140%;
+
+	/* Focus-ring SATURATION for glass form controls. Its own token rather
+	   than `--app-accent-s` because the accent drops to ~10% when no app is
+	   active, which would make focus nearly invisible. Achromatic palettes
+	   (Mono) lower it at the bottom of this file.
+
+	   ⚠️ There is deliberately NO `--glass-focus-h` companion token. A custom
+	   property is substituted at computed-value time on the element where it
+	   is DECLARED — here, :root/<html> — and children inherit the already-
+	   resolved value. `--app-accent-h` is written INLINE on the app shell
+	   (below <html>) by `accentStyle`, so a `--glass-focus-h:
+	   var(--app-accent-h, 220)` declared here would bake to the 220 fallback
+	   forever and never track the app accent. `.glass-field` therefore
+	   references `var(--app-accent-h)` directly in its box-shadow, where it
+	   resolves against the field itself. Same reason `.glass-surface`
+	   declares `--glass-h` on ITSELF rather than inheriting it. */
+	--glass-focus-s: 80%;
+	/* Focus ring is TWO parts: a crisp 1px inner edge the eye can land on,
+	   plus a soft outer halo. A halo alone (the first cut) read dull and
+	   blurry in light mode — 20% alpha over white has no defined boundary.
+	   Light gets a darker, more saturated accent so it actually reads
+	   against a white field. */
+	--glass-focus-l: 48%;
+	--glass-focus-edge: 0.9;
+	--glass-focus-halo: 0.18;
 }
 
 /* NOTE: `data-theme` and `.dark` both live on <html>, so the theme-scoped dark
@@ -119,33 +186,40 @@
    appeared to work because of the bare `.dark` fallback below. */
 [data-theme='glass'].dark,
 .dark {
-	--background: 0 0% 5%;
-	--foreground: 0 0% 93%;
+	/* Surfaces are pinned to the AURA GROUND (--aura-ground, ex-#0a1220) so
+	   the app chrome and Earnest's presence surfaces (Focus, Director's
+	   Office, the Generative Canvases) read as one continuous material.
+	   Previously these were neutral greys (0 0% 5%/8%/12%) while Focus was
+	   a cool blue-black — two unrelated dark languages side by side.
+	   Saturation drops as surfaces lift, so it reads "cool near-black"
+	   rather than "navy". */
+	--background: var(--aura-ground);
+	--foreground: var(--aura-foreground);
 
-	--card: 0 0% 8%;
-	--card-foreground: 0 0% 93%;
+	--card: 218 40% 11%;
+	--card-foreground: var(--aura-foreground);
 
-	--popover: 0 0% 8%;
-	--popover-foreground: 0 0% 93%;
+	--popover: 218 40% 11%;
+	--popover-foreground: var(--aura-foreground);
 
-	--primary: 0 0% 93%;
-	--primary-foreground: 0 0% 5%;
+	--primary: var(--aura-foreground);
+	--primary-foreground: var(--aura-ground);
 
-	--secondary: 0 0% 12%;
-	--secondary-foreground: 0 0% 93%;
+	--secondary: 218 30% 16%;
+	--secondary-foreground: var(--aura-foreground);
 
-	--muted: 0 0% 12%;
-	--muted-foreground: 0 0% 55%;
+	--muted: 218 30% 16%;
+	--muted-foreground: 216 18% 60%;
 
-	--accent: 0 0% 12%;
-	--accent-foreground: 0 0% 93%;
+	--accent: 218 30% 16%;
+	--accent-foreground: var(--aura-foreground);
 
 	--destructive: 0 62.8% 30.6%;
 	--destructive-foreground: 0 0% 93%;
 
-	--border: 0 0% 15%;
-	--input: 0 0% 15%;
-	--ring: 0 0% 93%;
+	--border: 218 26% 20%;
+	--input: 218 26% 20%;
+	--ring: var(--aura-foreground);
 
 	--chart-1: 0 0% 93%;
 	--chart-2: 0 0% 75%;
@@ -153,14 +227,36 @@
 	--chart-4: 0 0% 35%;
 	--chart-5: 0 0% 20%;
 
-	--sidebar-background: 0 0% 6%;
-	--sidebar-foreground: 0 0% 93%;
-	--sidebar-primary: 0 0% 93%;
-	--sidebar-primary-foreground: 0 0% 5%;
-	--sidebar-accent: 0 0% 12%;
-	--sidebar-accent-foreground: 0 0% 93%;
-	--sidebar-border: 0 0% 15%;
-	--sidebar-ring: 0 0% 93%;
+	--sidebar-background: 218 48% 9%;
+	--sidebar-foreground: var(--aura-foreground);
+	--sidebar-primary: var(--aura-foreground);
+	--sidebar-primary-foreground: var(--aura-ground);
+	--sidebar-accent: 218 30% 16%;
+	--sidebar-accent-foreground: var(--aura-foreground);
+	--sidebar-border: 218 26% 20%;
+	--sidebar-ring: var(--aura-foreground);
+
+	/* ── Liquid-glass edge, dark ──────────────────────────────────
+	   Dramatic: a brighter top highlight catching the light, and the
+	   shade ring all but disappears (there is nothing darker than the
+	   ground to shade against). Lift comes from a deep drop shadow. */
+	--glass-rim-top: 0 0% 100% / 0.28;
+	--glass-rim-mid: 0 0% 100% / 0.10;
+	--glass-rim-bottom: 0 0% 100% / 0.02;
+	/* No shade ring in dark — there is nothing darker than the ground to
+	   shade against, and stacking black under the light rim only muddies it.
+	   Definition comes entirely from the top highlight + drop shadow. */
+	--glass-shade: 0 0% 0% / 0;
+	--glass-shadow-h: 218;
+	--glass-shadow-s: 60%;
+	--glass-shadow-l: 2%;
+	--glass-shadow-near: 0.40;
+	--glass-shadow-far: 0.60;
+	/* Dark: lift the accent so it glows off the near-black ground, and ease
+	   the inner edge back — full-alpha reads harsh against a dark field. */
+	--glass-focus-l: 62%;
+	--glass-focus-edge: 0.7;
+	--glass-focus-halo: 0.24;
 
 	/* Semantic + status colours tuned FOR a dark ground. Previously these fell
 	   through to their light values, where full-saturation greens/ambers glare
@@ -542,4 +638,40 @@
 	text-transform: none;
 	letter-spacing: 0.01em;
 	font-weight: 700;
+}
+
+/* ── Palette: Mono ────────────────────────────────────────────────
+   ⚠️ MUST STAY LAST, AND MUST KEEP THE `.dark` SELECTOR. Two separate
+   traps bite here, both verified in the browser:
+
+   1. Source order — `[data-palette='mono']` ties `.dark` at (0,1,0), so it
+      only wins by coming later. Keep this block at the bottom.
+   2. Specificity — the dark rule is a selector LIST,
+      `[data-theme='glass'].dark, .dark`, and <html> carries
+      data-theme="glass". So it matches at (0,2,0) and beats a bare
+      `[data-palette='mono']` (0,1,0) REGARDLESS of order. The
+      `[data-palette='mono'].dark` selector below restores the tie at
+      (0,2,0), where source order then puts Mono on top.
+
+   Without #2, `--glass-shadow-s` silently stayed at the chromatic 60% in
+   dark mode — the default mode — while every other Mono token applied.
+   "Ink & glass — colour only where it means something." Mono inherits the
+   themes.css semantics wholesale (`inheritSemantics`), but two parts of the
+   glass system are chromatic by default and would break its language:
+   the blue-black aura ground, and the accent focus ring. Neutralise both.
+   The rim itself needs no override — it is pure white/black alpha, so it is
+   achromatic under every palette by construction. */
+[data-palette='mono'],
+[data-palette='mono'].dark {
+	--aura-ground: 220 12% 8%;
+	--aura-foreground: 220 10% 94%;
+	--aura-foreground-muted: 220 8% 78%;
+	--glass-focus-s: 14%;
+	--glass-shadow-s: 10%;
+	/* `.glass-surface` tints itself with `--app-accent-s`, defaulting to 70%
+	   when no app is active — so auth, settings and every non-app route kept
+	   a blue-tinted pane under Mono. Drop the FALLBACK to near-grey; app
+	   routes still get their real (already achromatic) accent inline from
+	   `accentStyle`, which wins over this. */
+	--app-accent-s: 12%;
 }
