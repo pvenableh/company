@@ -28,6 +28,16 @@ const router = useRouter();
 const route = useRoute();
 const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
+
+// Feedback hub: managers+ of the current org. Platform console: global Directus
+// Administrators (the "Earnest creator") — grants no access they lack via admin.
+const { isOrgManagerOrAbove } = useOrgRole();
+const canSeeFeedback = isOrgManagerOrAbove;
+const isPlatformAdmin = computed(() => {
+	const role = (user.value as any)?.role;
+	const roleId = typeof role === 'object' ? role?.id : role;
+	return roleId === '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
+});
 const { logout } = useLogout();
 const { open: openMyCard } = useMyCard();
 const { socialPublishingEnabled } = useSocialPublishing();
@@ -174,6 +184,14 @@ function handleLogout() {
 			<DropdownMenuItem @select="goTo('/apps/organization')">
 				<Icon name="lucide:building-2" class="size-4 mr-2 shrink-0" />
 				<span>Organization</span>
+			</DropdownMenuItem>
+			<DropdownMenuItem v-if="canSeeFeedback" @select="goTo('/feedback')">
+				<Icon name="lucide:message-square-heart" class="size-4 mr-2 shrink-0" />
+				<span>Feedback</span>
+			</DropdownMenuItem>
+			<DropdownMenuItem v-if="isPlatformAdmin" @select="goTo('/platform')">
+				<Icon name="lucide:layout-grid" class="size-4 mr-2 shrink-0" />
+				<span>Platform</span>
 			</DropdownMenuItem>
 
 			<DropdownMenuSeparator />
