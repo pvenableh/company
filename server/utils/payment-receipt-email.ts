@@ -108,12 +108,6 @@ export interface InvoicePaymentEmailInput {
 /** Payer receipt + staff confirmation for a successful invoice payment. */
 export async function sendInvoicePaymentEmails(input: InvoicePaymentEmailInput): Promise<void> {
 	try {
-		console.log('[payment-receipt] sendInvoicePaymentEmails', {
-			orgId: input.orgId,
-			invoiceId: input.invoice?.id,
-			payerEmail: input.payerEmail || input.invoice?.billing_email || null,
-			amount: input.amountDollars,
-		});
 		const org = await fetchOrgBrand(input.orgId);
 		const orgNameRaw = (org?.name && String(org.name).trim()) || 'the team';
 		const orgName = escapeHtml(orgNameRaw);
@@ -198,12 +192,6 @@ export interface InvoiceRefundEmailInput {
 /** Payer receipt + staff confirmation for a refund on an invoice payment. */
 export async function sendInvoiceRefundEmails(input: InvoiceRefundEmailInput): Promise<void> {
 	try {
-		console.log('[payment-receipt] sendInvoiceRefundEmails', {
-			orgId: input.orgId,
-			invoiceId: input.invoice?.id,
-			payerEmail: input.payerEmail || input.invoice?.billing_email || null,
-			amount: input.amountDollars,
-		});
 		const org = await fetchOrgBrand(input.orgId);
 		const orgNameRaw = (org?.name && String(org.name).trim()) || 'the team';
 		const orgName = escapeHtml(orgNameRaw);

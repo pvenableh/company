@@ -127,19 +127,10 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
 	const globalReplyTo = config.sendgridReplyToEmail || config.SENDGRID_REPLY_TO_EMAIL;
 	const bcc = config.sendgridBccEmail || config.SENDGRID_BCC_EMAIL;
 
-	// DEBUG (temporary): confirm the runtime actually resolved a SendGrid key.
-	// `keyId` is the non-secret id segment (SG.<keyId>.<secret>) so we can tell
-	// WHICH key prod is using without logging the secret. Remove once resolved.
-	console.log('[email-send] attempt', {
-		to,
-		emailName: emailName || (categories && categories[categories.length - 1]) || null,
-		hasApiKey: !!apiKey,
-		keyLen: apiKey ? String(apiKey).length : 0,
-		keyId: apiKey ? String(apiKey).split('.')[1]?.slice(0, 6) ?? null : null,
-	});
-
+	// Don't fail silently: a missing key is exactly what caused a multi-day
+	// email outage to hide. Warn loudly so it's visible in logs.
 	if (!apiKey) {
-		console.warn('[email-send] BAILED — no SendGrid API key in runtimeConfig (config.sendgridApiKey empty). Email NOT sent to', to);
+		console.warn('[email-send] no SendGrid API key in runtimeConfig — email NOT sent to', to);
 		return { sent: false, reason: 'SendGrid API key not configured' };
 	}
 
@@ -193,11 +184,10 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
 	try {
 		const sgMail = await import('@sendgrid/mail');
 		sgMail.default.setApiKey(apiKey);
-		const [resp] = await sgMail.default.send(message);
-		console.log('[email-send] SENT', { to, from: fromEmail, fromName, status: resp?.statusCode, msgId: resp?.headers?.['x-message-id'] });
+		await sgMail.default.send(message);
 		return { sent: true };
 	} catch (err: any) {
-		console.warn('[email-send] send FAILED (non-fatal):', { to, message: err?.message || err, body: err?.response?.body || '' });
+		console.warn('[email-send] send failed (non-fatal):', { to, message: err?.message || err, body: err?.response?.body || '' });
 		return { sent: false, reason: err?.message || 'unknown error' };
 	}
 }
