@@ -11,6 +11,10 @@ definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Platform | Earnest' });
 
 const { data: orgs, pending, error } = await useFetch<Array<any>>('/api/platform/orgs');
+const { data: reversals } = await useFetch<{ totals: any; items: any[] }>('/api/platform/reversals', {
+	// Non-fatal: the console still renders its org roster if this 403s/500s.
+	default: () => ({ totals: { invoiceRefunded: 0, openDisputes: 0, platformReversed: 0, tokensClawedBack: 0, total: 0 }, items: [] }),
+});
 
 const denied = computed(() => (error.value as any)?.statusCode === 403);
 const active = computed(() => (orgs.value || []).filter((o) => !o.archived));
@@ -21,10 +25,31 @@ const totals = computed(() => {
 	return {
 		orgs: a.length,
 		revenue: a.reduce((s, o) => s + (o.revenue || 0), 0),
+		refunded: reversals.value?.totals?.total ?? 0,
 		members: a.reduce((s, o) => s + (o.members || 0), 0),
 		projects: a.reduce((s, o) => s + (o.activeProjects || 0), 0),
 	};
 });
+
+const reversalItems = computed(() => reversals.value?.items ?? []);
+const reversalTotals = computed(() => reversals.value?.totals ?? {});
+
+function reversalLabel(type: string): string {
+	switch (type) {
+		case 'invoice_refund': return 'Invoice refund';
+		case 'invoice_dispute_lost': return 'Chargeback lost';
+		case 'invoice_dispute_open': return 'Dispute (held)';
+		case 'token_refund': return 'Token refund';
+		case 'token_dispute': return 'Token chargeback';
+		case 'subscription_refund': return 'Subscription refund';
+		case 'subscription_dispute': return 'Subscription chargeback';
+		default: return type;
+	}
+}
+function reversalTone(type: string): string {
+	if (type.includes('dispute') || type.includes('chargeback')) return 'bg-destructive/10 text-destructive';
+	return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+}
 
 function money(n: number): string {
 	if (n >= 1000) return `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
@@ -66,14 +91,20 @@ function healthColor(iso: string | null): string {
 
 		<template v-else>
 			<!-- Totals -->
-			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
 				<div class="ios-card p-4">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Organizations</p>
 					<p class="text-2xl font-semibold tabular-nums leading-none">{{ totals.orgs }}</p>
 				</div>
 				<div class="ios-card p-4">
-					<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Revenue collected</p>
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Net revenue</p>
 					<p class="text-2xl font-semibold tabular-nums leading-none">{{ money(totals.revenue) }}</p>
+					<p class="text-[10px] text-muted-foreground/70 mt-1">after refunds/disputes</p>
+				</div>
+				<div class="ios-card p-4">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Refunds &amp; disputes</p>
+					<p class="text-2xl font-semibold tabular-nums leading-none" :class="totals.refunded > 0 ? 'text-amber-600 dark:text-amber-400' : ''">{{ money(totals.refunded) }}</p>
+					<p v-if="reversalTotals.openDisputes" class="text-[10px] text-destructive mt-1">{{ reversalTotals.openDisputes }} open dispute{{ reversalTotals.openDisputes === 1 ? '' : 's' }}</p>
 				</div>
 				<div class="ios-card p-4">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Team members</p>
@@ -96,6 +127,8 @@ function healthColor(iso: string | null): string {
 					<div class="flex items-center gap-2 mb-4">
 						<span class="w-2 h-2 rounded-full shrink-0" :class="healthColor(o.lastActive)" :title="ago(o.lastActive)" />
 						<span class="font-semibold truncate">{{ o.name }}</span>
+						<span v-if="o.refunded > 0" class="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[9px] font-medium" :title="`${money(o.refunded)} refunded/reversed`"><Icon name="lucide:rotate-ccw" class="w-2.5 h-2.5" />{{ money(o.refunded) }}</span>
+						<span v-if="o.disputed" class="shrink-0 inline-flex items-center rounded-full bg-destructive/10 text-destructive px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider" title="Open or lost dispute">Disputed</span>
 						<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors ml-auto shrink-0" />
 					</div>
 
@@ -130,6 +163,19 @@ function healthColor(iso: string | null): string {
 						<span v-if="o.agency.count" class="ml-auto">{{ o.agency.count }} agency review{{ o.agency.count === 1 ? '' : 's' }}</span>
 					</p>
 				</NuxtLink>
+			</div>
+
+			<div v-if="reversalItems.length" class="mt-8">
+				<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">Refunds &amp; disputes</h3>
+				<div class="ios-card divide-y divide-border/40">
+					<div v-for="(r, i) in reversalItems" :key="i" class="flex items-center gap-3 px-4 py-2.5">
+						<span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium" :class="reversalTone(r.type)">{{ reversalLabel(r.type) }}</span>
+						<span class="text-sm truncate">{{ r.orgName || '—' }}</span>
+						<span v-if="r.tokens" class="text-[10px] text-muted-foreground shrink-0">−{{ r.tokens.toLocaleString() }} tokens</span>
+						<span class="ml-auto text-sm font-semibold tabular-nums shrink-0">−{{ money(r.amount) }}</span>
+						<span class="text-[10px] text-muted-foreground/70 shrink-0 w-16 text-right hidden sm:block">{{ ago(r.date) }}</span>
+					</div>
+				</div>
 			</div>
 
 			<div v-if="archived.length" class="mt-8">

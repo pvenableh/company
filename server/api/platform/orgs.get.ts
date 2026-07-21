@@ -51,11 +51,21 @@ export default defineEventHandler(async (event) => {
     if (org) lastActive.set(org, r.max?.date_created ?? null);
   }
 
-  // Revenue collected — sum non-pending payments per org (amount is a string).
-  const revenue = new Map<string, number>();
+  // Revenue collected — NET of refunds/disputes. Refunds + lost chargebacks on
+  // invoice payments are modeled as NEGATIVE payments_received rows (see
+  // apply-refund-adjustment.ts / apply-dispute-adjustment.ts), so summing every
+  // non-pending row already nets them out. We also track the refunded magnitude
+  // separately so the console can show gross vs refunded, and flag disputes.
+  const revenue = new Map<string, number>(); // net collected
+  const refunded = new Map<string, number>(); // magnitude of negative rows
+  const disputedOrgs = new Set<string>();
   for (const p of payments || []) {
     if (!p.organization || PENDING_PAY.includes(p.stripe_status || '')) continue;
-    revenue.set(p.organization, (revenue.get(p.organization) ?? 0) + Number(p.amount ?? 0));
+    const amt = Number(p.amount ?? 0);
+    revenue.set(p.organization, (revenue.get(p.organization) ?? 0) + amt);
+    if (amt < 0) refunded.set(p.organization, (refunded.get(p.organization) ?? 0) + Math.abs(amt));
+    const ss = String(p.stripe_status || '');
+    if (ss === 'disputed' || ss.startsWith('dispute')) disputedOrgs.add(p.organization);
   }
 
   return orgs.map((o) => {
@@ -73,7 +83,9 @@ export default defineEventHandler(async (event) => {
       members: members.get(o.id) ?? 0,
       activeProjects: activeProjects.get(o.id) ?? 0,
       openTickets: openTickets.get(o.id) ?? 0,
-      revenue: Math.round(revenue.get(o.id) ?? 0),
+      revenue: Math.round(revenue.get(o.id) ?? 0), // net of refunds/disputes
+      refunded: Math.round(refunded.get(o.id) ?? 0),
+      disputed: disputedOrgs.has(o.id),
       lastActive: lastActive.get(o.id) ?? null,
     };
   });
