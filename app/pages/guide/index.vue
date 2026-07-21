@@ -206,7 +206,7 @@ const goPrev = () => {
 
 						<div class="bg-muted/30 rounded-xl p-4">
 							<p class="text-sm text-foreground/80">
-								Owners and Admins can customize role permissions at <NuxtLink to="/organization/roles" class="text-primary hover:underline font-medium">Organization &rarr; Roles</NuxtLink>. Each role has a permission matrix with Create/Read/Update/Delete flags across 18 feature areas.
+								Owners and Admins can customize role permissions at <NuxtLink :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'roles:_' } }" class="text-primary hover:underline font-medium">Organization &rarr; Roles</NuxtLink>. Each role has a permission matrix with Create/Read/Update/Delete flags across 18 feature areas.
 							</p>
 						</div>
 					</div>
@@ -261,7 +261,7 @@ const goPrev = () => {
 						<ol class="space-y-3 text-sm text-foreground/80">
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</span>
-								<span>Go to <NuxtLink to="/organization/teams" class="text-primary hover:underline font-medium">Organization &rarr; Teams</NuxtLink>.</span>
+								<span>Go to <NuxtLink :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'teams:_' } }" class="text-primary hover:underline font-medium">Organization &rarr; Teams</NuxtLink>.</span>
 							</li>
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">2</span>

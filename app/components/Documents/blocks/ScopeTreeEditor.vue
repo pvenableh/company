@@ -423,7 +423,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 					<div v-if="servicesLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
 					<div v-else-if="!(services?.length)" class="px-3 py-2 text-xs text-muted-foreground">
 						No published offerings yet.
-						<NuxtLink to="/organization/documents-library?tab=offerings" class="underline">Create one</NuxtLink>
+						<NuxtLink :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'documents_library:offerings' } }" class="underline">Create one</NuxtLink>
 					</div>
 					<div v-else class="max-h-60 overflow-auto">
 						<button
@@ -714,7 +714,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 				<div v-if="servicesLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
 				<div v-else-if="!(services?.length)" class="px-3 py-2 text-xs text-muted-foreground">
 					No published offerings yet.
-					<NuxtLink to="/organization/documents-library?tab=offerings" class="underline">Create one</NuxtLink>
+					<NuxtLink :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'documents_library:offerings' } }" class="underline">Create one</NuxtLink>
 				</div>
 				<div v-else class="max-h-60 overflow-auto">
 					<button

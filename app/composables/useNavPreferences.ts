@@ -43,7 +43,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Files', type: ['header', 'footer', 'drawer'], to: '/files', icon: 'i-heroicons-folder-open', color: 'bg-sky-500', description: 'File manager', section: 'secondary' },
 	// ── Everything below starts HIDDEN from sidebar — accessible via Command Center grid + Cmd+K ──
 	{ name: 'Tickets', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/tickets', icon: 'i-heroicons-queue-list', color: 'bg-indigo-500', description: 'Support tickets', section: 'secondary', featureKey: 'tickets' },
-	{ name: 'Teams', type: ['drawer'], to: '/organization/teams', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },
+	{ name: 'Teams', type: ['drawer'], to: '/apps/organization?floor=settings&slide=teams:_', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },
 	{ name: 'Goals', type: ['drawer'], to: '/goals', icon: 'i-heroicons-flag', color: 'bg-amber-500', description: 'Track goals', section: 'secondary' },
 	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },

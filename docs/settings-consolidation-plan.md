@@ -144,10 +144,24 @@ Redirect risks still to handle when we retire classic:
 
 **Consolidation complete.** The classic/modern split is gone, org settings live
 in one coherent floor taxonomy, and the Integrations overview is grouped and
-digestible. Optional follow-ups: dead-code sweep of the old classic page's
-now-unused child components; retire the classic sub-routes
-(`/organization/roles|teams|documents-library`) if/when their modern homes are
-confirmed at parity.
+digestible.
+
+## Follow-ups (2026-07-21)
+
+- **Sub-route retirement — completed.** `/organization/roles|teams|documents-library`
+  were already thin 301 redirect stubs (from commit `f0a2725c`) wrapping the same
+  `*Body` components the modern slide-over panels render — full structural parity,
+  and the panels are URL-deep-linkable via `?slide=type:id`. Completed the
+  retirement by repointing every inbound link directly at the modern slide-over
+  URLs (guide, teams/[id], nav prefs Teams item, BlockComposer, ScopeTreeEditor)
+  and collapsing the two alias double-redirects (`document-blocks`,
+  `service-templates`) to point straight at the modern surface. Stubs kept as thin
+  bookmark safety nets. Only remaining `/organization/*` reference is a messaging
+  label in `needs-org.global.ts` (not a link).
+- **Dead-code sweep — no action needed.** The retired classic page's 8 child
+  components are all still referenced by the modern `apps/organization` /
+  `apps/money` surfaces or elsewhere (verified incl. transitive chains). The
+  retirement removed *a* consumer, never the *last* consumer. Nothing to delete.
 
 Each is an independent PR; the taxonomy in `useAppNav.ts` lands first so floors
 have a home to move into.

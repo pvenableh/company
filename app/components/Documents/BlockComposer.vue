@@ -336,7 +336,7 @@ function typeLabel(type: string): string {
 				</div>
 				<div v-else-if="library.length === 0" class="py-3 px-2 text-xs text-muted-foreground border-t border-border mt-2 pt-3">
 					No library blocks yet.
-					<NuxtLink to="/organization/documents-library?tab=blocks" class="underline">Create one</NuxtLink>
+					<NuxtLink :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'documents_library:blocks' } }" class="underline">Create one</NuxtLink>
 					to reuse across documents.
 				</div>
 				<div v-else class="space-y-2 border-t border-border mt-2 pt-2">

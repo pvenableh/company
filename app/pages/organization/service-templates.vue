@@ -1,13 +1,15 @@
 <script setup lang="ts">
-// Legacy alias — consolidated into /organization/documents-library?tab=offerings
-// as part of the Document System overhaul (step 4: Service Offerings restructure).
-// Kept as a thin redirect so any bookmarked URLs continue to resolve.
+// Legacy alias — Service Offerings now live in the Documents Library slide-over
+// on the modern org hub. Kept as a thin redirect so bookmarked URLs still
+// resolve; points straight at the modern surface (no intermediate hop).
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Documents Library | Earnest' });
-const router = useRouter();
-onMounted(() => {
-	router.replace('/organization/documents-library?tab=offerings');
-});
+const target = { path: '/apps/organization', query: { floor: 'settings', slide: 'documents_library:offerings' } } as const;
+if (import.meta.server) {
+	await navigateTo(target, { redirectCode: 301 });
+} else {
+	await navigateTo(target, { replace: true });
+}
 </script>
 <template>
 	<div class="flex items-center justify-center py-16 t-text-muted text-sm">Redirecting to Documents Library…</div>

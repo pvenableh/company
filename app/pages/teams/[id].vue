@@ -181,7 +181,7 @@ onUnmounted(() => clearEntity());
       <Icon name="lucide:alert-circle" class="w-10 h-10 text-destructive" />
       <p class="text-sm text-destructive">{{ error }}</p>
       <div class="flex gap-2">
-        <Button variant="outline" size="sm" class="text-xs font-medium" @click="router.push('/organization/teams')">
+        <Button variant="outline" size="sm" class="text-xs font-medium" @click="router.push({ path: '/apps/organization', query: { floor: 'settings', slide: 'teams:_' } })">
           <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
           Back to Teams
         </Button>
@@ -193,7 +193,7 @@ onUnmounted(() => clearEntity());
     <template v-else-if="team">
       <!-- Back link -->
       <NuxtLink
-        to="/organization/teams"
+        :to="{ path: '/apps/organization', query: { floor: 'settings', slide: 'teams:_' } }"
         class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
         <Icon name="lucide:chevron-left" class="w-3 h-3" />
