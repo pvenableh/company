@@ -472,9 +472,20 @@ function socialAccountCount(platform: string): number {
 }
 
 const { socialPublishingEnabled } = useSocialPublishing();
-const SOCIAL_INTEGRATION_KEYS = ['instagram', 'facebook', 'linkedin', 'tiktok', 'threads'];
+// Social platform tiles are built from one config so the row markup stays DRY.
+const SOCIAL_PLATFORMS = [
+  { key: 'instagram', label: 'Instagram', desc: 'Publish posts and reels', icon: 'logos:instagram-icon' },
+  { key: 'facebook', label: 'Facebook', desc: 'Publish to Pages', icon: 'logos:facebook' },
+  { key: 'linkedin', label: 'LinkedIn', desc: 'Publish to personal + Company Pages', icon: 'logos:linkedin-icon' },
+  { key: 'tiktok', label: 'TikTok', desc: 'Publish short-form video', icon: 'logos:tiktok-icon' },
+  { key: 'threads', label: 'Threads', desc: 'Publish text + image posts', icon: 'lucide:at-sign' },
+];
 
-const integrationsList = computed(() => {
+// Integrations floor: connection status grouped by purpose. Each row deep-links
+// to where that integration is actually managed (Money, Marketing, subscription
+// panel, or an external site) — this floor is an at-a-glance overview, not a
+// second management surface.
+const integrationGroups = computed(() => {
   const stripeMeta = stripeConnect.value;
   const stripeLabel =
     stripeMeta?.status === 'active'
@@ -487,17 +498,14 @@ const integrationsList = computed(() => {
             ? 'Status unavailable'
             : 'Not connected';
 
-  const tiles = [
+  const payments = [
     {
       key: 'stripe-connect',
       label: 'Stripe Connect',
       desc: 'Accept card and ACH payments on invoices',
       icon: 'lucide:credit-card',
-      status: stripeMeta?.status || 'inactive',
+      status: (stripeMeta?.status || 'inactive') as IntegrationStatus,
       statusLabel: stripeLabel,
-      // Onboarding + the operational surface (balance / transactions / payouts)
-      // now live on the Money app's Deposits floor. This tile is a status +
-      // deep-link only.
       action: 'Open in Money',
       onClick: () => router.push('/apps/money?floor=deposits'),
     },
@@ -511,6 +519,9 @@ const integrationsList = computed(() => {
       action: 'Learn more',
       onClick: () => accountSubscriptionSlide.open('default'),
     },
+  ];
+
+  const meetingsEmail = [
     {
       key: 'daily',
       label: 'Daily (Video meetings)',
@@ -520,56 +531,6 @@ const integrationsList = computed(() => {
       statusLabel: 'Built-in',
       action: 'Open meetings',
       onClick: () => router.push('/apps/work?floor=calendar&history=1'),
-    },
-    {
-      key: 'instagram',
-      label: 'Instagram',
-      desc: 'Publish posts and reels',
-      icon: 'logos:instagram-icon',
-      status: socialStatusFor('instagram'),
-      statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccountCount('instagram')} account(s)` : 'Not connected',
-      action: 'Manage',
-      onClick: () => socialAccountsSlide.open('instagram'),
-    },
-    {
-      key: 'facebook',
-      label: 'Facebook',
-      desc: 'Publish to Pages',
-      icon: 'logos:facebook',
-      status: socialStatusFor('facebook'),
-      statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccountCount('facebook')} account(s)` : 'Not connected',
-      action: 'Manage',
-      onClick: () => socialAccountsSlide.open('facebook'),
-    },
-    {
-      key: 'linkedin',
-      label: 'LinkedIn',
-      desc: 'Publish to personal + Company Pages',
-      icon: 'logos:linkedin-icon',
-      status: socialStatusFor('linkedin'),
-      statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccountCount('linkedin')} account(s)` : 'Not connected',
-      action: 'Manage',
-      onClick: () => socialAccountsSlide.open('linkedin'),
-    },
-    {
-      key: 'tiktok',
-      label: 'TikTok',
-      desc: 'Publish short-form video',
-      icon: 'logos:tiktok-icon',
-      status: socialStatusFor('tiktok'),
-      statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccountCount('tiktok')} account(s)` : 'Not connected',
-      action: 'Manage',
-      onClick: () => socialAccountsSlide.open('tiktok'),
-    },
-    {
-      key: 'threads',
-      label: 'Threads',
-      desc: 'Publish text + image posts',
-      icon: 'lucide:at-sign',
-      status: socialStatusFor('threads'),
-      statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccountCount('threads')} account(s)` : 'Not connected',
-      action: 'Manage',
-      onClick: () => socialAccountsSlide.open('threads'),
     },
     {
       key: 'email-forwarding',
@@ -583,25 +544,39 @@ const integrationsList = computed(() => {
     },
   ];
 
-  // Pre-launch: social connections ship after launch. While the publishing
-  // kill-switch is off, show the social tiles as disabled "Coming soon" rows
-  // moved to the bottom (rather than hiding them). The Marketing Accounts floor
-  // is separately gated by the same flag.
-  if (!socialPublishingEnabled.value) {
-    const rest = tiles.filter((t) => !SOCIAL_INTEGRATION_KEYS.includes(t.key));
-    const social = tiles
-      .filter((t) => SOCIAL_INTEGRATION_KEYS.includes(t.key))
-      .map((t) => ({
-        ...t,
+  // Social ships after launch; while the publishing kill-switch is off the tiles
+  // render disabled "Coming soon" (the Marketing Accounts floor is gated too).
+  const social = SOCIAL_PLATFORMS.map((p) => {
+    if (!socialPublishingEnabled.value) {
+      return {
+        ...p,
         status: 'inactive' as IntegrationStatus,
         statusLabel: 'Coming soon',
         comingSoon: true,
         action: 'Coming soon',
         onClick: () => {},
-      }));
-    return [...rest, ...social];
-  }
-  return tiles;
+      };
+    }
+    const connected = socialStatusFor(p.key) === 'active';
+    return {
+      ...p,
+      status: socialStatusFor(p.key),
+      statusLabel: connected ? `${socialAccountCount(p.key)} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => socialAccountsSlide.open(p.key),
+    };
+  });
+
+  return [
+    { key: 'payments', title: 'Payments', items: payments },
+    { key: 'meetings-email', title: 'Meetings & Email', items: meetingsEmail },
+    {
+      key: 'social',
+      title: 'Social',
+      note: socialPublishingEnabled.value ? undefined : 'Available after launch',
+      items: social,
+    },
+  ];
 });
 
 function statusDotClass(status: IntegrationStatus) {
@@ -1240,40 +1215,53 @@ function onClientInvited() {
           <span class="text-sm text-muted-foreground">Loading integrations…</span>
         </div>
 
-        <div v-else class="ios-card overflow-hidden">
-          <div
-            v-for="(item, idx) in integrationsList"
-            :key="item.key"
-            class="flex items-center gap-4 px-4 py-3 transition-colors"
-            :class="[
-              idx > 0 ? 'border-t border-border/30' : '',
-              item.comingSoon ? 'opacity-55' : 'hover:bg-muted/20',
-            ]"
-          >
-            <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
-              <Icon :name="item.icon" class="w-5 h-5" />
+        <div v-else class="space-y-5">
+          <p class="text-xs text-muted-foreground">
+            Connections to outside services. Each is managed where it lives — this is a status overview.
+          </p>
+
+          <div v-for="group in integrationGroups" :key="group.key">
+            <div class="flex items-center gap-2 mb-2">
+              <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{{ group.title }}</h3>
+              <span v-if="group.note" class="text-[10px] text-muted-foreground/60 lowercase tracking-normal">· {{ group.note }}</span>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium">{{ item.label }}</p>
-              <p class="text-xs text-muted-foreground truncate">{{ item.desc }}</p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span
-                v-if="item.comingSoon"
-                class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground"
+
+            <div class="ios-card overflow-hidden">
+              <div
+                v-for="(item, idx) in group.items"
+                :key="item.key"
+                class="flex items-center gap-4 px-4 py-3 transition-colors"
+                :class="[
+                  idx > 0 ? 'border-t border-border/30' : '',
+                  item.comingSoon ? 'opacity-55' : 'hover:bg-muted/20',
+                ]"
               >
-                Coming soon
-              </span>
-              <template v-else>
-                <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span :class="['w-1.5 h-1.5 rounded-full', statusDotClass(item.status)]" />
-                  {{ item.statusLabel }}
-                </span>
-                <Button size="sm" variant="ghost" @click="item.onClick">
-                  {{ item.action }}
-                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 ml-1" />
-                </Button>
-              </template>
+                <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                  <Icon :name="item.icon" class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium">{{ item.label }}</p>
+                  <p class="text-xs text-muted-foreground truncate">{{ item.desc }}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span
+                    v-if="item.comingSoon"
+                    class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground"
+                  >
+                    Coming soon
+                  </span>
+                  <template v-else>
+                    <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span :class="['w-1.5 h-1.5 rounded-full', statusDotClass(item.status)]" />
+                      {{ item.statusLabel }}
+                    </span>
+                    <Button size="sm" variant="ghost" @click="item.onClick">
+                      {{ item.action }}
+                      <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  </template>
+                </div>
+              </div>
             </div>
           </div>
         </div>

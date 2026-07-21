@@ -136,7 +136,18 @@ Redirect risks still to handle when we retire classic:
    ~17 inbound `/organization` references (nav prefs, AI engine, guide, banners,
    OrgSwitcher, payouts, + server default return/CTA URLs). OAuth `oauth-start`
    default flipped to `returnTo=money`.
-6. ⬜ Integrations cleanup (last workstream).
+6. ✅ Integrations cleanup — the flat status list is now grouped into labeled
+   sections (Payments · Meetings & Email · Social) with an intro line clarifying
+   it's a status overview; each row still deep-links to where the integration is
+   managed. Social tiles keep the "Coming soon" pre-launch treatment. Social
+   platform tiles de-duplicated via a `SOCIAL_PLATFORMS` config.
+
+**Consolidation complete.** The classic/modern split is gone, org settings live
+in one coherent floor taxonomy, and the Integrations overview is grouped and
+digestible. Optional follow-ups: dead-code sweep of the old classic page's
+now-unused child components; retire the classic sub-routes
+(`/organization/roles|teams|documents-library`) if/when their modern homes are
+confirmed at parity.
 
 Each is an independent PR; the taxonomy in `useAppNav.ts` lands first so floors
 have a home to move into.
