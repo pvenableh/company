@@ -1,5 +1,23 @@
 // /server/api/stripe/paymentchange.ts
-// Stripe webhook handler for payment and subscription events
+//
+// PLATFORM-account Stripe webhook (Earnest's own account). Verified with
+// STRIPE_WEBHOOK_SECRET. Skips any event carrying `event.account` — those are
+// Connect events owned by /api/stripe/connect-webhook — so the two endpoints
+// never double-process. Configure this endpoint on the "your account" scope
+// (NOT "Listen on Connected accounts").
+//
+// Subscribe these 11 events in the Stripe dashboard:
+//   payment_intent.succeeded          — one-off platform payment (records only if invoice_id)
+//   payment_intent.payment_failed     — log only
+//   charge.refunded                   — token/subscription clawback (or legacy platform invoice refund)
+//   charge.dispute.created            — platform dispute opened (funds held) + notify admin
+//   charge.dispute.closed             — platform dispute won/lost → token clawback / subscription flag
+//   customer.subscription.created     — sync org plan + entitlements
+//   customer.subscription.updated     — sync org plan + entitlements
+//   customer.subscription.deleted     — downgrade org to free
+//   invoice.payment_succeeded         — subscription billing period reset
+//   invoice.payment_failed            — log (Stripe flips sub → past_due)
+//   checkout.session.completed        — subscription link + AI token_purchase fulfillment
 import { defineEventHandler, getHeader, readRawBody } from 'h3';
 import Stripe from 'stripe';
 import { updateItems, updateItem, readItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
