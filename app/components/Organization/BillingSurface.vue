@@ -74,6 +74,7 @@ const subTabs = [
 	{ slot: 'refunds', label: 'Refunds', icon: 'i-heroicons-arrow-uturn-left' },
 	{ slot: 'payouts', label: 'Payouts', icon: 'i-heroicons-banknotes' },
 	{ slot: 'balance', label: 'Balance', icon: 'i-heroicons-scale' },
+	{ slot: 'fees', label: 'Fees', icon: 'i-heroicons-receipt-percent' },
 ];
 const activeSub = ref(0);
 
@@ -200,12 +201,69 @@ const fetchPayouts = async (loadMore = false) => {
 	}
 };
 
+// ── Fees (processing-fee policy) ────────────────────────────────────────────
+interface FeeSettings {
+	passCardFee: boolean;
+	passAchFee: boolean;
+	wholesale: boolean;
+	platformFeePercent: number;
+}
+const feeSettings = ref<FeeSettings | null>(null);
+const feeLoading = ref(false);
+const feeSaving = ref(false);
+
+const fetchFeeSettings = async () => {
+	feeLoading.value = true;
+	try {
+		feeSettings.value = await $fetch(`/api/org/${props.organizationId}/payment-settings`);
+	} catch (err: any) {
+		toast.add({ title: 'Could not load fee settings', description: err?.data?.message || err?.message, color: 'red' });
+	} finally {
+		feeLoading.value = false;
+	}
+};
+
+const saveFeeSetting = async (key: 'passCardFee' | 'passAchFee', value: boolean) => {
+	if (!feeSettings.value) return;
+	const prev = feeSettings.value[key];
+	feeSettings.value[key] = value; // optimistic
+	feeSaving.value = true;
+	try {
+		const res = await $fetch<{ passCardFee: boolean; passAchFee: boolean }>(
+			`/api/org/${props.organizationId}/payment-settings`,
+			{ method: 'PATCH', body: { [key]: value } },
+		);
+		feeSettings.value.passCardFee = res.passCardFee;
+		feeSettings.value.passAchFee = res.passAchFee;
+		toast.add({ title: 'Fee settings saved', color: 'green' });
+	} catch (err: any) {
+		feeSettings.value[key] = prev; // revert
+		toast.add({ title: 'Could not save', description: err?.data?.message || err?.message, color: 'red' });
+	} finally {
+		feeSaving.value = false;
+	}
+};
+
+// Worked example so the org sees exactly what a client pays + what they net.
+const feeExample = computed(() => {
+	const base = 1000;
+	const cardFee = feeSettings.value?.passCardFee ? (base + 0.3) / (1 - 0.029) - base : 0;
+	const achFee = feeSettings.value?.passAchFee ? Math.min((base * 0.008) / (1 - 0.008), 5) : 0;
+	const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+	return {
+		cardTotal: fmt(base + cardFee),
+		achTotal: fmt(base + achFee),
+		net: fmt(base),
+	};
+});
+
 // Lazy-load each section the first time the user views it.
 watch(activeSub, (i) => {
 	const slot = subTabs[i]?.slot;
 	if (slot === 'transactions' && !transactions.value.length) fetchTransactions();
 	if (slot === 'refunds' && !refunds.value.length) fetchRefunds();
 	if (slot === 'payouts' && !payouts.value.length) fetchPayouts();
+	if (slot === 'fees' && !feeSettings.value) fetchFeeSettings();
 }, { immediate: true });
 
 onMounted(() => fetchBalance());
@@ -555,6 +613,71 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 							</div>
 							<p class="text-xs text-muted-foreground mt-2">Eligible for instant payout (where supported).</p>
 						</UCard>
+					</div>
+				</div>
+			</template>
+
+			<template #fees>
+				<div class="mt-4">
+					<div v-if="feeLoading" class="flex items-center justify-center py-10 text-muted-foreground">
+						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<span class="text-sm">Loading fee settings…</span>
+					</div>
+					<div v-else-if="feeSettings" class="space-y-4">
+						<p class="text-sm text-muted-foreground">
+							Choose whether your client covers the payment processing fee, or you absorb it. Fees are added on top of the invoice total so you receive the full amount.
+						</p>
+
+						<!-- Card fee toggle -->
+						<div class="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+							<div>
+								<p class="text-sm font-medium">Pass card fee to client</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									Card processing fee (2.9% + $0.30) is added to the client's total.
+									{{ feeSettings.passCardFee ? `A $1,000 invoice bills ${feeExample.cardTotal}; you net ${feeExample.net}.` : 'Off — you absorb the card fee.' }}
+								</p>
+							</div>
+							<UToggle
+								:model-value="feeSettings.passCardFee"
+								:disabled="feeSaving"
+								@update:model-value="(v) => saveFeeSetting('passCardFee', v)"
+							/>
+						</div>
+
+						<!-- ACH fee toggle -->
+						<div class="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+							<div>
+								<p class="text-sm font-medium">Pass ACH (bank) fee to client</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									Bank-transfer fee (0.8%, capped at $5) is added to the client's total.
+									{{ feeSettings.passAchFee ? `A $1,000 invoice bills ${feeExample.achTotal}; you net ${feeExample.net}.` : 'Off — bank payments are free to your client (you absorb the ~0.8% fee).' }}
+								</p>
+							</div>
+							<UToggle
+								:model-value="feeSettings.passAchFee"
+								:disabled="feeSaving"
+								@update:model-value="(v) => saveFeeSetting('passAchFee', v)"
+							/>
+						</div>
+
+						<!-- Earnest platform fee (read-only) -->
+						<div class="flex items-start justify-between gap-4 rounded-lg bg-muted/40 p-4">
+							<div>
+								<p class="text-sm font-medium">Earnest platform fee</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									<template v-if="feeSettings.wholesale">Waived — your account is on wholesale pricing.</template>
+									<template v-else-if="feeSettings.platformFeePercent > 0">{{ feeSettings.platformFeePercent }}% of each invoice payment, deducted from your proceeds.</template>
+									<template v-else>None — Earnest takes no fee on your invoice payments.</template>
+								</p>
+							</div>
+							<span class="text-sm font-semibold tabular-nums whitespace-nowrap">
+								{{ feeSettings.wholesale ? 'Waived' : feeSettings.platformFeePercent > 0 ? `${feeSettings.platformFeePercent}%` : 'None' }}
+							</span>
+						</div>
+
+						<p class="text-[11px] text-muted-foreground">
+							Note: passing card fees to customers is regulated in some regions — confirm it's permitted where you operate.
+						</p>
 					</div>
 				</div>
 			</template>

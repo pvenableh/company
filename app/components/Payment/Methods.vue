@@ -51,10 +51,47 @@ function changePanel(newPanel, key) {
 	panel.value = newPanel;
 }
 
+// Stripe US pricing. Card = 2.9% + $0.30; ACH = 0.8% capped at $5.00. Stripe
+// takes its cut from the TOTAL captured (not the invoice base), so passing the
+// fee on means GROSSING UP — total = (base + fixed) / (1 - pct) — otherwise the
+// org under-collects by the fee-on-the-fee. The itemized fee shown is total-base.
+const CARD_PCT = 0.029;
+const CARD_FIXED = 0.3;
+const ACH_PCT = 0.008;
+const ACH_CAP = 5.0;
+
+// Per-org policy (merchant org = invoice.bill_to). Defaults preserve prior
+// behavior: card fee IS passed to the payer, ACH fee is NOT (bank stays free).
+const passCardFee = computed(() => props.bill_to?.pass_card_fee !== false);
+const passAchFee = computed(() => props.bill_to?.pass_ach_fee === true);
+
 const stripeFee = computed(() => {
-	if (panel.value === 'bank') return '0.00';
-	return (props.amount * 0.029 + 0.3).toFixed(2);
+	const base = Number(props.amount) || 0;
+	if (panel.value === 'bank') {
+		if (!passAchFee.value) return '0.00';
+		// Gross up ACH, then clamp at the flat $5 cap (above ~$620 Stripe charges
+		// the cap regardless, so the fee never exceeds it).
+		const uncapped = (base * ACH_PCT) / (1 - ACH_PCT);
+		return Math.min(uncapped, ACH_CAP).toFixed(2);
+	}
+	if (!passCardFee.value) return '0.00';
+	const total = (base + CARD_FIXED) / (1 - CARD_PCT);
+	return (total - base).toFixed(2);
 });
+
+// Payer-facing fee disclosure, adapted to the org's policy for each method.
+const feeDisclosure = computed(() => {
+	const card = passCardFee.value
+		? 'Credit card payments add a processing fee (2.9% + $0.30).'
+		: 'Credit card payments add no fee.';
+	const bank = passAchFee.value
+		? 'Bank payments add a smaller fee (0.8%, max $5).'
+		: 'Paying by bank adds no fees.';
+	return `${card} ${bank}`;
+});
+
+const hasFee = computed(() => Number(stripeFee.value) > 0);
+const feeMethodLabel = computed(() => (panel.value === 'bank' ? 'ACH' : 'Processing'));
 
 const totalWithFees = computed(() => {
 	return (Number(props.amount) + Number(stripeFee.value)).toFixed(2);
@@ -97,13 +134,12 @@ const formatNumber = (value) => {
 	<div class="w-full flex flex-col payment">
 		<h1 class="w-full mt-6 lg:mt-0 uppercase tracking-wider">Payment</h1>
 		<p class="mt-2 mb-6 text-[12px]">
-			Please note, a credit card payment will add a 3% processing fee. Using a bank account for payment adds
-			<strong>no fees.</strong>
+			{{ feeDisclosure }}
 		</p>
 		<h5 class="uppercase tracking-wide mb-6">
 			<span class="opacity-50">Total:</span>
 			${{ formatNumber(totalWithFees) }}
-			<span v-if="panel === 'card'" class="text-[9px] uppercase">Includes a ${{ stripeFee }} Processing fee.</span>
+			<span v-if="hasFee" class="text-[9px] uppercase">Includes a ${{ stripeFee }} {{ feeMethodLabel }} fee.</span>
 		</h5>
 		<transition :name="animateName" mode="out-in" class="relative transition-container">
 			<div class="w-full flex items-center justify-center flex-col payment-section">

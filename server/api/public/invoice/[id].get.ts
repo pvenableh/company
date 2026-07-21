@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
           'bill_to.id', 'bill_to.name', 'bill_to.email', 'bill_to.emails',
           'bill_to.stripe_customer_id', 'bill_to.address', 'bill_to.phone',
           'bill_to.website', 'bill_to.logo', 'bill_to.plan', 'bill_to.whitelabel',
+          'bill_to.pass_card_fee', 'bill_to.pass_ach_fee',
           'bill_to.document_theme', 'bill_to.document_accent', 'bill_to.document_theme_config',
           'client.id', 'client.name', 'client.organization',
           'client.billing_name', 'client.billing_email', 'client.billing_address',

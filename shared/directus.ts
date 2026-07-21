@@ -3320,6 +3320,10 @@ export interface Organization {
 	wholesale_pricing?: boolean;
 	/** @description Visual overrides layered on top of the base document theme (set via the Document Theme Studio). */
 	document_theme_config?: Record<string, any> | null;
+	/** @description Add the card processing fee (2.9% + $0.30) to the payer's total. Off = the org absorbs it. */
+	pass_card_fee?: boolean | null;
+	/** @description Add the ACH fee (0.8%, max $5) to the payer's total. Off = the org absorbs it (bank shows 'no fees'). */
+	pass_ach_fee?: boolean | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
