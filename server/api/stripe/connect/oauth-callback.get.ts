@@ -8,19 +8,30 @@
 import { updateItem } from '@directus/sdk';
 import Stripe from 'stripe';
 
-function backToBilling(event: any, query: Record<string, string>) {
+// `state` is `orgId|returnTo`; `returnTo` decides the landing page ('money' →
+// modern Money > Deposits floor, else the legacy classic org billing tab).
+function parseState(state: string | undefined): { orgId?: string; returnTo: 'money' | 'org' } {
+	const [orgId, returnTo] = (state || '').split('|');
+	return { orgId: orgId || undefined, returnTo: returnTo === 'money' ? 'money' : 'org' };
+}
+
+function backToApp(event: any, returnTo: 'money' | 'org', query: Record<string, string>) {
 	const baseUrl = getAppBaseUrl(event);
+	if (returnTo === 'money') {
+		const qs = new URLSearchParams({ floor: 'deposits', ...query }).toString();
+		return sendRedirect(event, `${baseUrl}/apps/money?${qs}`);
+	}
 	const qs = new URLSearchParams({ tab: 'billing', ...query }).toString();
 	return sendRedirect(event, `${baseUrl}/organization?${qs}`);
 }
 
 export default defineEventHandler(async (event) => {
 	const q = getQuery(event);
-	const orgId = q.state as string | undefined;
+	const { orgId, returnTo } = parseState(q.state as string | undefined);
 
 	// User declined on Stripe's screen, or Stripe returned an error.
 	if (q.error) {
-		return backToBilling(event, { connect_error: String(q.error_description || q.error) });
+		return backToApp(event, returnTo, { connect_error: String(q.error_description || q.error) });
 	}
 	const code = q.code as string | undefined;
 	if (!code || !orgId) {
@@ -40,11 +51,11 @@ export default defineEventHandler(async (event) => {
 		connectedAccountId = token.stripe_user_id as string;
 	} catch (err: any) {
 		console.error('[connect/oauth-callback] token exchange failed:', err?.message || err);
-		return backToBilling(event, { connect_error: 'Could not link the Stripe account. Please try again.' });
+		return backToApp(event, returnTo, { connect_error: 'Could not link the Stripe account. Please try again.' });
 	}
 
 	if (!connectedAccountId) {
-		return backToBilling(event, { connect_error: 'Stripe did not return an account id.' });
+		return backToApp(event, returnTo, { connect_error: 'Stripe did not return an account id.' });
 	}
 
 	// Reflect live capability state so the routing matrix treats it correctly.
@@ -69,5 +80,5 @@ export default defineEventHandler(async (event) => {
 
 	console.log(`[connect/oauth-callback] linked ${connectedAccountId} (${status}) to org ${orgId}`);
 
-	return backToBilling(event, { connect_linked: '1', onboarding: 'complete' });
+	return backToApp(event, returnTo, { connect_linked: '1', onboarding: 'complete' });
 });

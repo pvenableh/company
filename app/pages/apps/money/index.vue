@@ -193,6 +193,48 @@ async function startStripeConnect() {
   }
 }
 
+// Standard Connect OAuth — links a PRE-EXISTING Stripe account (e.g. a business
+// already running payments elsewhere) instead of creating a fresh Express
+// account. Full-page redirect to oauth-start; oauth-callback returns here with
+// connect_linked=1 (or connect_error=…) via returnTo=money.
+function connectExistingAccount() {
+  const orgId = selectedOrg.value;
+  if (!orgId || connectActing.value) return;
+  connectActing.value = true;
+  window.location.href = `/api/stripe/connect/oauth-start?organizationId=${encodeURIComponent(orgId)}&returnTo=money`;
+}
+
+// Return leg for both Connect flows (Express onboarding + Standard OAUTH link).
+// Refresh status, toast, then strip the query so a refresh doesn't re-fire.
+watch(
+  () => [route.query.onboarding, route.query.connect_linked, route.query.connect_error] as const,
+  async ([onboarding, linked, connectError]) => {
+    if (!onboarding && !linked && !connectError) return;
+    if (selectedOrg.value) {
+      depositsLoaded = true;
+      await fetchStripeConnect();
+    }
+    if (linked) {
+      toast.success('Stripe account linked', {
+        description: stripeConnect.value?.status === 'active'
+          ? 'Your existing account is connected and can accept invoice payments.'
+          : 'Account linked. Stripe is still verifying some details; this updates automatically.',
+      });
+    } else if (connectError) {
+      toast.error('Could not link Stripe account', { description: String(connectError) });
+    } else if (onboarding === 'complete') {
+      toast.success('Stripe onboarding submitted', {
+        description: stripeConnect.value?.status === 'active'
+          ? 'Your account is active and can accept invoice payments.'
+          : 'Stripe is still verifying your details; this updates automatically.',
+      });
+    }
+    const { onboarding: _o, connect_linked: _l, connect_error: _e, ...rest } = route.query;
+    router.replace({ query: rest });
+  },
+  { immediate: true },
+);
+
 const connectStatusMeta = computed(() => {
   const s = stripeConnect.value?.status;
   if (s === 'active') return { label: 'Connected · accepting payments', tone: 'bg-success/15 text-success', dot: 'bg-success' };
@@ -1385,13 +1427,27 @@ const headerAction = computed(() => {
               </span>
             </div>
 
-            <div v-if="stripeConnect?.status !== 'active'" class="mt-4 flex items-center gap-3">
-              <Button size="sm" :disabled="connectActing" @click="startStripeConnect">
-                {{ stripeConnect?.status === 'pending' || stripeConnect?.status === 'restricted' ? 'Continue setup' : 'Set up payments' }}
-              </Button>
-              <a href="https://dashboard.stripe.com/" target="_blank" rel="noopener" class="text-xs text-muted-foreground hover:text-foreground">
-                Stripe dashboard
-              </a>
+            <div v-if="stripeConnect?.status !== 'active'" class="mt-4 flex flex-col gap-2.5">
+              <div class="flex items-center gap-3">
+                <Button size="sm" :disabled="connectActing" @click="startStripeConnect">
+                  {{ stripeConnect?.status === 'pending' || stripeConnect?.status === 'restricted' ? 'Continue setup' : 'Set up payments' }}
+                </Button>
+                <a href="https://dashboard.stripe.com/" target="_blank" rel="noopener" class="text-xs text-muted-foreground hover:text-foreground">
+                  Stripe dashboard
+                </a>
+              </div>
+              <!-- Link a pre-existing Stripe account (Standard Connect OAuth)
+                   instead of creating a new Express account. Only offered before
+                   an account has been started. -->
+              <button
+                v-if="stripeConnect?.status !== 'pending' && stripeConnect?.status !== 'restricted'"
+                type="button"
+                class="text-xs text-muted-foreground text-left w-fit disabled:opacity-50"
+                :disabled="connectActing"
+                @click="connectExistingAccount"
+              >
+                Already using Stripe? <span class="text-primary hover:underline">Link an existing account</span>
+              </button>
             </div>
             <div v-else class="mt-4">
               <a

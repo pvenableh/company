@@ -15,6 +15,11 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'organizationId is required' });
 	}
 
+	// Where the callback should land the user afterwards. 'money' → the modern
+	// Money > Deposits floor; anything else (incl. absent) → the legacy classic
+	// org billing tab, preserving the original behavior during the transition.
+	const returnTo = getQuery(event).returnTo === 'money' ? 'money' : 'org';
+
 	await requireNotDemoSession(event);
 	await requireActiveOrg(orgId);
 	await requireOrgPermission(event, orgId, 'org_settings', 'update');
@@ -36,14 +41,15 @@ export default defineEventHandler(async (event) => {
 	const baseUrl = getAppBaseUrl(event);
 	const redirectUri = `${baseUrl}/api/stripe/connect/oauth-callback`;
 
-	// `state` carries the org id; the callback re-checks permission on it, so a
-	// tampered state can only ever target an org the signed-in user controls.
+	// `state` carries the org id (and the return target as `orgId|returnTo`); the
+	// callback re-checks permission on the org, so a tampered state can only ever
+	// target an org the signed-in user controls.
 	const params = new URLSearchParams({
 		response_type: 'code',
 		client_id: clientId,
 		scope: 'read_write',
 		redirect_uri: redirectUri,
-		state: orgId,
+		state: `${orgId}|${returnTo}`,
 		'stripe_user[business_type]': 'company',
 	});
 	if (org.email) params.set('stripe_user[email]', org.email);

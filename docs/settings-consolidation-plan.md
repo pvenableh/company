@@ -105,11 +105,14 @@ REAL gaps that blocked retirement — capabilities that existed ONLY on classic:
   actions on the Members floor's Client Portal Access list.
 - ✅ **Archived-banner copy** ("restore from classic settings page") — updated to
   point at the Settings-floor "Manage archive" control.
-- ⬜ **Stripe Connect "connect an existing account" (Standard OAuth)** — the
-  `connectExistingAccount` → `/api/stripe/connect/oauth-start` path plus its
-  `connect_linked`/`connect_error` return handlers still live only on classic.
-  Money's Deposits floor can create a NEW Express account but cannot link a
-  pre-existing one. This is the LAST blocker before classic can be redirected.
+- ✅ **Stripe Connect "connect an existing account" (Standard OAuth)** — DONE.
+  Added a "Link an existing account" action to the Money > Deposits onboarding
+  card (`connectExistingAccount` → `/api/stripe/connect/oauth-start?returnTo=money`).
+  The OAuth `state` now carries the return target (`orgId|returnTo`); the
+  callback routes `money` → `/apps/money?floor=deposits` and anything else →
+  the legacy classic billing tab (unchanged). Money floor now also handles the
+  `connect_linked`/`connect_error`/`onboarding` return query (toast + refresh +
+  strip). Classic's own OAuth path is untouched (defaults to `returnTo=org`).
 
 Redirect risks still to handle when we retire classic:
 - `?tab=billing` in classic = Stripe Connect (getting paid), but modern
@@ -122,11 +125,12 @@ Redirect risks still to handle when we retire classic:
 
 1. ✅ Gate social connect UI.
 2. ✅ Communications bucket (transactional branding extracted to Email floor).
-3. ✅ Member & client management ported to modern Members floor (4 of 5 classic
-   gaps closed; archived-banner copy fixed).
-4. ⬜ Stripe Connect "link existing account" OAuth → modern home (last gap).
+3. ✅ Member & client management ported to modern Members floor (archived-banner
+   copy fixed).
+4. ✅ Stripe Connect "link existing account" OAuth → modern Money Deposits home.
+   ALL classic capability gaps are now closed — classic is ready to retire.
 5. ⬜ Retire classic page + redirect (repoint the ~12 inbound links; handle the
-   `?tab=billing` → Money-deposits semantic).
+   `?tab=billing` → Money-deposits semantic; `?tab=ai-usage` → `?floor=ai`).
 6. ⬜ Integrations cleanup.
 
 Each is an independent PR; the taxonomy in `useAppNav.ts` lands first so floors
