@@ -35,6 +35,14 @@ const {
 	openPortal,
 } = useSubscription();
 
+// Entitlement/tier (Directus `organizations.plan`) is a separate axis from the
+// live Stripe billing status below — an enterprise/wholesale org (e.g. hue) is
+// fully entitled with no Stripe subscription, so the badge/plan name must read
+// `plan` before falling back to the Stripe lookup.
+const { isOrgAdminOrAbove, hasAddon, planAllows, orgPlan } = useOrgRole();
+const { selectedOrg, fetchOrganizationDetails } = useOrganization();
+const isEnterprise = computed(() => orgPlan.value === 'enterprise');
+
 const showCancelConfirm = ref(false);
 const route = useRoute();
 const router = useRouter();
@@ -54,6 +62,11 @@ onMounted(async () => {
 });
 
 const statusBadge = computed(() => {
+	// Enterprise/wholesale orgs are entitled via `plan`, not a Stripe sub — show
+	// their tier rather than the "No Plan" state that a missing customer yields.
+	if (isEnterprise.value) {
+		return { label: 'Enterprise', color: 'blue' as const };
+	}
 	const status = subscriptionData.value?.subscription?.status;
 	if (!status || status === 'none' || subscriptionData.value?.status === 'no_customer') {
 		return { label: 'No Plan', color: 'gray' as const };
@@ -70,6 +83,7 @@ const statusBadge = computed(() => {
 });
 
 const planName = computed(() => {
+	if (isEnterprise.value) return 'Enterprise — all features included';
 	if (!currentPlan.value) return 'No active plan';
 	const product = currentPlan.value.product;
 	if (typeof product === 'object' && product?.name) return product.name;
@@ -114,8 +128,8 @@ async function handleManageBilling() {
 // server/utils/stripe.ts; the canonical Stripe price ids live server-side and
 // the client only references add-on ids + human copy (same contract as the
 // signup wizard in pages/organization/new.vue).
-const { isOrgAdminOrAbove, hasAddon, planAllows, orgPlan } = useOrgRole();
-const { selectedOrg, fetchOrganizationDetails } = useOrganization();
+// (useOrgRole / useOrganization / isEnterprise are declared up top so the
+// status badge and plan name can read the tier.)
 
 interface AddonCatalogEntry {
 	id: string;
@@ -141,7 +155,7 @@ const visibleAddons = computed(() =>
 
 // Enterprise implicitly owns every add-on (internal/wholesale orgs like hue) —
 // render them as "Included with your plan" rather than cancellable line items.
-const isEnterprise = computed(() => orgPlan.value === 'enterprise');
+// `isEnterprise` is declared up top (used by the status badge too).
 
 // Subscribing requires an active base subscription for subscriptionItems.create.
 // Enterprise needs no sub (everything is included).

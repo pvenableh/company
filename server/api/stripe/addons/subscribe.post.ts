@@ -49,9 +49,20 @@ export default defineEventHandler(async (event) => {
 			// Org-owned billing: the subscription lives on the organization record.
 			const org = await directus.request(
 				readItem('organizations', body.orgId, {
-					fields: ['stripe_subscription_id'],
+					fields: ['stripe_subscription_id', 'plan'],
 				})
 			) as any;
+
+			// Enterprise/wholesale orgs (e.g. hue) are entitled to every add-on with
+			// no Stripe subscription — mirror the client-side `hasAddon` bypass so
+			// the two sides agree. Nothing to charge; the add-on is already included.
+			if (org?.plan === 'enterprise') {
+				return {
+					success: true,
+					data: { addonId: body.addonId, subscriptionItemId: null, included: true },
+				};
+			}
+
 			subscriptionId = org?.stripe_subscription_id || null;
 		}
 
