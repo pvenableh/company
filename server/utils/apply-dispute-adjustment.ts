@@ -19,10 +19,12 @@
  * Best-effort throughout — never 500 the webhook (Stripe retries), so the
  * caller wraps in try/catch and we swallow non-critical failures.
  *
- * ⚠️ SCAFFOLD: created/closed logic + notifications are implemented, but this
- * needs (1) the Stripe webhook endpoint subscribed to `charge.dispute.closed`
- * (verify in the Stripe dashboard — the current set may only have
- * dispute.created), and (2) end-to-end tests with Stripe test-mode disputes.
+ * Covered by tests/server/apply-dispute-adjustment.test.ts (created / won /
+ * lost / partial + idempotency, against the real recomputeInvoiceStatus) and by
+ * scripts/verify-dispute-adjustment.ts (the negative-row mechanic against prod
+ * Directus). OPS: ensure the Connect webhook endpoint is subscribed to
+ * `charge.dispute.closed` in the Stripe dashboard — the initial set may only
+ * have `charge.dispute.created`, so won/lost outcomes would never arrive.
  */
 import Stripe from 'stripe';
 import { createItem, readItems, updateItem, createNotification } from '@directus/sdk';
@@ -41,7 +43,8 @@ type PaymentRow = {
   livemode?: boolean | null;
 };
 
-async function findChargeRows(directus: any, dispute: Stripe.Dispute) {
+async function findChargeRows(dispute: Stripe.Dispute) {
+  const directus = getTypedDirectus();
   const chargeId = idOf(dispute.charge);
   const piId = idOf(dispute.payment_intent);
   const rows = (await directus.request(
@@ -60,8 +63,9 @@ async function findChargeRows(directus: any, dispute: Stripe.Dispute) {
 }
 
 /** Notify the org's active owners/admins. Mirrors the agency-rating fanout. */
-async function notifyOrgAdmins(directus: any, orgId: string | null, subject: string, message: string) {
+async function notifyOrgAdmins(orgId: string | null, subject: string, message: string) {
   if (!orgId) return;
+  const directus = getTypedDirectus();
   try {
     const admins = (await directus.request(
       readItems('org_memberships', {
@@ -90,7 +94,7 @@ const appendNote = (existing: string | null | undefined, line: string) =>
 
 export async function handleDisputeCreated(dispute: Stripe.Dispute, orgId: string | null) {
   const directus = getTypedDirectus();
-  const { rows, chargeId } = await findChargeRows(directus, dispute);
+  const { rows, chargeId } = await findChargeRows(dispute);
   const original = rows.find((r) => Number(r.amount || 0) > 0);
   const amount = (dispute.amount / 100).toFixed(2);
 
@@ -104,7 +108,6 @@ export async function handleDisputeCreated(dispute: Stripe.Dispute, orgId: strin
   }
 
   await notifyOrgAdmins(
-    directus,
     orgId,
     'Payment disputed',
     `A $${amount} payment was disputed (${dispute.reason}). The funds are held pending resolution — submit evidence in Stripe if this is invalid.`,
@@ -115,7 +118,7 @@ export async function handleDisputeCreated(dispute: Stripe.Dispute, orgId: strin
 
 export async function handleDisputeClosed(dispute: Stripe.Dispute, orgId: string | null) {
   const directus = getTypedDirectus();
-  const { rows, chargeId, piId } = await findChargeRows(directus, dispute);
+  const { rows, chargeId, piId } = await findChargeRows(dispute);
   const original = rows.find((r) => Number(r.amount || 0) > 0);
   const amount = (dispute.amount / 100).toFixed(2);
 
@@ -129,7 +132,7 @@ export async function handleDisputeClosed(dispute: Stripe.Dispute, orgId: string
         }))
         .catch(() => {});
     }
-    await notifyOrgAdmins(directus, orgId, 'Dispute resolved in your favor', `The $${amount} dispute closed as "${dispute.status}". The payment stands.`);
+    await notifyOrgAdmins(orgId, 'Dispute resolved in your favor', `The $${amount} dispute closed as "${dispute.status}". The payment stands.`);
     console.log(`[Stripe Connect] dispute.closed ${dispute.id} → ${dispute.status} (restored)`);
     return { outcome: dispute.status, applied: false };
   }
@@ -169,7 +172,6 @@ export async function handleDisputeClosed(dispute: Stripe.Dispute, orgId: string
   if (invoiceId) newInvoiceStatus = (await recomputeInvoiceStatus(invoiceId)).newStatus;
 
   await notifyOrgAdmins(
-    directus,
     orgId,
     'Dispute lost',
     `The $${amount} dispute was lost. The payment was reversed${invoiceId ? ` and the invoice reopened (${newInvoiceStatus})` : ''}.`,
