@@ -27,8 +27,9 @@ const sections = computed(() => {
 	];
 });
 
-// Combined recent stream across all three sources, newest first.
-const recent = computed(() => {
+// Combined recent stream across all three sources, newest first — the hub
+// doubles as the staff "feedback inbox".
+const stream = computed(() => {
 	const d = data.value as any;
 	if (!d) return [];
 	const tag = (arr: any[], kind: string, icon: string) => (arr || []).map((r) => ({ ...r, kind, icon }));
@@ -36,10 +37,13 @@ const recent = computed(() => {
 		...tag(d.agency?.recent, 'Agency', 'lucide:heart-handshake'),
 		...tag(d.projects?.recent, 'Project', 'lucide:folder-check'),
 		...tag(d.tickets?.recent, 'Ticket', 'lucide:ticket-check'),
-	]
-		.filter((r) => r.comment)
-		.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-		.slice(0, 30);
+	].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+});
+const recent = computed(() => stream.value.filter((r) => r.comment).slice(0, 30));
+// "New this month" across all sources — the inbox recency signal.
+const newThisMonth = computed(() => {
+	const cutoff = Date.now() - 30 * 86400000;
+	return stream.value.filter((r) => r.date && new Date(r.date).getTime() >= cutoff).length;
 });
 </script>
 
@@ -82,6 +86,12 @@ const recent = computed(() => {
 				<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-4 flex items-center gap-2">
 					<Icon name="lucide:message-square-quote" class="w-3.5 h-3.5" />
 					Recent feedback
+					<span
+						v-if="newThisMonth"
+						class="ml-1 normal-case tracking-normal text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+					>
+						{{ newThisMonth }} new this month
+					</span>
 				</h3>
 				<div v-if="recent.length" class="space-y-4">
 					<div v-for="(r, i) in recent" :key="`${r.kind}-${r.id}-${i}`" class="flex items-start gap-3">
