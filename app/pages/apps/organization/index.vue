@@ -39,8 +39,8 @@ const config = useRuntimeConfig();
 const toast = useToast();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'overview' | 'members' | 'teams' | 'billing' | 'ai' | 'integrations' | 'settings';
-const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'teams', 'billing', 'ai', 'integrations', 'settings'];
+type FloorKey = 'overview' | 'members' | 'teams' | 'billing' | 'ai' | 'communications' | 'integrations' | 'settings';
+const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'teams', 'billing', 'ai', 'communications', 'integrations', 'settings'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -268,6 +268,9 @@ function socialAccountCount(platform: string): number {
   return socialAccounts.value.filter((a) => a.platform === platform && a.status !== 'disconnected').length;
 }
 
+const { socialPublishingEnabled } = useSocialPublishing();
+const SOCIAL_INTEGRATION_KEYS = ['instagram', 'facebook', 'linkedin', 'tiktok', 'threads'];
+
 const integrationsList = computed(() => {
   const stripeMeta = stripeConnect.value;
   const stripeLabel =
@@ -281,7 +284,7 @@ const integrationsList = computed(() => {
             ? 'Status unavailable'
             : 'Not connected';
 
-  return [
+  const tiles = [
     {
       key: 'stripe-connect',
       label: 'Stripe Connect',
@@ -376,6 +379,26 @@ const integrationsList = computed(() => {
       onClick: () => window.open('https://www.name.com/account/domain', '_blank', 'noopener'),
     },
   ];
+
+  // Pre-launch: social connections ship after launch. While the publishing
+  // kill-switch is off, show the social tiles as disabled "Coming soon" rows
+  // moved to the bottom (rather than hiding them). The Marketing Accounts floor
+  // is separately gated by the same flag.
+  if (!socialPublishingEnabled.value) {
+    const rest = tiles.filter((t) => !SOCIAL_INTEGRATION_KEYS.includes(t.key));
+    const social = tiles
+      .filter((t) => SOCIAL_INTEGRATION_KEYS.includes(t.key))
+      .map((t) => ({
+        ...t,
+        status: 'inactive' as IntegrationStatus,
+        statusLabel: 'Coming soon',
+        comingSoon: true,
+        action: 'Coming soon',
+        onClick: () => {},
+      }));
+    return [...rest, ...social];
+  }
+  return tiles;
 });
 
 function statusDotClass(status: IntegrationStatus) {
@@ -929,6 +952,14 @@ function onClientInvited() {
         </div>
       </template>
 
+      <!-- ── Communications ("Email") floor ───────────────────────────── -->
+      <!-- Org-level transactional email settings (reply-to, footer address,
+           silent BCC, whitelabel) + live template preview. The marketing /
+           newsletter HTML builder stays in the Marketing app. -->
+      <template v-else-if="floor === 'communications'">
+        <AppsOrganizationCommunicationsSurface :can-manage="canManageOrg" />
+      </template>
+
       <!-- ── Integrations floor ───────────────────────────────────────── -->
       <template v-else-if="floor === 'integrations'">
         <div v-if="stripeConnectLoading && !stripeConnect" class="flex items-center justify-center py-16 gap-3">
@@ -940,8 +971,11 @@ function onClientInvited() {
           <div
             v-for="(item, idx) in integrationsList"
             :key="item.key"
-            class="flex items-center gap-4 px-4 py-3 hover:bg-muted/20 transition-colors"
-            :class="idx > 0 ? 'border-t border-border/30' : ''"
+            class="flex items-center gap-4 px-4 py-3 transition-colors"
+            :class="[
+              idx > 0 ? 'border-t border-border/30' : '',
+              item.comingSoon ? 'opacity-55' : 'hover:bg-muted/20',
+            ]"
           >
             <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
               <Icon :name="item.icon" class="w-5 h-5" />
@@ -951,14 +985,22 @@ function onClientInvited() {
               <p class="text-xs text-muted-foreground truncate">{{ item.desc }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span :class="['w-1.5 h-1.5 rounded-full', statusDotClass(item.status)]" />
-                {{ item.statusLabel }}
+              <span
+                v-if="item.comingSoon"
+                class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground"
+              >
+                Coming soon
               </span>
-              <Button size="sm" variant="ghost" @click="item.onClick">
-                {{ item.action }}
-                <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 ml-1" />
-              </Button>
+              <template v-else>
+                <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span :class="['w-1.5 h-1.5 rounded-full', statusDotClass(item.status)]" />
+                  {{ item.statusLabel }}
+                </span>
+                <Button size="sm" variant="ghost" @click="item.onClick">
+                  {{ item.action }}
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </template>
             </div>
           </div>
         </div>

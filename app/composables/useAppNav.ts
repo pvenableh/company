@@ -105,6 +105,7 @@ const FLOORS: Partial<Record<AppId, AppFloor[]>> = {
 		{ key: 'teams', label: 'Teams', icon: 'lucide:users-round' },
 		{ key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
 		{ key: 'ai', label: 'AI & Tokens', icon: 'lucide:sparkles' },
+		{ key: 'communications', label: 'Email', icon: 'lucide:mail' },
 		{ key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
 		{ key: 'settings', label: 'Settings', icon: 'lucide:settings' },
 	],
