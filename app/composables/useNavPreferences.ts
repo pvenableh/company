@@ -53,7 +53,6 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/apps/work?floor=time', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
 	{ name: 'Guide', type: ['drawer'], to: '/guide', icon: 'i-heroicons-book-open', color: 'bg-gradient-to-br from-cyan-500 to-blue-500', description: 'Setup tutorial', section: 'secondary' },
-	{ name: 'Chat', type: ['drawer'], to: '/command-center/ai', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'Earnest assistant' },
 	{ name: 'Organization', type: ['drawer'], to: '/apps/organization', icon: 'i-heroicons-building-office-2', color: 'bg-gray-700', description: 'Settings', section: 'secondary', featureKey: 'org_settings' },
 ];
 

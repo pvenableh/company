@@ -55,8 +55,11 @@ const { openEarnestPanel } = useEarnestPanel();
 const { track } = useProductEvent();
 
 // Calm first, always. The home ALWAYS opens on the calm greeting, even when a
-// prior "route:home" thread hydrates in the background (that thread is kept so
-// the conversation stays continuous and Expand can still show it in full).
+// prior "route:dashboard" thread hydrates in the background (that thread is kept
+// so the conversation stays continuous and Expand can still show it in full).
+// The bucket is 'route:dashboard' — the SAME key the docked panel and the
+// full-screen focus use on the home route — so the hero is genuinely Earnest at
+// rest: a thread you start here continues unbroken when you dock or expand.
 // `conversing` is gated on engagement THIS session — a fresh send or an explicit
 // "Continue where you left off" — never on the mere presence of yesterday's
 // transcript. That's what keeps the first impression calm on the next login.
@@ -91,7 +94,7 @@ function captureBaseline() {
 }
 
 function hydrateHome() {
-	setRoute('dashboard', 'home');
+	setRoute('dashboard', 'dashboard');
 	// If nothing needs hydrating (already loaded, or a clean slate) the loading
 	// flag never toggles — capture the baseline right away. Otherwise the watcher
 	// below captures it the instant hydration settles.
@@ -146,6 +149,8 @@ const openers = [
 	'What should I start with?',
 	'What needs me today?',
 	'Draft my morning',
+	// One-tap encouragement — Earnest answers grounded in real momentum, warmly.
+	EARNEST_LIFT_OPENER,
 ];
 
 const inputEl = ref<HTMLTextAreaElement | null>(null);
@@ -238,30 +243,13 @@ function useSettledText(source: () => string, graceMs: number) {
 	return shown;
 }
 
-// ── Greeting: wait for the personalized one, don't swap ──────────────────────
-// The generated greeting is the good part, so the hero HOLDS a "Thinking…"
-// placeholder for it rather than showing the basic deterministic line and
-// rewriting it a beat later. If it can't make it (personalizations off, token
-// gate, slow cold call), the deterministic greeting takes over after a patient
-// window — and whichever wins is then locked for the session.
-const GREETING_PATIENCE_MS = 12000;
-const greetingFallbackDue = ref(false);
-const shownGreeting = ref('');
-
-watchEffect(() => {
-	if (shownGreeting.value) return; // already settled — never swap
-	const g = (props.greeting || '').trim();
-	if (!g) return;
-	if (props.greetingSource === 'ai' || greetingFallbackDue.value) {
-		shownGreeting.value = g;
-	}
-});
-
-if (import.meta.client) {
-	onMounted(() => {
-		setTimeout(() => { greetingFallbackDue.value = true; }, GREETING_PATIENCE_MS);
-	});
-}
+// ── Greeting: greet instantly, upgrade silently ──────────────────────────────
+// Earnest greets — it doesn't stall. The instant deterministic greeting (time +
+// name) paints on arrival; the warmer AI greeting fades in only if it lands
+// inside the grace window, then the line latches for the session — the same
+// "settle" pattern as the read. The first thing the user sees is a hello, never
+// a "Thinking…" spinner narrating the machine's state back at them.
+const shownGreeting = useSettledText(() => (props.greeting || '').trim(), 3000);
 
 // Read priority: deeper LLM read → deterministic synthesis → the soft subtitle.
 const readSource = computed(() => deeperRead.value || props.read || props.subtitle || '');
@@ -317,11 +305,9 @@ function renderMarkdown(text: string): string {
 				<h1 class="ph__greeting">
 					<Transition name="ph-fade">
 						<span v-if="shownGreeting" :key="shownGreeting">{{ shownGreeting }}</span>
-						<span v-else key="thinking" class="ph__thinking">
-							<span class="ph__thinking-word">Thinking</span>
-							<span class="ph__dots" aria-hidden="true"><i /><i /><i /></span>
-							<span class="sr-only">Earnest is writing your greeting</span>
-						</span>
+						<!-- Calm height-holder for the sub-second gap before the instant
+						     greeting paints — no machine word, no spinner. -->
+						<span v-else key="hold" class="ph__greeting-hold" aria-hidden="true">&nbsp;</span>
 					</Transition>
 				</h1>
 
@@ -409,7 +395,17 @@ function renderMarkdown(text: string): string {
 			</button>
 
 			<div v-if="!conversing" class="ph__openers">
-				<button v-for="o in openers" :key="o" type="button" class="ph__opener" @click="send(o)">{{ o }}</button>
+				<button
+					v-for="o in openers"
+					:key="o"
+					type="button"
+					class="ph__opener"
+					:class="{ 'ph__opener--lift': o === EARNEST_LIFT_OPENER }"
+					@click="send(o)"
+				>
+					<Icon v-if="o === EARNEST_LIFT_OPENER" name="lucide:sparkles" class="ph__opener-spark" />
+					{{ o }}
+				</button>
 			</div>
 
 			<!-- reach for everything -->
@@ -672,6 +668,16 @@ function renderMarkdown(text: string): string {
 	transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 .ph__opener:hover { background: hsl(var(--primary) / 0.06); border-color: hsl(var(--primary) / 0.35); color: hsl(var(--foreground)); }
+/* The encouragement opener reads as the warm, inviting one — filled rather than
+   outline, so it's distinct from the task prompts without introducing a new
+   colour (stays within --primary, mono-palette safe). */
+.ph__opener--lift {
+	display: inline-flex; align-items: center; gap: 6px;
+	background: hsl(var(--primary) / 0.12); border-color: hsl(var(--primary) / 0.30);
+	color: hsl(var(--foreground));
+}
+.ph__opener--lift:hover { background: hsl(var(--primary) / 0.18); border-color: hsl(var(--primary) / 0.45); }
+.ph__opener-spark { width: 13px; height: 13px; color: hsl(var(--primary)); }
 
 .ph__reveal {
 	margin-top: 16px; display: inline-flex; align-items: center; gap: 4px;

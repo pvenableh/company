@@ -59,17 +59,17 @@
 						</button>
 					</div>
 					<div class="apps-shell__chrome-right">
-						<!-- One-tap Focus entry: the lucide focus glyph over Earnest's soft
-						     blurred living presence. Reachable from every page. -->
+						<!-- Earnest's ambient presence — the one launcher for the assistant.
+						     Tap to open Earnest (docked); expand to full-screen focus from
+						     inside. Reachable from every page. -->
 						<button
 							type="button"
 							class="group relative flex items-center justify-center w-7 h-7 shrink-0 ios-press"
-							aria-label="Focus mode"
-							title="Focus mode"
-							@click="handleOpenFocus"
+							aria-label="Open Earnest"
+							title="Earnest"
+							@click="handleOpenAI"
 						>
 							<EarnestPresenceDot />
-							<Icon name="lucide:focus" class="relative w-4 h-4 text-foreground/75" />
 						</button>
 						<!-- Search is desktop-chrome only; below sm it moves into the
 						     user-menu dropdown. Wrapper carries the responsive hide so
@@ -192,13 +192,9 @@ const { accentStyle } = useAppAccent();
 // forward / swipe-back drive the same state.
 useAppSlideOverStackUrlSync();
 
-// The unified Earnest panel self-derives entity vs route context.
+// The unified Earnest panel self-derives entity vs route context. Opens at the
+// docked size; the user expands to full-screen focus from inside Earnest.
 const handleOpenAI = () => openEarnestPanel();
-
-// Global one-tap Focus entry (org-scoped) — reachable from any page, so you can
-// step out of the noise exactly when a busy screen is what's overwhelming you.
-const { open: openCoaching } = useCoachingMode();
-const handleOpenFocus = () => openCoaching({ mode: 'org' });
 
 // Pending AI actions (HITL queue) badge on the assistant launcher.
 const { pendingCount: aiPendingCount, refresh: refreshAiPending } = useAiPendingActions();

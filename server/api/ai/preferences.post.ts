@@ -30,7 +30,6 @@ export default defineEventHandler(async (event) => {
 
     // Build the payload — only include fields that were actually sent
     const payload: Record<string, any> = {};
-    if (body.persona !== undefined) payload.persona = body.persona;
     if (body.enabled_modules !== undefined) payload.enabled_modules = body.enabled_modules;
     if (body.personalizations_enabled !== undefined) payload.personalizations_enabled = body.personalizations_enabled;
     if (body.low_usage_mode !== undefined) payload.low_usage_mode = body.low_usage_mode;

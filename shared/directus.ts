@@ -174,7 +174,6 @@ export interface AiPreference {
 	/** @required */
 	user: DirectusUser | string;
 	user_created?: DirectusUser | string | null;
-	persona?: 'default' | 'director' | null;
 	/** @description Enable AI-generated personalized greetings */
 	personalizations_enabled?: boolean | null;
 	/** @description Reduce AI token usage */

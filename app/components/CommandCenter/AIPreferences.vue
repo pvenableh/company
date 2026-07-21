@@ -4,7 +4,6 @@ const emit = defineEmits<{
 }>();
 
 const { modules, enabledModules, toggle, isEnabled, enableAll, disableAll, personalizationsEnabled, lowUsageMode, digestCadence } = useAIPreferences();
-const { personas, selectedPersona, setPersona } = useAIPersona();
 const { usageSummary } = useAITokens();
 
 const enabledCount = computed(() => enabledModules.value.size);
@@ -21,7 +20,7 @@ const groupedModules = computed(() => {
 	return groups;
 });
 
-const activeSection = ref<'modules' | 'persona' | 'settings'>('modules');
+const activeSection = ref<'modules' | 'settings'>('modules');
 
 const formatTokens = (n: number) => {
 	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -46,7 +45,6 @@ const formatTokens = (n: number) => {
 			<button
 				v-for="tab in [
 					{ key: 'modules', label: 'Modules' },
-					{ key: 'persona', label: 'Persona' },
 					{ key: 'settings', label: 'Settings' },
 				]"
 				:key="tab.key"
@@ -118,41 +116,6 @@ const formatTokens = (n: number) => {
 						</div>
 					</button>
 				</div>
-			</div>
-		</div>
-
-		<!-- Persona Section -->
-		<div v-if="activeSection === 'persona'" class="space-y-3">
-			<p class="text-xs text-muted-foreground">Choose how Earnest communicates with you.</p>
-			<div class="space-y-2">
-				<button
-					v-for="p in personas"
-					:key="p.value"
-					@click="setPersona(p.value)"
-					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
-					:class="selectedPersona === p.value ? p.activeClass : 'border-border hover:border-border/80'"
-				>
-					<div
-						class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-						:class="selectedPersona === p.value ? p.iconBg : 'bg-muted'"
-					>
-						<UIcon
-							:name="p.icon"
-							class="w-5 h-5"
-							:class="selectedPersona === p.value ? p.iconColor : 'text-muted-foreground'"
-						/>
-					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-sm font-medium text-foreground">{{ p.label }}</p>
-						<p class="text-[11px] text-muted-foreground">{{ p.description }}</p>
-					</div>
-					<div
-						v-if="selectedPersona === p.value"
-						class="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
-					>
-						<UIcon name="i-heroicons-check" class="w-3 h-3 text-primary-foreground" />
-					</div>
-				</button>
 			</div>
 		</div>
 

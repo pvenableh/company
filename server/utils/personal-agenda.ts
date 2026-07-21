@@ -126,6 +126,68 @@ async function personalTicketGroup(directus: any, organizationId: string, userId
   }
 }
 
+export interface RecentWins {
+  /** Tasks this user finished in the recent window. */
+  tasksDone: number;
+  /** One representative finished-task title, for a specific, grounded mention. */
+  sampleTitle: string | null;
+  /** Tickets this user closed in the recent window. */
+  ticketsClosed: number;
+  /** True when there's at least one real win to lead with. */
+  any: boolean;
+}
+
+/**
+ * Recent, concrete wins for ONE user — what they actually FINISHED lately, so
+ * Earnest can lead the morning with genuine, grounded reinforcement instead of
+ * hype. Window is a few days (a fresh morning would otherwise show nothing).
+ * Every query is wrapped: any failure yields "no wins", never a crash — Earnest
+ * simply doesn't manufacture praise it can't back with a real number/title.
+ */
+export async function collectRecentWins(
+  directus: any,
+  organizationId: string,
+  userId: string,
+  now: Date = new Date(),
+): Promise<RecentWins> {
+  const since = new Date(now.getTime() - 3 * 86400000).toISOString(); // last ~3 days
+  const [tasks, tickets] = await Promise.all([
+    directus.request((readItems as any)('tasks', {
+      filter: {
+        _and: [
+          { organization_id: { _eq: organizationId } },
+          { assigned_to: { directus_users_id: { _eq: userId } } },
+          { status: { _in: DONE_TASK_STATUSES } },
+          { date_updated: { _gte: since } },
+        ],
+      } as any,
+      fields: ['id', 'title', 'date_updated'],
+      sort: ['-date_updated'],
+      limit: 25,
+    } as any)).then((r: any) => r as any[]).catch(() => [] as any[]),
+    directus.request((readItems as any)('tickets', {
+      filter: {
+        _and: [
+          { organization: { _eq: organizationId } },
+          { assigned_to: { directus_users_id: { _eq: userId } } },
+          { status: { _in: CLOSED_TICKET_STATUSES } },
+          { date_updated: { _gte: since } },
+        ],
+      } as any,
+      fields: ['id'],
+      limit: 25,
+    } as any)).then((r: any) => r as any[]).catch(() => [] as any[]),
+  ]);
+  const tasksDone = (tasks || []).length;
+  const ticketsClosed = (tickets || []).length;
+  return {
+    tasksDone,
+    sampleTitle: (tasks || [])[0]?.title || null,
+    ticketsClosed,
+    any: tasksDone > 0 || ticketsClosed > 0,
+  };
+}
+
 /** Build the personal ("My work") agenda for one user in one org. */
 export async function collectPersonalAgenda(
   directus: any,

@@ -26,41 +26,9 @@ const props = defineProps<{
 
 const { openEarnestPanel } = useEarnestPanel();
 
-interface CreateAction { label: string; icon: string; prompt: string }
-
-const ACTIONS: Record<string, CreateAction[]> = {
-	client: [
-		{ label: 'New project', icon: 'lucide:folder-plus', prompt: 'Create a new project for this client with a short timeline of phases and a few tasks under each.' },
-		{ label: 'Proposal & contract', icon: 'lucide:file-text', prompt: 'Draft a proposal and a contract for this client based on what you know about them.' },
-		{ label: 'Invoice', icon: 'lucide:receipt', prompt: 'Create an invoice for this client for recent work.' },
-		{ label: 'Ticket', icon: 'lucide:ticket', prompt: 'Create a ticket for this client for a specific request, with a couple of tasks.' },
-		{ label: 'Task', icon: 'lucide:check-square', prompt: 'Add a follow-up task for this client.' },
-		{ label: 'Email', icon: 'lucide:mail', prompt: 'Draft a follow-up email to this client.' },
-	],
-	project: [
-		{ label: 'Add a phase / event', icon: 'lucide:flag', prompt: 'Add a phase to this project with a couple of tasks under it.' },
-		{ label: 'Add tasks', icon: 'lucide:check-square', prompt: 'Add a few tasks to this project.' },
-		{ label: 'Ticket', icon: 'lucide:ticket', prompt: 'Create a ticket on this project for a specific request, with a couple of tasks.' },
-		{ label: 'Invoice', icon: 'lucide:receipt', prompt: 'Create an invoice for this project\'s client for recent work.' },
-		{ label: 'Reschedule', icon: 'lucide:calendar-clock', prompt: 'Reschedule this project — push the dates out by two weeks and cascade to events and tasks.' },
-	],
-	lead: [
-		{ label: 'Proposal & contract', icon: 'lucide:file-text', prompt: 'Draft a proposal and contract for this lead.' },
-		{ label: 'Task', icon: 'lucide:check-square', prompt: 'Add a follow-up task for this lead.' },
-		{ label: 'Email', icon: 'lucide:mail', prompt: 'Draft an outreach email to this lead.' },
-	],
-	proposal: [
-		{ label: 'Turn into contract', icon: 'lucide:file-signature', prompt: 'Turn this proposal into a contract — draft a contract (targets: contract) based on this proposal\'s scope and pricing, linked to the same lead.' },
-	],
-	contract: [
-		{ label: 'Create invoice', icon: 'lucide:receipt', prompt: 'Create an invoice from this contract — bill its client for the contract amount.' },
-	],
-	project_event: [
-		{ label: 'Bill this milestone', icon: 'lucide:receipt', prompt: 'Create an invoice to bill this payment milestone for the project client.' },
-	],
-};
-
-const actions = computed(() => ACTIONS[props.entityType] || []);
+// One shared catalog (useEarnestActions) — the same set the docked panel shows.
+type CreateAction = EarnestAction;
+const actions = computed(() => earnestActionsFor(props.entityType));
 const ground = EARNEST_GROUND;
 
 // A small presence brain, local to this summon, shared into the sheet's aura so

@@ -9,7 +9,6 @@ export interface AIUsageEntry {
 	messageLength: number;
 	responseLength: number;
 	model?: string;
-	persona?: string;
 }
 
 export interface AIUsageSummary {
@@ -65,13 +64,12 @@ export const useAIUsage = () => {
 		}
 	};
 
-	const trackUsage = (messageLength: number, responseLength: number, model?: string, persona?: string) => {
+	const trackUsage = (messageLength: number, responseLength: number, model?: string) => {
 		_entries.value.push({
 			timestamp: new Date().toISOString(),
 			messageLength,
 			responseLength,
 			model,
-			persona,
 		});
 		save();
 	};

@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     const records = await directus.request(
       readItems('ai_preferences', {
         filter: { user: { _eq: userId } },
-        fields: ['id', 'persona', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'token_budget_monthly', 'ai_enabled', 'organization'],
+        fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'token_budget_monthly', 'ai_enabled', 'organization'],
         limit: 1,
       }),
     );

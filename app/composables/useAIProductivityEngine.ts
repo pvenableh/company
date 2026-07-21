@@ -98,7 +98,7 @@ export const useAIProductivityEngine = () => {
 	/**
 	 * Which greeting is currently on screen:
 	 *   'none'  — nothing yet
-	 *   'local' — the instant deterministic greeting (time/name/persona)
+	 *   'local' — the instant deterministic greeting (time/name)
 	 *   'ai'    — the personalized LLM greeting has landed
 	 * Surfaces use this to hold a "Thinking…" placeholder for the smart
 	 * greeting instead of showing the basic one and swapping it later.
@@ -172,53 +172,34 @@ export const useAIProductivityEngine = () => {
 		return Math.floor((d.getTime() - today().getTime()) / 86400000);
 	};
 
-	// Time-aware, persona-aware greeting (expanded arrays for more variety)
+	// Time-aware greeting (expanded arrays for more variety)
 	const getGreeting = (): string => {
 		const hour = new Date().getHours();
 		const name = user.value?.first_name || 'there';
-		const { activePersona } = useAIPersona();
-		const persona = activePersona.value?.value || 'default';
 		const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-		const greetings: Record<string, Record<string, string[]>> = {
-			default: {
-				morning: [`Good morning, ${name}`, `Rise and shine, ${name}`, `Morning, ${name} — let's make today count`, `Welcome back, ${name}`, `Ready to start the day, ${name}?`, `A fresh start awaits, ${name}`],
-				afternoon: [`Good afternoon, ${name}`, `Afternoon, ${name} — how's it going?`, `Hey ${name}, keeping the momentum going`, `Still at it, ${name}? Nice work`, `${name}, the afternoon is yours`, `What's next on the list, ${name}?`],
-				evening: [`Good evening, ${name}`, `Evening, ${name} — winding down?`, `Hey ${name}, finishing strong tonight`, `Almost there, ${name}`, `${name}, wrapping up the day`, `Evening check-in, ${name}`],
-			},
-			director: {
-				morning: [`Morning, ${name}. Time to execute.`, `Let's get to work, ${name}.`, `${name}, here's your mission briefing.`, `${name}. Priorities first.`, `Briefing ready, ${name}. Let's move.`, `${name}, the clock is ticking.`],
-				afternoon: [`${name}, status check. What's the priority?`, `Afternoon, ${name}. Stay focused.`, `Halfway through, ${name}. Let's push.`, `${name}, where do we stand?`, `Time check, ${name}. What needs closing?`, `${name}, keep the pressure on.`],
-				evening: [`${name}, final push. What needs to close today?`, `Evening, ${name}. Any blockers before we wrap?`, `Let's tie up loose ends, ${name}.`, `${name}, debrief time.`, `End of day, ${name}. Status report.`, `${name}, close it out strong.`],
-			},
+		const greetings: Record<'morning' | 'afternoon' | 'evening', string[]> = {
+			morning: [`Good morning, ${name}`, `Rise and shine, ${name}`, `Morning, ${name} — let's make today count`, `Welcome back, ${name}`, `Ready to start the day, ${name}?`, `A fresh start awaits, ${name}`],
+			afternoon: [`Good afternoon, ${name}`, `Afternoon, ${name} — how's it going?`, `Hey ${name}, keeping the momentum going`, `Still at it, ${name}? Nice work`, `${name}, the afternoon is yours`, `What's next on the list, ${name}?`],
+			evening: [`Good evening, ${name}`, `Evening, ${name} — winding down?`, `Hey ${name}, finishing strong tonight`, `Almost there, ${name}`, `${name}, wrapping up the day`, `Evening check-in, ${name}`],
 		};
 
-		const pool = greetings[persona]?.[period] || greetings.default[period];
+		const pool = greetings[period];
 		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
 		return pool[dayOfYear % pool.length];
 	};
 
-	// Persona-aware subtitle
 	const getSubtitle = (): string => {
-		const { activePersona } = useAIPersona();
-		const persona = activePersona.value?.value || 'default';
 		const hour = new Date().getHours();
 		const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-		const subtitles: Record<string, Record<string, string[]>> = {
-			default: {
-				morning: ["Here's what needs your attention today", 'Your priorities are lined up and ready', "Let's see what's on the radar", 'Time to tackle the day ahead', "Here's your morning snapshot", 'Your dashboard is ready'],
-				afternoon: ["Here's where things stand right now", "Let's keep the momentum going", 'A quick look at your open items', "Midday update — here's the rundown", 'Status check on your priorities', 'Your afternoon overview is ready'],
-				evening: ["Here's what's still on your plate", 'Wrapping up? Here are the loose ends', "Let's close out the day strong", "Final items before you sign off", "Here's where things landed today", 'Evening review of your priorities'],
-			},
-			director: {
-				morning: ['Your daily ops briefing is ready', 'Mission priorities loaded', 'Intel report: here are the open items', 'Status: action items queued', 'Today\'s targets are locked in', 'Operations dashboard is live'],
-				afternoon: ['Midday status — here are the action items', 'Time-sensitive items flagged below', 'Operational update incoming', 'Priority queue updated', 'Action items require your attention', 'Afternoon briefing ready'],
-				evening: ['End-of-day debrief — review the status', 'Final items requiring sign-off', "Tomorrow's blockers start here", 'Close-of-business status report', 'Outstanding items need resolution', 'Wrap-up briefing loaded'],
-			},
+		const subtitles: Record<'morning' | 'afternoon' | 'evening', string[]> = {
+			morning: ["Here's what needs your attention today", 'Your priorities are lined up and ready', "Let's see what's on the radar", 'Time to tackle the day ahead', "Here's your morning snapshot", 'Your dashboard is ready'],
+			afternoon: ["Here's where things stand right now", "Let's keep the momentum going", 'A quick look at your open items', "Midday update — here's the rundown", 'Status check on your priorities', 'Your afternoon overview is ready'],
+			evening: ["Here's what's still on your plate", 'Wrapping up? Here are the loose ends', "Let's close out the day strong", "Final items before you sign off", "Here's where things landed today", 'Evening review of your priorities'],
 		};
 
-		const pool = subtitles[persona]?.[period] || subtitles.default[period];
+		const pool = subtitles[period];
 		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
 		return pool[(dayOfYear + 1) % pool.length];
 	};
@@ -227,7 +208,7 @@ export const useAIProductivityEngine = () => {
 	// hero never paints an empty <h1> during the window before analyze() runs —
 	// on the home page analyze() is gated behind a couple of network fetches, so
 	// without this the greeting flashes empty and then shifts layout when it
-	// lands. Cheap + synchronous (time/name/persona only); the richer AI greeting
+	// lands. Cheap + synchronous (time/name only); the richer AI greeting
 	// still refines it later. Client-only to avoid an SSR text mismatch on a
 	// value that is inherently clock- and session-dependent.
 	const primeGreeting = () => {
@@ -244,11 +225,9 @@ export const useAIProductivityEngine = () => {
 			const { personalizationsEnabled, lowUsageMode } = useAIPreferences();
 			if (!personalizationsEnabled.value || lowUsageMode.value) return;
 
-			const { activePersona } = useAIPersona();
 			const hour = new Date().getHours();
 			const result = await $fetch('/api/ai/greeting', {
 				params: {
-					persona: activePersona.value?.value || 'default',
 					hour,
 					tasks: metrics.value.pendingTasks || 0,
 					overdue: metrics.value.overdueItems || 0,
