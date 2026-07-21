@@ -26,6 +26,7 @@ import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
 import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
 import { handleDisputeCreated, handleDisputeClosed } from '~~/server/utils/apply-dispute-adjustment';
+import { sendInvoicePaymentEmails } from '~~/server/utils/payment-receipt-email';
 import { notifyEvent } from '~~/server/utils/notify-event';
 
 type ConnectStatus = 'none' | 'pending' | 'active' | 'restricted';
@@ -216,7 +217,8 @@ async function handlePaymentSucceeded(
 			}),
 		)) as Array<{ id: string }>;
 
-		if (!existing?.length) {
+		const wroteRow = !existing?.length;
+		if (wroteRow) {
 			await directus.request(
 				createItem('payments_received', {
 					payment_intent: paymentIntent.id,
@@ -238,15 +240,40 @@ async function handlePaymentSucceeded(
 			// a partial payment must leave the invoice in 'processing', not 'paid'.
 			const result = await recomputeInvoiceStatus(invoiceId);
 
+			// Load the invoice once — reused by the branded receipt and the
+			// paid-transition staff notify below.
+			let inv: any = null;
+			if (wroteRow || (result.changed && result.newStatus === 'paid')) {
+				inv = (await directus
+					.request(
+						readItem('invoices', invoiceId, {
+							fields: ['id', 'invoice_code', 'title', 'client', 'organization', 'billing_email'],
+						}),
+					)
+					.catch(() => null)) as any;
+			}
+
+			// Branded "payment received" receipt → payer + org owners/admins.
+			// Fires once per payment (only when we wrote a new row, so webhook
+			// retries don't re-send). Best-effort.
+			if (wroteRow && inv) {
+				void sendInvoicePaymentEmails({
+					orgId,
+					invoice: inv,
+					payerEmail: paymentIntent.receipt_email || null,
+					amountDollars: paymentIntent.amount / 100,
+					method: paymentMethodType,
+					receiptUrl,
+					dateIso: new Date().toISOString(),
+				}).catch((e) => console.warn('[Stripe Connect] payment receipt send failed:', e));
+			}
+
 			// Return leg: notify the agency only on a genuine paid transition
 			// (staff-only; client isn't emailed this sprint). The paid event
 			// itself surfaces on the client Activity tab via the read-time
 			// composer, so no timeline row is written here.
-			if (result.changed && result.newStatus === 'paid') {
+			if (result.changed && result.newStatus === 'paid' && inv) {
 				try {
-					const inv = (await directus.request(
-						readItem('invoices', invoiceId, { fields: ['id', 'invoice_code', 'title', 'client', 'organization'] }),
-					)) as any;
 					const invOrg = typeof inv?.organization === 'object' ? inv.organization?.id : inv?.organization;
 					void notifyEvent({
 						directus,
@@ -264,6 +291,10 @@ async function handlePaymentSucceeded(
 						userId: '',
 						orgId: invOrg,
 						staffOnly: true,
+						// The branded "payment received" staff confirmation (above)
+						// is the email for this event — keep the bell, drop the
+						// generic notification email to avoid double-emailing staff.
+						skipEmail: true,
 					}).catch((e) => console.warn('[Stripe Connect] invoice-paid notify failed:', e));
 				} catch (err) {
 					console.warn('[Stripe Connect] could not load invoice for paid notify:', err);

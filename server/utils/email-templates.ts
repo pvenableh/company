@@ -37,6 +37,8 @@ import notificationMjml from '../emails/notification.mjml';
 import passwordResetMjml from '../emails/password-reset.mjml';
 import tokenPurchaseMjml from '../emails/token-purchase.mjml';
 import tokenRefundMjml from '../emails/token-refund.mjml';
+import paymentReceiptMjml from '../emails/payment-receipt.mjml';
+import refundReceiptMjml from '../emails/refund-receipt.mjml';
 import videoInviteMjml from '../emails/video-invite.mjml';
 import genericMjml from '../emails/generic.mjml';
 import meetingInvitedMjml from '../emails/meeting-invited.mjml';
@@ -56,6 +58,8 @@ const TEMPLATES: Record<string, string> = {
 	'password-reset': passwordResetMjml,
 	'token-purchase': tokenPurchaseMjml,
 	'token-refund': tokenRefundMjml,
+	'payment-receipt': paymentReceiptMjml,
+	'refund-receipt': refundReceiptMjml,
 	'video-invite': videoInviteMjml,
 	generic: genericMjml,
 	'meeting-invited': meetingInvitedMjml,

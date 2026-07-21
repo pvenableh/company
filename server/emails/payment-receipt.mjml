@@ -1,0 +1,70 @@
+<!--
+  Org-branded "payment received" receipt sent to the PAYER after a successful
+  invoice payment. Rendered via renderBrandedTemplate('payment-receipt', …, {org})
+  so the header logo + brand color + whitelabel footer are the merchant org's,
+  not Earnest's. noEscape is on — the util escapes orgName / firstName /
+  invoiceLabel before injection; amounts/dates are pre-formatted (safe).
+-->
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+      {{heading}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      {{#if firstName}}Hi {{firstName}},{{else}}Hi there,{{/if}}
+    </mj-text>
+    <mj-text padding="0 0 12px 0">
+      Thanks for your payment to <strong>{{orgName}}</strong>. This confirms we received <strong>{{amountFormatted}}</strong>{{#if invoiceLabel}} toward {{invoiceLabel}}{{/if}}.
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="4px 32px 8px 32px">
+  <mj-column background-color="#f6f5f3" border-radius="12px" padding="4px 16px">
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="14px 0 2px 0">
+      Amount paid
+    </mj-text>
+    <mj-text font-size="20px" line-height="1.2" font-weight="600" color="#141210" padding="0 0 12px 0">
+      {{amountFormatted}}
+    </mj-text>
+    {{#if invoiceLabel}}
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="0 0 2px 0">
+      Invoice
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.2" color="#141210" padding="0 0 12px 0">
+      {{invoiceLabel}}
+    </mj-text>
+    {{/if}}
+    {{#if methodLabel}}
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="0 0 2px 0">
+      Method
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.2" color="#141210" padding="0 0 12px 0">
+      {{methodLabel}}
+    </mj-text>
+    {{/if}}
+    <mj-text font-size="11px" letter-spacing="0.06em" text-transform="uppercase" color="#888888" padding="0 0 2px 0">
+      Date
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.2" color="#141210" padding="0 0 14px 0">
+      {{dateFormatted}}
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="8px 32px 8px 32px">
+  <mj-column>
+    {{#if receiptUrl}}
+    <mj-button href="{{receiptUrl}}" padding="8px 0 8px 0">
+      View Stripe receipt
+    </mj-button>
+    {{else}}{{#if ctaUrl}}
+    <mj-button href="{{ctaUrl}}" padding="8px 0 8px 0">
+      View invoice
+    </mj-button>
+    {{/if}}{{/if}}
+    <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
+      This is your receipt for a payment to {{orgName}}. Questions about this charge? Just reply to this email.
+    </mj-text>
+  </mj-column>
+</mj-section>

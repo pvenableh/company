@@ -30,8 +30,9 @@
  * the write half-succeeded), so callers wrap in try/catch and we swallow.
  */
 import Stripe from 'stripe';
-import { createItem, readItems, updateItem } from '@directus/sdk';
+import { createItem, readItem, readItems, updateItem } from '@directus/sdk';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
+import { sendInvoiceRefundEmails } from '~~/server/utils/payment-receipt-email';
 
 const REFUND_MARKER = 'refund';
 
@@ -164,6 +165,32 @@ export async function applyRefundAdjustment(
 		);
 	} else {
 		console.log(`[Refund] booked $${deltaDollars} adjustment for ${chargeId} (no invoice attached)`);
+	}
+
+	// Branded refund receipt → payer + staff. Fires once per booked delta (this
+	// path already short-circuited on an already-applied refund), so partial and
+	// incremental refunds each send their own confirmation. Best-effort.
+	if (invoiceId) {
+		void (async () => {
+			try {
+				const inv = (await directus.request(
+					readItem('invoices', invoiceId, { fields: ['id', 'invoice_code', 'title', 'billing_email'] }),
+				)) as { id: string; invoice_code?: string | null; title?: string | null; billing_email?: string | null } | null;
+				if (!inv) return;
+				const payerEmail =
+					(charge.billing_details?.email as string | null) || charge.receipt_email || inv.billing_email || null;
+				await sendInvoiceRefundEmails({
+					orgId: rowOrg,
+					invoice: inv,
+					payerEmail,
+					payerName: (charge.billing_details?.name as string | null) || null,
+					amountDollars: deltaCents / 100,
+					dateIso: new Date().toISOString(),
+				});
+			} catch (e: any) {
+				console.warn('[Refund] refund receipt send failed:', e?.message ?? e);
+			}
+		})();
 	}
 
 	return {

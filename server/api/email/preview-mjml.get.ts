@@ -26,6 +26,8 @@ export const TRANSACTIONAL_TEMPLATES = [
 	'password-reset',
 	'token-purchase',
 	'token-refund',
+	'payment-receipt',
+	'refund-receipt',
 	'video-invite',
 	'generic',
 	'meeting-invited',
@@ -208,6 +210,31 @@ function sampleVars(name: TemplateName): Record<string, any> {
 				tokensReversedFormatted: '500,000 tokens',
 				newBalanceFormatted: '112,480 tokens',
 				ctaUrl: 'https://app.earnest.guru/apps/organization?floor=ai',
+			};
+		case 'payment-receipt':
+			return {
+				subject: 'Northwind Studio: payment received ($1,250.00)',
+				preheader: 'Your payment to Northwind Studio was received.',
+				heading: 'Payment received',
+				firstName: 'Alex',
+				orgName: 'Northwind Studio',
+				amountFormatted: '$1,250.00',
+				invoiceLabel: 'INV-1042 — Website redesign',
+				methodLabel: 'Card',
+				dateFormatted: 'August 14, 2026',
+				receiptUrl: 'https://pay.stripe.com/receipts/sample',
+				ctaUrl: 'https://app.earnest.guru/invoices/sample',
+			};
+		case 'refund-receipt':
+			return {
+				subject: 'Northwind Studio: refund issued ($1,250.00)',
+				preheader: 'A refund from Northwind Studio is on its way.',
+				heading: 'Refund issued',
+				firstName: 'Alex',
+				orgName: 'Northwind Studio',
+				amountFormatted: '$1,250.00',
+				invoiceLabel: 'INV-1042 — Website redesign',
+				dateFormatted: 'August 14, 2026',
 			};
 		case 'video-invite':
 			return {
