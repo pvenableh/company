@@ -7,6 +7,8 @@ import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
 import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
+import { handleDisputeCreated, handleDisputeClosed } from '~~/server/utils/apply-dispute-adjustment';
+import { handlePlatformChargeRefund, handlePlatformDispute } from '~~/server/utils/apply-platform-reversal';
 import { notifyEvent } from '~~/server/utils/notify-event';
 import { fulfillTokenPurchase } from '~~/server/utils/fulfill-token-purchase';
 
@@ -56,13 +58,35 @@ export default defineEventHandler(async (event) => {
 
 		// ── Refunds ──
 		// Platform-scoped charges only (connect events already returned above).
-		// Books a negative adjustment row + recomputes the invoice so a refund
-		// drops it back to processing/pending. orgId is null here — platform
-		// payment rows aren't org-stamped; the adjustment inherits the original
-		// row's org (also null for legacy platform payments).
+		// First try the client-invoice path: books a negative adjustment row +
+		// recomputes the invoice so a refund drops it back to processing/pending.
+		// orgId is null here — legacy platform payment rows aren't org-stamped;
+		// the adjustment inherits the original row's org.
 		if (stripeEvent.type === 'charge.refunded') {
 			const charge = stripeEvent.data.object as Stripe.Charge;
-			await applyRefundAdjustment(charge, null);
+			const inv = await applyRefundAdjustment(charge, null);
+			// No client-invoice payment row matched → this is one of Earnest's OWN
+			// platform charges (AI token purchase or subscription). Reconcile it
+			// platform-side: claw back tokens / flag the subscription.
+			if (!inv.applied && inv.reason === 'no-original-row') {
+				await handlePlatformChargeRefund(charge);
+			}
+		}
+
+		// ── Disputes (chargebacks) on platform charges ──
+		// Route the same way as refunds: a legacy client-invoice charge on the
+		// platform account reconciles through the invoice dispute handlers; an
+		// Earnest token/subscription charge reconciles platform-side.
+		if (stripeEvent.type === 'charge.dispute.created') {
+			const dispute = stripeEvent.data.object as Stripe.Dispute;
+			if (await disputeMapsToInvoicePayment(dispute)) await handleDisputeCreated(dispute, null);
+			else await handlePlatformDispute(dispute, 'created');
+		}
+
+		if (stripeEvent.type === 'charge.dispute.closed') {
+			const dispute = stripeEvent.data.object as Stripe.Dispute;
+			if (await disputeMapsToInvoicePayment(dispute)) await handleDisputeClosed(dispute, null);
+			else await handlePlatformDispute(dispute, 'closed');
 		}
 
 		// ── Subscription Events ──
@@ -120,6 +144,33 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 500, message: 'Server error' });
 	}
 });
+
+// ── Dispute routing ──
+
+/**
+ * Does this dispute map to a client-invoice `payments_received` row? True for a
+ * legacy platform-account invoice charge (route to the invoice dispute
+ * handlers); false for an Earnest token/subscription charge (route platform-side).
+ */
+async function disputeMapsToInvoicePayment(dispute: Stripe.Dispute): Promise<boolean> {
+	const directus = getTypedDirectus();
+	const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id || null;
+	const piId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id || null;
+	if (!chargeId && !piId) return false;
+	const rows = (await directus.request(
+		readItems('payments_received', {
+			filter: {
+				_or: [
+					...(piId ? [{ payment_intent: { _eq: piId } } as any] : []),
+					...(chargeId ? [{ charge_id: { _eq: chargeId } } as any] : []),
+				],
+			},
+			fields: ['id'],
+			limit: 1,
+		}),
+	)) as Array<{ id: string }>;
+	return rows.length > 0;
+}
 
 // ── Payment Intent Handlers ──
 
