@@ -12,7 +12,8 @@
 //   payment_intent.payment_failed → log only (invoice stays pending)
 //   charge.refunded          → mirror onto matching payments_received row
 //   payout.paid / payout.failed   → log (notification surface lives in BillingSurface)
-//   charge.dispute.created   → log (admin notification deferred)
+//   charge.dispute.created   → mark payment disputed + notify org admins
+//   charge.dispute.closed    → won: restore; lost: reverse funds + reopen invoice
 //
 // Signature is verified with STRIPE_CONNECT_WEBHOOK_SECRET — distinct from
 // the platform webhook's STRIPE_WEBHOOK_SECRET. Both endpoints share the
@@ -24,6 +25,7 @@ import { useStripe } from '~~/server/utils/stripe';
 import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
 import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
+import { handleDisputeCreated, handleDisputeClosed } from '~~/server/utils/apply-dispute-adjustment';
 import { notifyEvent } from '~~/server/utils/notify-event';
 
 type ConnectStatus = 'none' | 'pending' | 'active' | 'restricted';
@@ -142,10 +144,19 @@ export default defineEventHandler(async (event) => {
 			}
 
 			case 'charge.dispute.created': {
+				// Money is held (not yet lost) — mark the payment disputed + alert the
+				// org's admins. No invoice change until the dispute closes.
 				const dispute = stripeEvent.data.object as Stripe.Dispute;
-				console.warn(
-					`[Stripe Connect] charge.dispute.created: ${dispute.id} (org ${orgId || 'unknown'}, ${(dispute.amount / 100).toFixed(2)} ${dispute.currency}, reason: ${dispute.reason})`,
-				);
+				await handleDisputeCreated(dispute, orgId);
+				break;
+			}
+
+			case 'charge.dispute.closed': {
+				// won → payment stands; lost → reverse the funds like a refund and
+				// reopen the invoice. Requires this event to be subscribed on the
+				// Stripe webhook endpoint (verify in the dashboard).
+				const dispute = stripeEvent.data.object as Stripe.Dispute;
+				await handleDisputeClosed(dispute, orgId);
 				break;
 			}
 
