@@ -45,7 +45,7 @@ const orgName = computed(() => currentOrg.value?.name || 'organization');
 				or data is permanently deleted.
 			</span>
 			<NuxtLink
-				to="/organization"
+				to="/apps/organization"
 				class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-warning/10 hover:bg-warning/20 dark:bg-warning/50 dark:hover:bg-warning/70 font-medium transition-colors"
 			>
 				Restore

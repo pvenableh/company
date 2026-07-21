@@ -196,7 +196,7 @@ function sampleVars(name: TemplateName): Record<string, any> {
 				packageName: '500K Tokens',
 				tokensAddedFormatted: '500,000 tokens',
 				newBalanceFormatted: '612,480 tokens',
-				ctaUrl: 'https://app.earnest.guru/organization?tab=ai-usage',
+				ctaUrl: 'https://app.earnest.guru/apps/organization?floor=ai',
 			};
 		case 'token-refund':
 			return {

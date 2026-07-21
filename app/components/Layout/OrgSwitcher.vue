@@ -149,7 +149,7 @@ const handleRegisterOrg = () => {
 					</div>
 
 					<NuxtLink
-						:to="`/organization`"
+						:to="`/apps/organization`"
 						class="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
 						title="Organization settings"
 						@click.stop="isOpen = false; setOrganization(org.id)"

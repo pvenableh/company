@@ -38,6 +38,7 @@ const PATH_LABELS: Record<string, string> = {
   '/lists': 'Lists',
   '/email': 'Email',
   '/organization': 'Organization settings',
+  '/apps/organization': 'Organization settings',
   '/organization/teams': 'Teams',
 };
 

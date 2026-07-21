@@ -102,8 +102,8 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const baseUrl = getAppBaseUrl(event);
-	const returnUrl = body?.returnUrl || `${baseUrl}/organization?tab=billing&onboarding=complete`;
-	const refreshUrl = body?.refreshUrl || `${baseUrl}/organization?tab=billing&onboarding=refresh`;
+	const returnUrl = body?.returnUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=complete`;
+	const refreshUrl = body?.refreshUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=refresh`;
 
 	const link = await stripe.accountLinks.create({
 		account: accountId,

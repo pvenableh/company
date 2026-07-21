@@ -43,7 +43,7 @@ async function buyTokens(packageId: string) {
 }
 
 function viewDetailedUsage() {
-	router.push('/organization?tab=ai-usage');
+	router.push('/apps/organization?floor=ai');
 	open.value = false;
 }
 

@@ -7,7 +7,7 @@ definePageMeta({
 	middleware: ['auth'],
 });
 
-await navigateTo('/organization?tab=billing', { replace: true, redirectCode: 301 });
+await navigateTo('/apps/money?floor=deposits', { replace: true, redirectCode: 301 });
 </script>
 
 <template>

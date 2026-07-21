@@ -78,8 +78,8 @@ export default defineEventHandler(async (event) => {
         user_id: userId,
         wholesale: org?.wholesale_pricing ? 'true' : 'false',
       },
-      success_url: successUrl || `${getAppBaseUrl(event)}/organization?tab=ai-usage&tokens_purchased=true`,
-      cancel_url: cancelUrl || `${getAppBaseUrl(event)}/organization?tab=ai-usage`,
+      success_url: successUrl || `${getAppBaseUrl(event)}/apps/organization?floor=ai&tokens_purchased=true`,
+      cancel_url: cancelUrl || `${getAppBaseUrl(event)}/apps/organization?floor=ai`,
     });
 
     return { sessionId: checkoutSession.id, url: checkoutSession.url };

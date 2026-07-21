@@ -128,10 +128,15 @@ Redirect risks still to handle when we retire classic:
 3. ✅ Member & client management ported to modern Members floor (archived-banner
    copy fixed).
 4. ✅ Stripe Connect "link existing account" OAuth → modern Money Deposits home.
-   ALL classic capability gaps are now closed — classic is ready to retire.
-5. ⬜ Retire classic page + redirect (repoint the ~12 inbound links; handle the
-   `?tab=billing` → Money-deposits semantic; `?tab=ai-usage` → `?floor=ai`).
-6. ⬜ Integrations cleanup.
+5. ✅ Retired the classic page. `app/pages/organization/index.vue` is now a thin
+   redirect that maps old `?tab=` deep-links to the modern shell (`billing` →
+   `/apps/money?floor=deposits`, `ai-usage` → `?floor=ai`, `members`/
+   `client-access` → `?floor=members`, `teams` → `?floor=teams`, else Overview),
+   forwarding any leftover query (Stripe OAuth return params, etc.). Repointed all
+   ~17 inbound `/organization` references (nav prefs, AI engine, guide, banners,
+   OrgSwitcher, payouts, + server default return/CTA URLs). OAuth `oauth-start`
+   default flipped to `returnTo=money`.
+6. ⬜ Integrations cleanup (last workstream).
 
 Each is an independent PR; the taxonomy in `useAppNav.ts` lands first so floors
 have a home to move into.

@@ -33,7 +33,7 @@ const brandSetupRoute = computed(() => {
 	if (selectedClient.value && selectedClient.value !== 'org') {
 		return `/clients/${selectedClient.value}`;
 	}
-	return '/organization';
+	return '/apps/organization';
 });
 
 // ── Persona (shared state) ──

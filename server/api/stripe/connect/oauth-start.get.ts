@@ -15,10 +15,10 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'organizationId is required' });
 	}
 
-	// Where the callback should land the user afterwards. 'money' → the modern
-	// Money > Deposits floor; anything else (incl. absent) → the legacy classic
-	// org billing tab, preserving the original behavior during the transition.
-	const returnTo = getQuery(event).returnTo === 'money' ? 'money' : 'org';
+	// Where the callback should land the user afterwards. Defaults to the modern
+	// Money > Deposits floor now that the classic org billing tab is retired;
+	// `returnTo=org` is a legacy fallback (which itself redirects to Deposits).
+	const returnTo = getQuery(event).returnTo === 'org' ? 'org' : 'money';
 
 	await requireNotDemoSession(event);
 	await requireActiveOrg(orgId);

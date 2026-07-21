@@ -218,7 +218,7 @@ const goPrev = () => {
 						<ol class="space-y-3 text-sm text-foreground/80">
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</span>
-								<span>Go to <NuxtLink to="/organization" class="text-primary hover:underline font-medium">Organization</NuxtLink> and open the <strong>Members</strong> tab.</span>
+								<span>Go to <NuxtLink to="/apps/organization?floor=members" class="text-primary hover:underline font-medium">Organization</NuxtLink> and open the <strong>Members</strong> tab.</span>
 							</li>
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">2</span>
@@ -379,7 +379,7 @@ const goPrev = () => {
 						<ol class="space-y-3 text-sm text-foreground/80">
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</span>
-								<span>Go to <NuxtLink to="/organization" class="text-primary hover:underline font-medium">Organization</NuxtLink> &rarr; <strong>Members</strong> tab.</span>
+								<span>Go to <NuxtLink to="/apps/organization?floor=members" class="text-primary hover:underline font-medium">Organization</NuxtLink> &rarr; <strong>Members</strong> tab.</span>
 							</li>
 							<li class="flex gap-3">
 								<span class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">2</span>

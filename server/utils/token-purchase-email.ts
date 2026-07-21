@@ -43,7 +43,7 @@ export async function sendTokenPurchaseEmail(
 
 	const config = useRuntimeConfig() as any;
 	const appUrl = config.public?.appUrl || config.public?.siteUrl || 'https://app.earnest.guru';
-	const ctaUrl = `${appUrl}/organization?tab=ai-usage`;
+	const ctaUrl = `${appUrl}/apps/organization?floor=ai`;
 
 	const orgName = (params.orgName && String(params.orgName).trim()) || 'your organization';
 	const firstName = (params.buyerName && String(params.buyerName).trim().split(/\s+/)[0]) || '';

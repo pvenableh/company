@@ -181,7 +181,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-warning mt-1.5">Pick an active organization to generate the URL.</p>
 			<p v-else-if="bookingUrlBlockedReason === 'no-slug'" class="text-[10px] text-warning mt-1.5">
 				Your organization has no URL slug yet.
-				<NuxtLink to="/organization" class="underline hover:text-warning">Set one in Organization settings</NuxtLink>
+				<NuxtLink to="/apps/organization" class="underline hover:text-warning">Set one in Organization settings</NuxtLink>
 			</p>
 		</div>
 	</div>

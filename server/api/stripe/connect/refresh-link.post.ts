@@ -39,8 +39,8 @@ export default defineEventHandler(async (event) => {
 
 	const stripe = useStripe();
 	const baseUrl = getAppBaseUrl(event);
-	const returnUrl = body?.returnUrl || `${baseUrl}/organization?tab=billing&onboarding=updated`;
-	const refreshUrl = body?.refreshUrl || `${baseUrl}/organization?tab=billing&onboarding=refresh`;
+	const returnUrl = body?.returnUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=updated`;
+	const refreshUrl = body?.refreshUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=refresh`;
 
 	const account = await stripe.accounts.retrieve(org.stripe_account_id);
 	const linkType: 'account_update' | 'account_onboarding' = account.details_submitted

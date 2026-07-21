@@ -48,13 +48,13 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Expenses', type: ['header', 'footer', 'drawer'], to: '/expenses', icon: 'i-lucide-receipt', color: 'bg-orange-500', description: 'Track expenses', section: 'secondary', featureKey: 'invoices' },
-	{ name: 'Billing', type: ['header', 'footer', 'drawer'], to: '/organization?tab=billing', icon: 'i-lucide-banknote', color: 'bg-teal-600', description: 'Transactions, refunds, balance, payouts', section: 'secondary', featureKey: 'invoices' },
+	{ name: 'Billing', type: ['header', 'footer', 'drawer'], to: '/apps/money?floor=deposits', icon: 'i-lucide-banknote', color: 'bg-teal-600', description: 'Transactions, refunds, balance, payouts', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Financials', type: ['footer', 'drawer'], to: '/financials', icon: 'i-heroicons-chart-bar', color: 'bg-green-600', description: 'Financial reports', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/apps/work?floor=time', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
 	{ name: 'Guide', type: ['drawer'], to: '/guide', icon: 'i-heroicons-book-open', color: 'bg-gradient-to-br from-cyan-500 to-blue-500', description: 'Setup tutorial', section: 'secondary' },
 	{ name: 'Chat', type: ['drawer'], to: '/command-center/ai', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'Earnest assistant' },
-	{ name: 'Organization', type: ['drawer'], to: '/organization', icon: 'i-heroicons-building-office-2', color: 'bg-gray-700', description: 'Settings', section: 'secondary', featureKey: 'org_settings' },
+	{ name: 'Organization', type: ['drawer'], to: '/apps/organization', icon: 'i-heroicons-building-office-2', color: 'bg-gray-700', description: 'Settings', section: 'secondary', featureKey: 'org_settings' },
 ];
 
 // Default sidebar visibility — first 10 items (Command Center + work apps + Marketing + Activity)
@@ -103,7 +103,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-money-bag',
 		name: 'Accountant',
 		description: 'Invoices, contracts, expenses & reports',
-		routes: ['/', '/invoices', '/contracts', '/expenses', '/financials', '/apps/work?floor=time', '/contacts', '/organization?tab=billing'],
+		routes: ['/', '/invoices', '/contracts', '/expenses', '/financials', '/apps/work?floor=time', '/contacts', '/apps/money?floor=deposits'],
 	},
 	{
 		id: 'salesman',
