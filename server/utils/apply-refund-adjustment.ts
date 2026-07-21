@@ -169,12 +169,18 @@ export async function applyRefundAdjustment(
 
 	// Branded refund receipt → payer + staff. Fires once per booked delta (this
 	// path already short-circuited on an already-applied refund), so partial and
-	// incremental refunds each send their own confirmation. Best-effort.
+	// incremental refunds each send their own confirmation. AWAITED — a
+	// fire-and-forget promise can be frozen when the serverless webhook returns.
 	if (invoiceId) {
-		void (async () => {
+		await (async () => {
 			try {
+				// NOTE: the getTypedDirectus service token (DIRECTUS_SERVER_TOKEN)
+				// lacks field-read on invoices.title / .organization — requesting
+				// them 403s the whole read → inv=null → receipt silently skipped.
+				// Only request fields the token can read; the label falls back to
+				// the invoice_code when title is absent.
 				const inv = (await directus.request(
-					readItem('invoices', invoiceId, { fields: ['id', 'invoice_code', 'title', 'billing_email'] }),
+					readItem('invoices', invoiceId, { fields: ['id', 'invoice_code', 'billing_email'] }),
 				)) as { id: string; invoice_code?: string | null; title?: string | null; billing_email?: string | null } | null;
 				if (!inv) return;
 				const payerEmail =

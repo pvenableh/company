@@ -241,13 +241,18 @@ async function handlePaymentSucceeded(
 			const result = await recomputeInvoiceStatus(invoiceId);
 
 			// Load the invoice once — reused by the branded receipt and the
-			// paid-transition staff notify below.
+			// paid-transition staff notify below. IMPORTANT: the getTypedDirectus
+			// service token (DIRECTUS_SERVER_TOKEN) has NO field-read on
+			// invoices.title / .organization — requesting them 403s the whole read
+			// → inv=null → the receipt is silently skipped. Only request readable
+			// fields; org comes from the already-resolved `orgId`, the label from
+			// invoice_code.
 			let inv: any = null;
 			if (wroteRow || (result.changed && result.newStatus === 'paid')) {
 				inv = (await directus
 					.request(
 						readItem('invoices', invoiceId, {
-							fields: ['id', 'invoice_code', 'title', 'client', 'organization', 'billing_email'],
+							fields: ['id', 'invoice_code', 'client', 'billing_email'],
 						}),
 					)
 					.catch(() => null)) as any;
@@ -255,9 +260,10 @@ async function handlePaymentSucceeded(
 
 			// Branded "payment received" receipt → payer + org owners/admins.
 			// Fires once per payment (only when we wrote a new row, so webhook
-			// retries don't re-send). Best-effort.
+			// retries don't re-send). AWAITED — a fire-and-forget promise can be
+			// frozen when the serverless function returns before it completes.
 			if (wroteRow && inv) {
-				void sendInvoicePaymentEmails({
+				await sendInvoicePaymentEmails({
 					orgId,
 					invoice: inv,
 					payerEmail: paymentIntent.receipt_email || null,
@@ -274,8 +280,7 @@ async function handlePaymentSucceeded(
 			// composer, so no timeline row is written here.
 			if (result.changed && result.newStatus === 'paid' && inv) {
 				try {
-					const invOrg = typeof inv?.organization === 'object' ? inv.organization?.id : inv?.organization;
-					void notifyEvent({
+					await notifyEvent({
 						directus,
 						collection: 'invoices',
 						action: 'update',
@@ -283,13 +288,12 @@ async function handlePaymentSucceeded(
 							status: 'paid',
 							client: inv?.client,
 							invoice_code: inv?.invoice_code,
-							title: inv?.title,
-							organization: invOrg,
+							organization: orgId,
 						},
 						previousItem: { status: result.previousStatus || 'processing' },
 						itemId: String(invoiceId),
 						userId: '',
-						orgId: invOrg,
+						orgId,
 						staffOnly: true,
 						// The branded "payment received" staff confirmation (above)
 						// is the email for this event — keep the bell, drop the
