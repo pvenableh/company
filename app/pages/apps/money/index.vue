@@ -252,6 +252,7 @@ async function fetchCashflow() {
         filter: invoiceFilter,
         fields: [
           'id', 'invoice_code', 'invoice_date', 'due_date', 'status', 'total_amount',
+          'refunded_total', 'disputed',
           'client.id', 'client.name',
         ],
         sort: ['-invoice_date'],
@@ -1167,6 +1168,23 @@ const headerAction = computed(() => {
                       :class="getStatusBadgeClasses(inv.status)"
                     >
                       {{ inv.status }}
+                    </span>
+                    <!-- Reconciliation markers: distinguish refunded/disputed from unpaid. -->
+                    <span
+                      v-if="Number((inv as any).refunded_total || 0) > 0"
+                      class="ml-1 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[9px] font-medium align-middle"
+                      :title="`${fmtMoney(Number((inv as any).refunded_total))} refunded/reversed`"
+                    >
+                      <Icon name="lucide:rotate-ccw" class="w-2.5 h-2.5" />
+                      {{ Number((inv as any).refunded_total) >= Number(inv.total_amount || 0) ? 'Refunded' : fmtMoney(Number((inv as any).refunded_total)) }}
+                    </span>
+                    <span
+                      v-if="(inv as any).disputed"
+                      class="ml-1 inline-flex items-center gap-0.5 rounded-full bg-destructive/10 text-destructive px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider align-middle"
+                      title="Payment disputed (chargeback)"
+                    >
+                      <Icon name="lucide:gavel" class="w-2.5 h-2.5" />
+                      Disputed
                     </span>
                   </td>
                   <td class="py-3 px-4 text-right font-medium tabular-nums">{{ fmtMoney(inv.total_amount) }}</td>

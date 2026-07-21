@@ -12,6 +12,23 @@ export interface ExtensionSeoMetadata {
     no_follow?: boolean;
 }
 
+export interface AgencyRating {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'archived' | null;
+	/** @description Org being rated */
+	organization?: string | null;
+	/** @description Rating client */
+	client?: string | null;
+	/** @description Portal user who rated */
+	user?: string | null;
+	/** @description 1–5 */
+	rating?: number | null;
+	comment?: string | null;
+	date_created?: string | null;
+	user_created?: string | null;
+}
+
 export interface AiAction {
 	/** @primaryKey */
 	id: number;
@@ -1566,8 +1583,6 @@ export interface Client {
 	/** @primaryKey */
 	id: string;
 	status?: 'published' | 'draft' | 'archived';
-	/** @description Pinned to the top of the clients widget / list for quick access. */
-	pinned?: boolean;
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -1613,6 +1628,8 @@ export interface Client {
 	account_state?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
 	/** @description Bumped by /api/clients/bump-activity when a child project/ticket/task changes. Drives the "Recent" client sort. */
 	last_activity_at?: string | null;
+	/** @description Pinned to the top of widgets / lists for quick access. */
+	pinned?: boolean;
 	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
 	/** @description Individual users with direct access to this client */
@@ -2700,6 +2717,10 @@ export interface Invoice {
 	check_image?: DirectusFile | string | null;
 	/** @description Date the client mailed the check */
 	date_mailed?: string | null;
+	/** @description Cumulative amount refunded or reversed (chargeback lost). Set by recomputeInvoiceStatus. */
+	refunded_total?: number | null;
+	/** @description A payment on this invoice is/was disputed (chargeback). Set by recomputeInvoiceStatus. */
+	disputed?: boolean | null;
 	/** @required */
 	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];
@@ -3275,8 +3296,6 @@ export interface Organization {
 	document_theme?: 'classic' | 'editorial' | 'mono';
 	/** @description Used by the Mono theme as the brand accent. Defaults to a neutral gray. */
 	document_accent?: string | null;
-	/** @description Optional per-org visual overrides layered on top of the base document_theme (colors, fonts, radius, etc). Shape: DocumentThemeConfig. */
-	document_theme_config?: Record<string, any> | null;
 	/** @description Stripe Express connected-account id (acct_…). Each org has their own; invoice payments route through this account. */
 	stripe_account_id?: string | null;
 	/** @description Snapshot of the connected account state. Updated by the Connect webhook on `account.updated`. */
@@ -3299,6 +3318,8 @@ export interface Organization {
 	goals_enabled?: boolean | null;
 	/** @description Earnest-admin grant. When on: wholesale token/credit pricing + zero platform fee on this org’s invoice payments. Fulfillment unchanged. */
 	wholesale_pricing?: boolean;
+	/** @description Visual overrides layered on top of the base document theme (set via the Document Theme Studio). */
+	document_theme_config?: Record<string, any> | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3659,6 +3680,28 @@ export interface PhoneSetting {
 	call_routes?: CallRoute[] | string[];
 }
 
+export interface PlatformReversal {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description token_refund | token_dispute | subscription_refund | subscription_dispute */
+	type?: 'token_refund' | 'token_dispute' | 'subscription_refund' | 'subscription_dispute' | null;
+	/** @description Org affected (organizations.id) */
+	organization?: string | null;
+	stripe_charge_id?: string | null;
+	/** @description Join key for cumulative idempotency */
+	stripe_payment_intent?: string | null;
+	/** @description Per-dispute idempotency guard (dispute rows only) */
+	stripe_dispute_id?: string | null;
+	/** @description Money reversed by THIS row (delta), cents */
+	amount_cents?: number | null;
+	/** @description Tokens removed from org balance (token rows) */
+	tokens_clawed_back?: number | null;
+	reason?: string | null;
+	livemode?: boolean | null;
+	note?: string | null;
+}
+
 export interface Portfolio {
 	/** @primaryKey */
 	id: string;
@@ -3741,6 +3784,22 @@ export interface PortfolioService {
 	sort?: number | null;
 }
 
+export interface ProductEvent {
+	/** @primaryKey */
+	id: number;
+	/** @description Namespaced event slug, e.g. home.mode_flipped @required */
+	event: string;
+	/** @description UI surface, e.g. presence-home */
+	source?: string | null;
+	/** @description Who triggered it (null for anon/system) */
+	user?: DirectusUser | string | null;
+	/** @description Active organization */
+	organization?: Organization | string | null;
+	/** @description Small event payload, e.g. { from, to } */
+	props?: Record<string, any> | null;
+	date_created?: string | null;
+}
+
 export interface Product {
 	/** @primaryKey */
 	id: string;
@@ -3807,26 +3866,6 @@ export interface ProjectEventFile {
 	sort?: number | null;
 	project_event_id?: ProjectEvent | string | null;
 	directus_files_id?: DirectusFile | string | null;
-}
-
-/** A lightweight communication touch point on a project (CardDesk-style). */
-export interface ProjectTouchpoint {
-	/** @primaryKey */
-	id: number;
-	project?: Project | string | null;
-	organization?: Organization | string | null;
-	type?: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
-	summary?: string | null;
-	note?: string | null;
-	occurred_at?: string | null;
-	awaiting_response?: boolean;
-	is_response?: boolean;
-	response_note?: string | null;
-	/** Tagged people: [{ kind: 'member'|'contact'|'portal', id, name }]. */
-	participants?: Array<{ kind: string; id: string; name: string }> | null;
-	sort?: number | null;
-	date_created?: string | null;
-	user_created?: DirectusUser | string | null;
 }
 
 export interface ProjectEvent {
@@ -3899,10 +3938,6 @@ export interface Project {
 	/** @primaryKey */
 	id: string;
 	status?: 'Pending' | 'Scheduled' | `In Progress` | 'completed' | 'Archived';
-	/** @description Pinned to the top of the projects widget / list for quick access. */
-	pinned?: boolean;
-	/** @description Communication touch points logged on this project (o2m alias). */
-	touchpoints?: ProjectTouchpoint[] | number[] | null;
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -3949,6 +3984,8 @@ export interface Project {
 	csat_comment?: string | null;
 	/** @description When the client submitted their CSAT rating. Null = not yet rated. */
 	csat_submitted_at?: string | null;
+	/** @description Pinned to the top of widgets / lists for quick access. */
+	pinned?: boolean;
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3958,6 +3995,8 @@ export interface Project {
 	digests?: ProjectDigest[] | string[];
 	/** @description Extra contacts pinned to this project (beyond the client roster). */
 	contacts?: ProjectsContact[] | string[];
+	/** @description Communication touch points logged on this project. Inverse of project_touchpoints.project. */
+	touchpoints?: ProjectTouchpoint[] | string[];
 }
 
 export interface ProjectsContact {
@@ -3996,6 +4035,33 @@ export interface ProjectStatusUpdate {
 	text?: string | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
+}
+
+export interface ProjectTouchpoint {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	date_created?: string | null;
+	user_created?: string | null;
+	/** @required */
+	project: Project | string;
+	/** @description Denormalized from project.organization for the create permission. @required */
+	organization: Organization | string;
+	/** @required */
+	type: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
+	/** @description Short label for the touch point. */
+	summary?: string | null;
+	note?: string | null;
+	/** @description When the touch happened. */
+	occurred_at?: string | null;
+	/** @description Expecting a reply. */
+	awaiting_response?: boolean | null;
+	/** @description This touch received / is a response. */
+	is_response?: boolean | null;
+	/** @description What came back. */
+	response_note?: string | null;
+	/** @description Tagged people: [{ kind, id, name }]. */
+	participants?: Record<string, any> | null;
 }
 
 export interface Prompt {
@@ -4863,22 +4929,6 @@ export interface UpsellEvent {
 	date_created?: string | null;
 }
 
-export interface ProductEvent {
-	/** @primaryKey */
-	id: string;
-	/** @description Namespaced event slug, e.g. home.mode_flipped */
-	event?: string;
-	/** @description UI surface, e.g. presence-home */
-	source?: string | null;
-	/** @description directus_users id of who triggered it */
-	user?: string | null;
-	/** @description organizations id */
-	organization?: string | null;
-	/** @description Small event payload, e.g. { from, to } */
-	props?: Record<string, unknown> | null;
-	date_created?: string | null;
-}
-
 export interface UserPresence {
 	/** @primaryKey */
 	id: string;
@@ -5386,10 +5436,6 @@ export interface DirectusUser {
 	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
 	/** @description Per-user palette for the apps shell (default | oceanic | royal). */
 	app_palette?: 'default' | 'oceanic' | 'royal' | null;
-	/** @description Earnest trust dial (0–3): how much of Earnest's proposed work auto-runs for this user. Email/money/meetings always stay gated. */
-	ai_autonomy_tier?: number | null;
-	/** @description Home surface: 'classic' command-center dashboard, or 'presence' calm conversational Earnest home. */
-	home_mode?: 'classic' | 'presence' | null;
 	/** @description Command Center lens preference — controls band emphasis on /. (me | org) */
 	view_lens?: 'me' | 'org' | null;
 	/** @description List of /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */
@@ -5412,6 +5458,10 @@ export interface DirectusUser {
 	app_pref_arcade_intro_dismissed_at?: string | null;
 	/** @description Per-category notification opt-outs: { [category]: boolean }. Missing key = opt-in. `_all: false` mutes everything. */
 	notification_preferences?: Record<string, any> | null;
+	/** @description Earnest trust dial: how much of Earnest's proposed work auto-runs for this user (0 ask everything … 3 full partner; email/money/meetings always stay gated). */
+	ai_autonomy_tier?: 0 | 1 | 2 | 3 | null;
+	/** @description Home surface: classic command-center dashboard, or the calm conversational Earnest presence home. */
+	home_mode?: 'classic' | 'presence' | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	/** @description Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters. */
@@ -5590,6 +5640,7 @@ export interface DirectusDeploymentRun {
 }
 
 export interface Schema {
+	agency_ratings: AgencyRating[];
 	ai_actions: AiAction[];
 	ai_chat_messages: AiChatMessage[];
 	ai_chat_sessions: AiChatSession[];
@@ -5756,12 +5807,14 @@ export interface Schema {
 	people: People[];
 	people_organizations: PeopleOrganization[];
 	phone_settings: PhoneSetting[];
+	platform_reversals: PlatformReversal[];
 	portfolio: Portfolio[];
 	portfolio_before_and_afters: PortfolioBeforeAndAfter[];
 	portfolio_capabilities: PortfolioCapability[];
 	portfolio_files: PortfolioFile[];
 	portfolio_industries: PortfolioIndustry[];
 	portfolio_services: PortfolioService[];
+	product_events: ProductEvent[];
 	products: Product[];
 	project_categories: ProjectCategory[];
 	project_digests: ProjectDigest[];
@@ -5775,6 +5828,7 @@ export interface Schema {
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
+	project_touchpoints: ProjectTouchpoint[];
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
@@ -5817,7 +5871,6 @@ export interface Schema {
 	tickets_services: TicketsService[];
 	time_entries: TimeEntry[];
 	token_purchases: TokenPurchase[];
-	product_events: ProductEvent[];
 	upsell_events: UpsellEvent[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
@@ -5856,6 +5909,7 @@ export interface Schema {
 }
 
 export enum CollectionNames {
+	agency_ratings = 'agency_ratings',
 	ai_actions = 'ai_actions',
 	ai_chat_messages = 'ai_chat_messages',
 	ai_chat_sessions = 'ai_chat_sessions',
@@ -6022,12 +6076,14 @@ export enum CollectionNames {
 	people = 'people',
 	people_organizations = 'people_organizations',
 	phone_settings = 'phone_settings',
+	platform_reversals = 'platform_reversals',
 	portfolio = 'portfolio',
 	portfolio_before_and_afters = 'portfolio_before_and_afters',
 	portfolio_capabilities = 'portfolio_capabilities',
 	portfolio_files = 'portfolio_files',
 	portfolio_industries = 'portfolio_industries',
 	portfolio_services = 'portfolio_services',
+	product_events = 'product_events',
 	products = 'products',
 	project_categories = 'project_categories',
 	project_digests = 'project_digests',
@@ -6041,6 +6097,7 @@ export enum CollectionNames {
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',
+	project_touchpoints = 'project_touchpoints',
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',
@@ -6083,7 +6140,6 @@ export enum CollectionNames {
 	tickets_services = 'tickets_services',
 	time_entries = 'time_entries',
 	token_purchases = 'token_purchases',
-	product_events = 'product_events',
 	upsell_events = 'upsell_events',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',

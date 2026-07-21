@@ -221,6 +221,26 @@ const fullyPaid = computed(() => {
   return total > 0 && totalPaid.value >= total;
 });
 
+// Refund/dispute reconciliation state. Derived from the payment rows (the
+// negative adjustment rows written by apply-refund-adjustment / apply-dispute-
+// adjustment) so the UI is correct even before recomputeInvoiceStatus persists
+// invoice.refunded_total / invoice.disputed. Falls back to those fields.
+const refundedTotal = computed(() => {
+  const list = (invoice.value?.payments as any[]) || [];
+  const fromRows = list
+    .filter(p => p?.status === 'paid' && Number(p?.amount || 0) < 0)
+    .reduce((sum, p) => sum + Math.abs(Number(p?.amount || 0)), 0);
+  return Math.round((fromRows || Number((invoice.value as any)?.refunded_total || 0)) * 100) / 100;
+});
+const isDisputed = computed(() => {
+  if ((invoice.value as any)?.disputed) return true;
+  const list = (invoice.value?.payments as any[]) || [];
+  return list.some((p) => {
+    const s = String(p?.stripe_status || '');
+    return s === 'disputed' || s.startsWith('dispute');
+  });
+});
+
 function openPaymentModal(method: 'check' | 'zelle' | 'venmo' | 'cash' | 'other') {
   paymentMethodKey.value = method;
   editingPayment.value = null;
@@ -419,6 +439,23 @@ if (!props.compact) {
             >
               {{ invoice.status }}
             </span>
+            <!-- Refund / dispute reconciliation badges — tell "was paid, then
+                 reversed" apart from "never paid" (both read pending/processing). -->
+            <span
+              v-if="!editMode && refundedTotal > 0"
+              class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium"
+              :title="`${formatCurrency(refundedTotal)} refunded or reversed`"
+            >
+              <Icon name="lucide:rotate-ccw" class="w-3 h-3" />
+              {{ refundedTotal >= Number(invoice.total_amount || 0) ? 'Refunded' : `−${formatCurrency(refundedTotal)}` }}
+            </span>
+            <span
+              v-if="!editMode && isDisputed"
+              class="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+            >
+              <Icon name="lucide:gavel" class="w-3 h-3" />
+              Disputed
+            </span>
             <span
               v-if="editMode"
               class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
@@ -571,6 +608,19 @@ if (!props.compact) {
       >
         <Icon name="lucide:check-circle-2" class="w-4 h-4" />
         Invoice fully paid ({{ formatCurrency(totalPaid) }} of {{ formatCurrency(invoice.total_amount || 0) }})
+      </div>
+
+      <!-- Refund / dispute reconciliation banner -->
+      <div
+        v-if="!editMode && (refundedTotal > 0 || isDisputed)"
+        class="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg text-xs"
+        :class="isDisputed ? 'bg-destructive/10 border border-destructive/30 text-destructive' : 'bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400'"
+      >
+        <Icon :name="isDisputed ? 'lucide:gavel' : 'lucide:rotate-ccw'" class="w-4 h-4 shrink-0" />
+        <span>
+          <template v-if="refundedTotal > 0">{{ formatCurrency(refundedTotal) }} refunded/reversed of {{ formatCurrency(invoice.total_amount || 0) }} — net collected {{ formatCurrency(totalPaid) }}.</template>
+          <template v-if="isDisputed"> A payment on this invoice is or was disputed.</template>
+        </span>
       </div>
 
       <!-- Inline error banner -->
