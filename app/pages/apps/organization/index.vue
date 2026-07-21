@@ -191,6 +191,209 @@ function formatRelative(iso: string | undefined) {
   return date.toLocaleDateString();
 }
 
+// ── Member & client management (owner/admin) ─────────────────────────────────
+// Ported from the classic /organization page so role changes, member removal,
+// adding existing users, and client-portal lifecycle actions have a home in the
+// modern shell — a prerequisite for retiring the classic page.
+const { user: sessionUser, loggedIn } = useUserSession();
+const currentUserId = computed(() => (loggedIn.value ? (sessionUser.value as any)?.id ?? null : null));
+const orgUserJunction = useDirectusItems('organizations_directus_users');
+const { readUsers } = useDirectusUsers();
+
+// Owner role is never reassignable.
+const assignableRoles = computed(() => orgRoles.value.filter((r: any) => r.slug !== 'owner'));
+
+// Change member role
+const changingRole = ref(false);
+async function changeMemberRole(memberId: string, newRoleId: string) {
+  if (!selectedOrg.value || changingRole.value) return;
+  const membership = orgMemberships.value.find(
+    (m: any) => (typeof m.user === 'object' ? m.user?.id : m.user) === memberId && m.status === 'active',
+  );
+  if (!membership) {
+    toast.add({ title: 'Error', description: 'Could not find membership for this user', color: 'red' });
+    return;
+  }
+  const currentRole = membership.role;
+  if (currentRole && typeof currentRole === 'object' && currentRole.slug === 'owner') {
+    toast.add({ title: 'Error', description: 'Cannot change the owner role', color: 'red' });
+    return;
+  }
+  changingRole.value = true;
+  try {
+    await membershipItems.update(membership.id, { role: newRoleId });
+    toast.add({ title: 'Saved', description: 'Member role updated', color: 'green' });
+    await fetchMembers();
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update role', color: 'red' });
+  } finally {
+    changingRole.value = false;
+  }
+}
+
+// Add existing user
+const showAddMemberModal = ref(false);
+const searchEmail = ref('');
+const searchResults = ref<any[]>([]);
+const searching = ref(false);
+const addingUser = ref(false);
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function openAddMemberModal() {
+  searchEmail.value = '';
+  searchResults.value = [];
+  showAddMemberModal.value = true;
+}
+
+async function searchUsers() {
+  if (!searchEmail.value || searchEmail.value.length < 2) {
+    searchResults.value = [];
+    return;
+  }
+  searching.value = true;
+  try {
+    const users = await readUsers({
+      filter: {
+        _or: [
+          { email: { _contains: searchEmail.value } },
+          { first_name: { _contains: searchEmail.value } },
+          { last_name: { _contains: searchEmail.value } },
+        ],
+      },
+      fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+      limit: 10,
+    });
+    // Exclude users already in the org.
+    const existingIds = new Set(filteredUsers.value.map((u: any) => u.id));
+    searchResults.value = (users || []).filter((u: any) => !existingIds.has(u.id));
+  } catch (error) {
+    console.error('Error searching users:', error);
+    searchResults.value = [];
+  } finally {
+    searching.value = false;
+  }
+}
+
+watch(searchEmail, () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => searchUsers(), 300);
+});
+
+async function addUserToOrganization(userId: string) {
+  if (!selectedOrg.value || !userId) return;
+  addingUser.value = true;
+  try {
+    // Route through the server endpoint so an org_membership row (which carries
+    // the role) is created alongside the legacy junction — a raw junction insert
+    // leaves the user with no org role and therefore no permissions.
+    await $fetch('/api/org/add-member', {
+      method: 'POST',
+      body: { organizationId: selectedOrg.value, userId },
+    });
+    toast.add({ title: 'Added', description: 'User added to organization', color: 'green' });
+    await fetchMembers();
+    searchResults.value = searchResults.value.filter((u: any) => u.id !== userId);
+  } catch (error) {
+    console.error('Error adding user to organization:', error);
+    toast.add({ title: 'Error', description: 'Failed to add user to organization', color: 'red' });
+  } finally {
+    addingUser.value = false;
+  }
+}
+
+// Remove member
+const showRemoveMemberModal = ref(false);
+const memberToRemove = ref<any>(null);
+const removingMember = ref(false);
+
+function confirmRemoveMember(member: any) {
+  memberToRemove.value = member;
+  showRemoveMemberModal.value = true;
+}
+
+async function removeMember() {
+  if (!memberToRemove.value || !selectedOrg.value) return;
+  removingMember.value = true;
+  try {
+    // Remove from the legacy junction, then suspend the org_membership.
+    const junctions = await orgUserJunction.list({
+      filter: {
+        organizations_id: { _eq: selectedOrg.value },
+        directus_users_id: { _eq: memberToRemove.value.id },
+      },
+      fields: ['id'],
+    });
+    if (junctions.length > 0) {
+      await orgUserJunction.remove(junctions.map((j: any) => j.id));
+    }
+    const memberships = await membershipItems.list({
+      filter: { organization: { _eq: selectedOrg.value }, user: { _eq: memberToRemove.value.id } },
+      fields: ['id'],
+    });
+    for (const m of memberships) {
+      await membershipItems.update(m.id, { status: 'suspended' });
+    }
+    toast.add({ title: 'Removed', description: 'Member removed from organization', color: 'green' });
+    showRemoveMemberModal.value = false;
+    memberToRemove.value = null;
+    await fetchMembers();
+  } catch (error) {
+    console.error('Error removing member:', error);
+    toast.add({ title: 'Error', description: 'Failed to remove member', color: 'red' });
+  } finally {
+    removingMember.value = false;
+  }
+}
+
+// Client portal lifecycle
+const clientActingId = ref<string | null>(null);
+async function resendClientInvite(m: any) {
+  if (!selectedOrg.value) return;
+  clientActingId.value = m.id;
+  try {
+    const result = (await $fetch('/api/org/resend-client-invite', {
+      method: 'POST',
+      body: { membershipId: m.id, organizationId: selectedOrg.value },
+    })) as any;
+    toast.add({ title: 'Invitation resent', description: result?.message, color: 'green' });
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to resend invitation', color: 'red' });
+  } finally {
+    clientActingId.value = null;
+  }
+}
+async function revokeClientAccess(m: any) {
+  if (!confirm('Revoke portal access for this user? They will no longer be able to sign in.')) return;
+  clientActingId.value = m.id;
+  try {
+    await $fetch('/api/org/portal-user-status', {
+      method: 'POST',
+      body: { portalUserId: m.id, organizationId: selectedOrg.value, status: 'suspended' },
+    });
+    toast.add({ title: 'Access revoked', description: 'Portal access has been suspended.', color: 'green' });
+    await fetchClientMemberships();
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to revoke', color: 'red' });
+  } finally {
+    clientActingId.value = null;
+  }
+}
+async function restoreClientAccess(m: any) {
+  clientActingId.value = m.id;
+  try {
+    await $fetch('/api/org/portal-user-status', {
+      method: 'POST',
+      body: { portalUserId: m.id, organizationId: selectedOrg.value, status: 'active' },
+    });
+    toast.add({ title: 'Access restored', description: 'Portal access has been re-enabled.', color: 'green' });
+    await fetchClientMemberships();
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to restore', color: 'red' });
+  } finally {
+    clientActingId.value = null;
+  }
+}
+
 // ── Billing floor ───────────────────────────────────────────────────────────
 // Fully delegated to <AppsAccountSubscriptionSurface> (plan · add-ons · payment
 // methods · billing history · cancel). No local subscription state needed here.
@@ -752,7 +955,13 @@ function onClientInvited() {
           <div>
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-semibold">Organization Members</h3>
-              <span class="text-xs text-muted-foreground">{{ filteredUsers.length }} member{{ filteredUsers.length === 1 ? '' : 's' }}</span>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-muted-foreground">{{ filteredUsers.length }} member{{ filteredUsers.length === 1 ? '' : 's' }}</span>
+                <Button v-if="canManageOrg" size="sm" variant="outline" @click="openAddMemberModal">
+                  <Icon name="lucide:user-plus" class="w-4 h-4 mr-1" />
+                  Add existing
+                </Button>
+              </div>
             </div>
 
             <div
@@ -772,30 +981,58 @@ function onClientInvited() {
               <div
                 v-for="member in filteredUsers"
                 :key="member.id"
-                class="ios-card p-4 flex items-center gap-3"
+                class="ios-card p-4 flex flex-col gap-3"
               >
-                <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                  <img
-                    v-if="member.avatar"
-                    :src="`${config.public.directusUrl}/assets/${member.avatar}?key=small`"
-                    :alt="`${member.first_name} ${member.last_name}`"
-                    class="w-full h-full object-cover"
-                  />
-                  <span v-else class="text-sm font-medium text-muted-foreground">
-                    {{ (member.first_name?.[0] || '') + (member.last_name?.[0] || '') }}
+                <!-- Top row: avatar + identity + remove -->
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                    <img
+                      v-if="member.avatar"
+                      :src="`${config.public.directusUrl}/assets/${member.avatar}?key=small`"
+                      :alt="`${member.first_name} ${member.last_name}`"
+                      class="w-full h-full object-cover"
+                    />
+                    <span v-else class="text-sm font-medium text-muted-foreground">
+                      {{ (member.first_name?.[0] || '') + (member.last_name?.[0] || '') }}
+                    </span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">{{ member.first_name }} {{ member.last_name }}</p>
+                    <p class="text-xs text-muted-foreground truncate">{{ member.email }}</p>
+                  </div>
+                  <button
+                    v-if="canManageOrg && member.id !== currentUserId && getMemberRole(member.id)?.slug !== 'owner'"
+                    type="button"
+                    class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    :title="`Remove ${member.first_name}`"
+                    @click="confirmRemoveMember(member)"
+                  >
+                    <Icon name="lucide:user-minus" class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <!-- Role row: editable select for admins, badge otherwise -->
+                <div v-if="getMemberRole(member.id)" class="flex items-center justify-between">
+                  <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Role</span>
+                  <select
+                    v-if="canManageOrg && member.id !== currentUserId && getMemberRole(member.id).slug !== 'owner'"
+                    class="text-xs rounded-full border bg-background px-2.5 py-1 cursor-pointer focus:outline-none"
+                    :value="getMemberRole(member.id).id"
+                    :disabled="changingRole"
+                    @change="changeMemberRole(member.id, ($event.target as HTMLSelectElement).value)"
+                  >
+                    <option v-for="role in assignableRoles" :key="role.id" :value="role.id">
+                      {{ role.name }}
+                    </option>
+                  </select>
+                  <span
+                    v-else
+                    class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium shrink-0"
+                    :class="getRoleBadgeClasses(getMemberRole(member.id).slug)"
+                  >
+                    {{ getMemberRole(member.id).name }}
                   </span>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium truncate">{{ member.first_name }} {{ member.last_name }}</p>
-                  <p class="text-xs text-muted-foreground truncate">{{ member.email }}</p>
-                </div>
-                <span
-                  v-if="getMemberRole(member.id)"
-                  class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium shrink-0"
-                  :class="getRoleBadgeClasses(getMemberRole(member.id).slug)"
-                >
-                  {{ getMemberRole(member.id).name }}
-                </span>
               </div>
             </div>
           </div>
@@ -832,7 +1069,7 @@ function onClientInvited() {
               <div
                 v-for="m in clientMemberships"
                 :key="m.id"
-                class="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+                class="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-center px-4 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
               >
                 <div class="min-w-0">
                   <p class="text-sm font-medium truncate">
@@ -867,6 +1104,42 @@ function onClientInvited() {
                     Invited {{ formatRelative(m.invited_at) }}
                   </span>
                   <span v-else>—</span>
+                </div>
+
+                <!-- Lifecycle actions (owner/admin) -->
+                <div class="flex items-center justify-end gap-1">
+                  <template v-if="canManageOrg">
+                    <button
+                      v-if="m.status === 'pending'"
+                      type="button"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                      title="Resend invitation"
+                      :disabled="clientActingId === m.id"
+                      @click="resendClientInvite(m)"
+                    >
+                      <Icon :name="clientActingId === m.id ? 'lucide:loader-2' : 'lucide:send'" class="w-3.5 h-3.5" :class="clientActingId === m.id && 'animate-spin'" />
+                    </button>
+                    <button
+                      v-if="m.status === 'suspended'"
+                      type="button"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-success hover:bg-success/10 transition-colors disabled:opacity-50"
+                      title="Restore access"
+                      :disabled="clientActingId === m.id"
+                      @click="restoreClientAccess(m)"
+                    >
+                      <Icon :name="clientActingId === m.id ? 'lucide:loader-2' : 'lucide:rotate-ccw'" class="w-3.5 h-3.5" :class="clientActingId === m.id && 'animate-spin'" />
+                    </button>
+                    <button
+                      v-if="m.status !== 'suspended'"
+                      type="button"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                      title="Revoke access"
+                      :disabled="clientActingId === m.id"
+                      @click="revokeClientAccess(m)"
+                    >
+                      <Icon name="lucide:user-x" class="w-3.5 h-3.5" />
+                    </button>
+                  </template>
                 </div>
               </div>
             </div>
@@ -1088,7 +1361,7 @@ function onClientInvited() {
               Archive this organization to cancel your subscription at the end of the current billing period and soft-delete all data. Retained for 90 days.
             </p>
             <p v-else class="text-sm text-muted-foreground mb-3">
-              This organization is archived. Restore it from the classic settings page.
+              This organization is archived. Restore it using “Manage archive” below.
             </p>
             <Button size="sm" variant="outline" class="text-destructive border-destructive/30" @click="showArchiveSheet = true">
               <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
@@ -1116,6 +1389,75 @@ function onClientInvited() {
       :organization-id="selectedOrg"
       @invited="onClientInvited"
     />
+
+    <!-- Add an existing Earnest user to this org -->
+    <UModal v-model="showAddMemberModal">
+      <div class="p-5 space-y-4">
+        <div>
+          <h3 class="text-base font-semibold">Add existing user</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Search users already in Earnest and add them to this organization.
+          </p>
+        </div>
+        <UInput
+          v-model="searchEmail"
+          placeholder="Search by name or email…"
+          icon="i-heroicons-magnifying-glass"
+          autofocus
+        />
+        <div v-if="searching" class="flex justify-center py-6">
+          <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+        <div v-else-if="searchEmail.length >= 2 && !searchResults.length" class="text-center py-6 text-sm text-muted-foreground">
+          No matching users found.
+        </div>
+        <div v-else-if="searchResults.length" class="space-y-2 max-h-72 overflow-y-auto">
+          <div
+            v-for="u in searchResults"
+            :key="u.id"
+            class="flex items-center gap-3 p-2.5 rounded-xl border border-border/40"
+          >
+            <div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+              <img
+                v-if="u.avatar"
+                :src="`${config.public.directusUrl}/assets/${u.avatar}?key=small`"
+                :alt="`${u.first_name} ${u.last_name}`"
+                class="w-full h-full object-cover"
+              />
+              <span v-else class="text-xs font-medium text-muted-foreground">
+                {{ (u.first_name?.[0] || '') + (u.last_name?.[0] || '') }}
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">{{ u.first_name }} {{ u.last_name }}</p>
+              <p class="text-xs text-muted-foreground truncate">{{ u.email }}</p>
+            </div>
+            <Button size="sm" :disabled="addingUser" @click="addUserToOrganization(u.id)">Add</Button>
+          </div>
+        </div>
+      </div>
+    </UModal>
+
+    <!-- Remove member confirmation -->
+    <UModal v-model="showRemoveMemberModal">
+      <div class="p-5 space-y-4">
+        <div>
+          <h3 class="text-base font-semibold">Remove member</h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            Remove
+            <span class="font-medium text-foreground">{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</span>
+            from this organization? They lose access immediately. This does not delete their user account.
+          </p>
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button variant="ghost" :disabled="removingMember" @click="showRemoveMemberModal = false">Cancel</Button>
+          <Button variant="destructive" :disabled="removingMember" @click="removeMember">
+            <Icon :name="removingMember ? 'lucide:loader-2' : 'lucide:user-minus'" class="w-4 h-4 mr-1" :class="removingMember && 'animate-spin'" />
+            Remove
+          </Button>
+        </div>
+      </div>
+    </UModal>
 
     <!-- Danger-zone archive / restore confirm sheet (Settings floor). -->
     <AppsOrganizationArchiveOrgSheet

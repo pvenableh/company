@@ -94,13 +94,40 @@ Social ships after launch. Mechanism already in place:
 - **Deploy note:** ensure `NUXT_PUBLIC_SOCIAL_PUBLISHING_ENABLED` is unset (or not
   `'true'`) in the production environment before launch.
 
+## Classic-retirement gap analysis (2026-07-21)
+
+A section-by-section audit of the classic page vs. the modern floors found these
+REAL gaps that blocked retirement — capabilities that existed ONLY on classic:
+
+- ✅ **Member role change / remove / add-existing user** — PORTED to the modern
+  Members floor (role `<select>`, remove confirm modal, add-existing search modal).
+- ✅ **Client portal lifecycle** (resend / revoke / restore) — PORTED as per-row
+  actions on the Members floor's Client Portal Access list.
+- ✅ **Archived-banner copy** ("restore from classic settings page") — updated to
+  point at the Settings-floor "Manage archive" control.
+- ⬜ **Stripe Connect "connect an existing account" (Standard OAuth)** — the
+  `connectExistingAccount` → `/api/stripe/connect/oauth-start` path plus its
+  `connect_linked`/`connect_error` return handlers still live only on classic.
+  Money's Deposits floor can create a NEW Express account but cannot link a
+  pre-existing one. This is the LAST blocker before classic can be redirected.
+
+Redirect risks still to handle when we retire classic:
+- `?tab=billing` in classic = Stripe Connect (getting paid), but modern
+  `?floor=billing` = SaaS subscription. Inbound links (`useNavPreferences.ts`,
+  `payouts.vue`) must route to `/apps/money?floor=deposits`, NOT a blind tab→floor map.
+- `/organization?tab=ai-usage` (TokenManagementModal) → `/apps/organization?floor=ai`.
+- ~12 inbound links to `/organization` to repoint (see gap-analysis notes).
+
 ## Sequencing
 
-1. ✅ Gate social connect UI (this pass).
-2. Communications bucket (extract transactional branding) — unblocks classic retirement.
-3. Billing & Money unify.
-4. Retire classic page + redirect.
-5. Integrations cleanup.
+1. ✅ Gate social connect UI.
+2. ✅ Communications bucket (transactional branding extracted to Email floor).
+3. ✅ Member & client management ported to modern Members floor (4 of 5 classic
+   gaps closed; archived-banner copy fixed).
+4. ⬜ Stripe Connect "link existing account" OAuth → modern home (last gap).
+5. ⬜ Retire classic page + redirect (repoint the ~12 inbound links; handle the
+   `?tab=billing` → Money-deposits semantic).
+6. ⬜ Integrations cleanup.
 
 Each is an independent PR; the taxonomy in `useAppNav.ts` lands first so floors
 have a home to move into.
