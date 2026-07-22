@@ -35,7 +35,7 @@ const ORG_DETAIL_FIELDS = [
 	'id', 'name', 'slug', 'logo', 'category', 'notes', 'website', 'phone', 'address',
 	'industry.id', 'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
-	'goals', 'goals_enabled', 'target_audience', 'location', 'default_hourly_rate',
+	'goals', 'goals_enabled', 'weather_enabled', 'target_audience', 'location', 'default_hourly_rate',
 ];
 
 const org = ref<any>(null);
@@ -134,6 +134,7 @@ const infoForm = ref({
 	industry: '' as string | number,
 	active: true,
 	goals_enabled: true,
+	weather_enabled: false,
 });
 
 watch(org, (o) => {
@@ -147,6 +148,7 @@ watch(org, (o) => {
 		industry: (typeof o.industry === 'object' ? o.industry?.id : o.industry) || '',
 		active: o.active !== false,
 		goals_enabled: o.goals_enabled !== false,
+		weather_enabled: o.weather_enabled === true,
 	};
 }, { immediate: true });
 
@@ -205,6 +207,7 @@ async function saveInfo() {
 			industry: infoForm.value.industry || null,
 			active: infoForm.value.active,
 			goals_enabled: infoForm.value.goals_enabled,
+			weather_enabled: infoForm.value.weather_enabled,
 		});
 		toast.add({ title: 'Saved', description: 'Organization info updated', color: 'green' });
 		await fetchOrg();
@@ -476,6 +479,15 @@ async function saveContact() {
 								<UToggle v-model="infoForm.goals_enabled" />
 								<span class="text-xs text-muted-foreground">
 									{{ infoForm.goals_enabled ? 'Goals enabled for everyone in this org' : 'Goals hidden across this org' }}
+								</span>
+							</div>
+						</UFormGroup>
+
+						<UFormGroup label="Weather widget">
+							<div class="flex items-center gap-3">
+								<UToggle v-model="infoForm.weather_enabled" />
+								<span class="text-xs text-muted-foreground">
+									{{ infoForm.weather_enabled ? 'Local weather shows in the app header' : 'Weather widget hidden' }}
 								</span>
 							</div>
 						</UFormGroup>

@@ -36,6 +36,8 @@
 						     See docs/dashboard-filters-localization-poc.md. -->
 						<ClientOnly>
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
+							<!-- Opt-in per-org local weather (Organization → Overview toggle). -->
+							<LayoutWeatherWidget v-if="user" />
 						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">

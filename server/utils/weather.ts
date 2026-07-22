@@ -17,13 +17,16 @@ export interface WeatherContext {
 	condition: string;
 	tempC: number | null;
 	city: string;
+	/** Raw Open-Meteo WMO code — lets a UI pick a precise icon. */
+	code?: number | null;
 }
 
 const cache = new Map<string, { data: WeatherContext | null; expiresAt: number }>();
 const TTL_MS = 60 * 60 * 1000; // one call per city per hour is plenty
 
-// Open-Meteo WMO weather codes → plain words.
-function describe(code: number): string {
+// Open-Meteo WMO weather codes → plain words. Exported so the greeting texture
+// and the header weather widget share one mapping.
+export function describeWeatherCode(code: number): string {
 	if (code === 0) return 'clear';
 	if (code <= 3) return 'partly cloudy';
 	if (code === 45 || code === 48) return 'foggy';
@@ -35,6 +38,32 @@ function describe(code: number): string {
 	return 'cloudy';
 }
 
+// Fetch current conditions for a coordinate (cached per ~0.1° per hour). Shared
+// by the edge-geo greeting texture and the client-callable /api/weather endpoint.
+export async function weatherFromLatLon(lat: number | string, lon: number | string, city = ''): Promise<WeatherContext | null> {
+	const nLat = Number(lat);
+	const nLon = Number(lon);
+	if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return null;
+
+	const key = `${nLat.toFixed(1)},${nLon.toFixed(1)}`;
+	const hit = cache.get(key);
+	if (hit && hit.expiresAt > Date.now()) return hit.data;
+
+	const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(nLat)}&longitude=${encodeURIComponent(nLon)}&current=temperature_2m,weather_code`;
+	const res: any = await $fetch(url, { timeout: 2500 }).catch(() => null);
+	const cur = res?.current;
+	const data: WeatherContext | null = (cur && typeof cur.weather_code === 'number')
+		? {
+			condition: describeWeatherCode(cur.weather_code),
+			tempC: Number.isFinite(cur.temperature_2m) ? Math.round(cur.temperature_2m) : null,
+			city,
+			code: cur.weather_code,
+		}
+		: null;
+	cache.set(key, { data, expiresAt: Date.now() + TTL_MS });
+	return data;
+}
+
 export async function getWeatherContext(event: H3Event): Promise<WeatherContext | null> {
 	try {
 		const lat = getRequestHeader(event, 'x-vercel-ip-latitude');
@@ -44,19 +73,7 @@ export async function getWeatherContext(event: H3Event): Promise<WeatherContext 
 			try { return decodeURIComponent(getRequestHeader(event, 'x-vercel-ip-city') || ''); }
 			catch { return ''; }
 		})();
-
-		const key = `${Number(lat).toFixed(1)},${Number(lon).toFixed(1)}`;
-		const hit = cache.get(key);
-		if (hit && hit.expiresAt > Date.now()) return hit.data;
-
-		const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,weather_code`;
-		const res: any = await $fetch(url, { timeout: 2500 }).catch(() => null);
-		const cur = res?.current;
-		const data: WeatherContext | null = (cur && typeof cur.weather_code === 'number')
-			? { condition: describe(cur.weather_code), tempC: Number.isFinite(cur.temperature_2m) ? Math.round(cur.temperature_2m) : null, city }
-			: null;
-		cache.set(key, { data, expiresAt: Date.now() + TTL_MS });
-		return data;
+		return await weatherFromLatLon(lat, lon, city);
 	} catch {
 		return null;
 	}
