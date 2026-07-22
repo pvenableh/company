@@ -538,6 +538,11 @@ const goTo = (route: string) => {
 				<!-- ═══ Command Center ═══ -->
 				<div class="space-y-6">
 
+				<!-- Getting-started activation checklist for new org admins. Self-hides
+				     once the essentials exist (or the admin dismisses it) — see
+				     useOnboardingProgress.shouldShow. -->
+				<OnboardingGettingStartedChecklist />
+
 				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
 					<!-- Badges -->

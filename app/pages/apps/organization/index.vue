@@ -95,6 +95,19 @@ const orgRoles = ref<any[]>([]);
 const orgMemberships = ref<any[]>([]);
 const showInviteMemberModal = ref(false);
 
+// Deep-link: `?invite=1` (e.g. from the dashboard getting-started checklist)
+// lands on the Members floor with the invite modal already open. Mirrors the
+// `?new=1` auto-open pattern on the clients/projects/invoices index pages.
+onMounted(() => {
+  if (route.query.invite === '1' && canManageOrg.value) {
+    floor.value = 'members';
+    showInviteMemberModal.value = true;
+    const { invite, ...rest } = route.query;
+    void invite;
+    router.replace({ query: rest });
+  }
+});
+
 async function fetchMembers() {
   if (!selectedOrg.value) return;
   try {
