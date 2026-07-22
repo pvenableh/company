@@ -16,7 +16,16 @@ import type {
   CreateTaskPayload,
 } from '~~/shared/projects';
 
-export function useProjectTimeline(opts: { portal?: boolean } = {}) {
+export function useProjectTimeline(opts: {
+  portal?: boolean;
+  /**
+   * LOCAL client filter getter (sentinel: null → all · 'org' → no client ·
+   * UUID → one client). When provided, it takes precedence over the legacy
+   * global `getClientFilter()`. Pass a getter (e.g. `() => props.clientId`)
+   * so fetches read the live value.
+   */
+  clientId?: () => string | null | undefined;
+} = {}) {
   const { user } = useDirectusAuth();
   const { selectedOrg } = useOrganization();
   const { getClientFilter } = useClients();
@@ -189,9 +198,16 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
       // proxy filter.
       if (!opts.portal) {
         filter._and.push({ organization: { _eq: selectedOrg.value } });
-        const clientFilter = getClientFilter();
-        if (Object.keys(clientFilter).length > 0) {
-          filter._and.push(clientFilter);
+        // A locally-supplied client filter wins over the legacy global one.
+        if (opts.clientId) {
+          const id = opts.clientId();
+          if (id === 'org') filter._and.push({ client: { _null: true } });
+          else if (id) filter._and.push({ client: { _eq: id } });
+        } else {
+          const clientFilter = getClientFilter();
+          if (Object.keys(clientFilter).length > 0) {
+            filter._and.push(clientFilter);
+          }
         }
       }
 

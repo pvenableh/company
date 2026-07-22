@@ -80,7 +80,7 @@
 					 project-embedded cases are covered by the copy in the left cluster
 					 above. -->
 				<div class="flex flex-row items-center gap-4">
-					<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+					<TicketsCreate v-if="!hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 
 					<!-- Due Date — universal Select (glass, dark-adaptive). The
 						 leading icon turns amber when a date filter is active. -->
@@ -99,6 +99,10 @@
 							</SelectItem>
 						</SelectContent>
 					</Select>
+
+					<!-- Client — LOCAL per-board filter (rounded-full pill). Hidden
+						 automatically when the org has no selectable clients. -->
+					<LayoutClientFilterSelect v-model="selectedClient" trigger-class="w-44" />
 
 					<!-- Project — universal Select with per-project ticket counts -->
 					<Select v-model="projectModel">
@@ -370,7 +374,11 @@ const config = useRuntimeConfig();
 
 // Use our composables
 const { selectedOrg, organizations, setupListeners: setupOrgListeners, getOrganizationFilter } = useOrganization();
-const { selectedClient, getClientFilter } = useClients();
+// LOCAL, per-board client filter (NOT the removed global chrome filter). The
+// `clientId` ref drives the toolbar <ClientFilterSelect>; `clientFilter` is
+// folded into generateFilter() below. Aliased to `selectedClient` so the
+// existing empty-state + watcher keep reading the same name.
+const { clientId: selectedClient, clientFilter } = useClientFilter();
 
 const {
 	selectedTeam,
@@ -636,11 +644,8 @@ const generateFilter = () => {
 	}
 
 	// Client filter — agency only. Portal proxy auto-scopes by client_portal_users walk.
-	if (!props.portal) {
-		const clientFilter = getClientFilter();
-		if (Object.keys(clientFilter).length > 0) {
-			filter._and.push(clientFilter);
-		}
+	if (!props.portal && Object.keys(clientFilter.value).length > 0) {
+		filter._and.push(clientFilter.value);
 	}
 
 	// Clean up empty filter
@@ -1010,7 +1015,7 @@ const handleTicketCreated = () => {
 
 // Check for active filters
 const hasActiveFilters = computed(() => {
-	return filterByAssignedTo.value || filterUnassigned.value || filterDueDate.value || selectedProject.value;
+	return filterByAssignedTo.value || filterUnassigned.value || filterDueDate.value || selectedProject.value || selectedClient.value;
 });
 
 // Clear all filters
@@ -1019,6 +1024,7 @@ const clearFilters = () => {
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
 	selectedProject.value = null;
+	selectedClient.value = null;
 };
 
 // Fetch projects for the current organization

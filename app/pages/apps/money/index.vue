@@ -481,6 +481,10 @@ const invoicesSearch = ref('');
 const invoicesStatus = ref<'all' | 'pending' | 'processing' | 'paid' | 'archived'>('all');
 const invoicesSort = ref('-due_date');
 const showInvoiceModal = ref(false);
+// LOCAL client filter for the invoices floor (own state; NOT the removed
+// global chrome filter). Passed to getInvoices() so it wins over the legacy
+// global selection.
+const { clientId: invoicesClientId } = useClientFilter();
 
 const invoiceStatusItems = [
   { key: 'all', label: 'All' },
@@ -498,6 +502,7 @@ async function fetchInvoices() {
       status: invoicesStatus.value !== 'all' ? invoicesStatus.value : undefined,
       sort: [invoicesSort.value],
       limit: 200,
+      clientId: invoicesClientId.value,
     });
     invoicesList.value = result.data;
     invoicesTotal.value = result.total;
@@ -773,7 +778,7 @@ watch(
 );
 
 // Refetch on filter / org / client changes (only if floor already loaded)
-watch([invoicesStatus, invoicesSort, selectedOrg, selectedClient], () => {
+watch([invoicesStatus, invoicesSort, selectedOrg, selectedClient, invoicesClientId], () => {
   if (invoicesLoaded.value) fetchInvoices();
 });
 watch([selectedOrg, selectedClient], () => {
@@ -1131,6 +1136,7 @@ const headerAction = computed(() => {
               :items="invoiceStatusItems"
               class="w-fit"
             />
+            <LayoutClientFilterSelect v-model="invoicesClientId" trigger-class="w-44" />
           </div>
           <AppsMoneyDateFilter
             v-if="invoicesList.length"

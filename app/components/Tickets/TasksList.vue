@@ -203,6 +203,12 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	// LOCAL client filter (sentinel: null | 'org' | UUID). Filters the parent
+	// tickets by their `client` relation.
+	clientId: {
+		type: String,
+		default: null,
+	},
 	limit: {
 		type: Number,
 		default: 20,
@@ -258,6 +264,7 @@ const {
 	teamId: props.teamId,
 	projectId: props.projectId,
 	userId: props.userId,
+	clientId: props.clientId,
 	limit: props.limit,
 });
 
@@ -289,6 +296,7 @@ watch(
 		teamId: props.teamId,
 		projectId: props.projectId,
 		userId: props.userId,
+		clientId: props.clientId,
 	}),
 	(newParams) => {
 		updateParams(newParams);

@@ -24,6 +24,13 @@ const props = defineProps<{
 	 * one or two projects. 0 (default) = always start collapsed.
 	 */
 	autoExpandThreshold?: number;
+	/**
+	 * LOCAL client filter (sentinel: null → all · 'org' → no client · UUID →
+	 * one client) driven by the host's `<ClientFilterSelect>`. Threaded into the
+	 * project fetch so the Timeline scopes to the chosen client without the
+	 * removed global filter.
+	 */
+	clientId?: string | null;
 }>();
 
 // ── Data composables ──
@@ -37,7 +44,10 @@ const {
 	personalTasks,
 } = useUnifiedTimeline({ portal: props.portal });
 
-const { projects, loading: projectsLoading, error, fetchProjects, fetchProjectDetails, showAllCompleted, toggleShowAllCompleted } = useProjectTimeline({ portal: props.portal });
+const { projects, loading: projectsLoading, error, fetchProjects, fetchProjectDetails, showAllCompleted, toggleShowAllCompleted } = useProjectTimeline({
+	portal: props.portal,
+	clientId: () => props.clientId,
+});
 // Pin-to-top: same optimistic composable ProjectWorkspace + the carousel use.
 // Portal mode is read-only, so the toggle is hidden there.
 const { togglePin } = usePinnable('projects');
@@ -108,7 +118,12 @@ async function fetchAllData() {
 	await Promise.all([fetchProjects(), fetchAll()]);
 }
 
-watch([selectedOrg, selectedClient], () => fetchAllData());
+// Refetch on org change, the legacy global client, or the LOCAL `clientId` prop.
+watch([selectedOrg, selectedClient, () => props.clientId], () => fetchAllData());
+
+// A client scope is active from either the local prop or the legacy global —
+// used by the empty-state copy below.
+const hasClientScope = computed(() => !!props.clientId || !!selectedClient.value);
 
 // Mine/All toggle → refetch tickets + tasks with the new predicate.
 // Skip in portal mode since the proxy is already user-scoped.
@@ -1025,9 +1040,9 @@ const showUndated = ref(false);
 			</template>
 			<template v-else>
 				<p class="text-sm font-medium text-foreground">No projects on the timeline</p>
-				<p class="text-xs text-muted-foreground mt-1">{{ portal ? 'Nothing scheduled yet — your team will populate this view.' : selectedClient ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
+				<p class="text-xs text-muted-foreground mt-1">{{ portal ? 'Nothing scheduled yet — your team will populate this view.' : hasClientScope ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
 				<NuxtLink
-					v-if="!portal && !selectedClient"
+					v-if="!portal && !hasClientScope"
 					to="/projects?new=1"
 					class="inline-flex items-center gap-1.5 mt-4 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
 				>

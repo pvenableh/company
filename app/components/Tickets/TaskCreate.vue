@@ -14,7 +14,7 @@
 -->
 <template>
 	<div>
-		<UiActionButton icon="lucide:plus" @click="openForm">New Task</UiActionButton>
+		<UiActionButton v-if="!hideTrigger" icon="lucide:plus" @click="openForm">New Task</UiActionButton>
 
 		<Teleport to="body">
 			<Transition
@@ -109,9 +109,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 
 const props = defineProps({
 	organizationId: { type: String, default: null },
+	/**
+	 * Suppress the built-in "New Task" trigger. The host renders its own CTA
+	 * (e.g. a page-header Tier-1 Button) and opens this via `open()`.
+	 */
+	hideTrigger: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['taskCreated']);
+
+defineExpose({ open: openForm });
 
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const taskItems = useDirectusItems('tasks');
