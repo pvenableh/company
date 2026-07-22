@@ -13,6 +13,13 @@ export function useInvoices() {
     sort?: string[];
     limit?: number;
     page?: number;
+    /**
+     * LOCAL, per-surface client filter (sentinel: null → all · 'org' → no
+     * client · UUID → one client). When the caller passes this key at all
+     * (even as null), it takes precedence over the legacy global
+     * `getClientFilter()`. Omit entirely to keep the old global behaviour.
+     */
+    clientId?: string | null;
   }): Promise<{ data: Invoice[]; total: number }> => {
     const filter: any = { _and: [] };
     const isAdmin = canAccess('invoices');
@@ -29,10 +36,17 @@ export function useInvoices() {
       filter._and.push({ bill_to: { id: { _in: userOrgIds } } });
     }
 
-    // Client filter
-    const clientFilter = getClientFilter();
-    if (Object.keys(clientFilter).length > 0) {
-      filter._and.push(clientFilter);
+    // Client filter — a locally-supplied `clientId` wins; otherwise fall back
+    // to the legacy global selection (dormant on most surfaces now).
+    if (params && 'clientId' in params) {
+      const id = params.clientId;
+      if (id === 'org') filter._and.push({ client: { _null: true } });
+      else if (id) filter._and.push({ client: { _eq: id } });
+    } else {
+      const clientFilter = getClientFilter();
+      if (Object.keys(clientFilter).length > 0) {
+        filter._and.push(clientFilter);
+      }
     }
 
     if (params?.status && params.status !== 'all') {

@@ -5,6 +5,7 @@ export function useTasksList({
 	teamId = null,
 	projectId = null,
 	userId = null,
+	clientId = null,
 	limit = 20,
 	sortBy = 'due_date',
 } = {}) {
@@ -34,6 +35,10 @@ export function useTasksList({
 	const teamIdParam = ref(teamId);
 	const projectIdParam = ref(projectId);
 	const userIdParam = ref(userId);
+	// LOCAL client filter (sentinel-based, mirrors useClientFilter):
+	//   null  → no filter · 'org' → tickets with no client · UUID → one client.
+	// Applied to the parent `tickets` collection (this list is ticket-nested).
+	const clientIdParam = ref(clientId);
 
 	const effectiveOrgId = computed(() => {
 		return orgIdParam.value || selectedOrg.value;
@@ -65,6 +70,14 @@ export function useTasksList({
 
 		if (projectIdParam.value) {
 			filter._and.push({ project: { _eq: projectIdParam.value } });
+		}
+
+		if (clientIdParam.value) {
+			filter._and.push(
+				clientIdParam.value === 'org'
+					? { client: { _null: true } }
+					: { client: { _eq: clientIdParam.value } },
+			);
 		}
 
 		if (userIdParam.value) {
@@ -235,12 +248,13 @@ export function useTasksList({
 		);
 	};
 
-	watch([effectiveOrgId, effectiveTeamId, projectIdParam, userIdParam], () => {
+	watch([effectiveOrgId, effectiveTeamId, projectIdParam, userIdParam, clientIdParam], () => {
 		console.log('Effective filter values changed:', {
 			organization: effectiveOrgId.value,
 			team: effectiveTeamId.value,
 			project: projectIdParam.value,
 			user: userIdParam.value,
+			client: clientIdParam.value,
 		});
 
 		if (subscriptionInitialized && updateFilterFunc) {
@@ -269,6 +283,7 @@ export function useTasksList({
 		if ('teamId' in newParams) teamIdParam.value = newParams.teamId;
 		if ('projectId' in newParams) projectIdParam.value = newParams.projectId;
 		if ('userId' in newParams) userIdParam.value = newParams.userId;
+		if ('clientId' in newParams) clientIdParam.value = newParams.clientId;
 	};
 
 	const toggleTaskStatus = async (taskId) => {

@@ -110,7 +110,6 @@ watch(floor, (next) => {
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { user } = useDirectusAuth();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
-const { selectedClient, getClientFilter } = useClients();
 // Team filter is shared state via `useState`, so the picker on the Projects
 // floor + the TicketsBoard's filter both read/write the same `selectedTeam`.
 // Changing it triggers a refetch on the active floor.
@@ -123,6 +122,10 @@ const projectsList = ref<any[]>([]);
 const projectsLoading = ref(false);
 const projectStatusFilter = ref<'active' | 'completed' | 'archived' | 'all'>('active');
 const projectsSearch = ref('');
+// LOCAL client filter for the Projects floor (own state; NOT the removed global
+// chrome filter). Drives both the Table (fetchProjects) and Timeline (Gantt
+// via its `clientId` prop) views.
+const { clientId: projectsClientId } = useClientFilter();
 
 const projectStatusItems = [
   { key: 'active', label: 'Active' },
@@ -136,7 +139,9 @@ async function fetchProjects() {
   try {
     const filter: Record<string, any> = {};
     Object.assign(filter, getOrganizationFilter());
-    Object.assign(filter, getClientFilter());
+    // LOCAL client filter (sentinel: null → all · 'org' → no client · UUID).
+    if (projectsClientId.value === 'org') filter.client = { _null: true };
+    else if (projectsClientId.value) filter.client = { _eq: projectsClientId.value };
     // Direct team filter — `projects.team` is a M2O field. Matches the same
     // shape TicketsBoard uses for tickets.team, so both floors are aligned.
     if (selectedTeam.value) {
@@ -216,6 +221,9 @@ const debouncedFetchProjects = useDebounceFn(fetchProjects, 300);
 const tasksTab = ref<'assigned' | 'organization' | 'all'>('assigned');
 const tasksFilterUserId = computed(() => (tasksTab.value === 'assigned' ? user.value?.id ?? null : null));
 const tasksOrgId = computed(() => selectedOrg.value || null);
+// LOCAL client filter for the Tasks floor (own state — NOT the removed global
+// chrome filter). Filters the underlying tickets by their `client` relation.
+const { clientId: tasksClientId } = useClientFilter();
 
 const taskTabs = [
   { key: 'assigned', label: 'Assigned to Me' },
@@ -230,6 +238,17 @@ const taskTabs = [
 const tasksListRef = ref<{ refresh?: () => void } | null>(null);
 function onTaskCreated() {
   tasksListRef.value?.refresh?.();
+}
+
+// Create flows are driven from the AppHeader (universal position) via these
+// exposed `open()` methods; the board/list render the modals with their own
+// triggers hidden. Columns are needed by <TicketsCreate>.
+const ticketColumns = TICKET_BOARD_COLUMNS;
+const ticketsCreateRef = ref<{ open: () => void } | null>(null);
+const taskCreateRef = ref<{ open: () => void } | null>(null);
+const { triggerRefresh: triggerTicketsRefresh } = useTicketsStore();
+function onTicketCreated() {
+  triggerTicketsRefresh();
 }
 
 // ── Meetings floor ──────────────────────────────────────────────────────────
@@ -348,7 +367,7 @@ watch(
 );
 
 // Refetch projects when filters change (only if Projects floor is active or already loaded)
-watch([projectStatusFilter, selectedOrg, selectedClient, selectedTeam], () => {
+watch([projectStatusFilter, selectedOrg, projectsClientId, selectedTeam], () => {
   if (projectsLoaded.value) fetchProjects();
 });
 
@@ -407,10 +426,19 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
             <Icon name="lucide:chevron-down" class="w-3 h-3 ml-1 text-muted-foreground" />
           </Button>
         </UDropdown>
-        <!-- TODO(ios-sweep): lift New Project to a bottom sheet (NewProjectSheet) -->
+        <!-- Primary create CTA — Tier 1, universal position (page header),
+             floor-aware. Mirrors the Money app's per-floor headerAction. -->
         <Button v-if="floor === 'projects'" size="sm" @click="showNewProject = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Project
+        </Button>
+        <Button v-else-if="floor === 'tickets'" size="sm" @click="ticketsCreateRef?.open()">
+          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+          New Ticket
+        </Button>
+        <Button v-else-if="floor === 'tasks'" size="sm" @click="taskCreateRef?.open()">
+          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+          New Task
         </Button>
       </template>
     </AppHeader>
@@ -440,14 +468,18 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
             @update:model-value="(v) => (projectsView = v as ProjectsView)"
           />
 
-          <!-- Table-only filters. The Gantt view does its own filtering
-               inside ProjectTimelineUnifiedGantt. -->
+          <!-- Client filter — applies to BOTH views (Table via fetchProjects,
+               Timeline via the Gantt's `client-id` prop). Hidden when the org
+               has no clients. -->
+          <LayoutClientFilterSelect v-model="projectsClientId" trigger-class="w-44" />
+
+          <!-- Table-only filters. -->
           <template v-if="projectsView === 'table'">
             <input
               v-model="projectsSearch"
               type="search"
               placeholder="Search projects..."
-              class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
+              class="flex-1 min-w-48 rounded-full glass-field px-3.5 py-2 text-sm"
               @input="debouncedFetchProjects"
             />
             <UTabs
@@ -460,7 +492,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
 
         <ClientOnly v-if="projectsView === 'timeline'">
           <div class="min-h-svh">
-            <ProjectTimelineUnifiedGantt />
+            <ProjectTimelineUnifiedGantt :client-id="projectsClientId" />
           </div>
           <template #fallback>
             <div class="flex items-center justify-center min-h-[400px]">
@@ -493,7 +525,9 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
             :items="taskTabs.map((t) => ({ key: t.key, label: t.label }))"
             class="w-fit"
           />
-          <TicketsTaskCreate :organization-id="tasksOrgId" @task-created="onTaskCreated" />
+          <!-- LOCAL per-floor client filter (hidden when the org has no clients).
+               New Task lives in the AppHeader now (universal position). -->
+          <LayoutClientFilterSelect v-model="tasksClientId" trigger-class="w-44 ml-auto" />
         </div>
 
         <div class="ios-card p-5">
@@ -502,6 +536,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
               ref="tasksListRef"
               :organizationId="tasksOrgId"
               :userId="tasksFilterUserId"
+              :clientId="tasksClientId"
               :limit="50"
             />
             <template #fallback>
@@ -516,7 +551,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
       <!-- ── Tickets floor ────────────────────────────────────────────── -->
       <ClientOnly v-else-if="floor === 'tickets'">
         <div class="xl:flex xl:items-center xl:justify-center w-full min-h-svh">
-          <TicketsBoard />
+          <TicketsBoard hide-create />
         </div>
         <template #fallback>
           <div class="flex items-center justify-center min-h-[400px]">
@@ -627,6 +662,24 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
     </LayoutPageContainer>
 
     <ProjectsFormModal v-model="showNewProject" @created="onProjectCreated" />
+
+    <!-- Create flows for the Tickets + Tasks floors. Triggers live in the
+         AppHeader (universal position); these render the (teleported) modals
+         with their own buttons hidden and are opened via the exposed open(). -->
+    <ClientOnly>
+      <TicketsCreate
+        ref="ticketsCreateRef"
+        hide-trigger
+        :columns="ticketColumns"
+        @ticket-created="onTicketCreated"
+      />
+      <TicketsTaskCreate
+        ref="taskCreateRef"
+        hide-trigger
+        :organization-id="tasksOrgId"
+        @task-created="onTaskCreated"
+      />
+    </ClientOnly>
   </div>
 </template>
 

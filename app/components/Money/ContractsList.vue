@@ -39,6 +39,12 @@ const contractSlide = useAppSlideOver('contract');
 const { selectedOrg } = useOrganization();
 const contractItems = useDirectusItems('contracts');
 
+// LOCAL client filter — only surfaced in the unscoped (Money/Documents floor)
+// usage; a parent that already passes a `clientId`/`leadId`/`projectId` scope
+// prop is showing one entity's docs, so the picker would be redundant.
+const { clientId: localClientId } = useClientFilter();
+const showClientFilter = computed(() => !props.clientId && props.leadId == null && !props.projectId);
+
 const items = ref<any[]>([]);
 const loading = ref(true);
 const search = ref('');
@@ -49,19 +55,28 @@ const statusOptions = [
 	...Object.entries(CONTRACT_STATUS_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
+// Client FK is the canonical path, but legacy/seeded contracts often only
+// carry the lead pointer — fall back to the lead.resulting_client (or source
+// proposal's lead) so the scope matches what a user would intuitively expect.
+function clientScope(id: string): Record<string, any> {
+	return {
+		_or: [
+			{ client: { _eq: id } },
+			{ lead: { resulting_client: { _eq: id } } },
+			{ proposal: { lead: { resulting_client: { _eq: id } } } },
+		],
+	};
+}
+
 function buildScopeFilter(): Record<string, any> | null {
 	if (props.clientId) {
-		// Direct client FK is the canonical path, but legacy/seeded
-		// contracts often only carry the lead pointer — fall back to
-		// the lead.resulting_client (or source proposal's lead) so the
-		// tab matches what a user would intuitively expect.
-		return {
-			_or: [
-				{ client: { _eq: props.clientId } },
-				{ lead: { resulting_client: { _eq: props.clientId } } },
-				{ proposal: { lead: { resulting_client: { _eq: props.clientId } } } },
-			],
-		};
+		return clientScope(props.clientId);
+	}
+	// LOCAL filter (Money/Documents floor). 'org' → contracts with no client.
+	if (showClientFilter.value && localClientId.value) {
+		return localClientId.value === 'org'
+			? { client: { _null: true } }
+			: clientScope(localClientId.value);
 	}
 	if (props.leadId != null) {
 		const lid = Number(props.leadId);
@@ -126,6 +141,7 @@ const debouncedFetch = useDebounceFn(fetchData, 300);
 watch(search, () => debouncedFetch());
 watch(statusFilter, () => fetchData());
 watch(() => [props.clientId, props.leadId, props.projectId, selectedOrg.value], () => fetchData());
+watch(localClientId, () => fetchData());
 
 onMounted(fetchData);
 
@@ -179,6 +195,7 @@ function openPanel(id: string | number, ev?: MouseEvent) {
 				size="sm"
 				class="w-36"
 			/>
+			<LayoutClientFilterSelect v-if="showClientFilter" v-model="localClientId" trigger-class="w-44" />
 		</div>
 
 		<div v-if="loading && !items.length" class="flex items-center justify-center py-12">

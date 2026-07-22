@@ -1,8 +1,10 @@
 <template>
 	<div>
 		<!-- Create Button — `md` size (h-8 px-3) so it matches the h-8 filter
-			 pills / Select triggers it sits beside in the board toolbar. -->
-		<UiActionButton size="md" icon="lucide:plus" @click="openForm">
+			 pills / Select triggers it sits beside in the board toolbar. Hidden
+			 when a host surface (page header) provides its own trigger and drives
+			 this via the exposed `open()` method. -->
+		<UiActionButton v-if="!hideTrigger" size="md" icon="lucide:plus" @click="openForm">
 			New Ticket
 		</UiActionButton>
 
@@ -228,6 +230,15 @@ const props = defineProps({
 	defaultOrganization: {
 		type: String,
 		default: null,
+	},
+	/**
+	 * Suppress the built-in "New Ticket" trigger button. The host renders its
+	 * own CTA (e.g. a page-header Tier-1 Button) and opens this via the exposed
+	 * `open()` method. The teleported modal still mounts.
+	 */
+	hideTrigger: {
+		type: Boolean,
+		default: false,
 	},
 });
 
@@ -682,6 +693,9 @@ const fetchAllOrganizationUsers = async (orgId) => {
 		loadingUsers.value = false;
 	}
 };
+
+// Let a host surface open the form from its own trigger (e.g. page-header CTA).
+defineExpose({ open: openForm });
 
 // Lifecycle hooks
 onMounted(async () => {
