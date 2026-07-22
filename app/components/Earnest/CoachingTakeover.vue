@@ -211,10 +211,19 @@ async function addStep() {
 }
 
 // ── Greeting + suggestions (before the first exchange) ───────────────────────
-const greeting = computed(() => {
+// Prefer LIVE page awareness (the entity you're actually looking at) over the
+// opener's `scope`, which is stale when Focus is entered via the dock's maximize
+// button (that path only resizes and never sets scope). This is what makes the
+// full-screen focus announce the specific project/client/ticket you're on.
+const focusEntityLabel = computed(() => {
+	if (aware.hasEntity.value && aware.focus.value) return aware.focus.value;
 	const s = scope.value;
-	if (s?.mode === 'entity' && s.label) {
-		return `Let's give ${s.label} the care it deserves.\nWhat's the honest state of it right now?`;
+	if (s?.mode === 'entity' && s.label) return s.label;
+	return null;
+});
+const greeting = computed(() => {
+	if (focusEntityLabel.value) {
+		return `Let's give ${focusEntityLabel.value} the care it deserves.\nWhat's the honest state of it right now?`;
 	}
 	return `I'm here. No rush.\nWhat's the honest version of how things are right now?`;
 });
@@ -222,7 +231,7 @@ const suggestions = computed(() => {
 	if (canWork.value) {
 		return ['Break this into honest steps', 'What should I do first?', "What am I avoiding?", 'Draft my next move'];
 	}
-	if (scope.value?.mode === 'entity') {
+	if (focusEntityLabel.value) {
 		return ['What matters most here?', 'Help me find the next true step', "What's weighing on this?", 'Draft my next move'];
 	}
 	return [EARNEST_LIFT_OPENER, "I'm stretched thin — where do I start?", 'Help me plan my next hour', 'What did I do well today?'];
@@ -353,6 +362,17 @@ const markRef = ref<{ expand: () => void } | null>(null);
 					<div class="coach__brand">
 						<EarnestPresenceMark ref="markRef" :height="24" auto-reveal :still="reduceMotion" />
 						<span class="coach__focus-tag">Focus</span>
+						<!-- Scoped-entity chip: shows the project / client / ticket the
+						     conversation is about, so full-screen focus makes the scope
+						     explicit (not just the docked panel). -->
+						<span
+							v-if="focusEntityLabel"
+							class="coach__entity"
+							:title="`Focused on ${focusEntityLabel}`"
+						>
+							<Icon name="lucide:target" class="coach__entity-icon" />
+							{{ focusEntityLabel }}
+						</span>
 						<p class="coach__mantra">
 							<Transition name="mantra" mode="out-in">
 								<span :key="mantraIdx">{{ MANTRAS[mantraIdx] }}</span>
@@ -513,6 +533,8 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 18px clamp(16px, 4vw, 40px) 6px; }
 .coach__brand { display: flex; align-items: center; gap: 12px; min-width: 0; color: hsl(var(--aura-foreground)); }
 .coach__focus-tag { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(238,242,248,.5); padding: 3px 8px; border-radius: 999px; border: 1px solid hsl(var(--aura-rim)); }
+.coach__entity { display: inline-flex; align-items: center; gap: 5px; max-width: 240px; font-size: 11px; font-weight: 500; letter-spacing: .01em; color: rgba(238,242,248,.82); padding: 3px 9px 3px 7px; border-radius: 999px; border: 1px solid hsl(var(--aura-rim)); background: hsl(var(--aura-foreground) / 0.06); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coach__entity-icon { width: 11px; height: 11px; flex-shrink: 0; opacity: .7; }
 .coach__mantra { margin: 0; height: 1.25em; overflow: hidden; font-family: var(--body-font, inherit); font-style: italic; font-size: 12.5px; color: rgba(238,242,248,.4); min-width: 0; }
 .mantra-enter-active, .mantra-leave-active { transition: opacity .5s ease, transform .5s ease; }
 .mantra-enter-from { opacity: 0; transform: translateY(6px); }
