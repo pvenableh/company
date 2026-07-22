@@ -82,9 +82,9 @@ const goToSession = () => {
     : (note.value.source_session as any)?.id;
   if (sessionId) {
     emit('update:modelValue', false);
-    // The full-page chat is retired — open the unified Earnest panel. (Deep-link
-    // to this exact past session is a follow-up once the panel history exposes it.)
-    openEarnestPanel();
+    // Open the unified Earnest panel restored to the exact conversation this
+    // note was saved out of.
+    openEarnestSession(String(sessionId));
   }
 };
 

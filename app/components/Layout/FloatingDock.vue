@@ -249,8 +249,7 @@ const {
 	resumeTimer,
 	discardTimer,
 } = useTimeTracker();
-const { usageSummary, refresh: refreshTokenUsage } = useAITokens();
-const { isQuickStreaming } = useEarnestChat();
+const { usageSummary } = useAITokens();
 
 // ── Token usage ring on the AI button ──
 const AI_RING_CIRC = 2 * Math.PI * 13; // r=13 → ~81.68
@@ -281,13 +280,6 @@ const aiBtnTitle = computed(() => {
 	const balance = s.orgBalance != null ? s.orgBalance.toLocaleString() : '—';
 	return `Earnest · ${aiUsagePercent.value}% used · ${balance} tokens left`;
 });
-
-// Refresh the meter after each AI completion so the ring stays live.
-if (import.meta.client) {
-	watch(isQuickStreaming, (streaming, prev) => {
-		if (prev && !streaming) refreshTokenUsage();
-	});
-}
 
 const emit = defineEmits(['open-ai']);
 const activePanel = activeDockPanel;

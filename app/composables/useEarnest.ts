@@ -35,6 +35,12 @@ const _initialPrompt = ref('');
 
 export const earnestMode = _mode;
 export const earnestInitialPrompt = _initialPrompt;
+/**
+ * A specific past conversation to restore on open (e.g. deep-linking from the
+ * note that was saved out of it). The panel loads it into the current bucket
+ * once open, then clears this — same mechanism the history browser uses.
+ */
+export const earnestPendingSession = ref<string | null>(null);
 /** The overlay (dock or full) is showing. */
 export const earnestIsOpen = computed(() => _mode.value !== 'rest');
 
@@ -56,10 +62,11 @@ export function setEarnestSize(size: EarnestSize) {
 	_mode.value = size;
 }
 
-/** Collapse Earnest to rest and clear any pending seed prompt. */
+/** Collapse Earnest to rest and clear any pending seed prompt / session. */
 export function closeEarnest() {
 	_mode.value = 'rest';
 	_initialPrompt.value = '';
+	earnestPendingSession.value = null;
 }
 
 export function useEarnest() {
