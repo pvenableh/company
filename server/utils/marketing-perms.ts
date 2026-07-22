@@ -27,7 +27,7 @@ export async function requireOrgMembership(event: any, organizationId: string): 
 		throw createError({ statusCode: 400, message: 'organizationId is required' });
 	}
 	const directus = getTypedDirectus();
-	const memberships = await directus.request(
+	const memberships = await withTransientRetry(() => directus.request(
 		readItems('org_memberships', {
 			filter: {
 				_and: [
@@ -39,7 +39,7 @@ export async function requireOrgMembership(event: any, organizationId: string): 
 			fields: ['id'],
 			limit: 1,
 		}),
-	) as any[];
+	), { label: 'requireOrgMembership' }) as any[];
 	if (!memberships?.length) {
 		throw createError({ statusCode: 403, message: 'You are not a member of this organization' });
 	}

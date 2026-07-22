@@ -11,6 +11,13 @@ let _audioUnlocked = false;
 let _notificationAudio = null;
 let _unlockListenersAdded = false;
 
+// Coalesce the initial notifications fetch across the many useNotifications()
+// consumers that each fire loadNotifications() on login. `data` is a per-instance
+// ref, so we share only the NETWORK request — each instance still sets its own
+// `data` from the shared result. Mirrors the other login-burst dedup guards.
+let _notifLoadInflight = null;
+let _notifLoadUser = null;
+
 export function useNotifications() {
 	const config = useRuntimeConfig();
 	const { readNotifications, createNotification, updateNotification } = useDirectusNotifications();
@@ -582,14 +589,34 @@ export function useNotifications() {
 
 	// Load initial notifications
 	const loadNotifications = async () => {
-		if (!user.value?.id) return;
+		const uid = user.value?.id;
+		if (!uid) return;
 
-		try {
-			const initialNotifications = await readNotifications({
+		// Coalesce concurrent callers onto ONE network request; each instance
+		// still applies the shared result to its own `data`.
+		let p;
+		if (_notifLoadInflight && _notifLoadUser === uid) {
+			p = _notifLoadInflight;
+		} else {
+			_notifLoadUser = uid;
+			p = readNotifications({
 				filter: getNotificationFilter(),
 				fields: subscriptionFields,
 				sort: ['-timestamp'],
 			});
+			_notifLoadInflight = p;
+			// Clear once settled so a later refresh refetches (only collapses the
+			// concurrent login burst, not future loads).
+			p.finally(() => {
+				if (_notifLoadInflight === p) {
+					_notifLoadInflight = null;
+					_notifLoadUser = null;
+				}
+			}).catch(() => {});
+		}
+
+		try {
+			const initialNotifications = await p;
 			data.value = initialNotifications;
 			previousCount.value = initialNotifications.length;
 		} catch (error) {

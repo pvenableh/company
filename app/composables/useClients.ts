@@ -17,6 +17,21 @@ import { notifyEntityChange } from './useEntityStore';
  *   2. "org"  → Organization's own work (items with no client assigned)
  *   3. UUID   → Specific client
  */
+
+// Module-level coalescing for the active-clients fetch. useClients() runs in
+// ~57 files, and each call registers its own selectedOrg watcher → its own
+// fetchActiveClients(). The useDirectusItems cache only collapses SUCCESSFUL
+// reads, so a failing or slow endpoint produced N duplicate requests + N error
+// logs on the login burst. This coalesces every concurrent caller for the same
+// org onto ONE in-flight promise — mirrors useOrganization's _orgInitInflight.
+let _activeClientsInflight: Promise<void> | null = null;
+let _activeClientsInflightOrg: string | null = null;
+// Last completed attempt (success OR failure) — collapses STAGGERED duplicate
+// calls (each consumer awaits role resolution at a different tick, so they don't
+// all overlap the inflight guard).
+let _activeClientsLastOrg: string | null = null;
+let _activeClientsLastAt = 0;
+
 export function useClients() {
   const items = useDirectusItems<Client>('clients');
   const clientTeamsItems = useDirectusItems('clients_teams');
@@ -219,12 +234,34 @@ export function useClients() {
   }
 
   // ── Fetch active clients for the dropdown ─────────────────────────────────
-  async function fetchActiveClients() {
-    if (!selectedOrg.value) {
+  // Public entry — coalesces duplicate/concurrent callers for the same org into
+  // one request (see _activeClientsInflight note at module scope).
+  function fetchActiveClients(opts?: { force?: boolean }): Promise<void> {
+    const orgId = selectedOrg.value;
+    if (!orgId) {
       clientList.value = [];
-      return;
+      return Promise.resolve();
     }
+    if (_activeClientsInflight && _activeClientsInflightOrg === orgId) {
+      return _activeClientsInflight;
+    }
+    // Skip a repeat load for the same org within a short window — collapses the
+    // staggered duplicate calls on login (a different org always refetches;
+    // pass { force } to bypass, e.g. after a client mutation).
+    if (!opts?.force && _activeClientsLastOrg === orgId && Date.now() - _activeClientsLastAt < 3000) {
+      return Promise.resolve();
+    }
+    _activeClientsInflightOrg = orgId;
+    _activeClientsInflight = runFetchActiveClients(orgId).finally(() => {
+      _activeClientsInflight = null;
+      _activeClientsInflightOrg = null;
+      _activeClientsLastOrg = orgId;
+      _activeClientsLastAt = Date.now();
+    });
+    return _activeClientsInflight;
+  }
 
+  async function runFetchActiveClients(orgId: string) {
     clientsLoading.value = true;
     try {
       // First resolve which clients this user can see
@@ -238,7 +275,7 @@ export function useClients() {
           // status='published' here so the header dropdown matches the
           // page's Active tab.
           { status: { _eq: 'published' } },
-          { organization: { _eq: selectedOrg.value } },
+          { organization: { _eq: orgId } },
         ],
       };
 
@@ -540,7 +577,7 @@ export function useClients() {
       }
     }
 
-    await fetchActiveClients();
+    await fetchActiveClients({ force: true });
     notifyEntityChange<Client>('clients', { id: String((result as any)?.id), op: 'create', item: result });
     return result;
   };
@@ -559,14 +596,14 @@ export function useClients() {
       ...payload,
       last_activity_at: (payload as any).last_activity_at || new Date().toISOString(),
     } as any);
-    await fetchActiveClients();
+    await fetchActiveClients({ force: true });
     notifyEntityChange<Client>('clients', { id, op: 'update', item: result });
     return result;
   };
 
   const deleteClient = async (id: string): Promise<boolean> => {
     const result = await items.remove(id);
-    await fetchActiveClients();
+    await fetchActiveClients({ force: true });
     notifyEntityChange<Client>('clients', { id, op: 'remove' });
     return result;
   };

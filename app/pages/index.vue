@@ -856,13 +856,15 @@ const goTo = (route: string) => {
 
 					<!-- Active client + project carousels — quick access to the
 					     most-recently-active rows. Cards open the corresponding
-					     slide-over panel. -->
-					<ClientOnly>
+					     slide-over panel. Deferred until scrolled into view so their
+					     clients/projects fetches leave the critical login burst
+					     (they sit below the fold on the presence-home landing). -->
+					<DeferUntilVisible min-height="180px">
 						<CommandCenterActiveClientCarousel />
-					</ClientOnly>
-					<ClientOnly>
+					</DeferUntilVisible>
+					<DeferUntilVisible min-height="180px">
 						<CommandCenterActiveProjectCarousel />
-					</ClientOnly>
+					</DeferUntilVisible>
 
 					<!-- Today's Briefs + CRM Pulse share one row on large screens. -->
 					<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

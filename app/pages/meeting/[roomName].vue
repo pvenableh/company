@@ -235,9 +235,12 @@
 					<span>Snapshot</span>
 				</button>
 				<button
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
-					title="Ask Earnest about this meeting"
-					@click="openEarnestPanel()"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg',
+						earnestOpen ? 'bg-white text-black' : 'bg-black/60 hover:bg-black/80 text-white',
+					]"
+					:title="earnestOpen ? 'Hide Earnest' : 'Ask Earnest about this meeting'"
+					@click="earnestOpen = !earnestOpen"
 				>
 					<EarnestIcon class="w-3.5 h-3.5" />
 					<span>Ask Earnest</span>
@@ -258,15 +261,31 @@
 			</div>
 		</div>
 
-		<!-- Floating dock + the unified Earnest panel. For a signed-in user the
-		     panel is registered to this meeting entity (video_meeting) with the
-		     live prompts, so it's the same Earnest as everywhere else, scoped to
-		     this call. Anonymous guests get no assistant. -->
+		<!-- Floating dock. The docked Earnest panel is retired; a signed-in user
+		     opening Earnest here gets Focus (mounted globally in app.vue), scoped
+		     to this call via the same entity context. Anonymous guests get no
+		     assistant. NOTE: Focus is full-screen, so it overlays the call — if the
+		     meeting room wants Earnest side-by-side with video, it should get a
+		     bespoke inline surface rather than the retired dock. -->
+		<!-- Inline Earnest — a non-modal side rail scoped to this call, so the
+		     assistant sits BESIDE the video instead of the full-screen Focus
+		     takeover the retired dock's launcher would now open. Toggled by the
+		     "Ask Earnest" pill. Signed-in users only. -->
+		<ClientOnly>
+			<MeetingEarnestPanel
+				v-if="hasJoined && currentUser && meeting"
+				:open="earnestOpen"
+				:meeting-id="String(meeting.id)"
+				:title="meeting.title"
+				@close="earnestOpen = false"
+			/>
+		</ClientOnly>
+
+		<!-- Floating dock -->
 		<ClientOnly>
 			<div class="meeting-dock-override">
 				<LayoutFloatingDock />
 			</div>
-			<AIEarnestPanel v-if="currentUser" />
 		</ClientOnly>
 	</div>
 </template>
@@ -515,6 +534,10 @@ const livePrompts = computed(() => {
 // live transcript — so "what have we discussed so far?" still works mid-call,
 // exactly as the old entity sidebar did.
 const { setEntity: setEarnestEntity, clearEntity: clearEarnestEntity } = useEntityPageContext();
+
+// Inline Earnest side rail (bespoke to the meeting — see MeetingEarnestPanel).
+// Toggled by the "Ask Earnest" pill; non-modal so the call stays visible.
+const earnestOpen = ref(false);
 watch(
 	[() => meeting.value?.id, () => currentUser.value?.id, livePrompts],
 	([mid]) => {

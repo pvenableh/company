@@ -464,9 +464,6 @@ const markRef = ref<{ expand: () => void } | null>(null);
 						>
 							<Icon name="lucide:history" class="w-5 h-5" />
 						</button>
-						<button type="button" class="coach__close" aria-label="Shrink to docked panel" title="Dock" @click="setEarnestSize('dock')">
-							<Icon name="lucide:minimize-2" class="w-5 h-5" />
-						</button>
 						<button type="button" class="coach__close" aria-label="Leave focus mode" @click="close">
 							<Icon name="lucide:x" class="w-5 h-5" />
 						</button>

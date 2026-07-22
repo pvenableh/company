@@ -76,6 +76,15 @@ function healthColor(iso: string | null): string {
 <template>
 	<LayoutPageContainer>
 		<AppHeader title="Platform" />
+		<div class="flex justify-end -mt-1 mb-2">
+			<NuxtLink
+				to="/platform/email"
+				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+			>
+				<Icon name="lucide:mail" class="w-3.5 h-3.5" />
+				Email activity
+			</NuxtLink>
+		</div>
 		<p class="text-sm text-muted-foreground mb-6 -mt-1">
 			Every organization on Earnest — feedback, usage, revenue, health. Open any one for its full client feedback.
 		</p>

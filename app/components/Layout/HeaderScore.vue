@@ -109,16 +109,18 @@ const totalFull = computed(() => (totalEP.value ?? 0).toLocaleString());
  * match the header avatars (size-7 = 28px) so the chrome cluster reads even. */
 .header-score {
 	@apply relative inline-flex flex-col items-center justify-center shrink-0
-		text-foreground/80 hover:text-foreground transition-colors;
+		text-foreground/80 hover:text-foreground transition-all;
 	width: 28px;
 	height: 28px;
 	border-radius: 9999px;
-	background: hsl(var(--app-accent-h, 38) var(--app-accent-s, 92%) 50% / 0.1);
-	border: 1px solid hsl(var(--app-accent-h, 38) var(--app-accent-s, 92%) 50% / 0.25);
+	/* Same subtle liquid-glass fill + refracted rim as the Earnest / search /
+	 * bell buttons, so the whole cluster reads as one set of circles. */
+	background: hsl(var(--muted) / 0.35);
+	box-shadow: var(--glass-edge-shadow);
 	line-height: 1;
 }
 .header-score:hover {
-	background: hsl(var(--app-accent-h, 38) var(--app-accent-s, 92%) 50% / 0.16);
+	background: hsl(var(--muted) / 0.6);
 }
 
 .header-score__today {

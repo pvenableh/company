@@ -47,18 +47,18 @@
 						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
 					<div class="apps-shell__chrome-right">
-						<!-- Earnest's ambient presence — THE single launcher for the
-						     assistant. Tap to open Earnest (docked); expand to full-screen
-						     focus from inside. Reachable from every page. The HITL
-						     pending-actions badge rides here now. -->
+						<!-- THE single launcher for Earnest — the "E." mark, so it
+						     unmistakably reads as Earnest (not a generic aperture). Tap to
+						     open Focus; reachable from every page. The HITL pending-actions
+						     badge rides here. -->
 						<button
 							type="button"
-							class="group relative flex items-center justify-center w-7 h-7 shrink-0 ios-press"
+							class="apps-shell__chrome-btn group relative shrink-0 ios-press"
 							aria-label="Open Earnest"
 							title="Earnest"
 							@click="handleOpenAI"
 						>
-							<EarnestPresenceDot aperture />
+							<EarnestIcon class="w-[18px] h-[18px] text-foreground/80 group-hover:text-foreground transition-colors" />
 							<span
 								v-if="aiPendingCount > 0"
 								class="apps-shell__brand-badge"
@@ -76,14 +76,14 @@
 								aria-label="Search"
 								@click="spotlightOpen = true"
 							>
-								<Icon name="lucide:search" class="size-4" />
+								<Icon name="lucide:search" class="size-5" />
 							</button>
 						</div>
 						<ClientOnly>
 							<LayoutNotificationsMenu />
 						</ClientOnly>
 						<ClientOnly>
-							<div class="hidden sm:flex ml-2">
+							<div class="hidden sm:flex">
 								<LayoutHeaderScore />
 							</div>
 						</ClientOnly>
@@ -132,10 +132,9 @@
 			<AppsAppSlideOverStack />
 		</ClientOnly>
 
-		<!-- Unified Earnest panel (route + entity aware; self-managed open state) -->
-		<ClientOnly>
-			<AIEarnestPanel />
-		</ClientOnly>
+		<!-- The docked Earnest panel is retired — Earnest is inline or Focus
+		     (mounted once in app.vue as EarnestCoachingTakeover). -->
+
 		<ClientOnly>
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
 		</ClientOnly>
@@ -195,6 +194,14 @@ const handleOpenAI = () => openEarnestPanel();
 // Pending AI actions (HITL queue) badge on the assistant launcher.
 const { pendingCount: aiPendingCount, refresh: refreshAiPending } = useAiPendingActions();
 onMounted(() => { refreshAiPending(); });
+
+// One batched login-time fetch for the chrome scalars (channel unread + AI
+// pending count) — seeds their shared singletons so the rail/launcher widgets
+// coalesce onto this single request instead of each fanning out on login. Runs
+// once the org resolves; widgets fall back to their own fetch if it's absent.
+const { load: loadBootstrap } = useBootstrap();
+const { selectedOrg: bootstrapOrg } = useOrganization();
+watch(bootstrapOrg, (o) => { if (o) loadBootstrap(); }, { immediate: true });
 
 const showOrgSwitcher = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
@@ -305,14 +312,22 @@ if (import.meta.client) {
 }
 
 .apps-shell__chrome-right {
-	@apply flex items-center gap-1.5 justify-self-end;
+	/* One uniform gap for the whole cluster — no per-item margins, so the
+	 * Earnest mark, search, bell, score, and avatar sit on an even rhythm. */
+	@apply flex items-center gap-2 justify-self-end;
 }
 
 .apps-shell__chrome-btn {
-	/* Sized to 28px (w-7) so it matches the notification bell, score gauge,
-	 * and avatar — a uniform diameter keeps the chrome cluster evenly
-	 * spaced. Pairs with the universal :active scale for tactile feedback. */
-	@apply flex items-center justify-center w-7 h-7 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
+	/* 28px circle with a very subtle liquid-glass fill + refracted rim — shared
+	 * by the Earnest mark, search, and bell so the three icon buttons read as one
+	 * uniform set of circles (matching the score + avatar height). */
+	@apply flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground transition-all;
+	background: hsl(var(--muted) / 0.35);
+	box-shadow: var(--glass-edge-shadow);
+}
+.apps-shell__chrome-btn:hover {
+	background: hsl(var(--muted) / 0.6);
+	color: hsl(var(--foreground));
 }
 
 .apps-shell__page {

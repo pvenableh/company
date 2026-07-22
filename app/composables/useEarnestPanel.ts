@@ -1,38 +1,36 @@
 /**
  * useEarnestPanel — compatibility shim over useEarnest.
  *
- * The docked panel is Earnest at size 'dock'. These exports keep every existing
- * caller (FloatingDock, entity detail pages via useEntityPageContext, the
- * presence home, meeting room) working while the single presence state lives in
- * useEarnest. `panelOpen` maps to the 'dock' size specifically, so it never
- * fights the full-screen 'full' size (they are mutually exclusive by mode).
+ * The docked panel has been RETIRED. These exports are kept so every existing
+ * caller (entity detail pages via useEntityPageContext, the presence home, the
+ * meeting room, EntityEarnestCard's prompt pills) keeps working — but they now
+ * open Earnest's full-screen Focus surface instead of a side panel. `panelOpen`
+ * therefore tracks the 'full' size; there is no separate 'dock' state anymore.
  */
 import { earnestMode, earnestInitialPrompt, earnestPendingSession, openEarnest, closeEarnest } from '~/composables/useEarnest';
 
 export const panelOpen = computed<boolean>({
-	get: () => earnestMode.value === 'dock',
+	get: () => earnestMode.value === 'full',
 	set: (v: boolean) => {
-		if (v) openEarnest('dock');
-		else if (earnestMode.value === 'dock') closeEarnest();
+		if (v) openEarnest('full');
+		else if (earnestMode.value === 'full') closeEarnest();
 	},
 });
 
 export const panelInitialPrompt = earnestInitialPrompt;
 
 export function openEarnestPanel(prompt = '') {
-	openEarnest('dock', { prompt });
+	openEarnest('full', { prompt });
 }
 
-/** Open the docked panel and restore a specific past conversation into it. */
+/** Open Focus and restore a specific past conversation into it. */
 export function openEarnestSession(sessionId: string) {
 	earnestPendingSession.value = sessionId;
-	openEarnest('dock');
+	openEarnest('full');
 }
 
 export function closeEarnestPanel() {
-	// Only dismiss when actually docked — a no-op at 'full' so that opening focus
-	// (which may be followed by a legacy closeEarnestPanel() call) isn't undone.
-	if (earnestMode.value === 'dock') closeEarnest();
+	if (earnestMode.value === 'full') closeEarnest();
 }
 
 export function useEarnestPanel() {

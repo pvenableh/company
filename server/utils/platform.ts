@@ -36,7 +36,7 @@ export async function authorizeOrgInsight(event: any, orgId: string): Promise<st
   if (await isPlatformAdmin(event)) return userId;
 
   const { readItems } = await import('@directus/sdk');
-  const rows = (await getServerDirectus().request(
+  const rows = (await withTransientRetry(() => getServerDirectus().request(
     readItems('org_memberships', {
       filter: {
         user: { _eq: userId },
@@ -47,7 +47,7 @@ export async function authorizeOrgInsight(event: any, orgId: string): Promise<st
       fields: ['id'],
       limit: 1,
     }),
-  )) as Array<{ id: string }>;
+  ), { label: 'authorizeOrgInsight' })) as Array<{ id: string }>;
 
   if (!rows.length) {
     throw createError({ statusCode: 403, message: 'You are not a manager of this organization' });

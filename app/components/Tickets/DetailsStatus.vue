@@ -1,5 +1,11 @@
 <template>
-	<FormSegmentedControl v-model="statusValue" :options="columns" label="Status" :custom-gradient="statusGradient" />
+	<FormSegmentedControl
+		v-model="statusValue"
+		:options="statuses"
+		label="Status"
+		:custom-gradient="gradient"
+		:animation-duration="animationDuration"
+	/>
 </template>
 
 <script setup>
@@ -8,18 +14,21 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
+	animationDuration: {
+		type: Number,
+		default: 0.3,
+	},
 });
 
 const emit = defineEmits(['update:modelValue']);
 
-const columns = [
-	{ value: 'pending', label: 'Pending' },
-	{ value: 'scheduled', label: 'Scheduled' },
-	{ value: 'in progress', label: 'In Progress' },
-	{ value: 'completed', label: 'Completed' },
-];
+// Same single source of truth the priority bar reads from — Capitalized
+// values matching ticketColumns, and a palette-driven lifecycle gradient.
+const { statusGradient, statusOptions } = useStatusStyle();
 
-// Status computed value with getter/setter for v-model binding
+const statuses = [...statusOptions];
+const gradient = statusGradient;
+
 const statusValue = computed({
 	get() {
 		return props.modelValue;
@@ -28,7 +37,4 @@ const statusValue = computed({
 		emit('update:modelValue', newValue);
 	},
 });
-
-// Custom gradient using CSS variables for consistent theming
-const statusGradient = 'linear-gradient(to right, var(--cyan), var(--cyan2), var(--green2), var(--green))';
 </script>

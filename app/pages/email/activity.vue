@@ -46,6 +46,10 @@ const scopedEvents = computed(() => {
 	return events.value;
 });
 
+// True once there's anything to render — lets a refetch (range change) keep the
+// last content on screen (dimmed) instead of collapsing to a spinner.
+const hasAnyData = computed(() => events.value.length > 0 || campaigns.value.length > 0);
+
 async function load() {
 	if (!selectedOrg.value) {
 		events.value = [];
@@ -278,47 +282,49 @@ async function discardDraft(id: string) {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<LayoutPageHeader
-			title="Email Activity"
-			:subtitle="`Opens, clicks, bounces — last ${range} days`"
-		>
-			<template #actions>
-				<div class="flex items-center gap-3 flex-wrap justify-end">
-					<div class="flex items-center gap-1.5">
-						<button
-							v-for="s in SCOPES"
-							:key="s.value"
-							type="button"
-							class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
-							:class="s.value === scope
-								? 'border-primary/40 bg-primary/10 text-primary font-semibold'
-								: 'border-border text-muted-foreground hover:bg-muted/60'"
-							@click="scope = s.value"
-						>
-							{{ s.label }}
-						</button>
-					</div>
-					<div class="flex items-center gap-1.5">
-						<button
-							v-for="r in RANGES"
-							:key="r.value"
-							type="button"
-							class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
-							:class="r.value === range
-								? 'border-primary/40 bg-primary/10 text-primary font-semibold'
-								: 'border-border text-muted-foreground hover:bg-muted/60'"
-							@click="range = r.value as 7 | 30 | 90"
-						>
-							{{ r.label }}
-						</button>
-					</div>
+	<div class="apps-page flex flex-col h-full">
+		<!-- Full-width app header, matching every other /apps/* surface — sits
+		     OUTSIDE the padded container so its divider spans edge to edge. -->
+		<AppHeader title="Email Activity" />
+
+		<LayoutPageContainer>
+		<!-- Toolbar: description + scope / range filters (shared pill toggles). -->
+		<div class="flex items-center justify-between gap-3 flex-wrap mb-5">
+			<p class="text-sm text-muted-foreground">Opens, clicks, bounces — last {{ range }} days</p>
+			<div class="flex items-center gap-3 flex-wrap">
+				<div class="flex items-center gap-1.5">
+					<button
+						v-for="s in SCOPES"
+						:key="s.value"
+						type="button"
+						class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
+						:class="s.value === scope
+							? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+							: 'border-border text-muted-foreground hover:bg-muted/60'"
+						@click="scope = s.value"
+					>
+						{{ s.label }}
+					</button>
 				</div>
-			</template>
-		</LayoutPageHeader>
+				<div class="flex items-center gap-1.5">
+					<button
+						v-for="r in RANGES"
+						:key="r.value"
+						type="button"
+						class="text-[11px] uppercase tracking-wider px-2.5 h-7 rounded-full border transition-colors"
+						:class="r.value === range
+							? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+							: 'border-border text-muted-foreground hover:bg-muted/60'"
+						@click="range = r.value as 7 | 30 | 90"
+					>
+						{{ r.label }}
+					</button>
+				</div>
+			</div>
+		</div>
 
 		<!-- KPI strip -->
-		<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 ea-content" :class="{ 'ea-content--busy': loading }">
 			<div class="ios-card p-4">
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Delivered</p>
 				<p class="text-2xl font-semibold tabular-nums mt-1">{{ stats.delivered }}</p>
@@ -339,13 +345,17 @@ async function discardDraft(id: string) {
 			</div>
 		</div>
 
-		<!-- Loading -->
-		<div v-if="loading" class="flex items-center justify-center py-16">
+		<!-- First-load spinner ONLY. A refetch (range change) keeps the last
+		     content visible + dimmed instead of collapsing to a spinner and back. -->
+		<div v-if="loading && !hasAnyData" class="flex items-center justify-center py-16">
 			<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
 		</div>
 
-		<!-- Empty -->
-		<div v-else-if="!stats.totalEvents && !campaigns.length" class="ios-card p-10 text-center">
+		<!-- Empty — only when there's truly no email at all. A scope with no
+		     matching events stays in the content grid (each section shows its own
+		     "none in this window" line), so switching filters never swaps the whole
+		     view out and the section fade transitions can play. -->
+		<div v-else-if="!loading && !hasAnyData" class="ios-card p-10 text-center">
 			<Icon name="lucide:mail-x" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/60" />
 			<p class="text-sm text-foreground font-medium">No email activity in this window</p>
 			<p class="text-[11px] text-muted-foreground mt-1">
@@ -357,8 +367,8 @@ async function discardDraft(id: string) {
 			</p>
 		</div>
 
-		<!-- Content -->
-		<div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		<!-- Content — dims + fades during a refetch instead of unmounting. -->
+		<div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6 ea-content" :class="{ 'ea-content--busy': loading }">
 			<!-- Left column: campaigns + transactional (spans 2 cols) -->
 			<div class="lg:col-span-2 space-y-6">
 			<!-- Held money-email drafts — invoice/receipt email the money gate
@@ -402,6 +412,7 @@ async function discardDraft(id: string) {
 			</div>
 
 			<!-- Campaign roll-up -->
+			<Transition name="ea-fade">
 			<div v-if="scope !== 'transactional'" class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Campaigns</h3>
@@ -439,8 +450,10 @@ async function discardDraft(id: string) {
 					</div>
 				</div>
 			</div>
+			</Transition>
 
 			<!-- Transactional roll-up — contract/AI/invoice/notification sends -->
+			<Transition name="ea-fade">
 			<div v-if="scope !== 'campaign'" class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Transactional</h3>
@@ -467,6 +480,7 @@ async function discardDraft(id: string) {
 					</div>
 				</div>
 			</div>
+			</Transition>
 			</div>
 
 			<!-- Side column: top links + bounces -->
@@ -515,5 +529,31 @@ async function discardDraft(id: string) {
 				</div>
 			</div>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
+
+<style scoped>
+/* Stale-while-revalidate: on a refetch (range change) the content + KPI strip
+   stay put and simply dim, then ease back — no collapse to a spinner and pop. */
+.ea-content {
+	transition: opacity 0.25s ease;
+}
+.ea-content--busy {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+/* Scope filter (All / Campaigns / Transactional) toggles whole sections — fade
+   them in AND out (via <Transition name="ea-fade">) so switching is smooth in
+   both directions. */
+.ea-fade-enter-active,
+.ea-fade-leave-active {
+	transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.ea-fade-enter-from,
+.ea-fade-leave-to {
+	opacity: 0;
+	transform: translateY(3px);
+}
+</style>

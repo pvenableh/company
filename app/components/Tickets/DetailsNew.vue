@@ -2,16 +2,13 @@
 	<div class="w-full mx-auto">
 		<LayoutUserPresenceIndicator v-if="currentUser" />
 
-		<!-- Status Timeline -->
-		<div class="w-full flex items-center">
-			<FormStatusTimeline
-				v-model:currentStatus="currentStatus"
-				:statuses="columns"
-				collection="tickets"
-				:itemId="localElement.id"
-				:loading="isUpdatingStatus"
-				@status-change="handleStatusChange"
-				class="mb-12"
+		<!-- Status — gradient segmented pill, mirroring the priority bar.
+		     Each status label is clickable; the fill traces the lifecycle. -->
+		<div class="w-full mb-6">
+			<TicketsDetailsStatus
+				:model-value="currentStatus"
+				:animation-duration="0.25"
+				@update:model-value="onStatusPick"
 			/>
 		</div>
 
@@ -309,6 +306,13 @@ const displayDescription = computed(() => {
 });
 
 const localElement = ref({ ...props.element });
+
+// The segmented pill emits the new status value; adapt it to the existing
+// old/new status-change flow (optimistic update + rollback + notify).
+function onStatusPick(newStatus) {
+	if (!newStatus || newStatus === currentStatus.value) return;
+	handleStatusChange({ oldStatus: currentStatus.value, newStatus });
+}
 
 // Status change handler
 async function handleStatusChange(event) {

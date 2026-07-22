@@ -741,26 +741,10 @@ watch(selectedOrg, () => {
 });
 
 // ── Overview edit mode ──────────────────────────────────────────────────────
-// `?edit=1` flips the Overview floor into the inline OverviewEditor in place
-// of the read-only summary. The Edit / Done header button toggles it; no
-// route navigation, no shell remount.
-const editingOverview = computed(() => route.query.edit === '1');
-
-function toggleOverviewEdit() {
-  const { edit, ...rest } = route.query;
-  void edit;
-  router.replace({
-    query: editingOverview.value ? rest : { ...rest, edit: '1' },
-  });
-}
-
 // ── Header action ───────────────────────────────────────────────────────────
+// The Overview floor is inline-editable for managers (no Edit/Done toggle) —
+// AppsOrganizationOverviewEditor renders directly, so there's no read→edit step.
 const headerAction = computed(() => {
-  if (floor.value === 'overview' && canManageOrg.value) {
-    return editingOverview.value
-      ? { label: 'Done', icon: 'lucide:check', onClick: toggleOverviewEdit }
-      : { label: 'Edit', icon: 'lucide:pencil', onClick: toggleOverviewEdit };
-  }
   if (floor.value === 'members' && canManageOrg.value) {
     return {
       label: 'Invite member',
@@ -830,8 +814,38 @@ function onClientInvited() {
           <Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
           <p class="text-sm text-muted-foreground">Loading organization…</p>
         </div>
-        <template v-else-if="editingOverview && canManageOrg">
+        <template v-else-if="canManageOrg">
+          <!-- Inline-editable by default — no read→edit step. Autosaving org
+               fields (name, brand, contact, booking slug, logo) live directly
+               in the editor; the Snapshot below carries the read-only stats the
+               editor doesn't cover. -->
           <AppsOrganizationOverviewEditor :can-manage="canManageOrg" />
+
+          <div class="ios-card p-5 mt-5">
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">Snapshot</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p class="text-muted-foreground text-xs mb-0.5">Members</p>
+                <button type="button" class="text-sm font-medium hover:text-primary" @click="floor = 'members'">
+                  {{ filteredUsers.length }}
+                </button>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs mb-0.5">Pending invites</p>
+                <span class="text-sm font-medium">{{ pendingInvitesCount }}</span>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs mb-0.5">Plan</p>
+                <span class="text-sm font-medium capitalize">{{ org.plan || '—' }}</span>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs mb-0.5">Member since</p>
+                <span class="text-sm font-medium">
+                  {{ org.origin_date ? new Date(org.origin_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : '—' }}
+                </span>
+              </div>
+            </div>
+          </div>
         </template>
         <template v-else>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">

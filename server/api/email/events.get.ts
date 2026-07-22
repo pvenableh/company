@@ -5,8 +5,12 @@
  * `email_events` has NO row-level read permission for authenticated org roles
  * (the only grant was a public, unfiltered read — a cross-org leak that has been
  * removed). So, exactly like marketing_campaigns, reads are routed through the
- * server: verify the caller belongs to the org, then read with the admin token
- * filtered to that org. The page never talks to the collection directly.
+ * server: authorize the caller, then read with the admin token filtered to that
+ * org. The page never talks to the collection directly.
+ *
+ * Access is gated to org owners/admins/managers (or platform admins) via
+ * authorizeOrgInsight — delivery/open data on a client's transactional email is
+ * sensitive, so it's not exposed to every active member.
  *
  * Query params:
  *   - org    (required) — organization id; caller must be a member.
@@ -21,16 +25,14 @@
  * aggregates (event, recipient, timestamp, url, reason, raw, email_id).
  */
 import { readItems } from '@directus/sdk';
-import { requireOrgMembership } from '~~/server/utils/marketing-perms';
+import { authorizeOrgInsight } from '~~/server/utils/platform';
 
 export default defineEventHandler(async (event) => {
-	const session = await requireUserSession(event);
-	if (!(session as any).user?.id) throw createError({ statusCode: 401, message: 'Authentication required' });
-
 	const query = getQuery(event);
 	const orgId = (query.org ?? '').toString().trim();
 	if (!orgId) throw createError({ statusCode: 400, message: 'org is required' });
-	await requireOrgMembership(event, orgId);
+	// Owner/admin/manager of this org, or a platform admin. Throws 401/403.
+	await authorizeOrgInsight(event, orgId);
 
 	const days = Math.min(365, Math.max(1, Number(query.days) || 30));
 	const since = new Date(Date.now() - days * 86400000).toISOString();
@@ -41,14 +43,14 @@ export default defineEventHandler(async (event) => {
 	else if (kind === 'transactional') filters.push({ email_id: { _null: true } });
 
 	const directus = getServerDirectus();
-	const events = (await directus.request(
+	const events = (await withTransientRetry(() => directus.request(
 		readItems('email_events' as any, {
 			fields: ['id', 'event', 'recipient', 'timestamp', 'url', 'reason', 'raw', 'email_id.id', 'email_id.name', 'email_id.subject'] as any,
 			filter: { _and: filters } as any,
 			sort: ['-timestamp'] as any,
 			limit: 1000,
 		}),
-	)) as any[];
+	), { label: 'email/events' })) as any[];
 
 	return { events };
 });
