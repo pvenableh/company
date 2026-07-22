@@ -1,5 +1,5 @@
 <!--
-  /director — the Director's Office as its own destination.
+  /boardroom — the Boardroom as its own destination.
 
   The working meeting itself still runs in the global overlay
   (CommandCenter/DirectorOffice.vue) so it can be convened from anywhere; this
@@ -9,11 +9,11 @@
 -->
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
-useHead({ title: "Director's Office | Earnest" });
+useHead({ title: "The Boardroom | Earnest" });
 
-const { open: openDirectorOffice } = useDirectorOffice();
+const { open: openBoardroom } = useBoardroom();
 const { selectedOrg } = useOrganization();
-const { joinSession, session: liveSession } = useDirectorSession();
+const { joinSession, session: liveSession } = useBoardroomSession();
 const { user } = useUserSession();
 
 // Personal "My work" review — grounded on the current user's own assignments,
@@ -21,7 +21,7 @@ const { user } = useUserSession();
 function reviewMyWork() {
   const id = (user.value as any)?.id;
   if (!id) return;
-  openDirectorOffice({ mode: 'entity', entityType: 'user', entityId: String(id), label: 'My work' });
+  openBoardroom({ mode: 'entity', entityType: 'user', entityId: String(id), label: 'My work' });
 }
 const route = useRoute();
 const router = useRouter();
@@ -53,9 +53,9 @@ async function joinLive(id: string | number) {
   if (!ok) return;
   const s = liveSession.value;
   if (s?.scopeType === 'entity' && s.entityType && s.entityId) {
-    openDirectorOffice({ mode: 'entity', entityType: s.entityType, entityId: s.entityId, label: s.title || 'Live session' });
+    openBoardroom({ mode: 'entity', entityType: s.entityType, entityId: s.entityId, label: s.title || 'Live session' });
   } else {
-    openDirectorOffice();
+    openBoardroom();
   }
 }
 
@@ -96,7 +96,7 @@ async function load() {
 }
 
 // Decision records — recorded minutes (director_minutes), the async recap layer.
-const { list: listMinutes } = useDirectorMinutes();
+const { list: listMinutes } = useBoardroomMinutes();
 const decisionRecords = ref<Awaited<ReturnType<typeof listMinutes>>>([]);
 async function loadMinutes() {
   if (!selectedOrg.value) { decisionRecords.value = []; return; }
@@ -110,7 +110,7 @@ function recordScopeNote(m: { scopeType: string; entityType: string | null }): s
 
 watch(selectedOrg, () => { load(); loadLive(); loadMinutes(); }, { immediate: true });
 
-// Deep-link from an invite notification: /director?session=<id> → join it.
+// Deep-link from an invite notification: /boardroom?session=<id> → join it.
 onMounted(async () => {
   const sid = route.query.session;
   if (sid) {
@@ -157,9 +157,9 @@ function snippet(t: string | null): string {
 }
 function openMeeting(m: Meeting) {
   if (m.scope_type === 'entity' && m.entity_type && m.entity_id) {
-    openDirectorOffice({ mode: 'entity', entityType: m.entity_type, entityId: m.entity_id, label: subjectLabel(m) });
+    openBoardroom({ mode: 'entity', entityType: m.entity_type, entityId: m.entity_id, label: subjectLabel(m) });
   } else {
-    openDirectorOffice();
+    openBoardroom();
   }
 }
 
@@ -179,15 +179,15 @@ const filteredMeetings = computed(() => {
     <div class="flex items-start justify-between gap-4 pt-2 mb-6">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-11 h-11 rounded-2xl bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-          <DirectorChairIcon class="w-7 h-7" />
+          <ExecutiveChairIcon class="w-7 h-7" />
         </div>
         <div class="min-w-0">
           <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight flex items-center gap-2">
-            The Director's Office
+            The Boardroom
             <UIcon
               name="i-lucide-info"
               class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0"
-              title="Earnest AI reviews the business and proposes a plan you approve step by step — nothing runs on its own."
+              title="Earnest's room — it convenes your board, reviews the business, and proposes a plan you approve step by step. Nothing runs on its own."
             />
           </h1>
         </div>
@@ -205,7 +205,7 @@ const filteredMeetings = computed(() => {
         <button
           type="button"
           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-sm ios-press"
-          @click="openDirectorOffice()"
+          @click="openBoardroom()"
         >
           <DirectorChairIcon class="w-5 h-5" />
           <span class="hidden sm:inline">Convene the board</span>
@@ -258,7 +258,7 @@ const filteredMeetings = computed(() => {
         <NuxtLink
           v-for="r in decisionRecords"
           :key="r.id"
-          :to="`/director/minutes/${r.id}`"
+          :to="`/boardroom/minutes/${r.id}`"
           class="group text-left rounded-2xl border border-border bg-card p-3.5 transition-all hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5"
         >
           <div class="flex items-center gap-3">

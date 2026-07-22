@@ -1,8 +1,8 @@
 /**
- * useDirectorOffice — shared open/close state for the Director's Office overlay
+ * useBoardroom — shared open/close state for the Boardroom overlay
  * (app/components/CommandCenter/DirectorOffice.vue, mounted once in app.vue).
  *
- * The office opens *over* whatever page the user is on and closes back to it, so
+ * The room opens *over* whatever page the user is on and closes back to it, so
  * this is deliberately global state, not a route. Two scopes:
  *   - org-wide meeting: `open()`
  *   - focused one-item meeting: `open({ mode:'entity', entityType, entityId, label })`
@@ -16,7 +16,7 @@ export interface DirectorScope {
   label?: string;
 }
 
-export function useDirectorOffice() {
+export function useBoardroom() {
   const isOpen = useState<boolean>('director-office-open', () => false);
   const scope = useState<DirectorScope | null>('director-office-scope', () => null);
 

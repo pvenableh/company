@@ -1,5 +1,5 @@
 <!--
-  /director/minutes/[id] — the read-only RECAP of a recorded Director's Office
+  /boardroom/minutes/[id] — the read-only RECAP of a recorded Boardroom
   meeting (a director_minutes decision record).
 
   This is the async "decision room": a teammate who wasn't in the room opens the
@@ -8,7 +8,7 @@
   items captured, and the Q&A thread. Nothing here runs or mutates; the deck is
   mounted with canDecide/canCapture false so approve/skip/assign are all hidden.
 
-  Reached from the "shared for review" notification, or from /director → Decision
+  Reached from the "shared for review" notification, or from /boardroom → Decision
   records. The author can re-share it from here.
 -->
 <script setup lang="ts">
@@ -17,7 +17,7 @@ definePageMeta({ middleware: ['auth'] });
 const route = useRoute();
 const minutesId = computed(() => String(route.params.id));
 
-const { load, share } = useDirectorMinutes();
+const { load, share } = useBoardroomMinutes();
 const { selectedOrg } = useOrganization();
 const { user } = useUserSession();
 const toast = useToast();
@@ -101,8 +101,8 @@ async function onShare(userIds: string[]) {
       </div>
       <p class="text-sm font-medium text-foreground">This decision record isn't available</p>
       <p class="text-xs text-muted-foreground mt-0.5">It may have been removed, or you don't have access to its organization.</p>
-      <NuxtLink to="/director" class="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline">
-        <UIcon name="i-lucide-arrow-left" class="w-4 h-4" /> Back to the Director's Office
+      <NuxtLink to="/boardroom" class="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline">
+        <UIcon name="i-lucide-arrow-left" class="w-4 h-4" /> Back to the Boardroom
       </NuxtLink>
     </div>
 

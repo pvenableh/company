@@ -44,9 +44,9 @@ export default defineEventHandler(async (event) => {
     recipientIds: userIds,
     subject: `${actorName} shared meeting minutes for review`,
     message: note
-      ? `${actorName} shared the Director's Office recap on ${label} for your review: “${note}”`
-      : `${actorName} shared the Director's Office recap on ${label}. Review what was decided.`,
-    link: `/director/minutes/${id}`,
+      ? `${actorName} shared the Boardroom recap on ${label} for your review: “${note}”`
+      : `${actorName} shared the Boardroom recap on ${label}. Review what was decided.`,
+    link: `/boardroom/minutes/${id}`,
   }).catch(() => {});
 
   await markMinutesShared(id);

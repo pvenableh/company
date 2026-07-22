@@ -1,4 +1,4 @@
-// composables/useDirectorMinutes.ts
+// composables/useBoardroomMinutes.ts
 /**
  * Thin client wrapper over the director_minutes endpoints — the async
  * "decision room" recap layer of the Director's Office.
@@ -94,7 +94,7 @@ export interface MinutesListRow {
   dateCreated: string | null;
 }
 
-export function useDirectorMinutes() {
+export function useBoardroomMinutes() {
   const toast = useToast();
 
   /** Snapshot the meeting; returns { id, summary, stats } or null on failure. */

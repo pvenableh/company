@@ -317,12 +317,12 @@ function chipMagnifyStyle(appId: string) {
 					<Tooltip>
 						<TooltipTrigger as-child>
 							<NuxtLink
-								to="/director"
+								to="/boardroom"
 								class="app-rail__item"
-								:class="{ 'app-rail__item--active': route.path.startsWith('/director') }"
+								:class="{ 'app-rail__item--active': route.path.startsWith('/boardroom') }"
 								:style="[styleFor(director), itemMagnifyStyle('director')]"
 								data-app-id="director"
-								aria-label="Director's Office"
+								aria-label="The Boardroom"
 								@click="hapticTap()"
 							>
 								<span class="app-rail__chip" :style="chipMagnifyStyle('director')">
@@ -330,11 +330,11 @@ function chipMagnifyStyle(appId: string) {
 										<DirectorChairIcon class="app-rail__icon-layer app-rail__icon-base" />
 									</span>
 								</span>
-								<span class="app-rail__label">Director</span>
+								<span class="app-rail__label">Boardroom</span>
 							</NuxtLink>
 						</TooltipTrigger>
 						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="tooltipOffset" class="z-[70]">
-							Director's Office
+							The Boardroom
 						</TooltipContent>
 					</Tooltip>
 				</li>

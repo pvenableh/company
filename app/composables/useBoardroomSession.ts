@@ -1,4 +1,4 @@
-// composables/useDirectorSession.ts
+// composables/useBoardroomSession.ts
 /**
  * Client state + actions for the LIVE, multiplayer Director's Office.
  *
@@ -98,7 +98,7 @@ const POLL_MS = 7000;
 const HEARTBEAT_MS = 20000;
 const PRESENCE_TTL = 60000; // treat a participant as "here now" if seen within 60s
 
-export function useDirectorSession() {
+export function useBoardroomSession() {
   const { selectedOrg } = useOrganization();
   const { user } = useUserSession();
   const toast = useToast();
