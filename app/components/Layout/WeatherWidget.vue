@@ -23,6 +23,12 @@ const ICONS: Record<string, string> = {
 	stormy: 'wi:thunderstorm',
 };
 const icon = computed(() => ICONS[weather.value?.condition || ''] || 'wi:day-cloudy');
+// The API returns Celsius (kept as-is for the AI greeting's `tempC`); the widget
+// displays Fahrenheit.
+const tempF = computed(() => {
+	const c = weather.value?.tempC;
+	return c == null ? null : Math.round(c * 9 / 5 + 32);
+});
 const label = computed(() => {
 	if (!weather.value) return '';
 	const parts = [weather.value.condition];
@@ -57,7 +63,7 @@ watch(weatherEnabled, (on) => { if (on) load(); });
 		:aria-label="label"
 	>
 		<Icon :name="icon" class="wx__icon" />
-		<span v-if="weather.tempC != null" class="wx__temp">{{ weather.tempC }}°</span>
+		<span v-if="tempF != null" class="wx__temp">{{ tempF }}°F</span>
 	</span>
 </template>
 
