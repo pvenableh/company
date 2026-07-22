@@ -175,6 +175,7 @@ onUnmounted(() => clearEntity());
 					<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
 						<Icon name="lucide:sparkles" class="w-3 h-3" />
 						Draft with Earnest
+						<AiSpendMark muted />
 					</button>
 				</NuxtLink>
 				<button

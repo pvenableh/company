@@ -11,6 +11,10 @@
 		<span v-if="$slots.default" :class="labelClass">
 			<slot />
 		</span>
+		<!-- Spend marker: kept OUTSIDE the label span so it stays visible even
+		     when the label is hidden (icon-only), signalling this action draws
+		     from the AI token balance. Opt-in via `spend`. -->
+		<AiSpendMark v-if="spend && !loading" muted />
 	</button>
 </template>
 
@@ -21,6 +25,8 @@ const props = defineProps<{
 	loading?: boolean;
 	disabled?: boolean;
 	hideLabel?: string;
+	/** Show the AI token-spend marker (this action makes an LLM call). */
+	spend?: boolean;
 	/**
 	 * Height/padding preset. `sm` (default) is the T3 pill (h-7 px-2.5). `md`
 	 * (h-8 px-3, wider gap) matches the h-8 filter pills / shadcn Select

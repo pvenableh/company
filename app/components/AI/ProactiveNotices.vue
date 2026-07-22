@@ -58,6 +58,9 @@ const handleAction = (notice: any) => {
       <span class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         Earnest Notices
       </span>
+      <!-- These are deterministic (pure data analysis, no LLM) — say so, so the
+           absence of a spend marker reads as intentional, not an oversight. -->
+      <AiFreeMark class="ml-0.5" />
     </div>
 
     <!-- Notice cards -->

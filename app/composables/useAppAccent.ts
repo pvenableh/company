@@ -105,7 +105,7 @@ const APP_META: Record<AppId, AppMeta> = {
 	// The Director's Office isn't rendered by the rail's app/footer loops (it has
 	// a bespoke tile with a custom chair glyph), but it takes a slot in CHIP_IDS
 	// so it earns its own in-order colour from the palette spread.
-	director:     { id: 'director',     name: "Director's Office", shortName: 'Director', icon: 'lucide:presentation',   to: '/director' },
+	director:     { id: 'director',     name: 'The Boardroom', shortName: 'Boardroom', icon: 'lucide:presentation',   to: '/boardroom' },
 	organization: { id: 'organization', name: 'Organization', shortName: 'Org',     icon: 'lucide:building-2',          to: '/apps/organization' },
 	account:      { id: 'account',      name: 'Account',      shortName: 'Me',      icon: 'lucide:circle-user',         to: '/account' },
 };
@@ -894,7 +894,7 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents(DEFAULT_APP_P
  */
 export function appIdForPath(path: string): AppId | null {
 	if (path.startsWith('/account')) return 'account';
-	if (path.startsWith('/director')) return 'director';
+	if (path.startsWith('/boardroom')) return 'director';
 	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
 
 	const seg = path.split('/').filter(Boolean);

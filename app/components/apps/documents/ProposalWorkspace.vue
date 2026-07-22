@@ -471,6 +471,7 @@ if (!props.compact) {
             >
               <Icon name="lucide:sparkles" class="w-3 h-3" />
               Draft with Earnest
+              <AiSpendMark muted />
             </button>
           </div>
           <DocumentsBlockComposer

@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
       actorName,
       recipientIds: recipients,
       subject: `You've been assigned a ${noun}`,
-      message: `<strong>${actorName}</strong> assigned you a ${noun} in the Director's Office:<br><strong>${title}</strong>`,
+      message: `<strong>${actorName}</strong> assigned you a ${noun} in the Boardroom:<br><strong>${title}</strong>`,
       link,
     }).catch((err) => console.error('[director/capture] notify failed', err));
   }

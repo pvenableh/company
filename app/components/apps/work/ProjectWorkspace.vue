@@ -53,9 +53,9 @@ const emit = defineEmits<{
 // "things Earnest can do here" prompts (what the old Create menu offered).
 const { openEarnestPanel } = useEarnestPanel();
 // Director's Office — convene a focused meeting scoped to just this project.
-const { open: openDirectorOffice } = useDirectorOffice();
+const { open: openBoardroom } = useBoardroom();
 function conveneMeeting() {
-	openDirectorOffice({
+	openBoardroom({
 		mode: 'entity',
 		entityType: 'projects',
 		entityId: props.projectId,
@@ -839,12 +839,13 @@ watch(() => props.projectId, () => {
 					<PinButton :pinned="(project as any)?.pinned" always @toggle="onTogglePin" />
 					<button
 						type="button"
-						class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-foreground text-background ios-press shrink-0"
-						title="Convene a meeting"
-						aria-label="Convene a meeting"
+						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
+						title="Convene the Boardroom — Earnest gathers your board on this project"
+						aria-label="Convene the Boardroom on this project"
 						@click="conveneMeeting"
 					>
-						<DirectorChairIcon class="w-4 h-4" />
+						<DirectorChairIcon class="w-4 h-4 shrink-0" />
+						<span class="hidden sm:inline">Convene</span>
 					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
 					     its AppHeader. One opener per surface. -->

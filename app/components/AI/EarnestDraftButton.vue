@@ -75,6 +75,7 @@ function close() {
       <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3 h-3 animate-spin" />
       <EarnestIcon v-else class="w-3 h-3" />
       {{ loading ? 'Suggesting…' : (label || 'Earnest Suggest') }}
+      <AiSpendMark v-if="!loading" muted />
     </button>
     <button
       v-else
@@ -86,6 +87,7 @@ function close() {
       <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
       <EarnestIcon v-else class="w-3.5 h-3.5" />
       {{ loading ? 'Drafting…' : (label || 'Quick draft') }}
+      <AiSpendMark v-if="!loading" muted />
     </button>
 
     <!-- Popover: click-away backdrop + panel. Kept dependency-free (no Reka

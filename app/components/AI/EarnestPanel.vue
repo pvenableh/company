@@ -688,7 +688,9 @@ function formatSessionTime(iso?: string): string {
 							<Icon :name="isStreaming ? 'lucide:square' : 'lucide:arrow-up'" class="w-3.5 h-3.5" />
 						</button>
 					</div>
-					<p class="text-[10px] text-muted-foreground mt-1.5">Earnest may make mistakes.</p>
+					<p class="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+						<AiSpendMark muted /> Chat uses AI tokens · Earnest may make mistakes.
+					</p>
 				</div>
 			</div>
 		</div>

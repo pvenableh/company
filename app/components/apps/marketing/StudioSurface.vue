@@ -816,6 +816,7 @@ onMounted(() => {
           <UiActionButton
             icon="lucide:sparkles"
             aria-label="Draft posts with Earnest"
+            spend
             @click="openDraftWithEarnest"
           >
             Draft with Earnest

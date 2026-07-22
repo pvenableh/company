@@ -431,6 +431,7 @@ function openContactPivot() {
 										variant="primary"
 										:loading="drafting"
 										hide-label="sm"
+										spend
 										@click="generateDraft"
 									>
 										AI Draft
@@ -467,6 +468,7 @@ function openContactPivot() {
 									icon="earnest"
 									variant="primary"
 									:loading="drafting"
+									spend
 									@click="generateDraft"
 								>
 									AI Draft

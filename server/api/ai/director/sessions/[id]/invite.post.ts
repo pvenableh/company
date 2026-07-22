@@ -45,9 +45,9 @@ export default defineEventHandler(async (event) => {
     actorId: userId,
     actorName,
     recipientIds: userIds,
-    subject: `${actorName} invited you to the Director's Office`,
+    subject: `${actorName} invited you to the Boardroom`,
     message: `${actorName} is convening a live meeting on ${label}. Join the table to review and approve the plan together.`,
-    link: `/director?session=${id}`,
+    link: `/boardroom?session=${id}`,
   }).catch(() => {});
 
   return { ok: true, invited: userIds.length };

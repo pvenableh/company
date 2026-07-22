@@ -8,13 +8,13 @@
   approve. A "minutes" rollup summarizes the meeting, and on close any approved
   changes trigger a refresh so the page behind the overlay isn't stale.
 
-  Mounted once globally (app.vue); opened from anywhere via useDirectorOffice().
+  Mounted once globally (app.vue); opened from anywhere via useBoardroom().
 -->
 <script setup lang="ts">
 import { gsap } from 'gsap';
 import { useEarnestPresence, type EarnestMood } from '~/composables/useEarnestPresence';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-const { isOpen, scope, close } = useDirectorOffice();
+const { isOpen, scope, close } = useBoardroom();
 const { selectedOrg, currentOrg } = useOrganization();
 const orgName = computed(() => (currentOrg.value as any)?.name || '');
 const toast = useToast();
@@ -35,7 +35,7 @@ const usersById = computed(() => new Map(assignableUsers.value.map((u) => [u.id,
 // ── Live, multiplayer meeting ────────────────────────────────────────────────
 // The office runs solo by default; going live convenes a shared session others
 // can be invited to. All live wiring is guarded by `liveActive` so solo mode is
-// untouched. Realtime state (presence, steps, Q&A) comes from useDirectorSession.
+// untouched. Realtime state (presence, steps, Q&A) comes from useBoardroomSession.
 const {
   isLive: liveActive,
   isHost: liveIsHost,
@@ -60,7 +60,7 @@ const {
   setViewOnly,
   reportViewedSlide,
   attachPlan,
-} = useDirectorSession();
+} = useBoardroomSession();
 
 const showInvite = ref(false);
 // Go-live setup sheet — the host curates which advisors are in the room.
@@ -387,7 +387,7 @@ const mutated = ref(false); // any step executed → refresh page behind on clos
 // Record the finished meeting into a durable decision record, then optionally
 // share it for review. Captured action items are accumulated here so they land
 // in the minutes alongside the steps + Q&A.
-const { record: recordMinutes, share: shareMinutes } = useDirectorMinutes();
+const { record: recordMinutes, share: shareMinutes } = useBoardroomMinutes();
 interface CapturedItem { type: 'task' | 'ticket'; title: string; priority?: string; assignees?: string[] }
 const capturedItems = ref<CapturedItem[]>([]);
 const recordingMinutes = ref(false);
@@ -1040,18 +1040,18 @@ const vReveal = {
           <header class="relative flex items-start justify-between gap-3 pt-5 pb-3 shrink-0">
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-                <DirectorChairIcon class="w-6 h-6" />
+                <ExecutiveChairIcon class="w-6 h-6" />
               </div>
               <div class="min-w-0">
                 <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">
-                  The Director's Office
+                  The Boardroom
                   <TooltipProvider :delay-duration="150">
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <span class="inline-flex cursor-help"><UIcon name="i-lucide-info" class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors shrink-0" /></span>
                       </TooltipTrigger>
                       <TooltipContent :side-offset="6" class="z-[95] max-w-xs">
-                        Earnest reviewed {{ scopeLabel }} and drafted the work below — you approve each step; nothing runs on its own.
+                        Earnest convened the board on {{ scopeLabel }} and drafted the work below — you approve each step; nothing runs on its own.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -1113,9 +1113,9 @@ const vReveal = {
                 </button>
               </template>
               <NuxtLink
-                to="/director"
+                to="/boardroom"
                 class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                title="Past meetings — open the Director's Office history"
+                title="Past meetings — open the Boardroom history"
                 @click="onClose"
               >
                 <UIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Past meetings
@@ -1517,6 +1517,7 @@ const vReveal = {
                       >
                         <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
                         Discuss
+                        <AiSpendMark muted />
                       </button>
                       <button
                         type="button"
@@ -1549,10 +1550,11 @@ const vReveal = {
                     <button
                       type="button"
                       class="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                      title="Draft a fresh plan for this section"
+                      title="Draft a fresh plan for this section — asks Earnest anew, so it spends tokens"
                       @click="draftPlan(activeSubject || '', true)"
                     >
                       <UIcon name="i-lucide-refresh-cw" class="w-3 h-3" /> Re-draft
+                      <AiSpendMark muted />
                     </button>
                   </div>
                 </div>
@@ -1766,7 +1768,7 @@ const vReveal = {
                   <div class="flex items-center gap-1.5 shrink-0">
                     <NuxtLink
                       v-if="savedMinutesId"
-                      :to="`/director/minutes/${savedMinutesId}`"
+                      :to="`/boardroom/minutes/${savedMinutesId}`"
                       class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
                       title="Open the saved recap"
                     >
@@ -1790,6 +1792,7 @@ const vReveal = {
                 <div v-if="hasBriefing && !planning" class="pt-3 border-t border-border space-y-2.5">
                   <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
                     <EarnestIcon class="w-3 h-3 text-primary" /> Ask Earnest
+                    <AiSpendMark muted />
                   </p>
 
                   <div v-if="qaThread.length" class="space-y-2">

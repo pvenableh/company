@@ -74,6 +74,7 @@
         >
           <Icon name="lucide:sparkles" class="w-3 h-3" />
           <span class="hidden sm:inline">Draft with Earnest</span>
+          <AiSpendMark muted />
         </button>
 
         <!-- HTML dropdown -->
