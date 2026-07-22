@@ -19,7 +19,7 @@ const SYSTEM_ROLES: RoleSlug[] = ['owner', 'admin', 'manager', 'member', 'client
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { email, password, first_name, last_name, phone, organization_name, terms_accepted } = body;
+    const { email, password, first_name, last_name, phone, organization_name, terms_accepted, referred_by } = body;
 
     if (!email || !password) {
       throw createError({
@@ -144,6 +144,43 @@ export default defineEventHandler(async (event) => {
       } catch (orgError: any) {
         // Log but don't fail registration if org setup fails
         console.error('Org setup error (user was still created):', orgError);
+      }
+    }
+
+    // 2b. Referral attribution — if this org was created via a subscriber's
+    // referral link (`?ref=<orgId>`), stamp the NEW org's Stripe customer with
+    // `referred_by_org`. This is the attribution store; payout happens later on
+    // paid conversion in the Stripe webhook (server/utils/referral-reward.ts).
+    // Creating the org customer now also means the later subscription reuses it
+    // (getOrCreateOrgStripeCustomer), so the attribution survives to reward time.
+    if (organizationId && typeof referred_by === 'string' && referred_by && referred_by !== organizationId) {
+      try {
+        const referrers = (await directus.request(
+          readItems('organizations', {
+            filter: { id: { _eq: referred_by }, active: { _neq: false } },
+            fields: ['id'],
+            limit: 1,
+          })
+        )) as any[];
+        if (referrers.length) {
+          const stripe = useStripe();
+          const orgCustomer = await stripe.customers.create({
+            name: organization_name?.trim() || undefined,
+            email,
+            metadata: {
+              organization_id: organizationId,
+              source: 'earnest_registration',
+              referred_by_org: referred_by,
+            },
+          });
+          const { updateItem } = await import('@directus/sdk');
+          await directus.request(
+            updateItem('organizations', organizationId, { stripe_customer_id: orgCustomer.id })
+          );
+          console.log(`[Registration] Referral attributed: org ${organizationId} referred by ${referred_by}`);
+        }
+      } catch (refErr: any) {
+        console.error('[Registration] Referral attribution failed (non-fatal):', refErr?.message);
       }
     }
 

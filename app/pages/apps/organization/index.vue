@@ -614,6 +614,7 @@ const settingsTiles = [
   { label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') },
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
   { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
+  { label: 'Refer an agency', desc: 'Share your link — you both earn bonus credits on their paid plan', icon: 'lucide:gift', to: '/organization/refer' },
 ];
 
 // Document theme studio — applied to invoices, proposals, contracts. Inline
