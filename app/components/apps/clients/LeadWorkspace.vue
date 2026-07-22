@@ -389,8 +389,12 @@ function openContactPivot() {
 		</div>
 
 		<template v-else-if="lead">
-			<div class="flex justify-end mb-3">
-				<AppsCreateWithEarnest entity-type="lead" />
+			<!-- Slide-over only: the page header already has "Ask Earnest". The
+			     entity-scoped prompts (old Create menu) live in the panel. -->
+			<div v-if="compact" class="flex justify-end mb-3">
+				<UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="sidebarOpen = true">
+					Ask Earnest
+				</UiActionButton>
 			</div>
 
 			<!-- Page-mode header -->

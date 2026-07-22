@@ -264,7 +264,7 @@
 		     this call. Anonymous guests get no assistant. -->
 		<ClientOnly>
 			<div class="meeting-dock-override">
-				<LayoutFloatingDock @open-ai="openEarnestPanel()" />
+				<LayoutFloatingDock />
 			</div>
 			<AIEarnestPanel v-if="currentUser" />
 		</ClientOnly>

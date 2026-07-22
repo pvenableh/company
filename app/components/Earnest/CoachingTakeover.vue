@@ -36,6 +36,12 @@ const {
 	setRoute,
 	sendMessage,
 	cancelStream,
+	sessionId,
+	hasHistory,
+	clearChat,
+	listSessions,
+	loadSession,
+	deleteSession,
 } = useContextualChat();
 
 // The shared presence brain — owns the mood + the energy engine. <EarnestAura>
@@ -237,6 +243,59 @@ const suggestions = computed(() => {
 	return [EARNEST_LIFT_OPENER, "I'm stretched thin — where do I start?", 'Help me plan my next hour', 'What did I do well today?'];
 });
 
+// ── Past-conversation history + new conversation ─────────────────────────────
+// Ported from EarnestPanel so Focus has the same "sidebar" affordances. Focus
+// and the dock share the active bucket, so a session opened / started here is
+// the same thread the dock shows.
+const showHistory = ref(false);
+const historyLoading = ref(false);
+const historySessions = ref<import('~/composables/useContextualChat').ChatSessionSummary[]>([]);
+const deletingId = ref<string | null>(null);
+
+// Always land on the conversation (not a stale history list) when Focus reopens.
+watch(isOpen, (open) => { if (open) showHistory.value = false; });
+
+async function openHistory() {
+	showHistory.value = true;
+	historyLoading.value = true;
+	try {
+		historySessions.value = await listSessions({ limit: 50 });
+	} finally {
+		historyLoading.value = false;
+	}
+}
+function closeHistory() { showHistory.value = false; }
+async function pickSession(id: string) {
+	await loadSession(id);
+	showHistory.value = false;
+	await nextTick();
+	scrollToBottom();
+}
+async function removeSession(id: string) {
+	deletingId.value = id;
+	const ok = await deleteSession(id);
+	deletingId.value = null;
+	if (ok) historySessions.value = historySessions.value.filter((s) => s.id !== id);
+}
+function newConversation() {
+	clearChat();
+	showHistory.value = false;
+}
+const sessionDateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+function formatSessionTime(iso?: string): string {
+	if (!iso) return '';
+	const then = new Date(iso).getTime();
+	if (Number.isNaN(then)) return '';
+	const mins = Math.round((Date.now() - then) / 60000);
+	if (mins < 1) return 'just now';
+	if (mins < 60) return `${mins}m ago`;
+	const hrs = Math.round(mins / 60);
+	if (hrs < 24) return `${hrs}h ago`;
+	const days = Math.round(hrs / 24);
+	if (days < 7) return `${days}d ago`;
+	return sessionDateFmt.format(then);
+}
+
 // ── Send ─────────────────────────────────────────────────────────────────────
 const input = ref('');
 const scroller = ref<HTMLElement | null>(null);
@@ -391,6 +450,20 @@ const markRef = ref<{ expand: () => void } | null>(null);
 							</button>
 							<button type="button" :data-on="mode === 'mirror'" @click="setMode('mirror')">Mirror</button>
 						</div>
+						<!-- New conversation + history — same thread store as the dock. -->
+						<button v-if="hasHistory" type="button" class="coach__close" aria-label="New conversation" title="New conversation" @click="newConversation">
+							<Icon name="lucide:plus" class="w-5 h-5" />
+						</button>
+						<button
+							type="button"
+							class="coach__close"
+							:class="{ 'coach__close--on': showHistory }"
+							aria-label="Past conversations"
+							title="Past conversations"
+							@click="showHistory ? closeHistory() : openHistory()"
+						>
+							<Icon name="lucide:history" class="w-5 h-5" />
+						</button>
 						<button type="button" class="coach__close" aria-label="Shrink to docked panel" title="Dock" @click="setEarnestSize('dock')">
 							<Icon name="lucide:minimize-2" class="w-5 h-5" />
 						</button>
@@ -406,7 +479,43 @@ const markRef = ref<{ expand: () => void } | null>(null);
 					     A lever on an insight drops you into the conversation with it. -->
 					<EarnestMirror v-if="mode === 'mirror'" :active="mode === 'mirror'" @lever="onMirrorLever" />
 
-					<div v-show="mode !== 'mirror'" ref="scroller" class="coach__convo">
+					<!-- Past conversations overlay (list / open / delete). -->
+					<div v-if="showHistory && mode !== 'mirror'" class="coach__history">
+						<div class="coach__history-head">
+							<span class="coach__history-title">Past conversations</span>
+							<button type="button" class="coach__history-back" @click="closeHistory">
+								<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" /> Back
+							</button>
+						</div>
+						<div v-if="historyLoading" class="coach__history-empty">
+							<Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Loading…
+						</div>
+						<div v-else-if="!historySessions.length" class="coach__history-empty">
+							<Icon name="lucide:message-square-dashed" class="w-6 h-6 opacity-50" />
+							<p>No past conversations yet.</p>
+						</div>
+						<ul v-else class="coach__history-list">
+							<li
+								v-for="s in historySessions"
+								:key="s.id"
+								class="coach__history-item"
+								:class="{ 'coach__history-item--on': s.id === sessionId }"
+								@click="pickSession(s.id)"
+							>
+								<Icon name="lucide:message-circle" class="w-3.5 h-3.5 shrink-0 opacity-70" />
+								<div class="coach__history-meta">
+									<p class="coach__history-name">{{ s.title || 'Untitled conversation' }}</p>
+									<p class="coach__history-time">{{ formatSessionTime(s.date_updated || s.date_created) }}</p>
+								</div>
+								<button type="button" class="coach__history-del" title="Delete conversation" @click.stop="removeSession(s.id)">
+									<Icon v-if="deletingId === s.id" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+									<Icon v-else name="lucide:trash-2" class="w-3 h-3" />
+								</button>
+							</li>
+						</ul>
+					</div>
+
+					<div v-show="mode !== 'mirror' && !showHistory" ref="scroller" class="coach__convo">
 						<div class="coach__convo-wrap">
 							<!-- Opening / empty -->
 							<div v-if="!hasConversation" class="coach__opener">
@@ -547,6 +656,25 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; line-height: 1; border-radius: 999px; background: #f3c465; color: #06121f; font-weight: 600; }
 .coach__close { width: 38px; height: 38px; border-radius: 50%; border: 0; background: transparent; color: rgba(238,242,248,.7); cursor: pointer; display: grid; place-items: center; transition: background .2s, color .2s; }
 .coach__close:hover { background: hsl(var(--aura-glass-2)); color: hsl(var(--aura-foreground)); }
+.coach__close--on { background: hsl(var(--aura-glass-2)); color: hsl(var(--aura-foreground)); }
+
+/* Past-conversations overlay */
+.coach__history { flex: 1; min-height: 0; display: flex; flex-direction: column; width: min(560px, 100%); margin: 0 auto; padding: 8px 4px 24px; overflow-y: auto; }
+.coach__history-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 12px; }
+.coach__history-title { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(238,242,248,.5); }
+.coach__history-back { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; color: rgba(238,242,248,.55); font: inherit; font-size: 11px; cursor: pointer; transition: color .2s; }
+.coach__history-back:hover { color: hsl(var(--aura-foreground)); }
+.coach__history-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(238,242,248,.5); font-size: 12px; }
+.coach__history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.coach__history-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid hsl(var(--aura-rim)); background: hsl(var(--aura-glass-1)); color: hsl(var(--aura-foreground)); cursor: pointer; transition: background .2s, border-color .2s; }
+.coach__history-item:hover { background: hsl(var(--aura-glass-2)); }
+.coach__history-item--on { border-color: hsl(var(--aura-foreground) / .35); background: hsl(var(--aura-glass-2)); }
+.coach__history-meta { min-width: 0; flex: 1; }
+.coach__history-name { margin: 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coach__history-time { margin: 1px 0 0; font-size: 10px; color: rgba(238,242,248,.45); }
+.coach__history-del { opacity: 0; border: 0; background: transparent; color: rgba(238,242,248,.5); cursor: pointer; padding: 4px; border-radius: 999px; transition: opacity .15s, color .2s, background .2s; }
+.coach__history-item:hover .coach__history-del { opacity: 1; }
+.coach__history-del:hover { color: hsl(var(--destructive)); background: hsl(var(--destructive) / .12); }
 
 .coach__body { flex: 1; min-height: 0; display: flex; }
 .coach__body--working { gap: clamp(12px, 2vw, 28px); }

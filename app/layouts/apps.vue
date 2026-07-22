@@ -41,29 +41,16 @@
 						</ClientOnly>
 					</div>
 					<div class="apps-shell__chrome-center">
-						<!-- The logo opens the Earnest assistant panel (home is the
-						     dock's Dashboard app). The HITL pending-actions badge that
-						     used to sit on the separate assistant button lives here now. -->
-						<button
-							type="button"
-							class="apps-shell__brand-btn"
-							aria-label="Open Earnest assistant"
-							@click="handleOpenAI"
-						>
-							<LayoutEarnestBrand tagline="Do good work." />
-							<span
-								v-if="aiPendingCount > 0"
-								class="apps-shell__brand-badge"
-								:aria-label="`${aiPendingCount} action${aiPendingCount === 1 ? '' : 's'} awaiting approval`"
-							>
-								{{ aiPendingCount > 9 ? '9+' : aiPendingCount }}
-							</span>
-						</button>
+						<!-- The logo is just the wordmark now (links home). Earnest has a
+						     single launcher — the presence dot on the right — so the logo no
+						     longer opens the assistant. -->
+						<LayoutEarnestBrand to="/apps" tagline="Do good work." />
 					</div>
 					<div class="apps-shell__chrome-right">
-						<!-- Earnest's ambient presence — the one launcher for the assistant.
-						     Tap to open Earnest (docked); expand to full-screen focus from
-						     inside. Reachable from every page. -->
+						<!-- Earnest's ambient presence — THE single launcher for the
+						     assistant. Tap to open Earnest (docked); expand to full-screen
+						     focus from inside. Reachable from every page. The HITL
+						     pending-actions badge rides here now. -->
 						<button
 							type="button"
 							class="group relative flex items-center justify-center w-7 h-7 shrink-0 ios-press"
@@ -72,6 +59,13 @@
 							@click="handleOpenAI"
 						>
 							<EarnestPresenceDot aperture />
+							<span
+								v-if="aiPendingCount > 0"
+								class="apps-shell__brand-badge"
+								:aria-label="`${aiPendingCount} action${aiPendingCount === 1 ? '' : 's'} awaiting approval`"
+							>
+								{{ aiPendingCount > 9 ? '9+' : aiPendingCount }}
+							</span>
 						</button>
 						<!-- Search is desktop-chrome only; below sm it moves into the
 						     user-menu dropdown. Wrapper carries the responsive hide so
@@ -152,7 +146,7 @@
 			<TimeTrackerFloatingIndicator class="md:hidden" />
 		</ClientOnly>
 		<ClientOnly>
-			<LayoutFloatingDock @open-ai="handleOpenAI" />
+			<LayoutFloatingDock />
 		</ClientOnly>
 		<ClientOnly>
 			<LayoutSpotlightSearch :open="spotlightOpen" @close="spotlightOpen = false" />
@@ -302,15 +296,10 @@ if (import.meta.client) {
 	@apply flex items-center justify-center;
 }
 
-/* The brand acts as the Earnest-assistant launcher. Keep it a bare, tappable
- * wrapper around the logo so the mark itself reads as the affordance. */
-.apps-shell__brand-btn {
-	@apply relative inline-flex items-center justify-center rounded-xl px-1.5 py-0.5
-		transition-transform hover:bg-muted/30 active:scale-95;
-}
-
+/* HITL pending-actions badge — now rides the presence-dot launcher (top-right
+ * of the dot), so it stays absolutely positioned within that relative button. */
 .apps-shell__brand-badge {
-	@apply absolute top-0 right-0 inline-flex items-center justify-center
+	@apply absolute -top-1 -right-1 inline-flex items-center justify-center
 		min-w-[15px] h-[15px] px-1 rounded-full bg-warning text-[9px]
 		font-semibold text-warning-foreground tabular-nums leading-none;
 }

@@ -49,6 +49,9 @@ const emit = defineEmits<{
 	(e: 'tab-change', tab: ProjectTabKey): void;
 }>();
 
+// One inline Earnest opener — the docked panel surfaces the entity-scoped
+// "things Earnest can do here" prompts (what the old Create menu offered).
+const { openEarnestPanel } = useEarnestPanel();
 // Director's Office — convene a focused meeting scoped to just this project.
 const { open: openDirectorOffice } = useDirectorOffice();
 function conveneMeeting() {
@@ -843,7 +846,11 @@ watch(() => props.projectId, () => {
 					>
 						<DirectorChairIcon class="w-4 h-4" />
 					</button>
-					<AppsCreateWithEarnest entity-type="project" />
+					<!-- Slide-over only: the full page already has an "Ask Earnest" in
+					     its AppHeader. One opener per surface. -->
+					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel()">
+						Ask Earnest
+					</UiActionButton>
 					<slot name="actions" />
 				</template>
 			</AppsWorkProjectIdentityStrip>

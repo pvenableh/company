@@ -30,6 +30,7 @@ const config = useRuntimeConfig();
 const { getContract } = useContracts();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const { openEarnestPanel } = useEarnestPanel();
 const slideOverStack = useAppSlideOverStack();
 
 const contract = ref<any>(null);
@@ -319,7 +320,9 @@ if (!props.compact) {
           </p>
         </div>
         <div class="flex items-center gap-1.5 flex-wrap">
-          <AppsCreateWithEarnest entity-type="contract" label="Create invoice" />
+          <UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel(earnestActionsFor('contract')[0]?.prompt)">
+            Create invoice
+          </UiActionButton>
           <div class="inline-flex items-center rounded-lg border border-border bg-background p-0.5 text-xs">
             <button
               class="h-6 px-2.5 rounded-md transition-colors"

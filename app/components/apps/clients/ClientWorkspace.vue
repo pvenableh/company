@@ -31,6 +31,10 @@ import { notifyEntityChange } from '~/composables/useEntityStore';
 import type { ClientTabKey } from './ClientTabsBar.vue';
 import VueDraggable from 'vuedraggable';
 
+// One inline Earnest opener — the docked panel surfaces the entity-scoped
+// "things Earnest can do here" prompts (what the old Create menu offered).
+const { openEarnestPanel } = useEarnestPanel();
+
 const props = defineProps<{
 	clientId: string;
 	/**
@@ -821,7 +825,11 @@ watch(() => props.clientId, () => {
 			>
 				<template #actions>
 					<PinButton :pinned="(client as any)?.pinned" always @toggle="onTogglePin" />
-					<AppsCreateWithEarnest entity-type="client" />
+					<!-- Slide-over only: the full page already has an "Ask Earnest" in
+					     its AppHeader. One opener per surface. -->
+					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel()">
+						Ask Earnest
+					</UiActionButton>
 					<slot name="actions" />
 				</template>
 			</AppsClientsClientIdentityStrip>

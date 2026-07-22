@@ -22,6 +22,7 @@ const projectEventItems = useDirectusItems('project_events');
 const videoMeetingItems = useDirectusItems('video_meetings');
 const { getUrl } = useDirectusFiles();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const { openEarnestPanel } = useEarnestPanel();
 
 const event = ref(null);
 const loading = ref(true);
@@ -232,7 +233,9 @@ function openProject() {
 				v-if="event.payment_amount || event.type === 'Financial' || event.is_milestone"
 				class="flex justify-end px-4 pt-3"
 			>
-				<AppsCreateWithEarnest entity-type="project_event" label="Bill this milestone" />
+				<UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel(earnestActionsFor('project_event')[0]?.prompt)">
+						Bill this milestone
+					</UiActionButton>
 			</div>
 
 			<!-- Header (page mode only) -->

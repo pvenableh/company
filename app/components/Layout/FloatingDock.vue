@@ -80,25 +80,8 @@
 					<span v-else-if="isTimerPaused" class="dock-paused-dot" />
 				</button>
 
-				<!-- Earnest AI button (with token-usage ring) -->
-				<button
-					class="dock-btn dock-btn-ai"
-					:title="aiBtnTitle"
-					@click="emit('open-ai')"
-				>
-					<svg v-if="!aiTokensUnlimited" class="dock-ai-ring" viewBox="0 0 30 30" aria-hidden="true">
-						<circle class="dock-ai-ring-track" cx="15" cy="15" r="13" />
-						<circle
-							class="dock-ai-ring-fill"
-							:class="aiRingColorClass"
-							cx="15" cy="15" r="13"
-							:stroke-dasharray="AI_RING_CIRC"
-							:stroke-dashoffset="aiRingDashOffset"
-						/>
-					</svg>
-					<EarnestIcon class="w-4 h-4 relative" />
-					<span v-if="aiTokenAlert" class="dock-ai-warn-dot" />
-				</button>
+				<!-- Earnest lives on the single header launcher (the presence dot),
+				     so the dock no longer carries a duplicate Earnest button. -->
 
 				<!-- Collapse button -->
 				<button
@@ -249,39 +232,6 @@ const {
 	resumeTimer,
 	discardTimer,
 } = useTimeTracker();
-const { usageSummary } = useAITokens();
-
-// ── Token usage ring on the AI button ──
-const AI_RING_CIRC = 2 * Math.PI * 13; // r=13 → ~81.68
-const aiTokensUnlimited = computed(() => {
-	const s = usageSummary.value;
-	return !s || s.orgLimit === null || s.orgLimit === undefined;
-});
-const aiUsagePercent = computed(() => {
-	const s = usageSummary.value;
-	if (!s || !s.orgLimit) return 0;
-	return Math.min(100, Math.round(((s.orgTokensUsed ?? 0) / s.orgLimit) * 100));
-});
-const aiRingDashOffset = computed(() => AI_RING_CIRC * (1 - aiUsagePercent.value / 100));
-const aiRingColorClass = computed(() => {
-	if (aiUsagePercent.value >= 90) return 'ring-critical';
-	if (aiUsagePercent.value >= 70) return 'ring-warn';
-	return 'ring-ok';
-});
-const aiTokenAlert = computed(() => {
-	const s = usageSummary.value;
-	if (!s) return false;
-	if (s.orgBalance !== null && s.orgBalance !== undefined && s.orgBalance <= 0) return true;
-	return aiUsagePercent.value >= 90;
-});
-const aiBtnTitle = computed(() => {
-	const s = usageSummary.value;
-	if (!s || aiTokensUnlimited.value) return 'Earnest';
-	const balance = s.orgBalance != null ? s.orgBalance.toLocaleString() : '—';
-	return `Earnest · ${aiUsagePercent.value}% used · ${balance} tokens left`;
-});
-
-const emit = defineEmits(['open-ai']);
 const activePanel = activeDockPanel;
 
 const COLLAPSED_KEY = 'dock-collapsed';
@@ -682,65 +632,6 @@ function snapToNearestCorner() {
 	border-radius: 50%;
 	background: #d97706;
 	opacity: 0.7;
-}
-
-/* Earnest brand ink for the mark (the E); its own #00BFFF dot carries the
-   accent. Don't tint it with the theme primary. */
-.dock-btn-ai {
-	color: hsl(var(--foreground));
-}
-
-.dock-btn-ai:hover {
-	background: hsl(var(--primary) / 0.2);
-	color: hsl(var(--foreground));
-}
-
-/* Token-usage ring around the Earnest AI button */
-.dock-ai-ring {
-	position: absolute;
-	inset: 0;
-	width: 30px;
-	height: 30px;
-	transform: rotate(-90deg);
-	pointer-events: none;
-	overflow: visible;
-}
-
-.dock-ai-ring-track {
-	fill: none;
-	stroke: hsl(var(--muted-foreground) / 0.15);
-	stroke-width: 1.5;
-}
-
-.dock-ai-ring-fill {
-	fill: none;
-	stroke-width: 1.5;
-	stroke-linecap: round;
-	transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
-}
-
-.dock-ai-ring-fill.ring-ok {
-	stroke: hsl(var(--primary) / 0.55);
-}
-
-.dock-ai-ring-fill.ring-warn {
-	stroke: #d97706;
-}
-
-.dock-ai-ring-fill.ring-critical {
-	stroke: hsl(var(--destructive));
-}
-
-.dock-ai-warn-dot {
-	position: absolute;
-	top: 3px;
-	right: 3px;
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: hsl(var(--destructive));
-	box-shadow: 0 0 0 1.5px hsl(var(--card));
-	animation: pulse-recording 1.5s ease-in-out infinite;
 }
 
 .dock-badge {
