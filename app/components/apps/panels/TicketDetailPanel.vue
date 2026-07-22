@@ -21,8 +21,6 @@ const props = defineProps<{ id: string; mode?: string }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
 const ticketItems = useDirectusItems('tickets');
-const { push } = useAppSlideOverStack();
-const { getStatusPillClass, getPriorityBadgeClass } = useStatusStyle();
 const toast = useToast();
 const { awardEvent } = useArcadeAwards();
 const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
@@ -108,6 +106,20 @@ async function changeStatus(next: string) {
 	}
 }
 
+// Inline quick-edits from the identity strip (due date). Optimistic, with
+// rollback on failure — same pattern as changeStatus.
+async function handleStripUpdate(fields: Record<string, any>) {
+	if (!ticket.value?.id) return;
+	const prev = { ...ticket.value };
+	ticket.value = { ...ticket.value, ...fields };
+	try {
+		await ticketItems.update(ticket.value.id, fields);
+	} catch (err: any) {
+		ticket.value = prev;
+		toast.add({ title: 'Failed to update ticket', description: err?.message, color: 'red' });
+	}
+}
+
 // Drop the entity context when the slide-over closes — but only if it's
 // still pointing at us (a panel pushed on top may have taken over).
 onBeforeUnmount(() => {
@@ -142,27 +154,23 @@ onBeforeUnmount(() => {
 		</div>
 
 		<div v-else-if="ticket" class="space-y-5">
-			<!-- Status + priority strip -->
-			<div class="flex items-center gap-2 flex-wrap">
-				<span
-					class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-					:class="getStatusPillClass(ticket.status)"
-				>
-					<Icon v-if="updatingStatus" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-					{{ ticket.status || 'No status' }}
-				</span>
-				<span
-					v-if="ticket.priority"
-					class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white"
-					:class="getPriorityBadgeClass(ticket.priority)"
-				>
-					{{ ticket.priority }}
-				</span>
-				<span v-if="ticket.due_date" class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground ml-1">
-					<Icon name="lucide:calendar" class="w-3 h-3" />
-					Due {{ fmtDate(ticket.due_date) }}
-				</span>
-			</div>
+			<!-- Shared identity strip — same component the full page uses, so the
+			     two surfaces can't drift. Carries priority / linked project +
+			     client + team / due date (inline-editable) / CSAT. Links open a
+			     panel on top via the slide-over stack. -->
+			<AppsWorkTicketIdentityStrip
+				:ticket="ticket"
+				use-panel-stack
+				@update="handleStripUpdate"
+			>
+				<template v-if="ticket.csat_rating" #rating>
+					<CsatBadge
+						:rating="ticket.csat_rating"
+						:comment="ticket.csat_comment"
+						:submitted-at="ticket.csat_submitted_at"
+					/>
+				</template>
+			</AppsWorkTicketIdentityStrip>
 
 			<!-- Quick-change status -->
 			<div class="flex items-center gap-1.5 flex-wrap">
@@ -187,15 +195,6 @@ onBeforeUnmount(() => {
 				<div class="text-sm whitespace-pre-wrap text-foreground/90" v-html="ticket.description" />
 			</div>
 
-			<!-- Client satisfaction (set from the portal when resolved) -->
-			<div v-if="ticket.csat_rating" class="pt-3 border-t border-border/30">
-				<CsatBadge
-					:rating="ticket.csat_rating"
-					:comment="ticket.csat_comment"
-					:submitted-at="ticket.csat_submitted_at"
-				/>
-			</div>
-
 			<!-- Tasks checklist — same component the full page uses; fetches
 			     its own rows by ticket id, so no extra panel data needed. -->
 			<div class="pt-3 border-t border-border/30">
@@ -206,40 +205,11 @@ onBeforeUnmount(() => {
 				<TicketsTasks :ticket-id="ticket.id" />
 			</div>
 
-			<!-- Linkages -->
-			<div
-				v-if="assignees.length || ticket.project?.id || ticket.client?.id || ticket.team?.id"
-				class="space-y-2 pt-3 border-t border-border/30"
-			>
-				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Linked</p>
+			<!-- Assignees — project/client/team links now live in the identity
+			     strip above; this row keeps the who's-assigned detail. -->
+			<div v-if="assignees.length" class="space-y-2 pt-3 border-t border-border/30">
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Assigned</p>
 				<div class="flex flex-wrap gap-2">
-					<button
-						v-if="ticket.project?.id"
-						type="button"
-						class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs border border-border hover:bg-muted/60 transition-colors"
-						@click="push('work-project', ticket.project.id)"
-					>
-						<Icon name="lucide:folder-kanban" class="w-3 h-3" />
-						{{ ticket.project.title || 'Project' }}
-					</button>
-					<button
-						v-if="ticket.client?.id"
-						type="button"
-						class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs border border-border hover:bg-muted/60 transition-colors"
-						@click="push('client', ticket.client.id)"
-					>
-						<Icon name="lucide:building-2" class="w-3 h-3" />
-						{{ ticket.client.name || 'Client' }}
-					</button>
-					<span
-						v-if="ticket.team?.id"
-						class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs border border-border text-muted-foreground"
-					>
-						<Icon name="lucide:users" class="w-3 h-3" />
-						{{ ticket.team.name || 'Team' }}
-					</span>
-				</div>
-				<div v-if="assignees.length" class="flex flex-wrap gap-2 pt-1">
 					<span
 						v-for="u in assignees"
 						:key="u.id"

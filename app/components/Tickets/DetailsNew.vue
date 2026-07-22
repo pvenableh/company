@@ -15,49 +15,47 @@
 			/>
 		</div>
 
-		<!-- Header -->
-		<div class="flex items-start sm:items-center justify-between mb-6 gap-2">
+		<!-- Header — standard detail-surface hero: title + status badge, then a
+		     shared identity strip carrying priority / links / due date / CSAT and
+		     the action row. Mirrors the project & client surfaces. -->
+		<div class="flex items-start justify-between mb-3 gap-2">
 			<div class="min-w-0">
+				<div class="sm:hidden mb-1">
+					<UiStatusBadge :status="currentStatus" />
+				</div>
 				<div class="flex items-center gap-2">
 					<h1 class="text-sm sm:text-base font-semibold text-foreground" style="line-height: 1.1">{{ localElement.title }}</h1>
+					<div class="hidden sm:block shrink-0">
+						<UiStatusBadge :status="currentStatus" />
+					</div>
 				</div>
-				<div class="flex items-center gap-1.5 mt-1">
-					<span
-						class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-						:class="getStatusColor(currentStatus)"
-					>
-						{{ currentStatus }}
-					</span>
-					<span
-						class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
-						:class="getPriorityColor(currentPriority)"
-					>
-						{{ currentPriority }}
-					</span>
-					<span v-if="localElement.due_date" class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground ml-1">
-						<Icon name="lucide:calendar" class="w-3 h-3" />
-						Due {{ formatDate(localElement.due_date) }}
-					</span>
-				</div>
-			</div>
-			<div class="flex items-center gap-1.5">
-				<LayoutShareButton :title="shareTitle" :text="shareDescription" />
-				<button
-					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-					@click="sidebarOpen = true"
-				>
-					<EarnestIcon class="w-3.5 h-3.5" />
-					<span class="hidden sm:inline">Ask Earnest</span>
-				</button>
-				<button
-					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
-					@click="showDeleteModal = true"
-				>
-					<Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-					<span class="hidden sm:inline">Delete</span>
-				</button>
 			</div>
 		</div>
+
+		<AppsWorkTicketIdentityStrip
+			:ticket="localElement"
+			class="mb-6"
+			@update="handleStripUpdate"
+		>
+			<!-- CSAT sits in the universal rating position (set from the portal
+			     when the ticket is resolved), matching project/client surfaces. -->
+			<template v-if="localElement.csat_rating" #rating>
+				<CsatBadge
+					:rating="localElement.csat_rating"
+					:comment="localElement.csat_comment"
+					:submitted-at="localElement.csat_submitted_at"
+				/>
+			</template>
+			<template #actions>
+				<LayoutShareButton :title="shareTitle" :text="shareDescription" />
+				<UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="sidebarOpen = true">
+					Ask Earnest
+				</UiActionButton>
+				<UiActionButton icon="lucide:trash-2" variant="destructive" hide-label="sm" @click="showDeleteModal = true">
+					Delete
+				</UiActionButton>
+			</template>
+		</AppsWorkTicketIdentityStrip>
 
 		<!-- AI Notices -->
 		<ClientOnly>
@@ -267,7 +265,6 @@ const router = useRouter();
 const { notifyTicketStatusChange, notifyTicketAssignment, notifyTicketUpdate, notifyMentions } =
 	useNotificationHelper();
 const config = useRuntimeConfig();
-const { getStatusPillClass, getPriorityBadgeClass } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 // Refs
@@ -380,10 +377,12 @@ const updateFormWithLatestData = () => {
 	formRef.value.updateFormData(localElement.value);
 };
 
-// Sync header priority badge with form changes in real-time
+// Sync header/strip priority with form changes in real-time. Mirror into
+// localElement too so the identity strip's priority pill reflects live edits.
 watch(() => formRef.value?.form?.priority, (newPriority) => {
 	if (newPriority) {
 		currentPriority.value = newPriority;
+		localElement.value = { ...localElement.value, priority: newPriority };
 	}
 });
 
@@ -422,9 +421,6 @@ const formatDate = (dateString, includeTime = false) => {
 	if (!dateString) return '';
 	return includeTime ? formatDateWithTime(dateString) : getFriendlyDateThree(dateString);
 };
-
-const getStatusColor = (status) => getStatusPillClass(status);
-const getPriorityColor = (priority) => getPriorityBadgeClass(priority);
 
 const getUserFullName = (user) => {
 	if (!user) return 'Unknown';
@@ -526,7 +522,7 @@ const updateTicket = async (formData) => {
 		try {
 			const freshTicket = await ticketItems.get(props.element.id, {
 				fields: [
-					'id', 'title', 'description', 'status', 'priority', 'date_created', 'date_updated',
+					'id', 'title', 'description', 'status', 'priority', 'csat_rating', 'csat_comment', 'csat_submitted_at', 'date_created', 'date_updated',
 					'user_updated.first_name', 'user_updated.last_name', 'user_updated.id',
 					'user_created.first_name', 'user_created.last_name', 'user_created.id',
 					'due_date', 'organization.id', 'organization.name', 'organization.logo',
@@ -564,6 +560,23 @@ const updateTicket = async (formData) => {
 		});
 	} finally {
 		isLoading.value = false;
+	}
+};
+
+// Inline quick-edits from the identity strip (currently the due date). Saves
+// straight through and mirrors the change into localElement so the strip and
+// form stay in sync without a full refetch.
+const handleStripUpdate = async (fields) => {
+	try {
+		await ticketItems.update(props.element.id, { ...fields, date_updated: new Date() });
+		localElement.value = { ...localElement.value, ...fields };
+		if ('due_date' in fields) {
+			notifyTicketUpdate(props.element, ['due date']).catch(() => {});
+		}
+		toast.add({ title: 'Ticket updated', color: 'green' });
+	} catch (error) {
+		console.error('Error updating ticket from identity strip:', error);
+		toast.add({ title: 'Error', description: 'Failed to update ticket', color: 'red' });
 	}
 };
 
