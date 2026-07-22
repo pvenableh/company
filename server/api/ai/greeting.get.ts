@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
 	// One optional, natural clause; never a widget, never a mood.
 	const weather = await getWeatherContext(event);
 	const weatherHint = weather
-		? `\n- Outside right now: ${weather.condition}${weather.tempC != null ? `, ${weather.tempC}°C` : ''}${weather.city ? ` in ${weather.city}` : ''}. You MAY weave ONE short, natural nod to this weather into the greeting as light texture if it genuinely fits — never force it, and never infer the user's mood from the weather.`
+		? `\n- Outside right now: ${weather.condition}${weather.tempF != null ? `, ${weather.tempF}°F` : ''}${weather.city ? ` in ${weather.city}` : ''}. You MAY weave ONE short, natural nod to this weather into the greeting as light texture if it genuinely fits — never force it, and never infer the user's mood from the weather.`
 		: '';
 
 	const systemPrompt = `You are ${personaDesc}. Generate a personalized greeting for the user.

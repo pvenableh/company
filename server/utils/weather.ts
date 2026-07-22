@@ -16,6 +16,8 @@ export interface WeatherContext {
 	/** Plain word: 'clear' | 'rainy' | 'cloudy' | … — texture, not a feeling. */
 	condition: string;
 	tempC: number | null;
+	/** Same reading in Fahrenheit — what the UI + greeting actually display. */
+	tempF: number | null;
 	city: string;
 	/** Raw Open-Meteo WMO code — lets a UI pick a precise icon. */
 	code?: number | null;
@@ -52,10 +54,12 @@ export async function weatherFromLatLon(lat: number | string, lon: number | stri
 	const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(nLat)}&longitude=${encodeURIComponent(nLon)}&current=temperature_2m,weather_code`;
 	const res: any = await $fetch(url, { timeout: 2500 }).catch(() => null);
 	const cur = res?.current;
+	const tempC = cur && Number.isFinite(cur.temperature_2m) ? cur.temperature_2m : null;
 	const data: WeatherContext | null = (cur && typeof cur.weather_code === 'number')
 		? {
 			condition: describeWeatherCode(cur.weather_code),
-			tempC: Number.isFinite(cur.temperature_2m) ? Math.round(cur.temperature_2m) : null,
+			tempC: tempC != null ? Math.round(tempC) : null,
+			tempF: tempC != null ? Math.round(tempC * 9 / 5 + 32) : null,
 			city,
 			code: cur.weather_code,
 		}

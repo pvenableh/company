@@ -9,7 +9,7 @@
 <script setup lang="ts">
 const { weatherEnabled } = useWeatherEnabled();
 
-const weather = ref<null | { condition: string; tempC: number | null; city: string; code?: number | null }>(null);
+const weather = ref<null | { condition: string; tempC: number | null; tempF: number | null; city: string; code?: number | null }>(null);
 const loaded = ref(false);
 
 // Plain condition word (from server describeWeatherCode) → wi icon name.
@@ -23,12 +23,7 @@ const ICONS: Record<string, string> = {
 	stormy: 'wi:thunderstorm',
 };
 const icon = computed(() => ICONS[weather.value?.condition || ''] || 'wi:day-cloudy');
-// The API returns Celsius (kept as-is for the AI greeting's `tempC`); the widget
-// displays Fahrenheit.
-const tempF = computed(() => {
-	const c = weather.value?.tempC;
-	return c == null ? null : Math.round(c * 9 / 5 + 32);
-});
+const tempF = computed(() => weather.value?.tempF ?? null);
 const label = computed(() => {
 	if (!weather.value) return '';
 	const parts = [weather.value.condition];
