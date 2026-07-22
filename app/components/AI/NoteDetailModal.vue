@@ -82,7 +82,9 @@ const goToSession = () => {
     : (note.value.source_session as any)?.id;
   if (sessionId) {
     emit('update:modelValue', false);
-    router.push(`/command-center/ai?session=${sessionId}`);
+    // The full-page chat is retired — open the unified Earnest panel. (Deep-link
+    // to this exact past session is a follow-up once the panel history exposes it.)
+    openEarnestPanel();
   }
 };
 

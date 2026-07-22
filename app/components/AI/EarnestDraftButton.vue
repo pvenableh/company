@@ -1,10 +1,14 @@
 <!--
-  EarnestDraftButton — the shared inline "Draft with Earnest" affordance.
+  EarnestDraftButton — the shared inline "Quick draft" affordance.
 
   A small pill trigger that opens a brief popover (free-text prompt) and emits
   the brief to the parent, which owns the actual generation + how the result is
-  applied to its field(s). Optional + non-blocking — it never edits the field
-  itself, so it drops onto any content/caption/text surface.
+  applied to its field(s). This is the ONE lightweight, fill-this-field draft;
+  multi-block artifacts (posts, proposals, newsletters) live on the Generative
+  Canvas, whose entry buttons own the "Draft with Earnest" label. Keeping the
+  two labels distinct is deliberate — same Earnest, right tool for the moment.
+  Optional + non-blocking — it never edits the field itself, so it drops onto
+  any content/caption/text surface.
 
   Loading is parent-controlled (`:loading`) because the generation round-trip
   lives with the field it fills. Copy stays plain per the Earnest voice charter
@@ -12,7 +16,7 @@
 
   Props:
     :loading      boolean   parent is generating — shows a spinner, blocks submit
-    :label        string    trigger label (default "Draft with Earnest")
+    :label        string    trigger label (default "Quick draft")
     :placeholder  string    brief textarea placeholder
     :disabled     boolean   disable the trigger entirely
 
@@ -81,7 +85,7 @@ function close() {
     >
       <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
       <EarnestIcon v-else class="w-3.5 h-3.5" />
-      {{ loading ? 'Drafting…' : (label || 'Draft with Earnest') }}
+      {{ loading ? 'Drafting…' : (label || 'Quick draft') }}
     </button>
 
     <!-- Popover: click-away backdrop + panel. Kept dependency-free (no Reka
@@ -94,7 +98,7 @@ function close() {
       >
         <div class="flex items-center gap-1.5 text-xs font-medium text-primary">
           <EarnestIcon class="w-3.5 h-3.5" />
-          {{ label || 'Draft with Earnest' }}
+          {{ label || 'Quick draft' }}
         </div>
         <textarea
           ref="inputEl"

@@ -9,7 +9,7 @@
 // Cheap by design — the client caches the result per day (localStorage), so this
 // runs about once per user per morning; the org token gate is the backstop.
 
-import { collectPersonalAgenda, type PersonalGroup } from '~~/server/utils/personal-agenda';
+import { collectPersonalAgenda, collectRecentWins, type PersonalGroup, type RecentWins } from '~~/server/utils/personal-agenda';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~~/server/utils/llm/types';
@@ -17,15 +17,32 @@ import type { ChatMessage } from '~~/server/utils/llm/types';
 const SYSTEM_PROMPT = `You are Earnest, greeting someone at the very top of their working day — read from their real, current work. Write ONE honest sentence (two at the very most), speaking directly to them ("you").
 
 Rules:
-- Name what the day actually weighs the most on — the single heaviest thread — using a real number or name from the facts. Don't list everything; the dashboard below already does that.
+- If there is a GENUINE recent win in the facts (something they actually finished), you MAY open with a brief, specific, warm acknowledgment of it — grounded in the real number or title, one clause, then move on. This is Earnest leading with earned encouragement. Never invent or inflate a win; if none is listed, don't imply one.
+- Then name what the day actually weighs the most on — the single heaviest thread — using a real number or name from the facts. Don't list everything; the dashboard below already does that.
 - Warm and plain, like a sharp colleague who respects their time. Not a cheerleader, not a manager.
 - Ground every specific in a provided number or title. Invent nothing.
 - No platitudes ("let's crush it", "you've got this"), no scolding, no to-do list.
 - If the day is genuinely light, say so honestly rather than manufacturing urgency.
 - Return ONLY the sentence(s). No preamble, no quotes, no JSON, no code fences.`;
 
-function factsBlock(groups: PersonalGroup[]): string {
-	const lines: string[] = ['THEIR WORK RIGHT NOW:'];
+/** Plain, grounded phrasing of what they finished (e.g. "3 tasks and a ticket"). */
+function winClause(w: RecentWins): string {
+	const parts: string[] = [];
+	if (w.tasksDone > 0) parts.push(`${w.tasksDone} task${w.tasksDone === 1 ? '' : 's'}`);
+	if (w.ticketsClosed > 0) parts.push(`${w.ticketsClosed} ticket${w.ticketsClosed === 1 ? '' : 's'}`);
+	return parts.join(' and ');
+}
+
+function factsBlock(groups: PersonalGroup[], wins: RecentWins): string {
+	const lines: string[] = [];
+	if (wins.any) {
+		// Earnest may lead with this — but only because it's a real, finished thing.
+		const bits = winClause(wins);
+		lines.push('RECENT WINS (real, finished — you may lead with this):');
+		lines.push(`- Wrapped up ${bits} in the last few days.${wins.sampleTitle ? ` Most recent: "${wins.sampleTitle}".` : ''}`);
+		lines.push('');
+	}
+	lines.push('THEIR WORK RIGHT NOW:');
 	for (const g of groups) {
 		const urgent = g.notices.filter((n) => n.priority === 'urgent').length;
 		const high = g.notices.filter((n) => n.priority === 'high').length;
@@ -48,10 +65,17 @@ export default defineEventHandler(async (event) => {
 	if (!orgId) return { read: '' };
 
 	const directus = await getUserDirectus(event);
-	const agenda = await collectPersonalAgenda(directus, orgId, userId).catch(() => null);
+	const [agenda, wins] = await Promise.all([
+		collectPersonalAgenda(directus, orgId, userId).catch(() => null),
+		collectRecentWins(directus, orgId, userId).catch(() => ({ tasksDone: 0, sampleTitle: null, ticketsClosed: 0, any: false } as RecentWins)),
+	]);
 
-	// A genuinely clear morning — answer honestly, spend nothing.
+	// A genuinely clear morning — answer honestly, spend nothing. If they earned a
+	// real win recently, Earnest still leads with it (grounded, no LLM needed).
 	if (!agenda || agenda.totalNotices === 0) {
+		if (wins.any) {
+			return { read: `Nice work — you cleared ${winClause(wins)} the last few days. Clean runway this morning; start wherever you like.` };
+		}
 		return { read: "Nothing's pulling at you yet this morning — a clear runway. Start wherever you like." };
 	}
 
@@ -61,7 +85,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		const provider = getLLMProvider();
 		const messages: ChatMessage[] = [
-			{ role: 'user', content: `${factsBlock(agenda.groups)}\n\nWrite your one honest read of their day.` },
+			{ role: 'user', content: `${factsBlock(agenda.groups, wins)}\n\nWrite your one honest read of their day.` },
 		];
 		const response = await provider.chat(messages, { systemPrompt: SYSTEM_PROMPT, maxTokens: 160, temperature: 0.6 });
 		const read = (response?.content || '').trim().replace(/^["']|["']$/g, '');

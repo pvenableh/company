@@ -1,11 +1,9 @@
 /**
- * Data-driven AI prompt suggestions — replaces static persona prompts with
- * contextual suggestions based on the user's actual business state.
+ * Data-driven AI prompt suggestions — contextual suggestions based on the
+ * user's actual business state.
  *
  * Uses data from useAIProductivityEngine metrics + live Directus queries
  * to generate prompts like "Follow up with Acme Corp — no activity in 21 days".
- *
- * Persona controls the tone, not the intelligence — all personas get the same data.
  */
 
 interface SmartPrompt {
@@ -37,7 +35,7 @@ export function useAISmartPrompts() {
       smartData: _smartData,
       isLoading: _smartDataLoading,
       fetchSmartData: async () => {},
-      getSmartPrompts: (persona: string) => getStaticPrompts(persona),
+      getSmartPrompts: () => getStaticPrompts(),
     };
   }
 
@@ -171,14 +169,14 @@ export function useAISmartPrompts() {
   };
 
   /**
-   * Generate persona-toned prompts from live data.
+   * Generate prompts from live data.
    * Returns 4 prompts max, prioritized by business importance.
    */
-  const getSmartPrompts = (persona: string): string[] => {
+  const getSmartPrompts = (): string[] => {
     const data = _smartData.value;
     if (!data) {
-      console.debug('[SmartPrompts] No data available — returning static prompts for persona:', persona);
-      return getStaticPrompts(persona);
+      console.debug('[SmartPrompts] No data available — returning static prompts');
+      return getStaticPrompts();
     }
 
     const prompts: SmartPrompt[] = [];
@@ -186,7 +184,7 @@ export function useAISmartPrompts() {
     // Stale clients — high priority relationship risk
     if (data.staleClients.length > 0) {
       const top = data.staleClients[0];
-      const text = tonePrompt(persona, 'stale_client', {
+      const text = tonePrompt('stale_client', {
         name: top.name,
         days: top.daysInactive,
         count: data.staleClients.length,
@@ -196,7 +194,7 @@ export function useAISmartPrompts() {
 
     // Overdue invoices — revenue risk
     if (data.overdueInvoices.count > 0) {
-      const text = tonePrompt(persona, 'overdue_invoices', {
+      const text = tonePrompt('overdue_invoices', {
         count: data.overdueInvoices.count,
         total: data.overdueInvoices.total,
       });
@@ -206,7 +204,7 @@ export function useAISmartPrompts() {
     // Overdue projects
     if (data.overdueProjects.length > 0) {
       const top = data.overdueProjects[0];
-      const text = tonePrompt(persona, 'overdue_project', {
+      const text = tonePrompt('overdue_project', {
         title: top.title,
         count: data.overdueProjects.length,
       });
@@ -215,13 +213,13 @@ export function useAISmartPrompts() {
 
     // Overdue tasks
     if (data.overdueTasks > 0) {
-      const text = tonePrompt(persona, 'overdue_tasks', { count: data.overdueTasks });
+      const text = tonePrompt('overdue_tasks', { count: data.overdueTasks });
       prompts.push({ text, priority: 75, category: 'tasks' });
     }
 
     // Open deals
     if (data.openDeals.count > 0) {
-      const text = tonePrompt(persona, 'open_deals', {
+      const text = tonePrompt('open_deals', {
         count: data.openDeals.count,
         value: data.openDeals.pipelineValue,
       });
@@ -230,7 +228,7 @@ export function useAISmartPrompts() {
 
     // Pending tasks (lower priority, always available)
     if (data.pendingTasks > 0) {
-      const text = tonePrompt(persona, 'pending_tasks', { count: data.pendingTasks });
+      const text = tonePrompt('pending_tasks', { count: data.pendingTasks });
       prompts.push({ text, priority: 30, category: 'tasks' });
     }
 
@@ -240,7 +238,7 @@ export function useAISmartPrompts() {
 
     // Pad with static prompts if we have fewer than 4
     if (result.length < 4) {
-      const fallbacks = getStaticPrompts(persona);
+      const fallbacks = getStaticPrompts();
       for (const fb of fallbacks) {
         if (result.length >= 4) break;
         if (!result.includes(fb)) result.push(fb);
@@ -258,54 +256,26 @@ export function useAISmartPrompts() {
   };
 }
 
-/** Persona-toned prompt templates */
-function tonePrompt(persona: string, type: string, data: Record<string, any>): string {
-  const templates: Record<string, Record<string, string>> = {
-    stale_client: {
-      default: `Follow up with ${data.name} — no activity in ${data.days} days`,
-      director: `${data.name} needs attention — ${data.days} days inactive. Action required.`,
-    },
-    overdue_invoices: {
-      default: `Review ${data.count} overdue invoice${data.count > 1 ? 's' : ''} — $${(data.total || 0).toLocaleString()} outstanding`,
-      director: `${data.count} overdue invoice${data.count > 1 ? 's' : ''}: $${(data.total || 0).toLocaleString()}. Chase these now.`,
-    },
-    overdue_project: {
-      default: `"${data.title}" is overdue — review status and next steps`,
-      director: `Project "${data.title}" is past deadline. What's the blocker?`,
-    },
-    overdue_tasks: {
-      default: `${data.count} overdue task${data.count > 1 ? 's' : ''} need attention`,
-      director: `${data.count} task${data.count > 1 ? 's' : ''} overdue. Prioritize and clear the backlog.`,
-    },
-    open_deals: {
-      default: `Review pipeline — ${data.count} open deal${data.count > 1 ? 's' : ''} worth $${(data.value || 0).toLocaleString()}`,
-      director: `Pipeline: ${data.count} deal${data.count > 1 ? 's' : ''}, $${(data.value || 0).toLocaleString()}. What's closest to closing?`,
-    },
-    pending_tasks: {
-      default: `Plan today's priorities from ${data.count} pending tasks`,
-      director: `${data.count} tasks pending. Rank by impact and execute.`,
-    },
+/** Prompt templates in Earnest's voice */
+function tonePrompt(type: string, data: Record<string, any>): string {
+  const templates: Record<string, string> = {
+    stale_client: `Follow up with ${data.name} — no activity in ${data.days} days`,
+    overdue_invoices: `Review ${data.count} overdue invoice${data.count > 1 ? 's' : ''} — $${(data.total || 0).toLocaleString()} outstanding`,
+    overdue_project: `"${data.title}" is overdue — review status and next steps`,
+    overdue_tasks: `${data.count} overdue task${data.count > 1 ? 's' : ''} need attention`,
+    open_deals: `Review pipeline — ${data.count} open deal${data.count > 1 ? 's' : ''} worth $${(data.value || 0).toLocaleString()}`,
+    pending_tasks: `Plan today's priorities from ${data.count} pending tasks`,
   };
 
-  return templates[type]?.[persona] || templates[type]?.default || 'What can I help with?';
+  return templates[type] || 'What can I help with?';
 }
 
 /** Fallback static prompts when no data is available */
-function getStaticPrompts(persona: string): string[] {
-  const statics: Record<string, string[]> = {
-    default: [
-      'Give me a business health overview',
-      'Help draft a client follow-up email',
-      'What should I focus on today?',
-      'Summarize my open projects',
-    ],
-    director: [
-      'What\'s the top priority right now?',
-      'Give me a game plan for this week',
-      'Which clients need immediate attention?',
-      'Revenue status and next actions',
-    ],
-  };
-
-  return statics[persona] || statics.default;
+function getStaticPrompts(): string[] {
+  return [
+    'Give me a business health overview',
+    'Help draft a client follow-up email',
+    'What should I focus on today?',
+    'Summarize my open projects',
+  ];
 }

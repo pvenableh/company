@@ -73,7 +73,6 @@ export interface GenerativeCanvasConfig {
 
 export function useGenerativeCanvas(config: GenerativeCanvasConfig) {
 	const { selectedOrg } = useOrganization();
-	const { selectedPersona } = useAIPersona();
 
 	const artifact = ref<CanvasArtifact>(
 		config.initial ?? { blocks: [], theme: undefined, title: undefined },
@@ -205,7 +204,6 @@ export function useGenerativeCanvas(config: GenerativeCanvasConfig) {
 					brief: config.brief,
 					entityType: config.entity?.type,
 					entityId: config.entity?.id,
-					responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
 				}),
 			});
 

@@ -30,13 +30,12 @@ export default defineEventHandler(async (event) => {
 		};
 	}
 
-	const persona = (query.persona as string) || 'default';
 	const hour = Number(query.hour) || new Date().getHours();
 	const taskCount = Number(query.tasks) || 0;
 	const overdueCount = Number(query.overdue) || 0;
 
 	// Check cache
-	const cacheKey = `${userId}-${persona}-${Math.floor(hour / 4)}`; // Cache per 4-hour window
+	const cacheKey = `${userId}-${Math.floor(hour / 4)}`; // Cache per 4-hour window
 	const cached = greetingCache.get(cacheKey);
 	if (cached && cached.expiresAt > Date.now()) {
 		return { greeting: cached.greeting, subtitle: cached.subtitle, cached: true };
@@ -46,12 +45,7 @@ export default defineEventHandler(async (event) => {
 
 	const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-	const personaDescriptions: Record<string, string> = {
-		default: 'a warm, encouraging business assistant named Earnest — friendly and genuinely supportive, celebrating real progress without exaggeration or empty hype',
-		director: 'a direct, no-nonsense executive assistant who gets straight to the point',
-	};
-
-	const personaDesc = personaDescriptions[persona] || personaDescriptions.default;
+	const personaDesc = 'a warm, encouraging business assistant named Earnest — friendly and genuinely supportive, celebrating real progress without exaggeration or empty hype';
 
 	let contextHint = '';
 	if (taskCount > 0 || overdueCount > 0) {
@@ -70,7 +64,7 @@ Rules:
 - Return ONLY a JSON object with "greeting" and "subtitle" fields
 - greeting: A warm, unique greeting (under 60 chars). Address them by name.
 - subtitle: A brief contextual line (under 80 chars)${contextHint}
-- Stay in character for the persona, but never exaggerate. If there is nothing notable to say, keep it simple and honest rather than manufacturing excitement.
+- Stay warm and in Earnest's voice, but never exaggerate. If there is nothing notable to say, keep it simple and honest rather than manufacturing excitement.
 - Be creative — don't use generic "Good morning" style greetings
 - No quotes around the name`;
 

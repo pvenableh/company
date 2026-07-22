@@ -120,7 +120,7 @@ watch(() => props.isOpen, (open) => {
 
 const { fetchSmartData, getSmartPrompts, smartData } = useAISmartPrompts();
 const activeTab = ref<'chat' | 'productivity' | 'notes'>('chat');
-const smartPrompts = computed(() => getSmartPrompts(selectedPersona.value));
+const smartPrompts = computed(() => getSmartPrompts());
 
 // Save Note from tray
 const showTraySaveNote = ref(false);
@@ -213,7 +213,6 @@ const filteredSuggestions = computed(() => {
 });
 
 const quickActions = [
-	{ label: 'Chat History', icon: 'i-lucide-history', route: '/command-center/ai' },
 	{ label: 'New Task', icon: 'i-heroicons-plus-circle', route: '/tickets' },
 	{ label: 'Send Invoice', icon: 'i-heroicons-paper-airplane', route: '/invoices' },
 	{ label: 'Schedule Call', icon: 'i-heroicons-phone', route: '/scheduler' },
@@ -256,7 +255,7 @@ const scrollChatToBottom = () => {
 };
 
 const openFullChat = () => {
-	router.push('/command-center/ai');
+	openEarnestPanel();
 	emit('close');
 };
 

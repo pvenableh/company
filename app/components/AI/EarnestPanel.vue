@@ -44,7 +44,6 @@ const {
 	deleteSession,
 } = useContextualChat();
 const { saveNoteFromMessage } = useAINotes();
-const { personas, selectedPersona, activePersona } = useAIPersona();
 const { usageSummary, refresh: refreshTokenUsage } = useAITokens();
 const { canAccess } = useOrgRole();
 const { pendingCount: aiPendingCount, refresh: refreshPendingActions } = useAiPendingActions();
@@ -67,21 +66,12 @@ const MOOD_DOT_COLORS: Record<EarnestMood, readonly [string, string, string]> = 
 };
 // mood wiring lives just below, once `newMessage` (the composer) is declared.
 
-// Enter the calm full-screen coaching takeover, carrying the panel's current
-// focus (entity if we're scoped to one, otherwise an org-wide check-in).
-const coaching = useCoachingMode();
+// Expand to the calm full-screen focus size. This is a pure resize — the docked
+// panel has already synced the chat context (entity or route) via syncContext,
+// and 'full' reads the SAME awareness bucket, so the live thread carries over
+// unbroken (setEntity/setRoute are idempotent on an unchanged key).
 function enterFocusMode() {
-	if (aware.hasEntity.value && aware.entityType.value && aware.entityId.value) {
-		coaching.open({
-			mode: 'entity',
-			entityType: aware.entityType.value,
-			entityId: aware.entityId.value,
-			label: aware.focus.value,
-		});
-	} else {
-		coaching.open({ mode: 'org' });
-	}
-	closeEarnestPanel();
+	setEarnestSize('full');
 }
 
 // ── Compositor-driven enter/leave (no Vue <Transition>) ──────────────────────
@@ -195,47 +185,11 @@ const handlePromptClick = (prompt: string) => send(prompt);
 // Actions Earnest can actually perform on the focused entity — surfaced so the
 // user knows these are on the table (each seeds a chat message that triggers the
 // approval-gated tool). Keyed by the setEntity type.
-const ENTITY_ACTIONS: Record<string, Array<{ label: string; prompt: string }>> = {
-	client: [
-		{ label: 'Create a project', prompt: 'Create a new project for this client with a short timeline of phases and a few tasks under each.' },
-		{ label: 'Draft a proposal & contract', prompt: 'Draft a proposal and a contract for this client based on what you know about them.' },
-		{ label: 'Create an invoice', prompt: 'Create an invoice for this client for recent work.' },
-		{ label: 'Draft social posts', prompt: 'Draft a few social posts for this client — real, on-brand captions I can review and edit.' },
-		{ label: 'Start a campaign', prompt: 'Spin up a draft marketing campaign for this client with a clear goal.' },
-		{ label: 'Add a task', prompt: 'Add a follow-up task for this client.' },
-	],
-	project: [
-		{ label: 'Add a phase / event', prompt: 'Add a phase to this project with a couple of tasks under it.' },
-		{ label: 'Add tasks', prompt: 'Add a few tasks to this project.' },
-		{ label: 'Reschedule', prompt: 'Reschedule this project — push the dates out by two weeks and cascade to events and tasks.' },
-		{ label: 'Update a field', prompt: 'Change this project\'s status.' },
-	],
-	lead: [
-		{ label: 'Draft a proposal & contract', prompt: 'Draft a proposal and contract for this lead.' },
-		{ label: 'Add a follow-up task', prompt: 'Add a follow-up task for this lead.' },
-		{ label: 'Draft an outreach email', prompt: 'Draft an outreach email to this lead.' },
-	],
-	invoice: [
-		{ label: 'Send a payment reminder', prompt: 'Draft a payment reminder email for this invoice to the client.' },
-		{ label: 'Extend the due date', prompt: 'Push this invoice\'s due date out by two weeks.' },
-		{ label: 'Update status', prompt: 'Change this invoice\'s status.' },
-	],
-	content_plan: [
-		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan for this — objective, a few themes, and a short strategy.' },
-		{ label: 'Plan next month', prompt: 'Create a monthly content plan for next month with a handful of content themes.' },
-		{ label: 'Draft social posts', prompt: 'Draft a handful of social posts for this plan — real, on-brand captions I can review and edit.' },
-	],
-	marketing_campaign: [
-		{ label: 'Draft social posts', prompt: 'Draft a few social posts for this campaign — real, on-brand captions I can review and edit.' },
-		{ label: 'Draft a content plan', prompt: 'Put together a draft content plan to support this campaign — objective, a few themes, and a short strategy.' },
-	],
-};
-const entityActions = computed(() => {
-	const t = aware.entityType.value;
-	if (!aware.hasEntity.value || !t) return [];
-	const key = t === 'work-project' || /(^|_)project$/.test(t) ? 'project' : t;
-	return ENTITY_ACTIONS[key] || [];
-});
+// The action chips come from the ONE shared catalog (useEarnestActions), the
+// same set the inline "Create with Earnest" sheet offers.
+const entityActions = computed(() =>
+	aware.hasEntity.value ? earnestActionsFor(aware.entityType.value) : [],
+);
 // Surface the "things Earnest can do here" chips by DEFAULT — they were the
 // highest-value affordance in the panel yet sat collapsed below the prompts.
 // The toggle stays so a user can still fold them away; this only opens on mount.
@@ -350,8 +304,7 @@ const activeTab = ref<'chat' | 'activity'>('chat');
 
 // ── Past-conversation history browser ────────────────────────────────────────
 // The unified panel restores only the latest thread for the current focus; this
-// overlay brings back the list/open/delete of past sessions that used to live
-// only in the legacy full-page chat (/command-center/ai).
+// overlay brings back the list/open/delete of past sessions.
 const showHistory = ref(false);
 const historyLoading = ref(false);
 const historySessions = ref<import('~/composables/useContextualChat').ChatSessionSummary[]>([]);
@@ -475,7 +428,7 @@ function formatSessionTime(iso?: string): string {
 					<!-- Chat ↔ Activity switch -->
 					<div class="flex gap-0.5 px-3 py-2 bg-muted/10 border-t border-border/20">
 						<button
-							v-for="t in ([{ key: 'chat', label: 'Chat', icon: 'lucide:message-circle' }, { key: 'activity', label: 'Activity', icon: 'lucide:sparkles' }] as const)"
+							v-for="t in ([{ key: 'chat', label: 'Chat', icon: 'lucide:message-circle' }, { key: 'activity', label: 'Proposals', icon: 'lucide:sparkles' }] as const)"
 							:key="t.key"
 							@click="activeTab = t.key"
 							class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-all flex-1 justify-center"
@@ -492,21 +445,6 @@ function formatSessionTime(iso?: string): string {
 						</button>
 					</div>
 
-					<!-- Persona picker -->
-					<div v-if="activeTab === 'chat'" class="flex gap-1 px-3 py-2 bg-muted/20">
-						<button
-							v-for="p in personas"
-							:key="p.value"
-							@click="selectedPersona = p.value"
-							class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all flex-1 justify-center"
-							:class="selectedPersona === p.value ? p.bgClass + ' ' + p.iconColor : 'text-muted-foreground hover:bg-muted/50'"
-						>
-							<EarnestIcon v-if="p.value === 'default'" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : 'text-muted-foreground'" />
-							<UIcon v-else :name="p.icon" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : ''" />
-							<span class="hidden sm:inline">{{ p.label.replace('The ', '') }}</span>
-						</button>
-					</div>
-
 					<!-- Token strip -->
 					<div v-if="activeTab === 'chat' && !tokensUnlimited && usageSummary" class="flex items-center gap-2 px-4 py-1.5 border-t border-border/20">
 						<UIcon name="i-heroicons-bolt" class="w-3 h-3 text-muted-foreground shrink-0" />
@@ -518,8 +456,9 @@ function formatSessionTime(iso?: string): string {
 					</div>
 				</div>
 
-				<!-- Activity tab: the trust dial (how much bypasses this queue) + the
-				     org-wide ai_actions audit log -->
+				<!-- Proposals tab: the trust dial (how much bypasses this queue) + the
+				     org-wide ai_actions queue/audit log — the same "Earnest's
+				     proposals" the Director's Office reviews as a session. -->
 				<div v-if="activeTab === 'activity'" class="flex-1 overflow-y-auto px-4 py-3">
 					<section class="mb-4 rounded-2xl border border-border/60 bg-muted/20 px-4 py-4">
 						<p class="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-3">How much Earnest handles on its own</p>
@@ -569,11 +508,6 @@ function formatSessionTime(iso?: string): string {
 							</button>
 						</li>
 					</ul>
-
-					<!-- Also improve the path back to the legacy full-page chat. -->
-					<div class="mt-auto pt-3 flex justify-center">
-						<UiViewLink to="/command-center/ai" label="Open full chat page" @click="closeEarnestPanel" />
-					</div>
 				</div>
 
 				<!-- Messages -->
@@ -587,13 +521,23 @@ function formatSessionTime(iso?: string): string {
 						<AIAwarenessChip :items="aware.knowledge.value" @toggle="aware.toggle" />
 						<div class="flex-1 flex flex-col items-center justify-center text-center px-2 py-6">
 							<!-- voice: the brand mark greets — the iconic "E." with its live blue
-							     dot (tap it to unfurl to the full wordmark). Non-redundant with
-							     the persona name below, which the label carries. -->
+							     dot (tap it to unfurl to the full wordmark). -->
 							<EarnestPresenceMark :height="30" class="text-foreground mb-3.5" />
-							<p class="text-sm font-medium text-foreground mb-1">{{ activePersona.label }}</p>
-							<p class="text-xs text-muted-foreground mb-4 max-w-[260px]">{{ activePersona.description }}</p>
+							<p class="text-sm font-medium text-foreground mb-1">Earnest</p>
+							<p class="text-xs text-muted-foreground mb-4 max-w-[260px]">Your warm, encouraging ops partner — projects, leads, tickets, revenue.</p>
 						</div>
 						<div class="w-full space-y-2 pb-1">
+							<!-- One-tap encouragement — the warm, inviting lead. Routes through
+							     the same contextually-aware engine, so Earnest grounds the lift
+							     in real momentum (never unearned hype). -->
+							<button
+								type="button"
+								class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary/12 border border-primary/25 text-xs font-medium text-foreground hover:bg-primary/[0.18] hover:border-primary/40 transition-colors"
+								@click="handlePromptClick(EARNEST_LIFT_OPENER)"
+							>
+								<Icon name="lucide:sparkles" class="w-3.5 h-3.5 text-primary" />
+								{{ EARNEST_LIFT_OPENER }}
+							</button>
 							<button
 								v-for="prompt in aware.suggestedPrompts.value"
 								:key="prompt"

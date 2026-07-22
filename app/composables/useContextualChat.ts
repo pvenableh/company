@@ -132,7 +132,6 @@ export function useContextualChat() {
     };
   }
 
-  const { selectedPersona } = useAIPersona();
   const { selectedOrg } = useOrganization();
 
   const messages = computed(() => {
@@ -233,7 +232,13 @@ export function useContextualChat() {
   };
 
   const setEntity = (entityType: string, entityId: string) => {
-    activeEntityKey.value = getEntityKey(entityType, entityId);
+    const key = getEntityKey(entityType, entityId);
+    // Idempotent: re-selecting the SAME thread (e.g. the user resizing Earnest
+    // between dock and full, or a surface re-syncing on mount) must NOT abort an
+    // in-flight stream or reload history — that's what makes one conversation
+    // survive moving between sizes. Only a genuine entity change re-buckets.
+    if (activeEntityKey.value === key) return;
+    activeEntityKey.value = key;
     // Cancel any in-progress stream when switching entities
     if (isStreaming.value) {
       abortController?.abort();
@@ -245,7 +250,11 @@ export function useContextualChat() {
   };
 
   const setRoute = (scope: string, routeKey: string) => {
-    activeEntityKey.value = `route:${routeKey}`;
+    const key = `route:${routeKey}`;
+    // Idempotent on an unchanged key — see setEntity. A resize is a view change,
+    // never a re-bucket.
+    if (activeEntityKey.value === key) return;
+    activeEntityKey.value = key;
     if (isStreaming.value) {
       abortController?.abort();
     }
@@ -312,7 +321,6 @@ export function useContextualChat() {
           sessionId: chat.sessionId || undefined,
           message: content.trim(),
           organizationId: typeof selectedOrg.value === 'string' ? selectedOrg.value : (selectedOrg.value as any)?.id || undefined,
-          responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
           verbosity: useAIPreferences().responseVerbosity.value,
           // Entity scope: only for entity chats (enables mutation tools + entity context).
           entityType: entityType || undefined,

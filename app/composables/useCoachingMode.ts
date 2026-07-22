@@ -1,15 +1,17 @@
 /**
- * useCoachingMode — shared open/close state for the Earnest coaching takeover
- * (app/components/Earnest/CoachingTakeover.vue, mounted once in app.vue).
+ * useCoachingMode — compatibility shim over useEarnest.
  *
- * A calm, full-screen "focus mode" that simplifies the screen down to a single
- * conversational flow with Earnest — for when the command center or a busy
- * project page feels overwhelming. Opens *over* the current page and closes
- * back to it, so this is deliberately global state, not a route.
+ * "Focus mode" is now simply Earnest at size 'full': the same conversation as
+ * the docked panel, shown full-screen in the calm "one honest thing" register.
+ * Opening it changes the size, it does NOT start a separate thread — context is
+ * derived from useEarnestAwareness like every other size, so the thread carries
+ * across dock ⇄ full.
  *
- * Scope mirrors useDirectorOffice: an org-wide check-in, or a focused walk
- * through one entity (project / task / client / …).
+ * `scope` is retained for back-compat with the current CoachingTakeover
+ * renderer; the unified overlay reads live route/entity context from awareness.
  */
+import { earnestMode, openEarnest, closeEarnest } from '~/composables/useEarnest';
+
 export interface CoachingScope {
 	mode: 'org' | 'entity';
 	/** Plural collection for a focused session (e.g. 'projects', 'clients'). */
@@ -22,15 +24,15 @@ export interface CoachingScope {
 }
 
 export function useCoachingMode() {
-	const isOpen = useState<boolean>('coaching-mode-open', () => false);
 	const scope = useState<CoachingScope | null>('coaching-mode-scope', () => null);
+	const isOpen = computed(() => earnestMode.value === 'full');
 
 	function open(next?: CoachingScope) {
 		scope.value = next ?? { mode: 'org' };
-		isOpen.value = true;
+		openEarnest('full', next?.opener ? { prompt: next.opener } : {});
 	}
 	function close() {
-		isOpen.value = false;
+		if (earnestMode.value === 'full') closeEarnest();
 	}
 	function toggle(next?: CoachingScope) {
 		if (isOpen.value) close();

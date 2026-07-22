@@ -19,7 +19,7 @@
  *   blockKinds: BlockKindSpec[],     // the builder's block vocabulary
  *   brief?: string,                  // optional session-grounding brief
  *   entityType?, entityId?,          // optional entity to ground brand/context
- *   responseStyle?, includedContext?, model?
+ *   includedContext?, model?
  * }
  *
  * SSE events: tool_start · canvas_ops · chunk · done · error
@@ -56,7 +56,6 @@ export default defineEventHandler(async (event) => {
 		brief,
 		entityType,
 		entityId,
-		responseStyle,
 		includedContext,
 	} = body || {};
 
@@ -163,15 +162,9 @@ export default defineEventHandler(async (event) => {
 		const brandContext = cachedContext?.brandSummary ? `\n\n${cachedContext.brandSummary}` : '';
 		const entityBlock = entityContext ? `\n\n${entityContext}` : '';
 
-		// Tone: reuse the same Director / Earnest split as ai/chat (tone only).
-		const styleContext =
-			responseStyle === 'director'
-				? '\n\nRESPONSE STYLE: Director — decisive and terse. In canvas replies, one crisp line about what changed.'
-				: '';
-
 		const canvasBlock = buildCanvasSystemPrompt({ kind: canvasKind, blockKinds: kinds, artifact: currentArtifact, brief });
 
-		const systemPrompt = buildSystemPrompt(orgContext) + brandContext + entityBlock + styleContext + canvasBlock;
+		const systemPrompt = buildSystemPrompt(orgContext) + brandContext + entityBlock + canvasBlock;
 
 		// 5. Provider + SSE.
 		const provider = getLLMProvider();

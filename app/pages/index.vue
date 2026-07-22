@@ -39,15 +39,9 @@ onUnmounted(() => {
 	if (typedGreetingTimer) clearInterval(typedGreetingTimer);
 });
 const { enabledModules } = useAIPreferences();
-const { selectedPersona } = useAIPersona();
 
 // Active engine modules = whatever the user has enabled.
 const activeEngineModules = computed<Set<string>>(() => new Set(enabledModules.value));
-
-// Update greeting when persona changes
-watch(selectedPersona, () => {
-	if (user.value) runAnalysis();
-});
 
 // ── CRM Intelligence Engine ──
 // `snapshot` is the algorithmic snapshot that drives the slim CRM-pulse
@@ -128,15 +122,6 @@ const checkinOpen = ref(false);
 
 // Director's Office + Focus mode entries moved to the global chrome (dock +
 // top-bar), so the dashboard no longer opens them directly.
-
-// ── AI Tray ──
-const aiTrayOpen = ref(false);
-const aiTrayPrompt = ref('');
-
-const handleTrayClose = () => {
-	aiTrayOpen.value = false;
-	aiTrayPrompt.value = '';
-};
 
 // ── Prioritized Actions ──
 // Locally-resolved actions: when the user changes an item's status inline we
@@ -541,7 +526,7 @@ const goTo = (route: string) => {
 							Try the calm home
 						</button>
 						<button
-							@click="aiTrayPrompt = ''; aiTrayOpen = true"
+							@click="openEarnestPanel()"
 							aria-label="Earnest"
 							class="flex items-center justify-center size-9 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 ios-press"
 						>
@@ -754,7 +739,7 @@ const goTo = (route: string) => {
 								<UiViewLink
 									v-if="suggestions.length > 10"
 									size="sm"
-									@click="aiTrayPrompt = ''; aiTrayOpen = true"
+									@click="openEarnestPanel()"
 								>
 									View all {{ suggestions.length }}
 								</UiViewLink>
@@ -1012,9 +997,6 @@ const goTo = (route: string) => {
 				-->
 
 			</div>
-
-			<!-- AI Tray -->
-			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayPrompt" @close="handleTrayClose" />
 
 			<!-- Weekly check-in modal (Stage 2.5). Mounted at root so the trigger
 			     pill in YOU's right column doesn't have to portal out of its

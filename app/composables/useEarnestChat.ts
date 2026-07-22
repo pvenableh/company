@@ -23,7 +23,6 @@ let quickAbortController: AbortController | null = null;
 export function useEarnestChat() {
 	const { selectedClient } = useClients();
 	const { selectedOrg } = useOrganization();
-	const { selectedPersona } = useAIPersona();
 
 	const sendQuickMessage = async (content: string) => {
 		if (!content.trim() || isQuickSending.value) return;
@@ -53,7 +52,6 @@ export function useEarnestChat() {
 					message: content.trim(),
 					clientId: selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined,
 					organizationId: (selectedOrg.value as any)?.id || undefined,
-					responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
 					verbosity: useAIPreferences().responseVerbosity.value,
 				}),
 			});

@@ -23,6 +23,10 @@ import { nextTick } from 'vue';
 import { useEarnestPresence, EARNEST_MOOD_TOKENS, type EarnestMood } from '~/composables/useEarnestPresence';
 
 const { isOpen, scope, close } = useCoachingMode();
+// One awareness source for every size: 'full' reads the SAME route/entity
+// context the docked panel does, so the bucket key matches and the live thread
+// carries across dock ⇄ full without a reload.
+const aware = useEarnestAwareness();
 const {
 	messages,
 	isStreaming,
@@ -74,18 +78,23 @@ const overlayStyle = computed(() => ({
 	transition: `opacity ${ANIM_MS}ms cubic-bezier(0.36,0.66,0.04,1), transform ${ANIM_MS}ms cubic-bezier(0.36,0.66,0.04,1)`,
 }));
 
-// ── Scope → chat context ─────────────────────────────────────────────────────
+// ── Awareness → chat context ─────────────────────────────────────────────────
+// Prefer live page awareness (so dock and full share one bucket); fall back to
+// the scope the opener passed only when awareness has no entity registered.
 function syncScope() {
 	const s = scope.value;
-	if (s?.mode === 'entity' && s.entityType && s.entityId) {
+	if (aware.hasEntity.value && aware.entityType.value && aware.entityId.value) {
+		setEntity(aware.entityType.value, aware.entityId.value);
+	} else if (s?.mode === 'entity' && s.entityType && s.entityId) {
 		setEntity(s.entityType, s.entityId);
 	} else {
-		setRoute('coaching', 'coaching');
+		setRoute(aware.scope.value, aware.scope.value);
 	}
 }
-watch(scope, () => { if (isOpen.value) { syncScope(); loadTasks(); } });
+watch([scope, aware.contextKey], () => { if (isOpen.value) { syncScope(); loadTasks(); } });
 
 const headerLabel = computed(() => {
+	if (aware.hasEntity.value && aware.focus.value) return aware.focus.value;
 	const s = scope.value;
 	if (s?.mode === 'entity' && s.label) return s.label;
 	return 'Focus mode';
@@ -216,7 +225,7 @@ const suggestions = computed(() => {
 	if (scope.value?.mode === 'entity') {
 		return ['What matters most here?', 'Help me find the next true step', "What's weighing on this?", 'Draft my next move'];
 	}
-	return ["I'm stretched thin — where do I start?", 'Help me plan my next hour', 'What can wait?', 'What did I do well today?'];
+	return [EARNEST_LIFT_OPENER, "I'm stretched thin — where do I start?", 'Help me plan my next hour', 'What did I do well today?'];
 });
 
 // ── Send ─────────────────────────────────────────────────────────────────────
@@ -231,13 +240,23 @@ async function send(text?: string) {
 	input.value = '';
 	autoResize();
 	presence.bump(0.6);
+	// A lift request earns an immediate warm bloom — Earnest leans in with
+	// reassurance the instant she reaches for encouragement, before a word is
+	// written (the aura normally only warms once a reply lands).
+	if (content === EARNEST_LIFT_OPENER) {
+		presence.bump(0.9);
+		warmFlash.value = true;
+		if (warmTimer) clearTimeout(warmTimer);
+		warmTimer = setTimeout(() => { warmFlash.value = false; }, 2800);
+	}
 	// Speaking from the Mirror returns you to the conversation.
 	if (mode.value === 'mirror') setMode('companion');
 	// Talk turned to doing → re-form into the Working Table (if we can).
 	if (canWork.value && mode.value === 'companion' && WORK_INTENT.test(content)) setMode('working');
 	const s = scope.value;
-	const routeFocus = s?.mode === 'entity' && s.label
-		? `${s.label} — in Focus mode, one honest thing at a time`
+	const label = (aware.hasEntity.value && aware.focus.value) ? aware.focus.value : (s?.mode === 'entity' ? s.label : '');
+	const routeFocus = label
+		? `${label} — in Focus mode, one honest thing at a time`
 		: 'their work in Focus mode — helping them find the next true step';
 	try { await sendMessage(content, { coaching: true, routeFocus }); } catch { /* engine surfaces errors */ }
 }
@@ -352,6 +371,9 @@ const markRef = ref<{ expand: () => void } | null>(null);
 							</button>
 							<button type="button" :data-on="mode === 'mirror'" @click="setMode('mirror')">Mirror</button>
 						</div>
+						<button type="button" class="coach__close" aria-label="Shrink to docked panel" title="Dock" @click="setEarnestSize('dock')">
+							<Icon name="lucide:minimize-2" class="w-5 h-5" />
+						</button>
 						<button type="button" class="coach__close" aria-label="Leave focus mode" @click="close">
 							<Icon name="lucide:x" class="w-5 h-5" />
 						</button>
@@ -370,7 +392,17 @@ const markRef = ref<{ expand: () => void } | null>(null);
 							<div v-if="!hasConversation" class="coach__opener">
 								<p class="coach__greeting">{{ greeting }}</p>
 								<div class="coach__chips">
-									<button v-for="s in suggestions" :key="s" type="button" class="coach__chip" @click="send(s)">{{ s }}</button>
+									<button
+									v-for="s in suggestions"
+									:key="s"
+									type="button"
+									class="coach__chip"
+									:class="{ 'coach__chip--lift': s === EARNEST_LIFT_OPENER }"
+									@click="send(s)"
+								>
+									<Icon v-if="s === EARNEST_LIFT_OPENER" name="lucide:sparkles" class="coach__chip-spark" />
+									{{ s }}
+								</button>
 								</div>
 							</div>
 
@@ -507,6 +539,11 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__chips { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; max-width: 540px; }
 .coach__chip { padding: 9px 16px; border-radius: 999px; border: 1px solid hsl(var(--aura-rim)); background: hsl(var(--aura-glass-1)); color: hsl(var(--aura-foreground-muted)); font: inherit; font-size: 13.5px; cursor: pointer; backdrop-filter: blur(10px); transition: background .25s, border-color .25s, transform .2s; }
 .coach__chip:hover { background: hsl(var(--aura-glass-2)); border-color: rgba(238,242,248,.24); transform: translateY(-1px); }
+/* The encouragement chip reads warm — a soft gold rim + spark, distinct from the
+   neutral glass prompts. Same "this is the warm one" signal as the home + panel. */
+.coach__chip--lift { display: inline-flex; align-items: center; gap: 7px; background: hsl(var(--aura-glass-2)); border-color: rgba(245,205,140,.38); color: hsl(var(--aura-foreground)); }
+.coach__chip--lift:hover { border-color: rgba(245,205,140,.6); }
+.coach__chip-spark { width: 14px; height: 14px; color: rgb(245,205,140); }
 
 .coach__msg { max-width: 88%; animation: coach-liquify .55s cubic-bezier(.2,.7,.2,1) both; }
 .coach__msg--me { align-self: flex-end; }
