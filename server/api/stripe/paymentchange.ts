@@ -429,6 +429,10 @@ async function handleSubscriptionChange(
 				await directus.request(
 					updateItem('organizations', orgId, orgUpdate)
 				);
+
+				// Org-referral payout — best-effort, idempotent, never throws.
+				// Fires when a referred org reaches a paid/trialing subscription.
+				await maybeGrantReferralReward({ directus, orgId, customerId, subscription });
 			}
 		}
 

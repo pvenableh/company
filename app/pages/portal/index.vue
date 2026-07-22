@@ -141,6 +141,12 @@ watch(() => selectedOrg.value, () => loadSummary());
 		</AppHeader>
 
 		<LayoutPageContainer>
+			<!-- Branded first-login welcome — self-dismisses per client per org.
+			     Client-only: visibility depends on localStorage + client-fetched org. -->
+			<ClientOnly>
+				<PortalWelcomeCard />
+			</ClientOnly>
+
 			<p v-if="clientName" class="text-sm text-muted-foreground mb-6 -mt-1">
 				{{ clientName }} &mdash; the headline view across everything.
 			</p>
