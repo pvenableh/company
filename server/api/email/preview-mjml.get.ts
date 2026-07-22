@@ -286,6 +286,22 @@ function sampleVars(name: TemplateName): Record<string, any> {
 	}
 }
 
+/**
+ * Client-portal invite variant of `invite.mjml`. Mirrors the exact copy the
+ * sender builds in server/utils/invite-email.ts when `clientName` is set (new
+ * user path), so preview matches production for the portal invite.
+ */
+function clientInviteSample(): Record<string, any> {
+	return {
+		subject: 'Northwind Studio invited you to the Acme Co client portal',
+		preheader: 'Northwind Studio invited you to Earnest.',
+		heading: "You're invited to Acme Co's portal",
+		introHtml: '<strong>Jordan Lee</strong> (jordan@example.com) invited you to the <strong>Acme Co</strong> client portal on <strong>Northwind Studio</strong>. Click below to set your password and finish creating your account.',
+		roleLabel: 'Client Portal',
+		ctaUrl: 'https://app.earnest.guru/auth/accept-org-invite?membership=sample',
+	};
+}
+
 export default defineEventHandler(async (event) => {
 	if (!import.meta.dev) {
 		await requireUserSession(event);
@@ -305,6 +321,12 @@ export default defineEventHandler(async (event) => {
 		}
 		renderName = 'notification';
 		vars = notificationSample(category);
+	} else if (rawName === 'invite:client') {
+		// The client-portal invite reuses invite.mjml with client-specific copy
+		// (see server/utils/invite-email.ts). Same render path, different vars —
+		// this variant exposes it so the portal invite is reviewable in preview.
+		renderName = 'invite';
+		vars = clientInviteSample();
 	} else {
 		const name = rawName as TemplateName;
 		if (!TRANSACTIONAL_TEMPLATES.includes(name)) {

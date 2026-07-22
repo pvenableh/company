@@ -46,7 +46,19 @@ export default defineEventHandler(async (event) => {
 		// on every account, and avoids interpolating the email into a query string.
 		let customer;
 		if (resolvedCustomerId) {
-			customer = await stripe.customers.retrieve(resolvedCustomerId);
+			// A stored `stripe_customer_id` can be stale or belong to a different
+			// Stripe account/key (e.g. after the Earnest-platform migration, or a
+			// live id retrieved against the test key in dev). Stripe throws
+			// `resource_missing` (404) in that case — degrade to the No Plan state
+			// instead of hard-failing the whole billing page.
+			try {
+				customer = await stripe.customers.retrieve(resolvedCustomerId);
+			} catch (err: any) {
+				if (err?.statusCode === 404 || err?.code === 'resource_missing') {
+					return { status: 'no_customer', subscription: null, customer: null, paymentMethods: [], invoices: [] };
+				}
+				throw err;
+			}
 		} else {
 			const list = await stripe.customers.list({ email: email as string, limit: 100 });
 			// Newest non-deleted match (list returns most-recent first), tolerant of

@@ -69,7 +69,7 @@
 							title="Earnest"
 							@click="handleOpenAI"
 						>
-							<EarnestPresenceDot />
+							<EarnestPresenceDot aperture />
 						</button>
 						<!-- Search is desktop-chrome only; below sm it moves into the
 						     user-menu dropdown. Wrapper carries the responsive hide so

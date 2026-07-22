@@ -10,7 +10,7 @@
  *
  * Returns: { org, agency, projects, tickets } — each { avg, count, recent[] }.
  */
-import { readItems } from '@directus/sdk';
+import { readItems, readUsers } from '@directus/sdk';
 import { authorizeOrgInsight } from '~~/server/utils/platform';
 
 function avg(nums: number[]): number {
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
   const userIds = [...new Set(agencyRows.map((r) => r.user).filter(Boolean))] as string[];
   const [clients, users] = await Promise.all([
     clientIds.length ? directus.request(readItems('clients', { filter: { id: { _in: clientIds } }, fields: ['id', 'name'], limit: 200 })) as Promise<Array<{ id: string; name: string }>> : Promise.resolve([]),
-    userIds.length ? directus.request(readItems('directus_users' as any, { filter: { id: { _in: userIds } }, fields: ['id', 'first_name', 'last_name'], limit: 200 })) as Promise<Array<{ id: string; first_name: string; last_name: string }>> : Promise.resolve([]),
+    userIds.length ? directus.request(readUsers({ filter: { id: { _in: userIds } }, fields: ['id', 'first_name', 'last_name'], limit: 200 })) as Promise<Array<{ id: string; first_name: string; last_name: string }>> : Promise.resolve([]),
   ]);
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name || null;
   const userName = (id: string | null) => {

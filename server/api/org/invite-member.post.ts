@@ -12,7 +12,7 @@
  * 5. Also creates the legacy junction entry for backward compat
  */
 
-import { createItem, readItems, readUsers, readRoles, inviteUser, readItem, readUser } from '@directus/sdk';
+import { createItem, createUser, readItems, readUsers, readRoles, readItem, readUser } from '@directus/sdk';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
 import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
@@ -190,35 +190,51 @@ export default defineEventHandler(async (event) => {
         });
       }
 
-      // Use Directus SDK invite to create the user with an invitation
+      // Create the user directly in the `invited` state. We deliberately do NOT
+      // use Directus's `inviteUser()`: when Directus SMTP is configured it sends
+      // its OWN unbranded, non-pill invite email in addition to ours — a raw
+      // duplicate. Our branded accept flow keys off `?membership=<id>` and sets
+      // the password directly at accept time (see accept-invite.post.ts), so the
+      // Directus native invite token is never needed. Creating the user here and
+      // sending only `sendOrgInviteEmail` below guarantees a single, on-brand
+      // (centered logo, pill CTA) email. `email_notifications:false` also keeps
+      // Directus from emitting native notification duplicates.
+      let createdUser: any = null;
       try {
-        await directus.request(
-          inviteUser(email, directusRoleId, {
-            invite_url: `${config.public.appUrl || ''}/auth/accept-org-invite`,
-          })
+        createdUser = await directus.request(
+          createUser({
+            email,
+            status: 'invited',
+            role: directusRoleId,
+            email_notifications: false,
+          } as any)
         );
-      } catch (inviteErr: any) {
-        // If invite fails (e.g. user exists but we didn't find them), log and continue
-        console.warn('Directus invite error (may be ok):', inviteErr?.message);
+      } catch (createErr: any) {
+        // Race: another invite may have just created this user. Fall back to a
+        // lookup rather than failing the whole request.
+        console.warn('Directus createUser error (may be a race):', createErr?.message);
       }
 
-      // Re-fetch the user after invite (Directus creates the user record)
-      const newUsers = await directus.request(
-        readUsers({
-          filter: { email: { _eq: email } },
-          fields: ['id'],
-          limit: 1,
-        })
-      ) as any[];
+      let newUserId = createdUser?.id || null;
+      if (!newUserId) {
+        const newUsers = await directus.request(
+          readUsers({
+            filter: { email: { _eq: email } },
+            fields: ['id'],
+            limit: 1,
+          })
+        ) as any[];
+        newUserId = newUsers[0]?.id || null;
+      }
 
-      if (!newUsers.length) {
+      if (!newUserId) {
         throw createError({
           statusCode: 500,
           message: 'Failed to create user invitation',
         });
       }
 
-      targetUserId = newUsers[0].id;
+      targetUserId = newUserId;
     }
 
     // Create the org_membership (pending)
@@ -273,9 +289,9 @@ export default defineEventHandler(async (event) => {
       console.warn('Contact sync failed (non-fatal):', contactErr?.message);
     }
 
-    // Send our own branded invite email. Directus's inviteUser also sends one
-    // when SMTP is configured, but most environments rely on this path —
-    // SendGrid is wired centrally and this is the only delivery guarantee.
+    // Send our own branded invite email — now the ONLY invite email, since we
+    // no longer call Directus's `inviteUser` (which double-sent an unbranded,
+    // non-pill message). SendGrid is wired centrally and delivers this one.
     try {
       const [org, inviter] = await Promise.all([
         directus.request(

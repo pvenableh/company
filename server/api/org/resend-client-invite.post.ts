@@ -10,7 +10,7 @@
  * return 409. Same role check as invite-client (owner/admin/manager only).
  */
 
-import { readItem, readItems, readUser, inviteUser } from '@directus/sdk';
+import { readItem, readItems, readUser } from '@directus/sdk';
 import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
 export default defineEventHandler(async (event) => {
@@ -26,7 +26,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const directus = getServerDirectus();
-    const config = useRuntimeConfig();
 
     const session = await getUserSession(event);
     const currentUserId = session?.user?.id;
@@ -86,28 +85,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'User email not found' });
     }
 
-    const directusRoleId = (typeof user.role === 'string' ? user.role : user.role?.id)
-      || config.public.directusRoleUser
-      || null;
-
-    if (!directusRoleId) {
-      throw createError({
-        statusCode: 500,
-        message: 'Cannot determine Directus role for invite',
-      });
-    }
-
-    try {
-      await directus.request(
-        inviteUser(user.email, directusRoleId, {
-          invite_url: `${config.public.appUrl || ''}/auth/accept-org-invite`,
-        })
-      );
-    } catch (inviteErr: any) {
-      console.warn('Directus resend invite error (may be ok):', inviteErr?.message);
-    }
-
-    // Branded resend email (always send so it works regardless of Directus SMTP).
+    // Re-send ONLY our branded invite email. We intentionally do not call
+    // Directus's `inviteUser()` here — the user already exists (this is a
+    // resend), so its sole effect would be an unbranded, non-pill duplicate.
+    // The branded accept flow (`?membership=<id>`) needs no Directus token.
     try {
       const [org, inviter, clientRow] = await Promise.all([
         directus.request(
