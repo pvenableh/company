@@ -35,7 +35,7 @@ const PAID_STATUSES = new Set(['active', 'trialing']);
  * Additively grant bonus AI tokens to an org. Reads the current balance and
  * writes balance + bonus. Returns true on success. Never throws.
  */
-async function grantBonusTokens(directus: any, orgId: string, bonus: number): Promise<boolean> {
+async function grantBonusTokens(directus: ReturnType<typeof getTypedDirectus>, orgId: string, bonus: number): Promise<boolean> {
 	try {
 		const org = (await directus.request(
 			readItem('organizations', orgId, { fields: ['id', 'ai_token_balance'] }),
@@ -61,7 +61,7 @@ async function grantBonusTokens(directus: any, orgId: string, bonus: number): Pr
  * @param subscription the Stripe subscription that triggered this
  */
 export async function maybeGrantReferralReward(opts: {
-	directus: any;
+	directus: ReturnType<typeof getTypedDirectus>;
 	orgId: string | null;
 	customerId: string | null;
 	subscription: Stripe.Subscription;
