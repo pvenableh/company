@@ -26,7 +26,7 @@
 				`portal-shell--rail-${railPosition}`,
 				previewClientName ? 'portal-shell--with-preview' : '',
 			]"
-			:style="accentStyle"
+			:style="shellStyle"
 		>
 			<div class="portal-shell__main">
 				<header class="portal-shell__chrome glass">
@@ -36,7 +36,21 @@
 						</ClientOnly>
 					</div>
 					<div class="portal-shell__chrome-center">
-						<LayoutEarnestBrand to="/portal" tagline="Client Portal" />
+						<!-- Agency logo when the org has branding; Earnest chrome otherwise.
+						     Branding derives from client-fetched org data, so render inside
+						     ClientOnly with the Earnest mark as the SSR fallback to avoid a
+						     hydration mismatch. -->
+						<ClientOnly>
+							<NuxtLink v-if="hasBranding" to="/portal" class="portal-brand" :title="orgName">
+								<img v-if="logoUrl" :src="logoUrl" :alt="orgName" class="portal-brand__logo" />
+								<span v-else class="portal-brand__name">{{ orgName }}</span>
+								<span v-if="!whitelabel" class="portal-brand__mark">Client Portal</span>
+							</NuxtLink>
+							<LayoutEarnestBrand v-else to="/portal" tagline="Client Portal" />
+							<template #fallback>
+								<LayoutEarnestBrand to="/portal" tagline="Client Portal" />
+							</template>
+						</ClientOnly>
 					</div>
 					<div class="portal-shell__chrome-right">
 						<div class="hidden sm:block">
@@ -98,6 +112,14 @@ const router = useRouter();
 const { railPosition } = useAppsMode();
 const { accentStyle } = usePortalAccent();
 
+// Agency branding — render the org's logo + brand accent in the portal chrome
+// so clients see their agency, not Earnest. Falls back to Earnest chrome when
+// the org has no branding set.
+const { logoUrl, orgName, hasBranding, whitelabel, brandStyle } = useOrgBrand();
+
+// Merge the org brand CSS vars onto the shell alongside the palette accents.
+const shellStyle = computed(() => ({ ...accentStyle.value, ...brandStyle.value }));
+
 const showUpsell = ref(false);
 
 // ── Admin preview mode ────────────────────────────────────────────────
@@ -139,6 +161,43 @@ function exitPreview() {
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
+
+/* Agency brand mark in the portal chrome center. */
+.portal-brand {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	text-decoration: none;
+	max-width: 200px;
+}
+
+.portal-brand__logo {
+	max-height: 30px;
+	max-width: 180px;
+	object-fit: contain;
+}
+
+.portal-brand__name {
+	font-size: 15px;
+	font-weight: 700;
+	line-height: 1;
+	color: hsl(var(--foreground));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 180px;
+}
+
+.portal-brand__mark {
+	font-family: var(--font-signature);
+	font-size: 10px;
+	line-height: 1;
+	letter-spacing: 0.02em;
+	color: hsl(var(--muted-foreground));
+	margin-top: 1px;
+}
 
 /* Mirror of `.apps-shell` — the rail floats as a glass pill on every
  * side regardless of railPosition, so the shell stays a simple column
