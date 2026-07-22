@@ -82,23 +82,17 @@
 								:class="{ 'shadow-[0_4px_12px_rgba(0,0,0,0.06)]': isHeaderStuck }"
 							>
 								<h2 class="font-medium">Ticket Details</h2>
-								<div class="flex items-center gap-2">
-									<transition name="fade">
-										<span v-if="formRef?.isDirty" class="text-[10px] text-warning uppercase tracking-wider font-medium">Unsaved</span>
-									</transition>
-									<button
-										class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border text-xs font-medium transition-colors"
-										:class="isLoading || !formRef?.isDirty
-											? 'border-border text-muted-foreground opacity-50 cursor-not-allowed'
-											: 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'"
-										:disabled="isLoading || !formRef?.isDirty"
-										@click="handleSaveClick"
-									>
-										<Icon v-if="isLoading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
-										<Icon v-else name="lucide:save" class="w-3.5 h-3.5" />
-										<span class="hidden sm:inline">Save</span>
-									</button>
-								</div>
+								<!-- Autosave status — changes persist automatically a beat
+								     after you stop editing (no manual Save). -->
+								<transition name="fade" mode="out-in">
+									<span v-if="isLoading" key="saving" class="text-[10px] text-muted-foreground uppercase tracking-wider inline-flex items-center gap-1">
+										<Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" /> Saving
+									</span>
+									<span v-else-if="formRef?.isDirty" key="pending" class="text-[10px] text-muted-foreground/70 uppercase tracking-wider">Editing…</span>
+									<span v-else key="saved" class="text-[10px] text-success uppercase tracking-wider inline-flex items-center gap-1">
+										<Icon name="lucide:check" class="w-3 h-3" /> Saved
+									</span>
+								</transition>
 							</div>
 							<TicketsDetailsForm
 								ref="formRef"
@@ -221,13 +215,6 @@
 			@cancel="showDeleteModal = false"
 		/>
 
-		<TicketsModalUnsaved
-			v-model:is-open="showUnsavedModal"
-			:is-loading="isLoading"
-			@save="handleSave"
-			@discard="handleDiscard"
-		/>
-
 		<!-- Contextual AI Sidebar -->
 	</div>
 </template>
@@ -273,7 +260,6 @@ const commentsSystemRef = ref(null);
 const tasksRef = ref(null);
 const activityRef = ref(null);
 const showDeleteModal = ref(false);
-const showUnsavedModal = ref(false);
 const isLoading = ref(false);
 const pendingChanges = ref(new Set());
 const previousTab = ref(null);
@@ -445,13 +431,6 @@ const handleDirtyStateChange = (isDirty) => {
 	emit('preventClose', isDirty);
 };
 
-// Save button click handler — triggers the form submit
-const handleSaveClick = () => {
-	if (formRef.value?.handleSubmit) {
-		formRef.value.handleSubmit();
-	}
-};
-
 // Update ticket logic
 const updateTicket = async (formData) => {
 	try {
@@ -545,12 +524,8 @@ const updateTicket = async (formData) => {
 		// The ticket watcher in DetailsForm will pick up the new localElement and reset form state
 
 		emit('updated', localElement.value);
-
-		toast.add({
-			title: 'Success',
-			description: 'Ticket updated successfully',
-			color: 'green',
-		});
+		// No success toast — autosave fires on every edit; the inline "Saved"
+		// indicator in the card header is the confirmation. Errors still toast.
 	} catch (error) {
 		console.error('Error updating ticket:', error);
 		toast.add({
@@ -615,27 +590,6 @@ const deleteTicket = async () => {
 	}
 };
 
-// Navigation protection handlers
-const handleSave = async () => {
-	if (formRef.value) {
-		await updateTicket(formRef.value.form);
-		if (!isLoading.value) {
-			showUnsavedModal.value = false;
-			emit('close');
-		}
-	}
-};
-
-const handleDiscard = () => {
-	formRef.value?.resetFormState();
-	showUnsavedModal.value = false;
-	emit('preventClose', false);
-	emit('close');
-};
-
-// Router navigation guard
-let routerGuard = null;
-
 onMounted(() => {
 	currentStatus.value = props.element.status;
 	currentPriority.value = props.element.priority;
@@ -645,18 +599,10 @@ onMounted(() => {
 		setEntity('ticket', String(props.element.id), props.element.title || 'Ticket');
 	}
 
-	routerGuard = router.beforeEach((to, from, next) => {
-		if (formRef.value?.isDirty) {
-			showUnsavedModal.value = true;
-			next(false);
-		} else {
-			next();
-		}
-	});
+	// Changes autosave (see DetailsForm) so there's no unsaved-changes nav guard
+	// or beforeunload prompt anymore.
 
 	if (import.meta.client) {
-		window.addEventListener('beforeunload', handleBeforeUnload);
-
 		// Observe when the sentinel scrolls out of view to add shadow to sticky header
 		if (stickyHeaderSentinel.value) {
 			stickyObserver = new IntersectionObserver(
@@ -674,26 +620,12 @@ let stickyObserver = null;
 
 onBeforeUnmount(() => {
 	clearEntity();
-	if (routerGuard) {
-		routerGuard();
-		routerGuard = null;
-	}
 	if (stickyObserver) {
 		stickyObserver.disconnect();
 		stickyObserver = null;
 	}
 	pendingChanges.value.clear();
-	if (import.meta.client) {
-		window.removeEventListener('beforeunload', handleBeforeUnload);
-	}
 });
-
-const handleBeforeUnload = (e) => {
-	if (formRef.value?.isDirty) {
-		e.preventDefault();
-		e.returnValue = '';
-	}
-};
 
 // Watch for element changes
 watch(

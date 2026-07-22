@@ -302,11 +302,34 @@ const handleUserAdded = (userId) => {
 const handleMention = (mentionData) => {
 	mentionedUsers.value.add(mentionData.id);
 	emit('change', { type: 'mention', userId: mentionData.id });
+	scheduleAutosave();
 };
 
-// Submit form - sync global team state before submitting
-const handleSubmit = () => {
+const isDifferentVal = (a, b) => {
+	if (Array.isArray(a) && Array.isArray(b)) {
+		if (a.length !== b.length) return true;
+		const sortedA = [...a].sort();
+		const sortedB = [...b].sort();
+		return JSON.stringify(sortedA) !== JSON.stringify(sortedB);
+	}
+	if (typeof a === 'string' && typeof b === 'string') {
+		const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+		if (datePattern.test(a) && datePattern.test(b)) {
+			const dateA = new Date(a);
+			const dateB = new Date(b);
+			return dateA.getTime() !== dateB.getTime();
+		}
+	}
+	return JSON.stringify(a) !== JSON.stringify(b);
+};
+
+// Submit form - sync global team state before submitting. `auto` is set by the
+// debounced autosave; in that mode we stay silent when the form isn't yet valid
+// (e.g. a non-manager hasn't picked a team) and no-op when nothing changed,
+// rather than surfacing a toast or firing an empty save.
+const handleSubmit = (auto = false) => {
 	if (!isAdminOrManager.value && !form.value.team) {
+		if (auto) return;
 		toast.add({
 			title: 'Error',
 			description: 'Please select a team before saving',
@@ -320,24 +343,6 @@ const handleSubmit = () => {
 	const changedFields = {};
 	let hasChanges = false;
 
-	const isDifferentVal = (a, b) => {
-		if (Array.isArray(a) && Array.isArray(b)) {
-			if (a.length !== b.length) return true;
-			const sortedA = [...a].sort();
-			const sortedB = [...b].sort();
-			return JSON.stringify(sortedA) !== JSON.stringify(sortedB);
-		}
-		if (typeof a === 'string' && typeof b === 'string') {
-			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-			if (datePattern.test(a) && datePattern.test(b)) {
-				const dateA = new Date(a);
-				const dateB = new Date(b);
-				return dateA.getTime() !== dateB.getTime();
-			}
-		}
-		return JSON.stringify(a) !== JSON.stringify(b);
-	};
-
 	for (const key in form.value) {
 		if (isDifferentVal(form.value[key], initialFormState.value[key])) {
 			changedFields[key] = form.value[key];
@@ -345,9 +350,15 @@ const handleSubmit = () => {
 		}
 	}
 
+	const assignmentChanged = isDifferentVal(form.value.assigned_to, initialFormState.value.assigned_to);
+	const hasMentions = mentionedUsers.value.size > 0;
+
+	// Autosave no-op guard: nothing to persist → skip the round trip entirely.
+	if (auto && !hasChanges && !assignmentChanged && !hasMentions) return;
+
 	changedFields.assigned_to = form.value.assigned_to;
 
-	if (mentionedUsers.value.size > 0) {
+	if (hasMentions) {
 		changedFields.mentioned_users = Array.from(mentionedUsers.value);
 	}
 
@@ -358,9 +369,40 @@ const handleSubmit = () => {
 		form.value.priority = changedFields.priority;
 	}
 
+	// Optimistically re-baseline to the snapshot we're sending, so the dirty
+	// indicator clears immediately. If the user keeps typing during the async
+	// save, the tracked-form watch recomputes against this new baseline, stays
+	// dirty, and autosave fires again — so nothing typed mid-save is lost.
+	initialFormState.value = {
+		title: form.value.title,
+		description: form.value.description,
+		status: form.value.status,
+		priority: form.value.priority,
+		project: form.value.project,
+		organization: form.value.organization,
+		team: form.value.team,
+		category: form.value.category,
+		assigned_to: [...form.value.assigned_to],
+		due_date: form.value.due_date,
+		client: form.value.client,
+	};
+	if (isDirty.value) { isDirty.value = false; emit('dirty-state-change', false); }
+	mentionedUsers.value.clear();
+
 	emit('update', changedFields);
 };
 
+// ── Autosave ────────────────────────────────────────────────────────────────
+// Replaces the manual Save button + Unsaved modal: persist a short beat after
+// the user stops editing. Seeding the form (mount / ticket-prop reset) must not
+// trigger a save, so guard with a suppression flag toggled around every reseed.
+const suppressAutosave = ref(false);
+let autosaveTimer = null;
+const scheduleAutosave = () => {
+	if (suppressAutosave.value) return;
+	clearTimeout(autosaveTimer);
+	autosaveTimer = setTimeout(() => handleSubmit(true), 700);
+};
 // Watch for changes to update dirty state
 watch(
 	() => ({
@@ -378,6 +420,7 @@ watch(
 	}),
 	() => {
 		trackChanges();
+		scheduleAutosave();
 	},
 	{ deep: true },
 );
@@ -385,7 +428,16 @@ watch(
 // Watch for changes in the ticket prop
 watch(
 	() => props.ticket,
-	async (newTicket) => {
+	async (newTicket, oldTicket) => {
+		// Only reseed the form on real navigation to a DIFFERENT ticket. A
+		// same-ticket re-emit is the post-autosave refetch; reseeding then would
+		// clobber whatever the user is actively typing. Autosave keeps the form and
+		// server in sync, and re-baselining happens in handleSubmit, so skipping is
+		// safe. (Relational display like the strip reads the parent's localElement,
+		// not this form.)
+		if (oldTicket && String(newTicket?.id) === String(oldTicket?.id)) return;
+
+		suppressAutosave.value = true;
 		const ticketTeamId = typeof newTicket.team === 'object' ? newTicket.team?.id || null : newTicket.team || null;
 		const ticketOrgId = typeof newTicket.organization === 'object' ? newTicket.organization?.id || null : newTicket.organization || null;
 
@@ -407,6 +459,9 @@ watch(
 		noTeamSelected.value = ticketTeamId === null && isAdminOrManager.value;
 
 		initializeFormState();
+		// The reseed above sets the dirty baseline; re-enable autosave only after
+		// the change-watcher has flushed so seeding never triggers a save.
+		nextTick(() => { suppressAutosave.value = false; });
 
 		if (ticketOrgId) {
 			await loadTeamsForOrg(ticketOrgId);
@@ -444,6 +499,7 @@ onMounted(async () => {
 
 const updateFormData = (newData) => {
 	if (!newData) return;
+	suppressAutosave.value = true;
 	form.value = {
 		title: newData.title || '',
 		description: newData.description || '',
@@ -459,7 +515,19 @@ const updateFormData = (newData) => {
 	};
 
 	initializeFormState();
+	nextTick(() => { suppressAutosave.value = false; });
 };
+
+// Flush any pending autosave when the form unmounts (e.g. navigating away
+// mid-debounce) so an in-flight edit isn't silently dropped. Best-effort — the
+// parent's update handler is async and may not resolve before teardown.
+onBeforeUnmount(() => {
+	if (autosaveTimer) {
+		clearTimeout(autosaveTimer);
+		autosaveTimer = null;
+		if (!suppressAutosave.value) handleSubmit(true);
+	}
+});
 
 // Expose form value and isDirty state to parent
 defineExpose({
