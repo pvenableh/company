@@ -31,7 +31,11 @@ const projectId = computed(() => props.ticket?.project?.id || null);
 const projectTitle = computed(() => props.ticket?.project?.title || null);
 const clientId = computed(() => props.ticket?.client?.id || null);
 const clientName = computed(() => props.ticket?.client?.name || null);
-const teamName = computed(() => props.ticket?.team?.name || null);
+// Suppress the team chip when the org has Teams turned off — folding the gate
+// into the computed hides the chip, its separators, and keeps the trailing
+// separator logic below correct without touching every v-if.
+const { teamsEnabled } = useTeamsEnabled();
+const teamName = computed(() => (teamsEnabled.value ? props.ticket?.team?.name || null : null));
 
 function fmtDate(d: string | null | undefined): string | null {
 	if (!d) return null;

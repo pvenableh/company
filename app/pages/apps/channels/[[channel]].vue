@@ -475,7 +475,10 @@ const memberLabel = (u) => u?.label || `${u?.first_name || ''} ${u?.last_name ||
 
 // Team / Client audience shortcuts — resolve to concrete user ids server-side
 // (respects org scope + perms) so the pickers can reflect exactly who's added.
-const teamOptions = computed(() => (teams.value || []).filter((t) => t.id && t.id !== 'org-default'));
+// Team audience shortcuts collapse to nothing when the org has Teams disabled
+// (the Client shortcut stays). Folding the gate here hides both team selects.
+const { teamsEnabled } = useTeamsEnabled();
+const teamOptions = computed(() => (teamsEnabled.value ? (teams.value || []).filter((t) => t.id && t.id !== 'org-default') : []));
 const clientOptions = computed(() => (clientList.value || []).filter((c) => c.id && c.id !== 'org'));
 const resolveShortcut = async (kind, id) => {
 	if (!id || !selectedOrg.value) return [];

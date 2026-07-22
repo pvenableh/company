@@ -174,6 +174,7 @@ export interface AiPreference {
 	/** @required */
 	user: DirectusUser | string;
 	user_created?: DirectusUser | string | null;
+	persona?: 'default' | 'director' | null;
 	/** @description Enable AI-generated personalized greetings */
 	personalizations_enabled?: boolean | null;
 	/** @description Reduce AI token usage */
@@ -3323,6 +3324,10 @@ export interface Organization {
 	pass_card_fee?: boolean | null;
 	/** @description Add the ACH fee (0.8%, max $5) to the payer's total. Off = the org absorbs it (bank shows 'no fees'). */
 	pass_ach_fee?: boolean | null;
+	/** @description When on, a small local-weather widget shows next to the org avatar in the app header. Off by default. */
+	weather_enabled?: boolean | null;
+	/** @description Show the Teams feature (team selectors, team fields, the org Teams floor). Off = hide it for solo/small orgs. On by default. */
+	teams_enabled?: boolean | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];

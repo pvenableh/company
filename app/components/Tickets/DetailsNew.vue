@@ -181,7 +181,7 @@
 								<span class="text-muted-foreground">Organization</span>
 								<span>{{ localElement.organization.name }}</span>
 							</div>
-							<div v-if="localElement.team" class="flex justify-between">
+							<div v-if="teamsEnabled && localElement.team" class="flex justify-between">
 								<span class="text-muted-foreground">Team</span>
 								<span>{{ localElement.team.name }}</span>
 							</div>
@@ -253,6 +253,8 @@ const { notifyTicketStatusChange, notifyTicketAssignment, notifyTicketUpdate, no
 	useNotificationHelper();
 const config = useRuntimeConfig();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+// Hide the Team detail row when the org has Teams turned off.
+const { teamsEnabled } = useTeamsEnabled();
 
 // Refs
 const formRef = ref(null);

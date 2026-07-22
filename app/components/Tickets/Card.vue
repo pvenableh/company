@@ -55,7 +55,7 @@
 							{{ clientLabel }}
 						</span>
 						<span
-							v-if="element?.team?.name"
+							v-if="teamsEnabled && element?.team?.name"
 							class="text-[10px] text-muted-foreground flex items-center gap-0.5"
 						>
 							<UIcon name="i-heroicons-user-group" class="w-2.5 h-2.5" />
@@ -149,6 +149,8 @@ defineEmits(['archive', 'edit']);
 
 const { user } = useDirectusAuth();
 const { getStatusAccent } = useStatusStyle();
+// Hide the team chip on the card when the org has Teams turned off.
+const { teamsEnabled } = useTeamsEnabled();
 
 const statusAccent = computed(() => getStatusAccent(props.element?.status));
 

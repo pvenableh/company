@@ -47,7 +47,7 @@
 					<option v-for="p in projects" :key="p.id" :value="p.id">{{ p.title }}</option>
 				</select>
 			</div>
-			<div class="space-y-1">
+			<div v-if="teamsEnabled" class="space-y-1">
 				<label class="t-label text-muted-foreground">Team (optional)</label>
 				<select
 					v-model="form.team"
@@ -112,6 +112,9 @@ const projectItems = useDirectusItems('projects');
 const { getClientOptions } = useClients();
 const { selectedOrg } = useOrganization();
 const { teams, fetchTeams } = useTeams();
+// Org-level Teams kill-switch — hides the team select when off. `form.team`
+// keeps its seeded value so editing a ticket never drops its team on save.
+const { teamsEnabled } = useTeamsEnabled();
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 const toast = useToast();
 
