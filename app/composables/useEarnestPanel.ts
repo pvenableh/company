@@ -7,7 +7,7 @@
  * useEarnest. `panelOpen` maps to the 'dock' size specifically, so it never
  * fights the full-screen 'full' size (they are mutually exclusive by mode).
  */
-import { earnestMode, earnestInitialPrompt, openEarnest, closeEarnest } from '~/composables/useEarnest';
+import { earnestMode, earnestInitialPrompt, earnestPendingSession, openEarnest, closeEarnest } from '~/composables/useEarnest';
 
 export const panelOpen = computed<boolean>({
 	get: () => earnestMode.value === 'dock',
@@ -21,6 +21,12 @@ export const panelInitialPrompt = earnestInitialPrompt;
 
 export function openEarnestPanel(prompt = '') {
 	openEarnest('dock', { prompt });
+}
+
+/** Open the docked panel and restore a specific past conversation into it. */
+export function openEarnestSession(sessionId: string) {
+	earnestPendingSession.value = sessionId;
+	openEarnest('dock');
 }
 
 export function closeEarnestPanel() {

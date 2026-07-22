@@ -237,7 +237,7 @@
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
 					title="Ask Earnest about this meeting"
-					@click="aiTrayOpen = true"
+					@click="openEarnestPanel()"
 				>
 					<EarnestIcon class="w-3.5 h-3.5" />
 					<span>Ask Earnest</span>
@@ -258,28 +258,15 @@
 			</div>
 		</div>
 
-		<!-- Floating dock + AI surface. While the meeting is active and the user
-		     is signed in we use the entity-aware ContextualSidebar so suggestions
-		     come back tied to this meeting's project / client / event. Anonymous
-		     guests fall back to the global tray. -->
+		<!-- Floating dock + the unified Earnest panel. For a signed-in user the
+		     panel is registered to this meeting entity (video_meeting) with the
+		     live prompts, so it's the same Earnest as everywhere else, scoped to
+		     this call. Anonymous guests get no assistant. -->
 		<ClientOnly>
 			<div class="meeting-dock-override">
-				<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
+				<LayoutFloatingDock @open-ai="openEarnestPanel()" />
 			</div>
-			<AIContextualSidebar
-				v-if="aiTrayOpen && currentUser && meeting?.id"
-				entity-type="video_meeting"
-				:entity-id="meeting.id"
-				:entity-label="meeting.title || 'Meeting'"
-				surface="live"
-				:prompts="livePrompts"
-				@close="aiTrayOpen = false"
-			/>
-			<CommandCenterAITray
-				v-else-if="aiTrayOpen"
-				:is-open="aiTrayOpen"
-				@close="aiTrayOpen = false"
-			/>
+			<AIEarnestPanel v-if="currentUser" />
 		</ClientOnly>
 	</div>
 </template>
@@ -310,7 +297,6 @@ const guestEmail = ref('');
 const myAttendeeId = ref(null);
 const loadingToken = ref(false);
 const dailyUrl = ref(null);
-const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
 // Tracks whether the wrap'd Daily iframe has fired `joined-meeting`. Used
 // only as a hint for `sendAppMessage` callers — the annotation toolbar is
@@ -522,6 +508,23 @@ const livePrompts = computed(() => {
 
 	return out.slice(0, 6);
 });
+
+// Register this call as the unified Earnest panel's entity, so the one assistant
+// is scoped to THIS meeting (video_meeting) with its live prompts. Because the
+// entity type is video_meeting, useContextualChat automatically forwards the
+// live transcript — so "what have we discussed so far?" still works mid-call,
+// exactly as the old entity sidebar did.
+const { setEntity: setEarnestEntity, clearEntity: clearEarnestEntity } = useEntityPageContext();
+watch(
+	[() => meeting.value?.id, () => currentUser.value?.id, livePrompts],
+	([mid]) => {
+		if (mid && currentUser.value) {
+			setEarnestEntity('video_meeting', String(mid), meeting.value?.title || 'Meeting', { prompts: livePrompts.value, surface: 'live' });
+		}
+	},
+	{ immediate: true },
+);
+onBeforeUnmount(() => clearEarnestEntity());
 
 const linkedEvent = computed(() => {
 	const pe = meeting.value?.project_event;

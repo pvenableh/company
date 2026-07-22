@@ -120,6 +120,15 @@ watch(
 	async () => {
 		if (!panelOpen.value) return;
 		syncContext();
+		// Deep-linked past conversation (from a saved note): load it into the
+		// now-synced bucket, then stop -- do not also fire an initial prompt.
+		if (earnestPendingSession.value) {
+			const sid = earnestPendingSession.value;
+			earnestPendingSession.value = null;
+			await nextTick();
+			await loadSession(sid);
+			return;
+		}
 		// Fire a queued initial prompt (e.g. from a dashboard suggestion card).
 		if (panelInitialPrompt.value) {
 			const p = panelInitialPrompt.value;

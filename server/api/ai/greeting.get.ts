@@ -1,6 +1,7 @@
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import { EARNEST_VOICE_CHARTER } from '~~/server/utils/llm/voice';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import { getWeatherContext } from '~~/server/utils/weather';
 import type { ChatMessage } from '~~/server/utils/llm/types';
 
 // Simple in-memory cache: userId -> { greeting, subtitle, expiresAt }
@@ -55,6 +56,13 @@ export default defineEventHandler(async (event) => {
 		contextHint = ` The user has ${parts.join(' and ')}.`;
 	}
 
+	// Light weather texture — present only where coarse edge geo exists (prod).
+	// One optional, natural clause; never a widget, never a mood.
+	const weather = await getWeatherContext(event);
+	const weatherHint = weather
+		? `\n- Outside right now: ${weather.condition}${weather.tempC != null ? `, ${weather.tempC}°C` : ''}${weather.city ? ` in ${weather.city}` : ''}. You MAY weave ONE short, natural nod to this weather into the greeting as light texture if it genuinely fits — never force it, and never infer the user's mood from the weather.`
+		: '';
+
 	const systemPrompt = `You are ${personaDesc}. Generate a personalized greeting for the user.
 
 ${EARNEST_VOICE_CHARTER}
@@ -63,7 +71,7 @@ Rules:
 - The user's name is "${firstName}" and it's ${period}
 - Return ONLY a JSON object with "greeting" and "subtitle" fields
 - greeting: A warm, unique greeting (under 60 chars). Address them by name.
-- subtitle: A brief contextual line (under 80 chars)${contextHint}
+- subtitle: A brief contextual line (under 80 chars)${contextHint}${weatherHint}
 - Stay warm and in Earnest's voice, but never exaggerate. If there is nothing notable to say, keep it simple and honest rather than manufacturing excitement.
 - Be creative — don't use generic "Good morning" style greetings
 - No quotes around the name`;
