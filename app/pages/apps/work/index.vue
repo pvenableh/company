@@ -115,6 +115,10 @@ const { selectedClient, getClientFilter } = useClients();
 // floor + the TicketsBoard's filter both read/write the same `selectedTeam`.
 // Changing it triggers a refetch on the active floor.
 const { selectedTeam, visibleTeams, fetchTeams, setTeam, clearTeam } = useTeams();
+// Org-level Teams kill-switch — hides the team picker when the org has turned
+// Teams off. The `selectedTeam` filter state is left untouched so any stored
+// team value keeps working if the org re-enables Teams later.
+const { teamsEnabled } = useTeamsEnabled();
 
 // ── Projects floor ──────────────────────────────────────────────────────────
 const projectItems = useDirectusItems('projects');
@@ -394,7 +398,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
              and the floor it can affect is open. Picker writes to the shared
              `selectedTeam` state, which TicketsBoard already reads. -->
         <UDropdown
-          v-if="visibleTeams.length > 0 && (floor === 'projects' || floor === 'tickets')"
+          v-if="teamsEnabled && visibleTeams.length > 0 && (floor === 'projects' || floor === 'tickets')"
           :items="[
             [{ label: 'All teams', icon: 'i-heroicons-user-group', click: () => handleSelectTeam(null) }],
             visibleTeams.map((t) => ({ label: t.name, icon: 'i-heroicons-users', click: () => handleSelectTeam(t.id) })),

@@ -40,7 +40,7 @@
 									{{ ticket?.organization.name }}
 								</p>
 
-								<p v-if="ticket?.team" class="text-[9px] text-muted-foreground uppercase">
+								<p v-if="teamsEnabled && ticket?.team" class="text-[9px] text-muted-foreground uppercase">
 									<span class="opacity-50 mr-1">Team:</span>
 									{{ ticket?.team.name }}
 								</p>
@@ -114,6 +114,9 @@ const props = defineProps({
 		required: true,
 	},
 });
+
+// Hide the Team metadata row when the org has Teams turned off.
+const { teamsEnabled } = useTeamsEnabled();
 
 const showMetadata = ref(false);
 const isMobile = ref(false);

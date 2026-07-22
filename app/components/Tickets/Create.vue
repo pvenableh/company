@@ -101,7 +101,7 @@
 											@update:modelValue="handleOrgChange"
 										/>
 									</UFormGroup>
-									<UFormGroup label="Team">
+									<UFormGroup v-if="teamsEnabled" label="Team">
 										<USelect
 											v-model="form.team"
 											:options="teamsList"
@@ -233,6 +233,8 @@ const props = defineProps({
 
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
 const { teams, visibleTeams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
+// Org-level Teams kill-switch — hides the team picker on new tickets when off.
+const { teamsEnabled } = useTeamsEnabled();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
 const { getClientOptions } = useClients();
 const ticketItems = useDirectusItems('tickets');

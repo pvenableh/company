@@ -166,6 +166,7 @@ const ticketItems = useDirectusItems('tickets');
 const { user } = useDirectusAuth();
 const { selectedTeam, teams, visibleTeams } = useTeams();
 const { selectedOrg } = useOrganization();
+const { teamsEnabled } = useTeamsEnabled();
 const router = useRouter();
 
 const applyFilters = () => {
@@ -194,8 +195,9 @@ const applyFilters = () => {
 	}, 10);
 };
 
-// Whether to show team filter (only if user has access to multiple teams)
-const showTeamFilter = computed(() => visibleTeams.value?.length > 1);
+// Whether to show team filter (only if user has access to multiple teams,
+// and the org hasn't turned Teams off org-wide)
+const showTeamFilter = computed(() => teamsEnabled.value && visibleTeams.value?.length > 1);
 
 // Team options for filter
 const teamOptions = computed(() => {

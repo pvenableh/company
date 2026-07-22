@@ -55,15 +55,28 @@ watch(floor, (next) => {
   router.replace({ query: { ...route.query, floor: next === 'overview' ? undefined : next } });
 });
 
-// Floor list lifted into the shared nav model (`useAppNav`) so this strip and
-// the desktop AppSidebar never drift.
-const floors = appFloors('organization') as Array<{ key: FloorKey; label: string; icon: string }>;
-
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { selectedOrg, currentOrg, fetchOrganizationDetails } = useOrganization();
 const organizationItems = useDirectusItems('organizations');
 const { canAccess, isOrgOwner } = useOrgRole();
 const { visibleTeams, loading: teamsLoading, fetchTeams } = useTeams();
+// Org-level Teams kill-switch — when off, drop the Teams floor from the strip
+// and bounce anyone deep-linked to `?floor=teams` back to Overview.
+const { teamsEnabled } = useTeamsEnabled();
+
+// Floor list lifted into the shared nav model (`useAppNav`) so this strip and
+// the desktop AppSidebar never drift. Filtered to hide the Teams floor when the
+// org has Teams disabled (mirrors how Marketing hides its Accounts floor).
+const floors = computed(() =>
+  (appFloors('organization') as Array<{ key: FloorKey; label: string; icon: string }>)
+    .filter((f) => f.key !== 'teams' || teamsEnabled.value),
+);
+
+// If Teams gets turned off while sitting on the Teams floor (or a stale deep
+// link lands there), fall back to Overview so the strip and content agree.
+watch([teamsEnabled, floor], ([enabled, f]) => {
+  if (!enabled && f === 'teams') floor.value = 'overview';
+}, { immediate: true });
 
 // Lazy-load teams when the Teams floor opens so the Overview/Members floors
 // don't pay the cost on first paint.
@@ -610,12 +623,15 @@ const rolesSlide = useAppSlideOver('roles');
 const documentsLibrarySlide = useAppSlideOver('documents_library');
 const socialAccountsSlide = useAppSlideOver('social-accounts');
 const accountSubscriptionSlide = useAppSlideOver('account-subscription');
-const settingsTiles = [
-  { label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') },
+const settingsTiles = computed(() => [
+  // Teams tile drops out when the org has Teams disabled.
+  ...(teamsEnabled.value
+    ? [{ label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') }]
+    : []),
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
   { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
   { label: 'Refer an agency', desc: 'Share your link — you both earn bonus credits on their paid plan', icon: 'lucide:gift', to: '/organization/refer' },
-];
+]);
 
 // Document theme studio — applied to invoices, proposals, contracts. Inline
 // editor in the Settings floor; mirrors the classic /organization page so the

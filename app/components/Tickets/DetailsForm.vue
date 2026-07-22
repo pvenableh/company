@@ -48,7 +48,7 @@
 			</div>
 		</div>
 		<!-- Team row -->
-		<div v-if="(localTeamOptions.length > 0 && !isAdminOrManager) || (localTeamOptions.length > 1 && isAdminOrManager)" class="max-w-xs">
+		<div v-if="teamsEnabled && ((localTeamOptions.length > 0 && !isAdminOrManager) || (localTeamOptions.length > 1 && isAdminOrManager))" class="max-w-xs">
 			<UFormGroup
 				:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
 				:required="!isAdminOrManager"
@@ -108,6 +108,10 @@ const toast = useToast();
 const { hasMultipleOrgs, organizationOptions } = useOrganization();
 const { teams, visibleTeams, loading: teamsLoading, fetchTeams, setTeam } = useTeams();
 const { isOrgManagerOrAbove } = useOrgRole();
+// Org-level Teams kill-switch. When off we hide the team picker but keep the
+// seeded `form.team` value intact so saving never drops a team an org already
+// assigned (they can re-enable Teams and it's still there).
+const { teamsEnabled } = useTeamsEnabled();
 
 // Local state for teams - decoupled from global state
 const localTeamId = ref(null);

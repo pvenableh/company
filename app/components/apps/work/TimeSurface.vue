@@ -28,6 +28,8 @@ const {
 
 const { selectedClient, currentClient } = useClients();
 const { isOrgManagerOrAbove } = useOrgRole();
+// Org-level Teams kill-switch — drops the "Team" time-tracker tab when off.
+const { teamsEnabled } = useTeamsEnabled();
 
 // ── State ───────────────────────────────────────────────────────
 const allEntries = ref<TimeEntry[]>([]);
@@ -54,7 +56,7 @@ const tabs = computed<Array<{ key: TabKey; label: string; icon: string }>>(() =>
     { key: 'week', label: 'This Week', icon: 'lucide:calendar-days' },
     { key: 'all', label: 'All Entries', icon: 'lucide:list' },
   ];
-  if (isOrgManagerOrAbove.value) {
+  if (isOrgManagerOrAbove.value && teamsEnabled.value) {
     base.push({ key: 'team', label: 'Team', icon: 'lucide:users' });
   }
   return base;
@@ -282,7 +284,7 @@ watch(() => selectedClient.value, () => {
     </div>
 
     <!-- Team Tab -->
-    <LazyTimeTrackerTeamView v-if="activeTab === 'team'" />
+    <LazyTimeTrackerTeamView v-if="activeTab === 'team' && teamsEnabled" />
 
     <!-- Reports Tab -->
     <LazyTimeTrackerReport v-else-if="activeTab === 'reports'" :team-mode="isOrgManagerOrAbove" />
