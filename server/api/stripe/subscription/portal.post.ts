@@ -31,7 +31,12 @@ export default defineEventHandler(async (event) => {
 		// still pass customerId/email directly.
 		let resolvedCustomerId = customerId || null;
 		if (!resolvedCustomerId && organizationId) {
-			resolvedCustomerId = await getOrCreateOrgStripeCustomer(organizationId, { emailFallback: email });
+			// revalidate: the id is passed straight to billingPortal.sessions.create,
+			// so a stale/deleted stored customer must self-heal (else Stripe 400s).
+			resolvedCustomerId = await getOrCreateOrgStripeCustomer(organizationId, {
+				emailFallback: email,
+				revalidate: true,
+			});
 		}
 		if (!resolvedCustomerId && email) {
 			const existing = await stripe.customers.list({ email, limit: 1 });

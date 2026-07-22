@@ -27,6 +27,7 @@
 			:organization-id="selectedOrg"
 			:initial-teams="visibleTeams"
 			:external-loading="loading"
+			:focus-team-id="focusTeamId"
 		/>
 	</div>
 </template>
@@ -34,8 +35,12 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
 	compact?: boolean;
+	// Forwarded from the slide-over: when set to a real team id, ManageTeams
+	// opens that team's editor directly (see TeamsManageTeams).
+	focusTeamId?: string | null;
 }>(), {
 	compact: false,
+	focusTeamId: null,
 });
 
 const { selectedOrg } = useOrganization();

@@ -541,9 +541,13 @@ const integrationGroups = computed(() => {
       desc: 'Auto-import transactions to expenses',
       icon: 'lucide:landmark',
       status: 'inactive' as IntegrationStatus,
-      statusLabel: 'Available as add-on',
-      action: 'Learn more',
-      onClick: () => accountSubscriptionSlide.open('default'),
+      // Bank Sync isn't purchasable yet — the add-on + backend land with the
+      // Plaid phase-1 work (pending security review), so advertise it as
+      // upcoming rather than linking to a billing surface that can't sell it.
+      statusLabel: 'Coming soon',
+      comingSoon: true,
+      action: 'Coming soon',
+      onClick: () => {},
     },
   ];
 
@@ -1326,6 +1330,10 @@ function onClientInvited() {
               </component>
             </div>
           </div>
+
+          <!-- Org-wide feature flags (Goals / Weather / Teams). Moved here from
+               the Overview editor so they're discoverable as feature toggles. -->
+          <AppsOrganizationFeatureTogglesCard :can-manage="canManageOrg" />
 
           <!-- Document theme — applied to every invoice, proposal, and
                contract. Inlined here so users never have to leave the apps

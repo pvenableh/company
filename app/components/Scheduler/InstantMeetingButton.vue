@@ -12,8 +12,10 @@
 <script setup>
 const emit = defineEmits(['created']);
 
-const schedulerData = inject('schedulerData');
-const { user } = schedulerData;
+// Optional inject — present when rendered inside SchedulerHub, absent when the
+// button is hoisted to the Work app header. Nothing here reads it today, so an
+// optional default keeps the button self-sufficient in either spot.
+inject('schedulerData', null);
 const { selectedOrg } = useOrganization();
 
 const toast = useToast();

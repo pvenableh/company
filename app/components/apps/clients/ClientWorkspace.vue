@@ -854,6 +854,13 @@ watch(() => props.clientId, () => {
 							</div>
 						</template>
 					</AppsAtAGlance>
+					<!-- Earnest, focused on THIS client: scoped prompts + a Boardroom
+					     convene, so opening a client surfaces work + next moves. -->
+					<AppsEntityEarnestCard
+						entity-type="client"
+						:entity-id="String(client.id)"
+						:label="client.name || 'this client'"
+					/>
 					<AppsInlineDetailsEditor
 						collection="clients"
 						:item-id="String(client.id)"

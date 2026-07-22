@@ -31,6 +31,10 @@ const { isOrgManagerOrAbove } = useOrgRole();
 // Org-level Teams kill-switch — drops the "Team" time-tracker tab when off.
 const { teamsEnabled } = useTeamsEnabled();
 
+// When the Work app header hosts the create CTAs (universal position, matching
+// Tickets/Tasks/Projects), the in-body toolbar buttons are hidden.
+defineProps<{ hideToolbarActions?: boolean }>();
+
 // ── State ───────────────────────────────────────────────────────
 const allEntries = ref<TimeEntry[]>([]);
 const total = ref(0);
@@ -38,6 +42,9 @@ const loading = ref(true);
 const activeTab = ref<'today' | 'week' | 'all' | 'team' | 'reports'>('today');
 const showManualEntry = ref(false);
 const editingEntry = ref<TimeEntry | null>(null);
+
+// Opened from the hoisted "Manual Entry" header CTA (see Work app header).
+defineExpose({ openManualEntry: () => { showManualEntry.value = true; } });
 const page = ref(1);
 const limit = 50;
 const hasMore = computed(() => page.value * limit < total.value);
@@ -241,13 +248,17 @@ watch(() => selectedClient.value, () => {
 
 <template>
   <div>
-    <!-- Toolbar: client context + Start Timer / Manual Entry -->
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <!-- Toolbar: client context + Start Timer / Manual Entry. The action
+         cluster is hidden when the CTAs live in the Work app header. -->
+    <div
+      v-if="clientLabel || !hideToolbarActions"
+      class="flex flex-wrap items-center justify-between gap-2 mb-3"
+    >
       <p v-if="clientLabel" class="cg-text-child text-muted-foreground">
         Viewing entries for <span class="font-medium text-foreground">{{ clientLabel }}</span>
       </p>
       <span v-else />
-      <div class="flex items-center gap-1.5 ml-auto">
+      <div v-if="!hideToolbarActions" class="flex items-center gap-1.5 ml-auto">
         <UiActionButton icon="lucide:timer" @click="openTimerDockPanel()">
           <span class="hidden sm:inline">Start Timer</span>
         </UiActionButton>

@@ -867,6 +867,14 @@ watch(() => props.projectId, () => {
 				<!-- Overview — inline-editable core project fields. -->
 				<div v-if="activeTab === 'overview'">
 					<AppsAtAGlance :metrics="overviewGlance.metrics" :attention="overviewGlance.attention" />
+					<!-- Earnest, focused on THIS project: scoped prompts + a Boardroom
+					     convene, so opening a project surfaces work + next moves. -->
+					<AppsEntityEarnestCard
+						v-if="project.id"
+						entity-type="project"
+						:entity-id="String(project.id)"
+						:label="project.title || 'this project'"
+					/>
 					<AppsInlineDetailsEditor
 						v-if="project.id"
 						collection="projects"

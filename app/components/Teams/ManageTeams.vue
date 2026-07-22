@@ -302,6 +302,13 @@ const props = defineProps({
 		type: Boolean,
 		default: null,
 	},
+	// When opened scoped to a single team (slide=teams:<id>), jump straight
+	// into that team's editor instead of showing the full grid. '_' / null
+	// keeps the grid (the "Manage teams" / create entry point).
+	focusTeamId: {
+		type: String,
+		default: null,
+	},
 });
 
 // Get composables
@@ -519,6 +526,24 @@ const cancelTeamForm = () => {
 	currentEditTeam.value = null;
 	showCreateTeamModal.value = false;
 };
+
+// Slide-over scoped to a specific team → open that team's editor once its
+// record is available. Guarded so it fires a single time per focused id.
+const autoOpenedTeamId = ref(null);
+watch(
+	[() => props.focusTeamId, visibleTeams],
+	([focusId, teams]) => {
+		if (!focusId || focusId === '_') return;
+		if (autoOpenedTeamId.value === focusId) return;
+		if (!hasTeamManagementAccess.value) return;
+		const team = (teams || []).find((t) => String(t.id) === String(focusId));
+		if (team) {
+			autoOpenedTeamId.value = focusId;
+			editTeam(team);
+		}
+	},
+	{ immediate: true },
+);
 
 const submitTeamForm = async () => {
 	if (!teamForm.value.name) return;
