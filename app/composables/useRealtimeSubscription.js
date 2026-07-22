@@ -13,6 +13,18 @@
 
 import { consumeOptimisticEvent } from '~/composables/useDirectusItems';
 
+// ─── Module-level REST-hydrate dedup (client-only) ───────────────────────────
+// A board remount spins up a fresh composable instance whose connect() would
+// re-fire POST /api/directus/items even though a sibling instance already holds
+// the data and a live WS subscription for the same (collection, filter). These
+// maps collapse those duplicate hydrates — the burst that, mid token-refresh,
+// produced the 503 cascade + socket drop on back-navigation. Client-only: the
+// composable early-returns on the server (import.meta.server guard below), so
+// these are never touched during SSR and can't leak state across requests.
+const _restHydrateInFlight = new Map(); // key -> Promise<any[]>
+const _restHydrateDoneAt = new Map();   // key -> epoch ms of last success
+const REST_HYDRATE_TTL_MS = 10_000;
+
 export function useRealtimeSubscription(collection, fields, initialFilter, sort = '-date_created', initialData = null) {
 	// ─── Core reactive state ─────────────────────────────────────────────────
 	const data = ref(initialData || []);
@@ -40,7 +52,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	}
 
 	// ─── Dependencies ────────────────────────────────────────────────────────
-	const { loggedIn } = useUserSession();
+	const { loggedIn, session } = useUserSession();
 	const manager = useWebSocketManager();
 
 	// ─── Internal state ──────────────────────────────────────────────────────
@@ -59,33 +71,89 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// ─── REST initial load ───────────────────────────────────────────────────
 	// Fires immediately for fast initial render while WebSocket connects.
 
-	const loadViaRest = async () => {
+	// Known-expired gate: if the client can already see the access token is at/past
+	// expiry, skip the doomed REST hydrate and let the WS `init` reconcile once the
+	// socket re-authenticates. Mirrors the server's isSessionExpired() 60s buffer.
+	const isSessionKnownExpired = () => {
+		const expiresAt = session.value?.expiresAt;
+		if (!expiresAt) return false; // no info → assume valid
+		return Date.now() >= expiresAt - 60_000;
+	};
+
+	// `force` (used by refresh()) bypasses the freshness cache to always hit the
+	// network; the in-flight guard still applies so concurrent callers coalesce.
+	const loadViaRest = async (force = false) => {
 		if (!hasValidAuth()) {
 			isLoading.value = false;
 			return;
 		}
 
-		try {
-			const result = await $fetch('/api/directus/items', {
-				method: 'POST',
-				body: {
-					collection,
-					operation: 'list',
-					query: {
-						fields,
-						filter: currentFilter.value,
-						sort: sort ? [sort] : undefined,
-						// Cap initial REST hydrate. WebSocket then reconciles via `init`.
-						// 200 covers every active board/list use we have today; raise per-caller
-						// if a future consumer genuinely needs more than the freshest 200 rows.
-						limit: 200,
-					},
-				},
-			});
+		// Don't fire into a refresh storm when we already know the token is expired;
+		// the WS `init` event hydrates us after the socket re-authenticates.
+		if (isSessionKnownExpired()) {
+			isLoading.value = false;
+			return;
+		}
 
+		// Dedup key by (collection, filter). fields/sort are omitted: the WS `init`
+		// reconciles each instance with its own query moments later, so the REST
+		// hydrate is just a shared first-paint optimisation.
+		const key = `${collection}:${JSON.stringify(currentFilter.value ?? {})}`;
+
+		// A fresh success within the TTL — reuse it, don't re-fetch on remount.
+		if (!force) {
+			const doneAt = _restHydrateDoneAt.get(key);
+			if (doneAt && Date.now() - doneAt < REST_HYDRATE_TTL_MS) {
+				isLoading.value = false;
+				return;
+			}
+		}
+
+		// An in-flight hydrate for the same key — piggyback on it.
+		const inflight = _restHydrateInFlight.get(key);
+		if (inflight) {
+			try {
+				const result = await inflight;
+				if (Array.isArray(result)) {
+					data.value = result;
+					_restLoaded = true;
+				}
+			} catch {
+				// The owning instance already logged/handled the failure.
+			} finally {
+				isLoading.value = false;
+			}
+			return;
+		}
+
+		const promise = $fetch('/api/directus/items', {
+			method: 'POST',
+			body: {
+				collection,
+				operation: 'list',
+				query: {
+					fields,
+					filter: currentFilter.value,
+					sort: sort ? [sort] : undefined,
+					// Cap initial REST hydrate. WebSocket then reconciles via `init`.
+					// 200 covers every active board/list use we have today; raise per-caller
+					// if a future consumer genuinely needs more than the freshest 200 rows.
+					limit: 200,
+				},
+			},
+		});
+		_restHydrateInFlight.set(key, promise);
+
+		try {
+			const result = await promise;
 			if (Array.isArray(result)) {
 				data.value = result;
 				_restLoaded = true;
+			}
+			_restHydrateDoneAt.set(key, Date.now());
+			// Opportunistic trim so the done-map can't grow unbounded across filters.
+			for (const [k, at] of _restHydrateDoneAt) {
+				if (Date.now() - at >= REST_HYDRATE_TTL_MS) _restHydrateDoneAt.delete(k);
 			}
 		} catch (err) {
 			// REST failure is non-fatal — WebSocket will still deliver data
@@ -94,6 +162,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 				error.value = err;
 			}
 		} finally {
+			_restHydrateInFlight.delete(key);
 			// Always stop the loading spinner after REST completes
 			isLoading.value = false;
 		}
@@ -257,8 +326,9 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		isLoading.value = true;
 		_restLoaded = false;
 
-		// Re-fetch from REST
-		loadViaRest();
+		// Re-fetch from REST — force past the freshness cache since this is an
+		// explicit user/programmatic refresh.
+		loadViaRest(true);
 
 		// Resubscribe on WebSocket to get a fresh init event
 		if (_subHandle) {

@@ -127,14 +127,30 @@ async function executeOperation(
         throw new Error(`Unknown operation: ${operation}`);
     }
   } catch (error: any) {
+    const status = error?.response?.status ?? error?.statusCode;
+
     // Check if this is a token expiration error
     const isTokenExpired =
       error.message?.includes("Token expired") ||
       error.errors?.[0]?.extensions?.code === "TOKEN_EXPIRED" ||
-      (error.response?.status === 401 && error.message?.includes("Token"));
+      (status === 401 && error.message?.includes("Token"));
 
-    // Retry once with force refresh if token is expired
-    if (isTokenExpired && retryCount === 0 && session?.user) {
+    // A 503 here is transient: the refresh route (server/api/auth/refresh.post.ts
+    // returns 503 on a non-401/403 failure) or Directus itself was momentarily
+    // unavailable during a concurrent refresh burst — exactly what surfaced when
+    // a board remount fired a REST hydrate at the same instant as the socket
+    // re-auth. Retry once: the recursion re-enters getUserDirectus(event, true)
+    // which routes through dedupedDirectusRefresh, whose 10s result cache lets
+    // this retry ride a sibling's successful rotation instead of fighting for the
+    // single-use refresh token.
+    const isTransient503 = status === 503;
+
+    // Retry once with force refresh if the token expired or the call transiently 503'd.
+    if ((isTokenExpired || isTransient503) && retryCount === 0 && session?.user) {
+      if (isTransient503) {
+        // Small settle so the in-flight refresh can populate the deduped cache.
+        await new Promise((r) => setTimeout(r, 300));
+      }
       return executeOperation(event, collection, operation, id, data, query, retryCount + 1);
     }
 
