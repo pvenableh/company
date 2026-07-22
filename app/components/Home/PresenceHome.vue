@@ -19,7 +19,14 @@
  *
  * App-native typography: greeting/eyebrow follow the user's Appearance style
  * (--title-font); prose follows --body-font — same as the rest of the app.
+ *
+ * Motion: the idle↔conversing swap and each new message are GSAP-driven (the
+ * same engine the presence layer uses) for fluid, native-feeling movement —
+ * expo easing on the way in, a quick settle on the way out. Reduced-motion is
+ * honoured (the hooks resolve instantly).
  */
+import { gsap } from 'gsap';
+
 const props = defineProps<{
 	greeting: string;
 	subtitle?: string;
@@ -47,91 +54,84 @@ const {
 	messages,
 	isStreaming,
 	isSending,
-	isLoadingHistory,
+	streamingContent,
 	sendMessage,
 	setRoute,
+	clearChat,
+	loadSession,
 } = useContextualChat();
 const { openEarnestPanel } = useEarnestPanel();
 const { track } = useProductEvent();
 
-// Calm first, always. The home ALWAYS opens on the calm greeting, even when a
-// prior "route:dashboard" thread hydrates in the background (that thread is kept
-// so the conversation stays continuous and Expand can still show it in full).
-// The bucket is 'route:dashboard' — the SAME key the docked panel and the
-// full-screen focus use on the home route — so the hero is genuinely Earnest at
-// rest: a thread you start here continues unbroken when you dock or expand.
-// `conversing` is gated on engagement THIS session — a fresh send or an explicit
-// "Continue where you left off" — never on the mere presence of yesterday's
-// transcript. That's what keeps the first impression calm on the next login.
-//
-//   baseline    — how many messages were already loaded when we landed (the
-//                 prior thread); these stay folded away unless resumed.
-//   resumed     — the user tapped "Continue where you left off" → show it all.
-//   priorRecent — was that prior thread recent enough to bother offering?
-const baseline = ref(0);
-const priorRecent = ref(false);
-const resumed = ref(false);
-// Reactive on purpose: `startedThisSession` short-circuits on this, so if it
-// weren't reactive the computed would track no deps and never re-evaluate.
-const captured = ref(false);
-
-// A prior home thread counts as "recent" (worth a Continue chip) while it's
-// younger than a learned window (default 18h — a working day plus an overnight
-// return — but it widens when the user resumes and narrows when they ignore it;
-// see useHomeContinueWindow). Older threads stay reachable via Expand.
+// Calm first, fresh each visit. The home ALWAYS opens on the calm greeting on a
+// CLEAN 'route:dashboard' thread — a pill/opener starts a NEW conversation, and
+// Expand shows exactly that thread (the dock + full-screen focus read the SAME
+// bucket). Yesterday's transcript is never dumped over today's greeting; instead
+// we peek for a recent one and offer "Continue where you left off", which loads
+// it on demand. `conversing` is simply "the fresh bucket holds something" — no
+// baseline/slice bookkeeping, so a pill that streams a reply just works.
 const { windowMs, recordResumed, recordIgnored } = useHomeContinueWindow();
 function isRecent(iso?: string): boolean {
 	if (!iso) return false;
 	const t = new Date(iso).getTime();
 	return Number.isFinite(t) && Date.now() - t < windowMs.value;
 }
-function captureBaseline() {
-	if (captured.value) return;
-	const msgs = messages.value;
-	baseline.value = msgs.length;
-	priorRecent.value = isRecent(msgs[msgs.length - 1]?.date_created);
-	captured.value = true;
+
+// Start (or re-activate) the dashboard thread. `fresh` = don't auto-load the
+// prior session; the idempotency guard in setRoute preserves an in-progress
+// thread when the home re-mounts, so this only lands empty on a new bucket.
+function startDashboardThread() {
+	setRoute('dashboard', 'dashboard', { fresh: true });
 }
+onMounted(startDashboardThread);
+onActivated(startDashboardThread);
 
-function hydrateHome() {
-	setRoute('dashboard', 'dashboard');
-	// If nothing needs hydrating (already loaded, or a clean slate) the loading
-	// flag never toggles — capture the baseline right away. Otherwise the watcher
-	// below captures it the instant hydration settles.
-	nextTick(() => { if (!isLoadingHistory.value) captureBaseline(); });
+// A recent prior dashboard thread we can offer to resume. Peeked only — NOT
+// loaded into the live bucket (that happens when the user taps Continue).
+const priorSessionId = ref<string | null>(null);
+const priorRecent = ref(false);
+async function peekPriorThread() {
+	try {
+		const data = await $fetch('/api/ai/sessions/by-route', {
+			params: { scope: 'dashboard', routeKey: 'dashboard' },
+		}) as any;
+		const s = data?.session;
+		const last = data?.messages?.[data.messages.length - 1]?.date_created;
+		if (s?.id) {
+			priorSessionId.value = s.id;
+			priorRecent.value = isRecent(s.date_updated || s.date_created || last);
+		} else {
+			priorSessionId.value = null;
+			priorRecent.value = false;
+		}
+	} catch {
+		priorSessionId.value = null;
+		priorRecent.value = false;
+	}
 }
-onMounted(hydrateHome);
-onActivated(hydrateHome);
+onMounted(peekPriorThread);
 
-// Snapshot the prior thread the moment hydration settles (loading true→false).
-watch(isLoadingHistory, (loading, was) => {
-	if (was && !loading) captureBaseline();
-});
-
-// A fresh exchange this session = anything appended past the hydrated baseline.
-// Read `len` unconditionally so the computed always tracks message growth, even
-// before the baseline is captured (a bare `captured.value && …` would short-
-// circuit and register no dependency on the message count).
-const startedThisSession = computed(() => {
-	const len = messages.value.length;
-	return captured.value && len > baseline.value;
-});
-const conversing = computed(() => resumed.value || startedThisSession.value);
-
-// What the inline thread renders: the whole thread once resumed, otherwise only
-// this session's fresh exchange (the prior transcript stays folded away — the
-// LLM still receives the full history server-side, so Earnest keeps its memory).
-const visibleMessages = computed(() =>
-	resumed.value ? messages.value : messages.value.slice(baseline.value),
-);
+// In conversation the moment the fresh bucket holds anything (a send, or a
+// resumed thread). The bucket IS this session's line — render it directly.
+const conversing = computed(() => messages.value.length > 0);
+const visibleMessages = computed(() => messages.value);
 
 // Offer to bring back the prior thread only while calm and only if it's recent.
-const canResume = computed(() => !conversing.value && priorRecent.value && baseline.value > 0);
-function resumeThread() {
-	resumed.value = true;
+const canResume = computed(() => !conversing.value && priorRecent.value && !!priorSessionId.value);
+async function resumeThread() {
+	if (!priorSessionId.value) return;
 	recordResumed(); // they picked the thread back up — worth offering for longer
 	track('home.continue_resumed', { source: 'presence-home' });
+	await loadSession(priorSessionId.value);
 	scrollThread();
+}
+
+// Leave the conversation and return to the calm hero. Clears the live bucket
+// (the server session persists — reachable again via Continue) and re-checks
+// whether a resumable thread should be offered.
+function exitConversation() {
+	clearChat();
+	peekPriorThread();
 }
 
 // ── Adoption instrumentation (fire-and-forget; see useProductEvent) ──────────
@@ -181,6 +181,43 @@ function scrollThread() {
 	nextTick(() => { const el = threadEl.value; if (el) el.scrollTop = el.scrollHeight; });
 }
 watch(() => [messages.value.length, isStreaming.value], scrollThread);
+
+// ── GSAP state motion ────────────────────────────────────────────────────────
+// The idle hero and the conversation are swapped via <Transition :css="false">;
+// these hooks drive the movement so it feels native — the outgoing state settles
+// out quickly, the incoming one rises in on an expo curve with its children
+// staggered. Reduced-motion resolves instantly (no tween).
+const reducedMotion = () =>
+	import.meta.client && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+function onStageEnter(el: Element, done: () => void) {
+	if (reducedMotion()) { done(); return; }
+	const kids = el.querySelectorAll(':scope > *');
+	const tl = gsap.timeline({ onComplete: done });
+	tl.from(el, { autoAlpha: 0, duration: 0.3, ease: 'power1.out' }, 0);
+	tl.from(
+		kids,
+		{ autoAlpha: 0, y: 18, scale: 0.985, duration: 0.6, ease: 'expo.out', stagger: 0.055, clearProps: 'transform' },
+		0.02,
+	);
+}
+
+function onStageLeave(el: Element, done: () => void) {
+	if (reducedMotion()) { done(); return; }
+	gsap.to(el, { autoAlpha: 0, y: -10, scale: 0.99, duration: 0.24, ease: 'power2.in', onComplete: done });
+}
+
+// Pop each newly appended message bubble in (user turn + the streaming reply).
+watch(
+	() => messages.value.length,
+	(n, prev) => {
+		if (reducedMotion() || n <= (prev || 0)) return;
+		nextTick(() => {
+			const el = threadEl.value?.querySelector('.ph__msg:last-child');
+			if (el) gsap.from(el, { autoAlpha: 0, y: 14, scale: 0.96, duration: 0.5, ease: 'expo.out', clearProps: 'transform' });
+		});
+	},
+);
 
 // ── Deeper read — richer LLM sentence, cached daily; progressive enhancement ──
 // The read is a "morning read," so it's cached per user+org+day in localStorage:
@@ -295,7 +332,8 @@ function renderMarkdown(text: string): string {
 
 		<div class="ph__inner">
 			<!-- ── IDLE: the calm hero ──────────────────────────────────────── -->
-			<template v-if="!conversing">
+				<Transition :css="false" mode="out-in" @enter="onStageEnter" @leave="onStageLeave">
+				<div v-if="!conversing" key="idle" class="ph__stage">
 				<div class="ph__mark">
 					<EarnestPresenceMark :height="26" class="text-foreground/85" />
 				</div>
@@ -335,18 +373,23 @@ function renderMarkdown(text: string): string {
 						</div>
 					</Transition>
 				</div>
-			</template>
+				</div>
 
 			<!-- ── CONVERSING: slim header + in-place thread ─────────────────── -->
-			<template v-else>
+				<div v-else key="conv" class="ph__stage">
 				<div class="ph__conv-head">
 					<div class="ph__conv-id">
 						<EarnestPresenceMark :height="18" class="text-foreground/80" />
 						<span class="ph__conv-name">Earnest</span>
 					</div>
-					<button type="button" class="ph__conv-expand" title="Open in the panel" @click="openEarnestPanel()">
-						Expand <Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
-					</button>
+					<div class="ph__conv-actions">
+						<button type="button" class="ph__conv-expand" title="Open in the panel" @click="openEarnestPanel()">
+							Expand <Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
+						</button>
+						<button type="button" class="ph__conv-expand ph__conv-exit" title="Back to the calm home" @click="exitConversation">
+							Close <Icon name="lucide:x" class="w-3.5 h-3.5" />
+						</button>
+					</div>
 				</div>
 
 				<div ref="threadEl" class="ph__thread" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with Earnest">
@@ -358,12 +401,18 @@ function renderMarkdown(text: string): string {
 					>
 						<div v-if="m.role === 'user'" class="ph__bubble ph__bubble--user">{{ m.content }}</div>
 						<div v-else class="ph__bubble ph__bubble--earnest" :class="{ 'is-streaming': m.streaming }">
-							<span v-if="!m.content && m.streaming" class="ph__typing" aria-label="Thinking"><span></span><span></span><span></span></span>
-							<span v-else v-html="renderMarkdown(m.content)" />
+							<!-- While streaming, read the reactive `streamingContent` ref so the
+							     bubble re-renders per chunk — the message objects are mutated in
+							     place (raw) and don't trigger reactivity on their own, exactly as
+							     the dock panel does. On done, streamingContent clears and the
+							     settled `m.content` shows. -->
+							<span v-if="m.streaming && !streamingContent" class="ph__typing" aria-label="Thinking"><span></span><span></span><span></span></span>
+							<span v-else v-html="renderMarkdown(m.streaming ? streamingContent : m.content)" />
 						</div>
 					</div>
 				</div>
-			</template>
+				</div>
+				</Transition>
 
 			<!-- ── The composer (shared by both states) ─────────────────────── -->
 			<div class="ph__composer">
@@ -424,6 +473,16 @@ function renderMarkdown(text: string): string {
 	padding: clamp(28px, 7vh, 84px) 20px clamp(20px, 4vh, 40px);
 	overflow: hidden;
 }
+/* idle hero ⇄ conversation: motion is GSAP-driven (see onStageEnter/Leave in
+   the script); the stage just carries the shared column rhythm so children lay
+   out identically in both states. */
+.ph__stage {
+	display: flex; flex-direction: column; align-items: center; text-align: center;
+	gap: 14px; width: 100%;
+}
+.ph__conv-actions { display: flex; align-items: center; gap: 8px; }
+.ph__conv-exit { opacity: 0.65; }
+.ph__conv-exit:hover { opacity: 1; }
 /* The living presence wash. Centered on the hero and sized so its radial fades
    fully to transparent BEFORE the section edges — that way `.ph { overflow:
    hidden }` (kept to stop the wide glow from causing horizontal scroll on

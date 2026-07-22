@@ -44,7 +44,7 @@
 						<!-- The logo is just the wordmark now (links home). Earnest has a
 						     single launcher — the presence dot on the right — so the logo no
 						     longer opens the assistant. -->
-						<LayoutEarnestBrand to="/apps" tagline="Do good work." />
+						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
 					<div class="apps-shell__chrome-right">
 						<!-- Earnest's ambient presence — THE single launcher for the

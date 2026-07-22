@@ -96,18 +96,25 @@ async function save() {
 }
 
 // ── Live preview ─────────────────────────────────────────────────────────────
-// Mirrors the classic page: renders a transactional template through this org's
-// branding via the server preview endpoint.
-// Values must match the server preview endpoint's TEMPLATES list
-// (server/api/email/preview.get.ts) — unknown names 400.
+// Renders a transactional template through this org's branding. Points at the
+// MJML renderer (/api/email/preview-mjml) — the SAME system that sends real
+// transactional mail — so the preview reflects the shipped design (centered
+// logo, pill buttons) instead of the legacy /api/email/preview shell.
+// Values must match TRANSACTIONAL_TEMPLATES in server/api/email/preview-mjml.get.ts
+// (plus the `invite:client` variant it special-cases) — unknown names 400.
 const previewTemplate = ref('notification');
 const previewTemplates = [
-	{ value: 'welcome', label: 'Welcome (Earnest-branded)' },
 	{ value: 'notification', label: 'Notification' },
+	{ value: 'welcome', label: 'Welcome' },
+	{ value: 'invite', label: 'Team invite' },
+	{ value: 'invite:client', label: 'Client portal invite' },
 	{ value: 'meeting-invited', label: 'Meeting invite' },
 	{ value: 'meeting-reminder', label: 'Meeting reminder' },
 	{ value: 'meeting-cancelled', label: 'Meeting cancelled' },
 	{ value: 'video-invite', label: 'Video room invite' },
+	{ value: 'payment-receipt', label: 'Payment receipt' },
+	{ value: 'refund-receipt', label: 'Refund receipt' },
+	{ value: 'password-reset', label: 'Password reset' },
 ];
 const previewUrl = computed(() => {
 	if (!org.value?.id) return '';
@@ -115,7 +122,7 @@ const previewUrl = computed(() => {
 		template: previewTemplate.value,
 		org: String(org.value.id),
 	});
-	return `/api/email/preview?${params.toString()}`;
+	return `/api/email/preview-mjml?${params.toString()}`;
 });
 </script>
 

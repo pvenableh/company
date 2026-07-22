@@ -24,6 +24,7 @@
  */
 import { useDebounceFn } from '@vueuse/core';
 import { Button } from '~/components/ui/button';
+import { openTimerDockPanel } from '~/composables/useTimeTrackerModal';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Work | Earnest' });
@@ -250,6 +251,13 @@ function onTaskCreated() {
 const ticketColumns = TICKET_BOARD_COLUMNS;
 const ticketsCreateRef = ref<{ open: () => void } | null>(null);
 const taskCreateRef = ref<{ open: () => void } | null>(null);
+// Calendar + Time floors hoist their create CTAs into the AppHeader (universal
+// position). These refs let the header buttons drive the mounted surfaces.
+const schedulerHubRef = ref<{ refresh?: () => void } | null>(null);
+const timeSurfaceRef = ref<{ openManualEntry: () => void } | null>(null);
+function onSchedulerMeetingCreated() {
+  schedulerHubRef.value?.refresh?.();
+}
 const { triggerRefresh: triggerTicketsRefresh } = useTicketsStore();
 function onTicketCreated() {
   triggerTicketsRefresh();
@@ -444,6 +452,26 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Task
         </Button>
+        <!-- Calendar floor: both create affordances hoisted here (New Meeting
+             is the primary; Start Instant Meeting is its work-accented sibling).
+             The button components carry their own modal/popover. -->
+        <template v-else-if="floor === 'calendar'">
+          <SchedulerInstantMeetingButton @created="onSchedulerMeetingCreated" />
+          <SchedulerNewMeetingButton @created="onSchedulerMeetingCreated" />
+        </template>
+        <!-- Time floor: Manual Entry is the primary create; Start Timer is the
+             secondary (outline) — mirrors the surface's own toolbar order. -->
+        <template v-else-if="floor === 'time'">
+          <Button variant="outline" size="sm" @click="openTimerDockPanel()">
+            <Icon name="lucide:timer" class="w-4 h-4 mr-1" />
+            <span class="hidden sm:inline">Start Timer</span>
+            <span class="sm:hidden">Timer</span>
+          </Button>
+          <Button size="sm" @click="timeSurfaceRef?.openManualEntry()">
+            <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+            Manual Entry
+          </Button>
+        </template>
       </template>
     </AppHeader>
 
@@ -645,7 +673,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
       <!-- Full scheduler hub: stats, filters, CRM sidebar, calendar with
            day-click-to-create, day timeline, unified event/meeting modal. -->
       <ClientOnly v-else-if="floor === 'calendar'">
-        <SchedulerHub />
+        <SchedulerHub ref="schedulerHubRef" hide-create-actions />
         <template #fallback>
           <div class="flex items-center justify-center min-h-[400px]">
             <span class="spinner-ios spinner-ios--xl" role="status" aria-label="Loading" />
@@ -655,7 +683,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
 
       <!-- ── Time floor ───────────────────────────────────────────────── -->
       <template v-else-if="floor === 'time'">
-        <AppsWorkTimeSurface />
+        <AppsWorkTimeSurface ref="timeSurfaceRef" hide-toolbar-actions />
       </template>
 
       <template v-else-if="floor === 'insights'">

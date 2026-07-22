@@ -13,7 +13,7 @@ import { readItem, updateItem } from '@directus/sdk';
  */
 export async function getOrCreateOrgStripeCustomer(
 	orgId: string,
-	opts?: { emailFallback?: string },
+	opts?: { emailFallback?: string; revalidate?: boolean },
 ): Promise<string> {
 	const stripe = useStripe();
 	const directus = getTypedDirectus();
@@ -27,7 +27,20 @@ export async function getOrCreateOrgStripeCustomer(
 	if (!org) {
 		throw createError({ statusCode: 404, message: 'Organization not found' });
 	}
-	if (org.stripe_customer_id) return org.stripe_customer_id as string;
+	if (org.stripe_customer_id) {
+		// A stored id can be stale — e.g. it belongs to a different Stripe
+		// account/key after the Earnest-platform migration, or the customer was
+		// deleted. Callers that hand the id straight to Stripe (billing portal)
+		// pass `revalidate` so a dead id self-heals instead of throwing a 400.
+		if (!opts?.revalidate) return org.stripe_customer_id as string;
+		try {
+			const existing = await stripe.customers.retrieve(org.stripe_customer_id as string);
+			if (existing && !(existing as any).deleted) return org.stripe_customer_id as string;
+		} catch (err: any) {
+			// `resource_missing` (No such customer) → fall through and re-create.
+			if (err?.code !== 'resource_missing' && err?.statusCode !== 404) throw err;
+		}
+	}
 
 	const customer = await stripe.customers.create({
 		name: org.name || undefined,

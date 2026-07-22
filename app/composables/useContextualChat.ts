@@ -249,10 +249,11 @@ export function useContextualChat() {
     hydrateFromServer(entityType, entityId, chat);
   };
 
-  const setRoute = (scope: string, routeKey: string) => {
+  const setRoute = (scope: string, routeKey: string, opts: { fresh?: boolean } = {}) => {
     const key = `route:${routeKey}`;
     // Idempotent on an unchanged key — see setEntity. A resize is a view change,
-    // never a re-bucket.
+    // never a re-bucket. (This also preserves an in-progress thread when the
+    // home re-mounts with `fresh` — the guard fires before we touch messages.)
     if (activeEntityKey.value === key) return;
     activeEntityKey.value = key;
     if (isStreaming.value) {
@@ -260,6 +261,16 @@ export function useContextualChat() {
     }
     const chat = getOrCreateChat(activeEntityKey.value);
     chat.ctx = { kind: 'route', scope, routeKey };
+    // `fresh`: start a clean thread — do NOT auto-load the most recent server
+    // session for this route. The home uses this so a pill/opener begins a NEW
+    // conversation (and Expand shows THAT thread), offering "Continue where you
+    // left off" to bring a prior thread back on demand. Marking `hydrated` keeps
+    // any later non-fresh caller (e.g. the dock re-syncing) from loading it.
+    // A brand-new bucket is already empty, so this never clobbers live messages.
+    if (opts.fresh) {
+      chat.hydrated = true;
+      return;
+    }
     hydrateFromRoute(scope, routeKey, chat);
   };
 

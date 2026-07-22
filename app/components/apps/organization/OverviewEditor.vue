@@ -133,9 +133,6 @@ const infoForm = ref({
 	brand_color: '',
 	industry: '' as string | number,
 	active: true,
-	goals_enabled: true,
-	weather_enabled: false,
-	teams_enabled: true,
 });
 
 watch(org, (o) => {
@@ -148,9 +145,6 @@ watch(org, (o) => {
 		brand_color: o.brand_color || '',
 		industry: (typeof o.industry === 'object' ? o.industry?.id : o.industry) || '',
 		active: o.active !== false,
-		goals_enabled: o.goals_enabled !== false,
-		weather_enabled: o.weather_enabled === true,
-		teams_enabled: o.teams_enabled !== false,
 	};
 }, { immediate: true });
 
@@ -208,9 +202,6 @@ async function saveInfo() {
 			brand_color: infoForm.value.brand_color || null,
 			industry: infoForm.value.industry || null,
 			active: infoForm.value.active,
-			goals_enabled: infoForm.value.goals_enabled,
-			weather_enabled: infoForm.value.weather_enabled,
-			teams_enabled: infoForm.value.teams_enabled,
 		});
 		toast.add({ title: 'Saved', description: 'Organization info updated', color: 'green' });
 		await fetchOrg();
@@ -477,32 +468,9 @@ async function saveContact() {
 							</div>
 						</UFormGroup>
 
-						<UFormGroup label="Goals">
-							<div class="flex items-center gap-3">
-								<UToggle v-model="infoForm.goals_enabled" />
-								<span class="text-xs text-muted-foreground">
-									{{ infoForm.goals_enabled ? 'Goals enabled for everyone in this org' : 'Goals hidden across this org' }}
-								</span>
-							</div>
-						</UFormGroup>
-
-						<UFormGroup label="Weather widget">
-							<div class="flex items-center gap-3">
-								<UToggle v-model="infoForm.weather_enabled" />
-								<span class="text-xs text-muted-foreground">
-									{{ infoForm.weather_enabled ? 'Local weather shows in the app header' : 'Weather widget hidden' }}
-								</span>
-							</div>
-						</UFormGroup>
-
-						<UFormGroup label="Teams">
-							<div class="flex items-center gap-3">
-								<UToggle v-model="infoForm.teams_enabled" />
-								<span class="text-xs text-muted-foreground">
-									{{ infoForm.teams_enabled ? 'Teams shown across this org (selectors, forms, Teams floor)' : 'Teams hidden — good for solo/small orgs' }}
-								</span>
-							</div>
-						</UFormGroup>
+						<!-- Feature toggles (Goals / Weather / Teams) moved to the
+						     Settings floor → "Features" so they're discoverable
+						     without entering Overview edit mode. -->
 
 						<div class="flex justify-end pt-1">
 							<Button size="sm" :disabled="savingInfo || !infoForm.name || !slugValid" @click="saveInfo">

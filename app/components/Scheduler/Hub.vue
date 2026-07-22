@@ -16,8 +16,13 @@
 	<div>
 		<!-- Action bar -->
 		<div class="flex items-center justify-end gap-2 mb-5">
-			<SchedulerInstantMeetingButton @created="handleMeetingCreated" />
-			<SchedulerNewMeetingButton @created="handleMeetingCreated" />
+			<!-- Create CTAs are hoisted to the Work app header (universal position)
+			     when `hideCreateActions` is set — matches Tickets/Tasks/Projects.
+			     Kept inline for the standalone /scheduler page. -->
+			<template v-if="!hideCreateActions">
+				<SchedulerInstantMeetingButton @created="handleMeetingCreated" />
+				<SchedulerNewMeetingButton @created="handleMeetingCreated" />
+			</template>
 			<button
 				type="button"
 				class="inline-flex items-center justify-center size-9 rounded-full bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
@@ -165,6 +170,8 @@
 <script setup lang="ts">
 import { parseISO } from 'date-fns';
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
+
+defineProps<{ hideCreateActions?: boolean }>();
 
 const router = useRouter();
 const { user } = useDirectusAuth();
@@ -353,6 +360,10 @@ const handleMeetingCreated = () => {
 	calendarEvents.refresh();
 	fetchVideoMeetings();
 };
+
+// Let the Work app header (which hosts the hoisted create CTAs) refresh the
+// hub's calendar + meeting list after a meeting is created there.
+defineExpose({ refresh: handleMeetingCreated });
 
 // Data fetching
 const fetchVideoMeetings = async () => {

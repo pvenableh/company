@@ -179,7 +179,7 @@ const filteredMeetings = computed(() => {
     <div class="flex items-start justify-between gap-4 pt-2 mb-6">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-11 h-11 rounded-2xl bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-          <ExecutiveChairIcon class="w-7 h-7" />
+          <DirectorChairIcon class="w-7 h-7" />
         </div>
         <div class="min-w-0">
           <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight flex items-center gap-2">

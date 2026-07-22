@@ -1040,7 +1040,7 @@ const vReveal = {
           <header class="relative flex items-start justify-between gap-3 pt-5 pb-3 shrink-0">
             <div class="relative flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-full bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-                <ExecutiveChairIcon class="w-6 h-6" />
+                <DirectorChairIcon class="w-6 h-6" />
               </div>
               <div class="min-w-0">
                 <h2 class="text-base font-semibold leading-tight flex items-center gap-1.5">

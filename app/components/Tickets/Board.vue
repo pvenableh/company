@@ -22,68 +22,45 @@
 		</transition>
 
 		<!-- Filters and Controls -->
-		<div
-			class="w-full flex flex-col md:flex-row items-start md:items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
-		>
-			<div class="flex items-center gap-3 mb-4 xl:mb-0">
-				<!-- Create button — agency only. Portal users use the page-level
-					 New Ticket button on /portal/tickets which posts to /api/portal/tickets.
-					 On the desktop board (no projectId), New Ticket instead lives in the
-					 filter row below so it reads as grouped with the filters — this copy
-					 is hidden at md+ then (`md:hidden`) and only carries the mobile +
-					 project-embedded cases, where the filter cluster is absent. -->
-				<TicketsCreate v-if="!portal && !hideCreate" :class="{ 'md:hidden': !projectId }" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
-				<UButton
-					v-if="!projectId"
-					icon="i-heroicons-x-mark"
-					size="xs"
-					color="gray"
-					variant="ghost"
-					@click="clearFilters"
-					class="uppercase text-[10px] transition-opacity duration-500 p-0"
-					:class="hasActiveFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-				>
-					Clear Filters
-				</UButton>
+		<div class="w-full tickets-board__filters">
+			<!-- Project-embedded / portal boards: no filter toolbar — just the
+				 create affordance (when it isn't hoisted to a page header). -->
+			<div v-if="projectId || portal" class="flex items-center gap-3 mb-4 px-4 pt-4">
+				<TicketsCreate v-if="!portal && !hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 			</div>
 
-			<div v-if="!projectId && !portal" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0 min-w-0">
-				<!-- Row 1: Toggles -->
-				<div class="flex flex-row items-center gap-4">
-					<button
-						class="flex flex-row items-center space-x-2 cursor-pointer"
-						@click="filterByAssignedTo = !filterByAssignedTo"
-					>
-						<UToggle :model-value="filterByAssignedTo" />
-						<span class="text-[10px] uppercase select-none whitespace-nowrap" :class="filterByAssignedTo ? 'text-foreground font-semibold' : 'text-muted-foreground'">
-							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
-						</span>
-					</button>
-					<button
-						class="flex flex-row items-center space-x-2 cursor-pointer"
-						:disabled="filterByAssignedTo"
-						@click="!filterByAssignedTo && (filterUnassigned = !filterUnassigned)"
-					>
-						<UToggle :model-value="filterUnassigned" :disabled="filterByAssignedTo" />
-						<span class="text-[10px] uppercase select-none whitespace-nowrap" :class="filterUnassigned ? 'text-foreground font-semibold' : 'text-muted-foreground'">
-							{{ filterUnassigned ? 'Unassigned Only' : 'All Assignments' }}
-						</span>
-					</button>
+			<!-- Standalone board: single-row pill toolbar matching the Tasks floor
+				 — scope pill-tabs on the left, pill filters pushed to the right. -->
+			<div v-else class="relative flex items-center justify-between gap-3 mb-5 flex-wrap">
+				<!-- Scope — 3-way segmented pill control (was two toggle switches). -->
+				<UTabs
+					:model-value="ticketScope"
+					:items="ticketScopeItems"
+					class="w-fit"
+					@update:model-value="(v) => (ticketScope = v)"
+				/>
+
+				<!-- Right cluster: pill filters, pushed right. -->
+				<div class="flex items-center gap-2 flex-wrap ml-auto">
 					<transition name="fade">
 						<UIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
 					</transition>
-				</div>
-				<!-- Row 2: New Ticket + Due Date, Project, Archive.
-					 New Ticket sits at the head of the filter row (desktop, non-project
-					 board only) so the create action reads as part of this control
-					 cluster rather than stranded across the toolbar. The mobile +
-					 project-embedded cases are covered by the copy in the left cluster
-					 above. -->
-				<div class="flex flex-row items-center gap-4">
-					<TicketsCreate v-if="!hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 
-					<!-- Due Date — universal Select (glass, dark-adaptive). The
-						 leading icon turns amber when a date filter is active. -->
+					<transition name="fade">
+						<UButton
+							v-if="hasActiveFilters"
+							icon="i-heroicons-x-mark"
+							size="xs"
+							color="gray"
+							variant="ghost"
+							class="uppercase text-[10px]"
+							@click="clearFilters"
+						>
+							Clear
+						</UButton>
+					</transition>
+
+					<!-- Due Date — leading icon turns amber when a date filter is active. -->
 					<Select v-model="dueDateModel">
 						<SelectTrigger size="sm" class="h-8 w-40 rounded-full text-xs gap-1.5">
 							<Icon
@@ -100,8 +77,7 @@
 						</SelectContent>
 					</Select>
 
-					<!-- Client — LOCAL per-board filter (rounded-full pill). Hidden
-						 automatically when the org has no selectable clients. -->
+					<!-- Client — LOCAL per-board filter (hidden when the org has no clients). -->
 					<LayoutClientFilterSelect v-model="selectedClient" trigger-class="w-44" />
 
 					<!-- Project — universal Select with per-project ticket counts -->
@@ -123,6 +99,7 @@
 						</SelectContent>
 					</Select>
 
+					<!-- Archived toggle -->
 					<button
 						type="button"
 						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium transition-colors"
@@ -134,8 +111,12 @@
 						<Icon name="lucide:archive" class="w-3.5 h-3.5" />
 						{{ showArchived ? 'View board' : 'Archived' }}
 					</button>
+
+					<!-- New Ticket — only when not hoisted to a page header CTA. -->
+					<TicketsCreate v-if="!hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 				</div>
-				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-muted-foreground absolute font-bold uppercase">
+
+				<div v-if="lastUpdated" class="absolute -bottom-[18px] right-0 text-[9px] text-muted-foreground font-bold uppercase">
 					Last updated: {{ formatLastUpdated(lastUpdated) }}
 				</div>
 			</div>
@@ -421,6 +402,21 @@ const selectedProject = ref(props.projectId || null);
 const projectOptions = ref([]);
 const filterByAssignedTo = ref(false);
 const filterUnassigned = ref(false);
+// Scope as a single 3-way pill-tab control (mirrors the Tasks floor toolbar).
+// Backed by the two existing mutually-exclusive filter refs so persistence,
+// storage sync and the generateFilter() logic are untouched.
+const ticketScopeItems = [
+	{ key: 'mine', label: 'My Tickets' },
+	{ key: 'unassigned', label: 'Unassigned' },
+	{ key: 'all', label: 'All' },
+];
+const ticketScope = computed({
+	get: () => (filterByAssignedTo.value ? 'mine' : filterUnassigned.value ? 'unassigned' : 'all'),
+	set: (v) => {
+		filterByAssignedTo.value = v === 'mine';
+		filterUnassigned.value = v === 'unassigned';
+	},
+});
 const filterDueDate = ref(null);
 const isLoading = ref(true);
 const isFetching = ref(false);
