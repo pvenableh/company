@@ -1932,6 +1932,8 @@ export interface Contract {
 	/** @description Source proposal (if generated from one) */
 	proposal?: Proposal | string | null;
 	client?: Client | string | null;
+	/** @description Project this contract is attached to (nullable, SET NULL). */
+	project?: Project | string | null;
 }
 
 export interface Course {
@@ -4109,6 +4111,10 @@ export interface Proposal {
 	file?: DirectusFile | string | null;
 	/** @description Proposal name/title @required */
 	title: string;
+	/** @description Project this proposal is attached to (nullable, SET NULL). */
+	project?: Project | string | null;
+	/** @description Client this proposal is attached to directly (nullable, SET NULL). */
+	client?: Client | string | null;
 	/** @description Originating lead */
 	lead?: Lead | string | null;
 	/** @description Primary contact */

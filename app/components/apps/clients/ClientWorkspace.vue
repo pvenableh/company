@@ -169,6 +169,90 @@ const documentsProposalCount = ref(0);
 const documentsContractCount = ref(0);
 const documentsRefreshTick = ref(0); // bumped on new-create to refresh both lists
 
+// ── Files & Docs (merged, read-only file roll-up) ───────────────────────────
+// The client has no file store of its own; its "Files & Docs" tab aggregates
+// the files of ALL its projects (via /api/clients/[id]/files) alongside the
+// authored proposals/contracts. Files are read-only here — managed on their
+// project. Classification mirrors the project surface (native file tags).
+const config = useRuntimeConfig();
+const clientFiles = ref<any[]>([]);
+const clientFilesLoading = ref(false);
+const clientFilesLoaded = ref(false);
+type LibraryFilter = 'all' | 'contracts' | 'proposals' | 'documents' | 'assets';
+const libraryFilter = ref<LibraryFilter>('all');
+const libraryFolder = ref<string | null>(null);
+
+async function loadClientFiles() {
+	clientFilesLoading.value = true;
+	try {
+		clientFiles.value = (await $fetch(`/api/clients/${props.clientId}/files`).catch(() => [])) as any[];
+		clientFilesLoaded.value = true;
+	} finally {
+		clientFilesLoading.value = false;
+	}
+}
+
+function fileKind(row: any): 'contract' | 'proposal' | 'document' | 'asset' {
+	const doc = row?.directus_files_id || {};
+	const tags = (Array.isArray(doc.tags) ? doc.tags : []).map((t: any) => String(t).toLowerCase());
+	if (tags.includes('contract')) return 'contract';
+	if (tags.includes('proposal')) return 'proposal';
+	if (tags.includes('asset')) return 'asset';
+	if (tags.includes('document') || tags.includes('brief') || tags.includes('doc')) return 'document';
+	if (String(doc.type || '').startsWith('image/')) return 'asset';
+	return 'document';
+}
+const KIND_BADGE: Record<string, { label: string; class: string }> = {
+	contract: { label: 'Contract', class: 'bg-primary/15 text-primary' },
+	proposal: { label: 'Proposal', class: 'bg-info/15 text-info' },
+	document: { label: 'Document', class: 'bg-muted/50 text-foreground/70' },
+	asset:    { label: 'Asset', class: 'bg-success/15 text-success' },
+};
+const filteredLibraryFiles = computed(() => clientFiles.value.filter((row) => {
+	if (libraryFolder.value && (row.directus_files_id?.folder?.id || null) !== libraryFolder.value) return false;
+	if (libraryFilter.value === 'all') return true;
+	const k = fileKind(row);
+	if (libraryFilter.value === 'assets') return k === 'asset';
+	if (libraryFilter.value === 'documents') return k === 'document';
+	if (libraryFilter.value === 'contracts') return k === 'contract';
+	if (libraryFilter.value === 'proposals') return k === 'proposal';
+	return true;
+}));
+const libraryFolders = computed(() => {
+	const map = new Map<string, string>();
+	for (const row of clientFiles.value) {
+		const fl = row.directus_files_id?.folder;
+		if (fl?.id) map.set(fl.id, fl.name || 'Folder');
+	}
+	return [...map.entries()].map(([id, name]) => ({ id, name }));
+});
+const showContractsSection = computed(() => libraryFilter.value === 'all' || libraryFilter.value === 'contracts');
+const showProposalsSection = computed(() => libraryFilter.value === 'all' || libraryFilter.value === 'proposals');
+const libraryFilterChips: Array<{ key: LibraryFilter; label: string; icon: string }> = [
+	{ key: 'all', label: 'All', icon: 'lucide:layers' },
+	{ key: 'contracts', label: 'Contracts', icon: 'lucide:file-signature' },
+	{ key: 'proposals', label: 'Proposals', icon: 'lucide:file-text' },
+	{ key: 'documents', label: 'Documents', icon: 'lucide:file' },
+	{ key: 'assets', label: 'Assets', icon: 'lucide:image' },
+];
+function openProjectPanel(id: string) {
+	if (id) pushPanel('work-project', String(id));
+}
+function getFileIcon(type: string | null | undefined): string {
+	if (!type) return 'lucide:file';
+	if (type.startsWith('image/')) return 'lucide:image';
+	if (type.includes('pdf')) return 'lucide:file-text';
+	if (type.includes('spreadsheet') || type.includes('excel')) return 'lucide:table';
+	if (type.includes('presentation') || type.includes('powerpoint')) return 'lucide:presentation';
+	return 'lucide:file';
+}
+function formatFileSize(bytes: number | null | undefined): string {
+	if (!bytes) return '';
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
 const TICKET_STATUSES: Array<'Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'Archived'> = [
 	'Pending', 'Scheduled', 'In Progress', 'Completed', 'Archived',
 ];
@@ -210,7 +294,12 @@ function skeletonRows(n: number, fallback = 4, max = 8): number[] {
 
 const { inheritedContacts, inheritedConnections, load: loadInherited } = useClientInheritedContacts();
 
-const activeTab = ref<ClientTabKey>(props.initialTab || 'overview');
+// Legacy `?tab=documents` deep-links fold into the merged Files & Docs surface.
+function normalizeTab(t: ClientTabKey | undefined | null): ClientTabKey {
+	if (t === 'documents' as any) return 'library';
+	return (t || 'overview') as ClientTabKey;
+}
+const activeTab = ref<ClientTabKey>(normalizeTab(props.initialTab));
 
 // Tab-activation loader. Shared by the active-tab watcher AND the
 // hover-prefetch handler from <ClientTabsBar>, so a hover and a click
@@ -226,7 +315,9 @@ function loadForTab(tab: ClientTabKey) {
 		case 'tasks':    if (!relatedTasks.value.length && !tasksLoading.value) loadTasks(); break;
 		case 'meetings': if (!relatedMeetings.value.length && !meetingsLoading.value) loadMeetings(); break;
 		case 'content':  if (!relatedContent.value.length && !contentLoading.value) loadContent(); break;
-		// 'documents' tab is self-loading via MoneyProposalsList/ContractsList.
+		// Files & Docs — proposals/contracts self-load via the Money lists;
+		// warm the aggregated file roll-up here.
+		case 'library':  if (!clientFilesLoaded.value && !clientFilesLoading.value) loadClientFiles(); break;
 	}
 }
 
@@ -475,7 +566,7 @@ const tabCounts = computed(() => ({
 	// Projects/invoices/messages: cached counts on mount; replaced by the
 	// loaded row count once the tab is activated.
 	projects: projectsLoaded.value ? relatedProjects.value.length : projectCount.value,
-	documents: documentsProposalCount.value + documentsContractCount.value,
+	library: clientFiles.value.length + documentsProposalCount.value + documentsContractCount.value,
 	tickets: relatedTickets.value.length,
 	tasks: relatedTasks.value.length,
 	meetings: relatedMeetings.value.length,
@@ -642,6 +733,8 @@ const showAttachChannelModal = ref(false);
 const showCreateMeetingModal = ref(false);
 const showCreateProposalModal = ref(false);
 const showCreateContractModal = ref(false);
+const showAttachProposalModal = ref(false);
+const showAttachContractModal = ref(false);
 
 // Quick task add: lightweight inline input instead of full FormModal
 // (no FormModal exists for tasks, and a project-less task at client
@@ -773,6 +866,16 @@ function onProposalCreated() {
 
 function onContractCreated() {
 	showCreateContractModal.value = false;
+	documentsRefreshTick.value++;
+}
+// Attaching an existing proposal/contract sets its `client` FK (handled by
+// AppsClientsAttachExistingModal). Refresh the lists so it appears.
+function onProposalAttached() {
+	showAttachProposalModal.value = false;
+	documentsRefreshTick.value++;
+}
+function onContractAttached() {
+	showAttachContractModal.value = false;
 	documentsRefreshTick.value++;
 }
 
@@ -1211,8 +1314,49 @@ watch(() => props.clientId, () => {
 				     MoneyProposalsList / MoneyContractsList components.
 				     Empty state per section keeps both visible even with
 				     zero rows so the create chips are always reachable. -->
-				<div v-else-if="activeTab === 'documents'" class="space-y-6">
-					<section>
+				<div v-else-if="activeTab === 'library'" class="space-y-6">
+					<!-- Files & Docs — the client's authored proposals/contracts +
+					     a read-only roll-up of files from ALL its projects. Filter
+					     chips switch the population; folder chips narrow the files.
+					     Files are managed on their project (the ↳ chip opens it). -->
+					<div class="flex flex-wrap items-center gap-1.5">
+						<button
+							v-for="chip in libraryFilterChips"
+							:key="chip.key"
+							type="button"
+							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-medium border transition-colors"
+							:class="libraryFilter === chip.key
+								? 'bg-primary text-primary-foreground border-primary'
+								: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+							@click="libraryFilter = chip.key"
+						>
+							<Icon :name="chip.icon" class="w-3 h-3" />
+							{{ chip.label }}
+						</button>
+					</div>
+
+					<div v-if="libraryFolders.length" class="flex flex-wrap items-center gap-1.5">
+						<span class="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Folder</span>
+						<button
+							type="button"
+							class="inline-flex items-center h-6 px-2.5 rounded-full text-[10px] font-medium border transition-colors"
+							:class="!libraryFolder ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="libraryFolder = null"
+						>All</button>
+						<button
+							v-for="fl in libraryFolders"
+							:key="fl.id"
+							type="button"
+							class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-medium border transition-colors"
+							:class="libraryFolder === fl.id ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="libraryFolder = fl.id"
+						>
+							<Icon name="lucide:folder" class="w-2.5 h-2.5" />
+							{{ fl.name }}
+						</button>
+					</div>
+
+					<section v-if="showProposalsSection">
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
@@ -1221,14 +1365,24 @@ watch(() => props.clientId, () => {
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ documentsProposalCount }}</span>
 							</div>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateProposalModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Proposal
-							</button>
+							<div class="flex items-center gap-2">
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+									@click="showAttachProposalModal = true"
+								>
+									<Icon name="lucide:link" class="w-3 h-3" />
+									Attach Existing
+								</button>
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+									@click="showCreateProposalModal = true"
+								>
+									<Icon name="lucide:plus" class="w-3 h-3" />
+									New Proposal
+								</button>
+							</div>
 						</div>
 						<MoneyProposalsList
 							ref="documentsProposalsRef"
@@ -1237,7 +1391,7 @@ watch(() => props.clientId, () => {
 						/>
 					</section>
 
-					<section>
+					<section v-if="showContractsSection">
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Icon name="lucide:file-signature" class="w-4 h-4 text-muted-foreground" />
@@ -1246,20 +1400,104 @@ watch(() => props.clientId, () => {
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ documentsContractCount }}</span>
 							</div>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateContractModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Contract
-							</button>
+							<div class="flex items-center gap-2">
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+									@click="showAttachContractModal = true"
+								>
+									<Icon name="lucide:link" class="w-3 h-3" />
+									Attach Existing
+								</button>
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+									@click="showCreateContractModal = true"
+								>
+									<Icon name="lucide:plus" class="w-3 h-3" />
+									New Contract
+								</button>
+							</div>
 						</div>
 						<MoneyContractsList
 							ref="documentsContractsRef"
 							:client-id="clientId"
 							@count="documentsContractCount = $event"
 						/>
+					</section>
+
+					<!-- Files — read-only roll-up from the client's projects. Each
+					     row shows which project it lives on; open/download only. -->
+					<section>
+						<div class="flex items-center gap-2 mb-3">
+							<Icon name="lucide:folder" class="w-4 h-4 text-muted-foreground" />
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Files</h4>
+							<span class="text-[10px] text-muted-foreground/70">{{ filteredLibraryFiles.length }}</span>
+							<span class="text-[10px] text-muted-foreground/50">· from projects</span>
+						</div>
+						<div v-if="clientFilesLoading && !clientFiles.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
+							<div v-for="i in skeletonRows(clientFiles.length, 4, 6)" :key="`cf-skel-${i}`" class="ios-card p-3 flex items-center gap-3">
+								<USkeleton class="w-4 h-4 shrink-0" />
+								<div class="flex-1 space-y-1.5">
+									<USkeleton class="h-3.5 w-3/4" />
+									<USkeleton class="h-2.5 w-20" />
+								</div>
+							</div>
+						</div>
+						<div v-else-if="!clientFiles.length" class="text-sm text-muted-foreground text-center py-10">
+							No files across this client's projects yet.
+						</div>
+						<div v-else-if="!filteredLibraryFiles.length" class="text-sm text-muted-foreground text-center py-10">
+							No files in this view.
+						</div>
+						<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+							<div
+								v-for="row in filteredLibraryFiles"
+								:key="row.id"
+								class="ios-card p-3 flex items-center gap-2.5 hover:bg-muted/30 transition-colors"
+							>
+								<Icon :name="getFileIcon(row.directus_files_id?.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+								<a
+									:href="`${config.public.directusUrl}/assets/${row.directus_files_id?.id}`"
+									target="_blank"
+									rel="noopener"
+									class="flex-1 min-w-0"
+								>
+									<p class="text-sm font-medium text-foreground truncate">{{ row.directus_files_id?.title || row.directus_files_id?.filename_download }}</p>
+									<div class="flex items-center gap-2 mt-0.5 flex-wrap">
+										<span class="text-[10px] text-muted-foreground">{{ formatFileSize(row.directus_files_id?.filesize) }}</span>
+										<span v-if="row.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">{{ fmtDate(row.directus_files_id.uploaded_on) }}</span>
+										<span v-if="row.directus_files_id?.folder?.name" class="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+											<Icon name="lucide:folder" class="w-2.5 h-2.5" />{{ row.directus_files_id.folder.name }}
+										</span>
+									</div>
+								</a>
+								<span
+									v-if="KIND_BADGE[fileKind(row)]"
+									class="shrink-0 inline-flex items-center px-1.5 h-5 rounded-full text-[9px] font-semibold uppercase tracking-wide"
+									:class="KIND_BADGE[fileKind(row)].class"
+								>{{ KIND_BADGE[fileKind(row)].label }}</span>
+								<button
+									v-if="row.projects_id?.id"
+									type="button"
+									class="shrink-0 inline-flex items-center gap-0.5 max-w-[9rem] h-5 px-1.5 rounded-full text-[10px] font-medium bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+									:title="`Open ${row.projects_id.title || 'project'}`"
+									@click="openProjectPanel(row.projects_id.id)"
+								>
+									<Icon name="lucide:corner-down-right" class="w-2.5 h-2.5 shrink-0" />
+									<span class="truncate">{{ row.projects_id.title || 'Project' }}</span>
+								</button>
+								<a
+									:href="`${config.public.directusUrl}/assets/${row.directus_files_id?.id}`"
+									target="_blank"
+									rel="noopener"
+									class="shrink-0 text-muted-foreground/40 hover:text-muted-foreground"
+									title="Download"
+								>
+									<Icon name="lucide:download" class="w-3.5 h-3.5" />
+								</a>
+							</div>
+						</div>
 					</section>
 				</div>
 
@@ -1866,6 +2104,42 @@ watch(() => props.clientId, () => {
 			@attached="onChannelAttached"
 		/>
 
+		<!-- Attach existing proposal / contract — sets the doc's `client` FK
+		     (proposals.client + contracts.client both exist). Surfaces unlinked
+		     docs and those on another client. -->
+		<AppsClientsAttachExistingModal
+			v-if="client"
+			v-model="showAttachProposalModal"
+			:client-id="clientId"
+			collection="proposals"
+			entity-singular="Proposal"
+			entity-plural="proposals"
+			fk-field="client"
+			row-icon="lucide:file-text"
+			:fields="['id', 'title', 'proposal_status', 'total_value', 'date_created', 'client.id', 'client.name']"
+			:get-label="(r) => r.title || 'Untitled proposal'"
+			:get-subtitle="(r) => [r.proposal_status, r.total_value != null && ('$' + Number(r.total_value).toLocaleString())].filter(Boolean).join(' · ')"
+			:get-current-client-name="(r) => r.client && r.client.name"
+			:get-search-haystack="(r) => `${r.title || ''} ${r.proposal_status || ''}`"
+			@attached="onProposalAttached"
+		/>
+		<AppsClientsAttachExistingModal
+			v-if="client"
+			v-model="showAttachContractModal"
+			:client-id="clientId"
+			collection="contracts"
+			entity-singular="Contract"
+			entity-plural="contracts"
+			fk-field="client"
+			row-icon="lucide:file-signature"
+			:fields="['id', 'title', 'contract_status', 'total_value', 'date_created', 'client.id', 'client.name']"
+			:get-label="(r) => r.title || 'Untitled contract'"
+			:get-subtitle="(r) => [r.contract_status, r.total_value != null && ('$' + Number(r.total_value).toLocaleString())].filter(Boolean).join(' · ')"
+			:get-current-client-name="(r) => r.client && r.client.name"
+			:get-search-haystack="(r) => `${r.title || ''} ${r.contract_status || ''}`"
+			@attached="onContractAttached"
+		/>
+
 		<ClientOnly>
 			<SchedulerUnifiedEventModal
 				v-if="client"
@@ -1878,14 +2152,11 @@ watch(() => props.clientId, () => {
 			/>
 		</ClientOnly>
 
-		<!-- Documents create modals. Proposals have no client FK in the
-		     schema (they tie to lead + contact + organization), so the
-		     modal just opens unscoped here — the user picks the lead or
-		     contact in the form. Contracts DO have a client FK; the
-		     modal prefill goes through ContractForm.contact today, so
-		     the same un-scoped open is fine until ContractForm grows a
-		     client picker. Lists still re-scope on refresh via the
-		     unioned filter in MoneyProposalsList. -->
+		<!-- Documents create modals open unscoped (the forms pick lead/
+		     contact, which imply the client via the unioned list filter). To
+		     put a specific existing doc under this client, use "Attach Existing"
+		     above — it sets the direct `client` FK (proposals.client +
+		     contracts.client both exist now). -->
 		<ProposalsFormModal
 			v-if="client"
 			v-model="showCreateProposalModal"

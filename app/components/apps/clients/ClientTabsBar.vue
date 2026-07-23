@@ -9,7 +9,7 @@ export type ClientTabKey =
 	| 'activity'
 	| 'contacts'
 	| 'projects'
-	| 'documents'
+	| 'library'
 	| 'tickets'
 	| 'tasks'
 	| 'meetings'
@@ -42,7 +42,7 @@ const tabs: Array<{ key: ClientTabKey; label: string; icon: string }> = [
 	{ key: 'overview', label: 'Overview', icon: 'lucide:building-2' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
 	{ key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
-	{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
+	{ key: 'library', label: 'Files & Docs', icon: 'lucide:files' },
 	{ key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
 	{ key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
 	{ key: 'meetings', label: 'Meetings', icon: 'lucide:video' },

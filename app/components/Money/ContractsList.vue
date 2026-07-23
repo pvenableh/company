@@ -26,6 +26,9 @@ const props = defineProps<{
 	clientId?: string | null;
 	leadId?: string | number | null;
 	projectId?: string | null;
+	/** With `clientId`, restrict to client-LEVEL docs not tied to any project
+	    (project _null) — used for the "From [client]" section on a project. */
+	clientLevelOnly?: boolean;
 	showFilters?: boolean;
 	hideHeader?: boolean;
 }>();
@@ -70,7 +73,10 @@ function clientScope(id: string): Record<string, any> {
 
 function buildScopeFilter(): Record<string, any> | null {
 	if (props.clientId) {
-		return clientScope(props.clientId);
+		// Client-LEVEL view (project inheritance): only docs not tied to a project.
+		return props.clientLevelOnly
+			? { _and: [clientScope(props.clientId), { project: { _null: true } }] }
+			: clientScope(props.clientId);
 	}
 	// LOCAL filter (Money/Documents floor). 'org' → contracts with no client.
 	if (showClientFilter.value && localClientId.value) {

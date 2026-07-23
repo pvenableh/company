@@ -14,12 +14,16 @@ const clientId = route.params.id as string;
 
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
-type TabKey = 'activity' | 'contacts' | 'projects' | 'documents' | 'tickets' | 'tasks' | 'meetings' | 'invoices' | 'partners' | 'messages';
-const VALID_TABS: TabKey[] = ['activity', 'contacts', 'projects', 'documents', 'tickets', 'tasks', 'meetings', 'invoices', 'partners', 'messages'];
+type TabKey = 'activity' | 'contacts' | 'projects' | 'library' | 'tickets' | 'tasks' | 'meetings' | 'invoices' | 'partners' | 'messages';
+const VALID_TABS: TabKey[] = ['activity', 'contacts', 'projects', 'library', 'tickets', 'tasks', 'meetings', 'invoices', 'partners', 'messages'];
+// Legacy `?tab=documents` deep-links fold into the merged Files & Docs surface.
+const LEGACY_TAB_ALIAS: Record<string, TabKey> = { documents: 'library' };
 
 const initialTab: TabKey = (() => {
   const v = route.query.tab;
-  return typeof v === 'string' && VALID_TABS.includes(v as TabKey) ? (v as TabKey) : 'overview';
+  if (typeof v !== 'string') return 'overview';
+  if (LEGACY_TAB_ALIAS[v]) return LEGACY_TAB_ALIAS[v];
+  return VALID_TABS.includes(v as TabKey) ? (v as TabKey) : 'overview';
 })();
 
 const client = ref<Client | null>(null);

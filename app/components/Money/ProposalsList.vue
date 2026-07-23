@@ -27,6 +27,9 @@ const props = defineProps<{
 	clientId?: string | null;
 	leadId?: string | number | null;
 	projectId?: string | null;
+	/** With `clientId`, restrict to client-LEVEL docs not tied to any project
+	    (project _null) — used for the "From [client]" section on a project. */
+	clientLevelOnly?: boolean;
 	/** Show built-in search + status filter bar. Off by default for the
 	    in-tab surfaces; on for the standalone Money floor. */
 	showFilters?: boolean;
@@ -59,12 +62,19 @@ function buildScopeFilter(): Record<string, any> | null {
 		// Proposals have no direct client FK. Union the two paths that
 		// can tie a proposal to a client: the originating lead converted
 		// into this client, OR the linked contact belongs to this client.
-		return {
+		const clientOr = {
 			_or: [
+				// Direct link (set when attached to a client), then the indirect
+				// walks: originating lead → resulting client, or linked contact.
+				{ client: { _eq: props.clientId } },
 				{ lead: { resulting_client: { _eq: props.clientId } } },
 				{ contact: { client: { _eq: props.clientId } } },
 			],
 		};
+		// Client-LEVEL view (project inheritance): only docs not tied to a project.
+		return props.clientLevelOnly
+			? { _and: [clientOr, { project: { _null: true } }] }
+			: clientOr;
 	}
 	if (props.leadId != null) {
 		return { lead: { _eq: Number(props.leadId) } };
