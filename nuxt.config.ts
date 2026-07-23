@@ -327,6 +327,9 @@ export default defineNuxtConfig({
 			adminRoleId: process.env.NUXT_PUBLIC_ADMIN_ROLE_ID || '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
 			clientManagerRoleId: process.env.NUXT_PUBLIC_CLIENT_MANAGER_ROLE_ID || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb',
 			directusRoleUser: process.env.NUXT_PUBLIC_DIRECTUS_ROLE_USER,
+			// Dedicated low-privilege role for client-portal invites (invite-client.post.ts).
+			// Staff registration/invites keep using directusRoleUser (Client Manager).
+			directusRolePortal: process.env.NUXT_PUBLIC_DIRECTUS_ROLE_PORTAL,
 
 			// Social publishing kill-switch. OFF until the Meta/Facebook + LinkedIn
 			// app IDs/keys are approved. While false: external publishing, the

@@ -1,41 +1,51 @@
 <!--
-  ProjectTouchpoints — a project's communication log (CardDesk-style).
+  Touchpoints — a general communication log (CardDesk-style), scoped to a
+  client, project, and/or contact.
 
-  Log a quick touch ("Sent email", "Phone call") with an optional note, tag the
-  people involved (team members and/or client contacts), and flag whether you're
-  awaiting a reply. Each touch can later be marked as responded, so a team can
-  track outreach and follow-up at a glance. Mirrors CardDesk's activity feed.
+  Log a quick touch ("Sent email", "Phone call"), tag the client contacts
+  involved (a real m2m relation) plus optional team members, and flag whether
+  you're awaiting a reply. Logging on a project also stamps the project's client
+  so the touch shows on both. Replaces the project-only ProjectTouchpoints.
 -->
 <script setup lang="ts">
 import {
-	PROJECT_TOUCHPOINT_TYPES,
-	PROJECT_TOUCHPOINT_ICON,
-	PROJECT_TOUCHPOINT_LABEL,
-	PROJECT_TOUCHPOINT_FALLBACK_ICON,
+	TOUCHPOINT_TYPES,
+	TOUCHPOINT_ICON,
+	TOUCHPOINT_LABEL,
+	TOUCHPOINT_FALLBACK_ICON,
 	type TouchpointParticipant,
-} from '~/utils/project-touchpoints';
-import type { ProjectTouchpoint } from '~~/shared/directus';
+} from '~/utils/touchpoints';
 
 const props = defineProps<{
-	projectId: string;
 	organizationId?: string | null;
 	clientId?: string | null;
+	projectId?: string | null;
+	contactId?: string | null;
 }>();
 
-const { listForProject, logTouchpoint, markResponded, deleteTouchpoint } = useProjectTouchpoints();
+const { listForScope, logTouchpoint, markResponded, deleteTouchpoint } = useTouchpoints();
 const { fetchFilteredUsers, filteredUsers } = useFilteredUsers();
 const contactItems = useDirectusItems('contacts');
 const toast = useToast();
 
-const touchpoints = ref<ProjectTouchpoint[]>([]);
+// ── Per-org matrix gating (mirrors tickets/tasks: client-side affordance on top
+// of the Directus org-scoped row perms). Owner/Admin bypass inside useOrgRole. ──
+const { canView, canCreate, canEdit, canDelete } = useOrgRole();
+const canViewTp = computed(() => canView('touchpoints'));
+const canCreateTp = computed(() => canCreate('touchpoints'));
+const canEditTp = computed(() => canEdit('touchpoints'));
+const canDeleteTp = computed(() => canDelete('touchpoints'));
+
+const touchpoints = ref<any[]>([]);
 const loading = ref(true);
 
 // ── Taggable people ────────────────────────────────────────────────────────
+interface ContactOption { id: string; name: string; }
 const members = ref<TouchpointParticipant[]>([]);
-const contacts = ref<TouchpointParticipant[]>([]);
+const clientContacts = ref<ContactOption[]>([]);
 
 async function loadPeople() {
-	// Team / org members
+	// Team / org members → participants JSON (no contacts row).
 	try {
 		if (props.organizationId) await fetchFilteredUsers(props.organizationId);
 		members.value = (filteredUsers.value || []).map((u: any) => ({
@@ -44,7 +54,7 @@ async function loadPeople() {
 			name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Member',
 		}));
 	} catch { members.value = []; }
-	// Client contacts (client + portal members)
+	// Client contacts → real m2m relation.
 	try {
 		if (props.clientId) {
 			const rows = (await contactItems.list({
@@ -53,19 +63,21 @@ async function loadPeople() {
 				sort: ['first_name'],
 				limit: 100,
 			})) as any[];
-			contacts.value = rows.map((c) => ({
-				kind: 'contact' as const,
+			clientContacts.value = rows.map((c) => ({
 				id: String(c.id),
 				name: [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Contact',
 			}));
+		} else if (props.contactId) {
+			const c = (await contactItems.get(props.contactId, { fields: ['id', 'first_name', 'last_name', 'email'] })) as any;
+			if (c) clientContacts.value = [{ id: String(c.id), name: [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Contact' }];
 		}
-	} catch { contacts.value = []; }
+	} catch { clientContacts.value = []; }
 }
 
 async function load() {
 	loading.value = true;
 	try {
-		touchpoints.value = await listForProject(props.projectId);
+		touchpoints.value = await listForScope({ clientId: props.clientId, projectId: props.projectId, contactId: props.contactId });
 	} catch {
 		touchpoints.value = [];
 	} finally {
@@ -74,18 +86,13 @@ async function load() {
 }
 
 onMounted(() => { load(); loadPeople(); });
-watch(() => props.projectId, () => { load(); });
+watch(() => [props.clientId, props.projectId, props.contactId], () => { load(); loadPeople(); });
 
 // ── Log form ─────────────────────────────────────────────────────────────
 const formOpen = ref(false);
 const saving = ref(false);
-const form = reactive<{ type: string; summary: string; note: string; occurred_at: string; awaiting_response: boolean; participants: TouchpointParticipant[] }>({
-	type: 'email',
-	summary: '',
-	note: '',
-	occurred_at: '',
-	awaiting_response: false,
-	participants: [],
+const form = reactive<{ type: string; summary: string; note: string; occurred_at: string; awaiting_response: boolean; contactIds: string[]; participants: TouchpointParticipant[] }>({
+	type: 'email', summary: '', note: '', occurred_at: '', awaiting_response: false, contactIds: [], participants: [],
 });
 
 function resetForm() {
@@ -94,21 +101,26 @@ function resetForm() {
 	form.note = '';
 	form.occurred_at = '';
 	form.awaiting_response = false;
+	// On a contact surface, pre-tag that contact.
+	form.contactIds = props.contactId ? [String(props.contactId)] : [];
 	form.participants = [];
 }
 
-function openForm() { resetForm(); formOpen.value = true; }
+function openForm() { if (!canCreateTp.value) return; resetForm(); formOpen.value = true; }
 function cancelForm() { formOpen.value = false; }
 
-function isTagged(p: TouchpointParticipant) {
-	return form.participants.some((x) => x.kind === p.kind && x.id === p.id);
+function toggleContact(id: string) {
+	form.contactIds = form.contactIds.includes(id) ? form.contactIds.filter((x) => x !== id) : [...form.contactIds, id];
 }
-function toggleTag(p: TouchpointParticipant) {
-	if (isTagged(p)) form.participants = form.participants.filter((x) => !(x.kind === p.kind && x.id === p.id));
+function isMemberTagged(p: TouchpointParticipant) { return form.participants.some((x) => x.kind === p.kind && x.id === p.id); }
+function toggleMember(p: TouchpointParticipant) {
+	if (isMemberTagged(p)) form.participants = form.participants.filter((x) => !(x.kind === p.kind && x.id === p.id));
 	else form.participants = [...form.participants, p];
 }
 
 const tagPickerOpen = ref(false);
+const taggedCount = computed(() => form.contactIds.length + form.participants.length);
+const anyPeople = computed(() => members.value.length + clientContacts.value.length > 0);
 
 async function save() {
 	if (!props.organizationId) {
@@ -118,8 +130,10 @@ async function save() {
 	saving.value = true;
 	try {
 		await logTouchpoint({
-			project: props.projectId,
 			organization: props.organizationId,
+			client: props.clientId || null,
+			project: props.projectId || null,
+			contactIds: form.contactIds,
 			type: form.type,
 			summary: form.summary.trim() || undefined,
 			note: form.note.trim() || undefined,
@@ -140,7 +154,7 @@ async function save() {
 // ── Response handling ──────────────────────────────────────────────────────
 const respondingId = ref<number | null>(null);
 const responseNote = ref('');
-function openRespond(tp: ProjectTouchpoint) { respondingId.value = tp.id; responseNote.value = ''; }
+function openRespond(tp: any) { respondingId.value = tp.id; responseNote.value = ''; }
 async function confirmRespond() {
 	if (respondingId.value == null) return;
 	try {
@@ -152,7 +166,7 @@ async function confirmRespond() {
 	}
 }
 
-async function removeTouchpoint(tp: ProjectTouchpoint) {
+async function removeTouchpoint(tp: any) {
 	try {
 		await deleteTouchpoint(tp.id);
 		touchpoints.value = touchpoints.value.filter((t) => t.id !== tp.id);
@@ -161,26 +175,39 @@ async function removeTouchpoint(tp: ProjectTouchpoint) {
 	}
 }
 
-function iconFor(type?: string | null) { return (type && PROJECT_TOUCHPOINT_ICON[type]) || PROJECT_TOUCHPOINT_FALLBACK_ICON; }
-function labelFor(type?: string | null) { return (type && PROJECT_TOUCHPOINT_LABEL[type]) || 'Touch'; }
+function iconFor(type?: string | null) { return (type && TOUCHPOINT_ICON[type]) || TOUCHPOINT_FALLBACK_ICON; }
+function labelFor(type?: string | null) { return (type && TOUCHPOINT_LABEL[type]) || 'Touch'; }
 
 function fmtDate(iso?: string | null) {
 	if (!iso) return '';
-	try {
-		return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-	} catch { return ''; }
+	try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return ''; }
 }
 
-const anyPeople = computed(() => members.value.length + contacts.value.length > 0);
+/** Names of the tagged m2m contacts on a touchpoint row. */
+function contactNames(tp: any): string[] {
+	return (tp.contacts || [])
+		.map((j: any) => {
+			const c = j?.contacts_id;
+			if (!c || typeof c !== 'object') return null;
+			return [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Contact';
+		})
+		.filter(Boolean);
+}
 </script>
 
 <template>
 	<div>
+		<!-- No access -->
+		<div v-if="!canViewTp" class="text-center py-8 text-sm text-muted-foreground">
+			You don't have access to touchpoints in this organization.
+		</div>
+
+		<template v-else>
 		<!-- Header -->
 		<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-			<p class="text-xs text-muted-foreground">Track outreach and follow-up on this project.</p>
+			<p class="text-xs text-muted-foreground">Track outreach and follow-up.</p>
 			<button
-				v-if="!formOpen"
+				v-if="!formOpen && canCreateTp"
 				type="button"
 				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-medium bg-foreground text-background ios-press"
 				@click="openForm"
@@ -193,9 +220,9 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 		<!-- Log form -->
 		<div v-if="formOpen" class="ios-card p-3 mb-4 space-y-2.5">
 			<!-- Type picker -->
-			<div class="flex flex-nowrap gap-1 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+			<div class="flex flex-nowrap gap-1 overflow-x-auto pb-1 -mx-0.5 px-0.5 scrollbar-hide">
 				<button
-					v-for="opt in PROJECT_TOUCHPOINT_TYPES"
+					v-for="opt in TOUCHPOINT_TYPES"
 					:key="opt.key"
 					type="button"
 					class="shrink-0 whitespace-nowrap inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors"
@@ -247,31 +274,31 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 						@click="tagPickerOpen = !tagPickerOpen"
 					>
 						<Icon name="lucide:users" class="w-3 h-3" />
-						{{ form.participants.length ? `${form.participants.length} tagged` : 'Tag people' }}
+						{{ taggedCount ? `${taggedCount} tagged` : 'Tag people' }}
 					</button>
 					<template v-if="tagPickerOpen">
 						<div class="fixed inset-0 z-40" @click="tagPickerOpen = false" />
 						<div class="absolute z-50 top-full left-0 mt-1.5 w-64 max-h-72 overflow-auto rounded-2xl border border-border bg-card shadow-xl p-1.5" @click.stop>
-							<p v-if="members.length" class="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Team</p>
+							<p v-if="clientContacts.length" class="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Client contacts</p>
+							<button
+								v-for="c in clientContacts"
+								:key="`c-${c.id}`"
+								type="button"
+								class="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm text-left hover:bg-primary/5"
+								@click="toggleContact(c.id)"
+							>
+								<Icon :name="form.contactIds.includes(c.id) ? 'lucide:check-square' : 'lucide:square'" class="w-3.5 h-3.5 shrink-0" :class="form.contactIds.includes(c.id) ? 'text-primary' : 'text-muted-foreground/50'" />
+								<span class="truncate">{{ c.name }}</span>
+							</button>
+							<p v-if="members.length" class="px-2 py-1 mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">Team</p>
 							<button
 								v-for="p in members"
 								:key="`m-${p.id}`"
 								type="button"
 								class="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm text-left hover:bg-primary/5"
-								@click="toggleTag(p)"
+								@click="toggleMember(p)"
 							>
-								<Icon :name="isTagged(p) ? 'lucide:check-square' : 'lucide:square'" class="w-3.5 h-3.5 shrink-0" :class="isTagged(p) ? 'text-primary' : 'text-muted-foreground/50'" />
-								<span class="truncate">{{ p.name }}</span>
-							</button>
-							<p v-if="contacts.length" class="px-2 py-1 mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">Client contacts</p>
-							<button
-								v-for="p in contacts"
-								:key="`c-${p.id}`"
-								type="button"
-								class="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm text-left hover:bg-primary/5"
-								@click="toggleTag(p)"
-							>
-								<Icon :name="isTagged(p) ? 'lucide:check-square' : 'lucide:square'" class="w-3.5 h-3.5 shrink-0" :class="isTagged(p) ? 'text-primary' : 'text-muted-foreground/50'" />
+								<Icon :name="isMemberTagged(p) ? 'lucide:check-square' : 'lucide:square'" class="w-3.5 h-3.5 shrink-0" :class="isMemberTagged(p) ? 'text-primary' : 'text-muted-foreground/50'" />
 								<span class="truncate">{{ p.name }}</span>
 							</button>
 						</div>
@@ -279,16 +306,25 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 				</div>
 			</div>
 
-			<!-- Selected participant chips -->
-			<div v-if="form.participants.length" class="flex flex-wrap gap-1">
+			<!-- Selected chips -->
+			<div v-if="taggedCount" class="flex flex-wrap gap-1">
+				<span
+					v-for="c in clientContacts.filter((x) => form.contactIds.includes(x.id))"
+					:key="`sel-c-${c.id}`"
+					class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+				>
+					<Icon name="lucide:contact" class="w-2.5 h-2.5" />
+					{{ c.name }}
+					<button type="button" class="hover:text-destructive" @click="toggleContact(c.id)"><Icon name="lucide:x" class="w-2.5 h-2.5" /></button>
+				</span>
 				<span
 					v-for="p in form.participants"
-					:key="`sel-${p.kind}-${p.id}`"
+					:key="`sel-m-${p.id}`"
 					class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-muted text-foreground"
 				>
-					<Icon :name="p.kind === 'member' ? 'lucide:user' : 'lucide:contact'" class="w-2.5 h-2.5" />
+					<Icon name="lucide:user" class="w-2.5 h-2.5" />
 					{{ p.name }}
-					<button type="button" class="hover:text-destructive" @click="toggleTag(p)"><Icon name="lucide:x" class="w-2.5 h-2.5" /></button>
+					<button type="button" class="hover:text-destructive" @click="toggleMember(p)"><Icon name="lucide:x" class="w-2.5 h-2.5" /></button>
 				</span>
 			</div>
 
@@ -331,29 +367,37 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 					<p v-if="tp.note" class="text-muted-foreground text-xs mt-0.5 italic">{{ tp.note }}</p>
 					<p v-if="tp.is_response && tp.response_note" class="text-green-600 dark:text-green-400 text-xs mt-1">↩ {{ tp.response_note }}</p>
 
-					<!-- Participants -->
-					<div v-if="tp.participants && tp.participants.length" class="flex flex-wrap gap-1 mt-1.5">
+					<!-- Tagged people: m2m contacts + participant tags -->
+					<div v-if="contactNames(tp).length || (tp.participants && tp.participants.length)" class="flex flex-wrap gap-1 mt-1.5">
 						<span
-							v-for="(p, i) in tp.participants"
+							v-for="(name, i) in contactNames(tp)"
+							:key="`tp-${tp.id}-c-${i}`"
+							class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
+						>
+							<Icon name="lucide:contact" class="w-2.5 h-2.5" />
+							{{ name }}
+						</span>
+						<span
+							v-for="(p, i) in (tp.participants || [])"
 							:key="`tp-${tp.id}-p-${i}`"
 							class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-muted/70 text-muted-foreground"
 						>
-							<Icon :name="p.kind === 'member' ? 'lucide:user' : 'lucide:contact'" class="w-2.5 h-2.5" />
+							<Icon name="lucide:user" class="w-2.5 h-2.5" />
 							{{ p.name }}
 						</span>
 					</div>
 
 					<!-- Actions -->
-					<div class="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+					<div v-if="canEditTp || canDeleteTp" class="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
 						<button
-							v-if="!tp.is_response"
+							v-if="!tp.is_response && canEditTp"
 							type="button"
 							class="text-[11px] text-primary hover:underline"
 							@click="openRespond(tp)"
 						>
 							Mark responded
 						</button>
-						<button type="button" class="text-[11px] text-muted-foreground hover:text-destructive" @click="removeTouchpoint(tp)">Delete</button>
+						<button v-if="canDeleteTp" type="button" class="text-[11px] text-muted-foreground hover:text-destructive" @click="removeTouchpoint(tp)">Delete</button>
 					</div>
 
 					<!-- Inline respond box -->
@@ -371,5 +415,6 @@ const anyPeople = computed(() => members.value.length + contacts.value.length > 
 				</div>
 			</div>
 		</div>
+		</template>
 	</div>
 </template>

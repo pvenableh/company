@@ -186,6 +186,17 @@ onBeforeUnmount(() => {
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</p>
 				<p class="text-sm whitespace-pre-wrap">{{ contact.notes }}</p>
 			</div>
+
+			<!-- Touchpoints — this person's communication log (scoped to the
+			     contact via the m2m; new touches tag them + their client). -->
+			<div class="space-y-2 pt-3 border-t border-border/30">
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Touchpoints</p>
+				<AppsTouchpoints
+					:contact-id="String(props.id)"
+					:client-id="linkedClientId"
+					:organization-id="selectedOrg"
+				/>
+			</div>
 		</div>
 
 		<div v-else-if="error" class="text-sm text-destructive py-10 text-center">

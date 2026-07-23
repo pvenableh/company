@@ -78,11 +78,23 @@ const { getStatusBadgeClasses } = useStatusStyle();
 // ── Sorting ──────────────────────────────────────────────────────────────────
 const sortBy = ref('sort,name');
 const sortOptions = [
+  { label: 'Pinned first', value: '-pinned,name' },
   { label: 'Custom Order', value: 'sort,name' },
   { label: 'Name (A→Z)', value: 'name' },
   { label: 'Name (Z→A)', value: '-name' },
   { label: 'Recently Created', value: '-date_created' },
 ];
+
+// Pin a client to keep it at the top (same `pinned` flag the carousels and the
+// home "Pinned work" rail read). Optimistic; re-sorts locally when the list is
+// already ordered pinned-first so the row jumps to the top on toggle.
+const { togglePin: togglePinClient } = usePinnable('clients');
+async function onTogglePinClient(client: Client) {
+  await togglePinClient(client as any);
+  if (sortBy.value.startsWith('-pinned')) {
+    allClients.value = sortPinnedFirst(allClients.value);
+  }
+}
 
 // ── Tab counts ───────────────────────────────────────────────────────────────
 const tabCounts = ref<Record<string, number>>({});
@@ -314,6 +326,13 @@ onMounted(() => {
               <!-- Client Name + Logo -->
               <td class="py-3 px-4">
                 <div class="flex items-center gap-3">
+                  <PinButton
+                    :pinned="!!client.pinned"
+                    size="xs"
+                    class="shrink-0"
+                    @click.stop
+                    @toggle="onTogglePinClient(client)"
+                  />
                   <div class="shrink-0">
                     <img
                       v-if="getLogoUrl(client)"

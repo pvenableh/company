@@ -126,8 +126,14 @@ export default defineEventHandler(async (event) => {
     } else {
       isNewUser = true;
 
-      // Resolve the Directus system role for the new user
-      let directusRoleId = config.public.directusRoleUser || null;
+      // Resolve the Directus system role for the new PORTAL user. Portal users
+      // get the dedicated low-privilege "Client Portal" role — NOT the shared
+      // Client Manager role that staff use. That role is nearly empty (self
+      // /users/me, role-name expansion, file assets, message create); all portal
+      // reads run server-side via /api/portal/*, so the leaky agency-data
+      // permissions on the Client/Client Manager policies never reach them.
+      // Fall back to the staff role only if the portal role env is unset.
+      let directusRoleId = config.public.directusRolePortal || config.public.directusRoleUser || null;
 
       if (!directusRoleId) {
         // Env var not set — query Directus for a non-admin role to assign
@@ -150,7 +156,7 @@ export default defineEventHandler(async (event) => {
       if (!directusRoleId) {
         throw createError({
           statusCode: 500,
-          message: 'No default user role configured. Set NUXT_PUBLIC_DIRECTUS_ROLE_USER or create a non-admin role in Directus.',
+          message: 'No portal user role configured. Set NUXT_PUBLIC_DIRECTUS_ROLE_PORTAL (or NUXT_PUBLIC_DIRECTUS_ROLE_USER) or create a non-admin role in Directus.',
         });
       }
 

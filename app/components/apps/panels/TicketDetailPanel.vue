@@ -105,6 +105,18 @@ async function changeStatus(next: string) {
 	}
 }
 
+async function changePriority(next: string) {
+	if (!ticket.value?.id || next === ticket.value.priority) return;
+	const prev = ticket.value.priority;
+	ticket.value = { ...ticket.value, priority: next };
+	try {
+		await ticketItems.update(ticket.value.id, { priority: next });
+	} catch (err: any) {
+		ticket.value = { ...ticket.value, priority: prev };
+		toast.add({ title: 'Failed to update priority', description: err?.message, color: 'red' });
+	}
+}
+
 // Inline quick-edits from the identity strip (due date). Optimistic, with
 // rollback on failure — same pattern as changeStatus.
 async function handleStripUpdate(fields: Record<string, any>) {
@@ -171,13 +183,28 @@ onBeforeUnmount(() => {
 				</template>
 			</AppsWorkTicketIdentityStrip>
 
-			<!-- Quick-change status — gradient segmented pill, same control the
-			     full page uses so the two surfaces can't drift. -->
-			<TicketsDetailsStatus
-				:model-value="ticket.status"
-				:animation-duration="0.25"
-				@update:model-value="changeStatus"
-			/>
+			<!-- Status + Priority — gradient segmented pills in a 2-col grid,
+			     matching the task edit form so the two surfaces feel identical.
+			     Same controls the ticket full page uses, so nothing can drift. -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5">
+				<div class="space-y-1.5">
+					<label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+					<TicketsDetailsStatus
+						:model-value="ticket.status"
+						hide-label
+						:animation-duration="0.25"
+						@update:model-value="changeStatus"
+					/>
+				</div>
+				<div class="space-y-1.5">
+					<label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Priority</label>
+					<TicketsDetailsPriority
+						:model-value="ticket.priority || 'medium'"
+						hide-label
+						@update:model-value="changePriority"
+					/>
+				</div>
+			</div>
 
 			<!-- Description -->
 			<div v-if="ticket.description" class="pt-3 border-t border-border/30">

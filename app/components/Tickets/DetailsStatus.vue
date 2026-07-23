@@ -3,6 +3,7 @@
 		v-model="statusValue"
 		:options="statuses"
 		label="Status"
+		:hide-label="hideLabel"
 		:custom-gradient="gradient"
 		:animation-duration="animationDuration"
 	/>
@@ -17,6 +18,10 @@ const props = defineProps({
 	animationDuration: {
 		type: Number,
 		default: 0.3,
+	},
+	hideLabel: {
+		type: Boolean,
+		default: false,
 	},
 });
 

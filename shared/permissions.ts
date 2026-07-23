@@ -9,6 +9,7 @@ export type FeatureKey =
   | 'people'
   | 'clients'
   | 'channels'
+  | 'touchpoints'
   | 'comments'
   | 'reactions'
   | 'messages'
@@ -56,6 +57,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'people',
   'clients',
   'channels',
+  'touchpoints',
   'comments',
   'reactions',
   'messages',
@@ -84,6 +86,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   people: 'People',
   clients: 'Clients',
   channels: 'Channels',
+  touchpoints: 'Touchpoints',
   comments: 'Comments',
   reactions: 'Reactions',
   messages: 'Messages',
@@ -152,6 +155,7 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   people: full(),
   clients: full(),
   channels: full(),
+  touchpoints: full(),
   comments: full(),
   reactions: full(),
   messages: full(),
@@ -181,6 +185,7 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   people: full(),
   clients: full(),
   channels: full(),
+  touchpoints: full(),
   comments: full(),
   reactions: full(),
   messages: full(),
@@ -210,6 +215,7 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   people: full(),
   clients: full(),
   channels: full(),
+  touchpoints: full(),
   comments: full(),
   reactions: full(),
   messages: full(),
@@ -239,6 +245,7 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   people: custom({ access: true, create: true, read: true, update: true }),
   clients: custom({ access: true, read: true }),
   channels: custom({ access: true, create: true, read: true, update: true }),
+  touchpoints: custom({ access: true, create: true, read: true, update: true }),
   comments: custom({ access: true, create: true, read: true, update: true, delete: true }),
   reactions: custom({ access: true, create: true, read: true, delete: true }),
   messages: custom({ access: true, create: true, read: true, update: true }),
@@ -268,6 +275,7 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   people: noAccess(),
   clients: noAccess(),
   channels: readOnly(),
+  touchpoints: noAccess(),
   comments: custom({ access: true, create: true, read: true, update: true, delete: true }),
   reactions: custom({ access: true, create: true, read: true, delete: true }),
   messages: custom({ access: true, create: true, read: true, update: true }),

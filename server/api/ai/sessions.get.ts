@@ -35,16 +35,28 @@ export default defineEventHandler(async (event) => {
       ],
     };
 
-    // Fetch sessions with pagination
+    // Fetch sessions with pagination. `context` is returned so the client can
+    // scope the history list to the entity a surface is focused on (project /
+    // client / etc.). Sort by `-date_created` at the DB (always populated —
+    // `date_updated` is NULL until a session is edited, and a NULLs-last DESC
+    // sort would otherwise bury freshly-created sessions below older edited
+    // ones); we then re-sort in memory by the coalesced "last active" time so
+    // the list reads most-recently-active first.
     const sessions = await directus.request(
       readItems('ai_chat_sessions', {
         filter,
-        fields: ['id', 'title', 'status', 'date_created', 'date_updated'],
-        sort: ['-date_updated'],
+        fields: ['id', 'title', 'status', 'context', 'date_created', 'date_updated'],
+        sort: ['-date_created'],
         limit,
         offset: (page - 1) * limit,
       }),
-    );
+    ) as any[];
+
+    sessions.sort((a, b) => {
+      const ta = new Date(a.date_updated || a.date_created).getTime();
+      const tb = new Date(b.date_updated || b.date_created).getTime();
+      return tb - ta;
+    });
 
     // Get total count for pagination
     let total = 0;

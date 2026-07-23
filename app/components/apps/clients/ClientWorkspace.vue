@@ -34,6 +34,17 @@ import VueDraggable from 'vuedraggable';
 // One inline Earnest opener — the docked panel surfaces the entity-scoped
 // "things Earnest can do here" prompts (what the old Create menu offered).
 const { openEarnestPanel } = useEarnestPanel();
+// Boardroom — convene a focused meeting scoped to just this client (mirrors the
+// project surface; the card's own Convene is hidden in favour of this one).
+const { open: openBoardroom } = useBoardroom();
+function conveneMeeting() {
+	openBoardroom({
+		mode: 'entity',
+		entityType: 'clients',
+		entityId: props.clientId,
+		label: (client.value as any)?.name || 'this client',
+	});
+}
 
 const props = defineProps<{
 	clientId: string;
@@ -825,6 +836,16 @@ watch(() => props.clientId, () => {
 			>
 				<template #actions>
 					<PinButton :pinned="(client as any)?.pinned" always @toggle="onTogglePin" />
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
+						title="Convene the Boardroom — Earnest gathers your board on this client"
+						aria-label="Convene the Boardroom on this client"
+						@click="conveneMeeting"
+					>
+						<DirectorChairIcon class="w-4 h-4 shrink-0" />
+						<span class="hidden sm:inline">Convene</span>
+					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
 					     its AppHeader. One opener per surface. -->
 					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel()">
@@ -845,29 +866,59 @@ watch(() => props.clientId, () => {
 				<!-- Overview — inline-editable "who they are": website, industry,
 				     location, brand direction, goals, target audience, notes.
 				     Autosaves each field; no need to leave the slide-over. -->
-				<div v-if="activeTab === 'overview'">
-					<AppsAtAGlance :metrics="clientGlance.metrics">
-						<template #lead>
-							<div>
-								<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Rating</p>
-								<ClientsClientRatingBadge :client-id="clientId" />
-							</div>
-						</template>
-					</AppsAtAGlance>
-					<!-- Earnest, focused on THIS client: scoped prompts + a Boardroom
-					     convene, so opening a client surfaces work + next moves. -->
+				<div v-if="activeTab === 'overview'" class="space-y-6">
+					<!-- Rating / Projects / Invoices stats intentionally omitted here —
+					     the identity strip above already shows the rating breakdown
+					     and the tab counts carry Projects/Invoices. -->
+					<!-- Earnest, focused on THIS client: scoped prompts. The Convene
+					     button is hidden here — the identity strip above owns it. -->
 					<AppsEntityEarnestCard
 						entity-type="client"
 						:entity-id="String(client.id)"
 						:label="client.name || 'this client'"
+						hide-convene
 					/>
-					<AppsInlineDetailsEditor
-						collection="clients"
-						:item-id="String(client.id)"
-						:model-value="overviewValues"
-						:fields="overviewFields"
-						@updated="onOverviewUpdated"
-					/>
+					<!-- Live pulse: timeline of the client's work (projects/tickets/
+					     tasks) alongside the touchpoints log — mirrors the project
+					     overview's two-column pulse. -->
+					<div class="grid gap-6 lg:grid-cols-2">
+						<div class="min-w-0 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+							<AppsClientsClientTimelineFeed :client-id="clientId" />
+						</div>
+						<div class="min-w-0">
+							<div class="flex items-center gap-2 mb-4">
+								<Icon name="lucide:radio" class="w-5 h-5 text-primary" />
+								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Touchpoints</h3>
+							</div>
+							<AppsTouchpoints
+								:client-id="clientId"
+								:organization-id="(client as any)?.organization || null"
+							/>
+						</div>
+					</div>
+
+					<!-- Client details — inline editor, demoted to a disclosure (mirrors
+					     the project overview) so the landing leads with work, not a form.
+					     The full edit form is one tap away here, and the header "Edit"
+					     button still opens the modal. -->
+					<details class="group rounded-2xl border border-border/50 bg-muted/10">
+						<summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground">
+							<span class="inline-flex items-center gap-2">
+								<Icon name="lucide:sliders-horizontal" class="w-4 h-4 text-muted-foreground" />
+								Client details
+							</span>
+							<Icon name="lucide:chevron-down" class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+						</summary>
+						<div class="px-4 pb-4 pt-1 border-t border-border/40">
+							<AppsInlineDetailsEditor
+								collection="clients"
+								:item-id="String(client.id)"
+								:model-value="overviewValues"
+								:fields="overviewFields"
+								@updated="onOverviewUpdated"
+							/>
+						</div>
+					</details>
 				</div>
 
 				<!-- Activity -->

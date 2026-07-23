@@ -3,6 +3,7 @@
 		v-model="priorityValue"
 		:options="priorities"
 		label="Priority"
+		:hide-label="hideLabel"
 		:custom-gradient="gradient"
 	/>
 </template>
@@ -12,6 +13,10 @@ const props = defineProps({
 	modelValue: {
 		type: String,
 		required: true,
+	},
+	hideLabel: {
+		type: Boolean,
+		default: false,
 	},
 });
 

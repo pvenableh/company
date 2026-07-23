@@ -120,6 +120,17 @@ const {
 const { getStatusBadgeClasses } = useStatusStyle();
 const { selectedOrg } = useOrganization();
 
+// Pin-to-top for clients — the same `pinned` flag the home "Pinned work" rail
+// and the carousels read. Optimistic; keeps pinned rows first when the list is
+// sorted manually (drag order) so a freshly-pinned client jumps to the top.
+const { togglePin: togglePinClient } = usePinnable('clients');
+async function onTogglePinClient(client: Client) {
+  await togglePinClient(client as any);
+  if (clientsSortMode.value === 'manual' && !sortByRating.value) {
+    allClients.value = sortPinnedFirst(allClients.value);
+  }
+}
+
 // Persisted "View as Table / Board" toggle (per-user). Stored client-side
 // only — power users tend to lock in one or the other and switch is rare.
 const clientsViewMode = useCookie<'table' | 'board'>('clients-view-mode', { default: () => 'table' });
@@ -713,6 +724,13 @@ watch(view, (next) => {
                   </td>
                   <td class="py-3 px-4">
                     <div class="flex items-center gap-3">
+                      <PinButton
+                        :pinned="!!client.pinned"
+                        size="xs"
+                        class="shrink-0"
+                        @click.stop
+                        @toggle="onTogglePinClient(client)"
+                      />
                       <div class="shrink-0">
                         <img
                           v-if="getLogoUrl(client)"

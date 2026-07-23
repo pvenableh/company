@@ -252,11 +252,38 @@ const historyLoading = ref(false);
 const historySessions = ref<import('~/composables/useContextualChat').ChatSessionSummary[]>([]);
 const deletingId = ref<string | null>(null);
 
+// When Focus is opened in the context of a specific entity (a project, client,
+// etc.), the history list defaults to *that* entity's conversations, with a
+// one-tap escape hatch to see everything. `historyEntity` mirrors the same
+// resolution order as `syncScope` (live awareness first, opener scope second).
+const showAllHistory = ref(false);
+const historyEntity = computed<{ type: string; id: string; label: string } | null>(() => {
+	if (aware.hasEntity.value && aware.entityType.value && aware.entityId.value) {
+		const label = aware.entityLabel.value || aware.entityReadable.value || headerLabel.value;
+		return { type: aware.entityType.value, id: String(aware.entityId.value), label };
+	}
+	const s = scope.value;
+	if (s?.mode === 'entity' && s.entityType && s.entityId) {
+		return { type: s.entityType, id: String(s.entityId), label: s.label || 'this item' };
+	}
+	return null;
+});
+const filteredHistory = computed(() => {
+	const ent = historyEntity.value;
+	if (!ent || showAllHistory.value) return historySessions.value;
+	return historySessions.value.filter((s) => {
+		const ctx = s.context;
+		return !!ctx && ctx.entityType === ent.type && String(ctx.entityId ?? '') === ent.id;
+	});
+});
+const hiddenHistoryCount = computed(() => historySessions.value.length - filteredHistory.value.length);
+
 // Always land on the conversation (not a stale history list) when Focus reopens.
 watch(isOpen, (open) => { if (open) showHistory.value = false; });
 
 async function openHistory() {
 	showHistory.value = true;
+	showAllHistory.value = false; // default to the current entity's thread when focused on one
 	historyLoading.value = true;
 	try {
 		historySessions.value = await listSessions({ limit: 50 });
@@ -484,16 +511,34 @@ const markRef = ref<{ expand: () => void } | null>(null);
 								<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" /> Back
 							</button>
 						</div>
+						<!-- Entity scope banner: when Focus is opened on a project/client the
+						     list is filtered to that item; tap to widen to everything. -->
+						<button
+							v-if="historyEntity"
+							type="button"
+							class="coach__history-scope"
+							@click="showAllHistory = !showAllHistory"
+						>
+							<Icon :name="showAllHistory ? 'lucide:list' : 'lucide:filter'" class="w-3 h-3 shrink-0" />
+							<span class="coach__history-scope-text">
+								<template v-if="!showAllHistory">Showing <b>{{ historyEntity.label }}</b> only</template>
+								<template v-else>Showing all conversations</template>
+							</span>
+							<span class="coach__history-scope-action">
+								{{ showAllHistory ? `${historyEntity.label} only` : (hiddenHistoryCount ? `Show all · ${hiddenHistoryCount}` : 'Show all') }}
+							</span>
+						</button>
 						<div v-if="historyLoading" class="coach__history-empty">
 							<Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Loading…
 						</div>
-						<div v-else-if="!historySessions.length" class="coach__history-empty">
+						<div v-else-if="!filteredHistory.length" class="coach__history-empty">
 							<Icon name="lucide:message-square-dashed" class="w-6 h-6 opacity-50" />
-							<p>No past conversations yet.</p>
+							<p v-if="historyEntity && !showAllHistory">No conversations for {{ historyEntity.label }} yet.</p>
+							<p v-else>No past conversations yet.</p>
 						</div>
 						<ul v-else class="coach__history-list">
 							<li
-								v-for="s in historySessions"
+								v-for="s in filteredHistory"
 								:key="s.id"
 								class="coach__history-item"
 								:class="{ 'coach__history-item--on': s.id === sessionId }"
@@ -656,12 +701,21 @@ const markRef = ref<{ expand: () => void } | null>(null);
 .coach__close--on { background: hsl(var(--aura-glass-2)); color: hsl(var(--aura-foreground)); }
 
 /* Past-conversations overlay */
-.coach__history { flex: 1; min-height: 0; display: flex; flex-direction: column; width: min(560px, 100%); margin: 0 auto; padding: 8px 4px 24px; overflow-y: auto; }
+/* Cap + center the list. NB: this is a flex-row child of .coach__body, so it must
+   NOT use `flex: 1` — that would grow it to full width and defeat the max-width.
+   Auto side-margins center it along the row's main axis; align-items:stretch (the
+   body default) still gives it full height for scrolling. */
+.coach__history { align-self: stretch; min-height: 0; display: flex; flex-direction: column; width: min(560px, 100%); margin: 0 auto; padding: 8px 4px 24px; overflow-y: auto; }
 .coach__history-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 12px; }
 .coach__history-title { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(238,242,248,.5); }
 .coach__history-back { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; color: rgba(238,242,248,.55); font: inherit; font-size: 11px; cursor: pointer; transition: color .2s; }
 .coach__history-back:hover { color: hsl(var(--aura-foreground)); }
 .coach__history-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(238,242,248,.5); font-size: 12px; }
+.coach__history-scope { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; border: 1px solid hsl(var(--aura-rim)); background: hsl(var(--aura-glass-1)); color: rgba(238,242,248,.7); font: inherit; font-size: 11.5px; cursor: pointer; text-align: left; transition: background .2s, border-color .2s; }
+.coach__history-scope:hover { background: hsl(var(--aura-glass-2)); border-color: rgba(238,242,248,.24); }
+.coach__history-scope-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coach__history-scope-text b { font-weight: 600; color: hsl(var(--aura-foreground)); }
+.coach__history-scope-action { flex-shrink: 0; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: rgba(238,242,248,.55); }
 .coach__history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .coach__history-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid hsl(var(--aura-rim)); background: hsl(var(--aura-glass-1)); color: hsl(var(--aura-foreground)); cursor: pointer; transition: background .2s, border-color .2s; }
 .coach__history-item:hover { background: hsl(var(--aura-glass-2)); }

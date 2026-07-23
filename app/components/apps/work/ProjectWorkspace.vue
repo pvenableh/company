@@ -86,6 +86,13 @@ const error = ref<string | null>(null);
 
 const activeTab = ref<ProjectTabKey>(props.initialTab || 'overview');
 
+// Overview "live pulse" sub-tabs. Timeline (events + tickets + tasks, in time
+// order) leads as the default read; Activity (audit feed) is one tap away.
+const overviewPulseTabs = [
+	{ slot: 'timeline', label: 'Timeline', icon: 'i-heroicons-chart-bar' },
+	{ slot: 'activity', label: 'Activity', icon: 'i-heroicons-clock' },
+];
+
 // ── Overview tab (inline-editable) ──────────────────────────────────────────
 // Core project fields, editable in place via <AppsInlineDetailsEditor> so a
 // user can update the project without leaving the slide-over.
@@ -877,21 +884,31 @@ watch(() => props.projectId, () => {
 						entity-type="project"
 						:entity-id="String(project.id)"
 						:label="project.title || 'this project'"
+						hide-convene
 					/>
 
 					<!-- Live pulse: recent activity/events + latest touchpoints. -->
 					<div class="grid gap-6 lg:grid-cols-2">
 						<div class="min-w-0">
-							<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
-								<ProjectsActivityTimeline :project-id="projectId" />
-							</div>
+							<UTabs :items="overviewPulseTabs">
+								<template #timeline>
+									<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+										<AppsWorkProjectTimelineFeed :project-id="projectId" hide-header />
+									</div>
+								</template>
+								<template #activity>
+									<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+										<ProjectsActivityTimeline :project-id="projectId" hide-header />
+									</div>
+								</template>
+							</UTabs>
 						</div>
 						<div class="min-w-0">
 							<div class="flex items-center gap-2 mb-4">
 								<Icon name="lucide:radio" class="w-5 h-5 text-primary" />
 								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Touchpoints</h3>
 							</div>
-							<AppsWorkProjectTouchpoints
+							<AppsTouchpoints
 								:project-id="projectId"
 								:organization-id="organizationId"
 								:client-id="clientId"
@@ -1015,7 +1032,7 @@ watch(() => props.projectId, () => {
 
 				<!-- Touchpoints — lightweight communication log (outreach + follow-up). -->
 				<div v-else-if="activeTab === 'touchpoints'">
-					<AppsWorkProjectTouchpoints
+					<AppsTouchpoints
 						:project-id="projectId"
 						:organization-id="organizationId"
 						:client-id="clientId"

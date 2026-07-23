@@ -18,6 +18,9 @@ const props = defineProps<{
 	entityType: 'client' | 'project';
 	entityId: string;
 	label: string;
+	// Some surfaces (e.g. the project detail header) already expose a Convene
+	// button — pass `hide-convene` there to avoid a duplicate on this card.
+	hideConvene?: boolean;
 }>();
 
 const { suggestedPrompts } = useEarnestAwareness();
@@ -53,7 +56,7 @@ function convene() {
 					Earnest is focused on <span class="text-primary">{{ label }}</span>
 				</p>
 			</div>
-			<Button variant="outline" size="sm" class="shrink-0" @click="convene">
+			<Button v-if="!hideConvene" variant="outline" size="sm" class="shrink-0" @click="convene">
 				<DirectorChairIcon class="w-4 h-4 mr-1.5" />
 				Convene the Boardroom
 			</Button>

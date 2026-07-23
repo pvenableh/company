@@ -4003,8 +4003,6 @@ export interface Project {
 	digests?: ProjectDigest[] | string[];
 	/** @description Extra contacts pinned to this project (beyond the client roster). */
 	contacts?: ProjectsContact[] | string[];
-	/** @description Communication touch points logged on this project. Inverse of project_touchpoints.project. */
-	touchpoints?: ProjectTouchpoint[] | string[];
 }
 
 export interface ProjectsContact {
@@ -4045,16 +4043,20 @@ export interface ProjectStatusUpdate {
 	date_created?: string | null;
 }
 
-export interface ProjectTouchpoint {
+export interface Touchpoint {
 	/** @primaryKey */
 	id: number;
 	sort?: number | null;
 	date_created?: string | null;
 	user_created?: string | null;
-	/** @required */
-	project: Project | string;
-	/** @description Denormalized from project.organization for the create permission. @required */
+	/** @description Denormalized owner org for the create permission. @required */
 	organization: Organization | string;
+	/** @description The client this touchpoint is about (optional). */
+	client?: Client | string | null;
+	/** @description Optional project context. */
+	project?: Project | string | null;
+	/** @description Client contacts involved (m2m via touchpoints_contacts). */
+	contacts?: TouchpointsContact[] | number[];
 	/** @required */
 	type: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
 	/** @description Short label for the touch point. */
@@ -4068,8 +4070,15 @@ export interface ProjectTouchpoint {
 	is_response?: boolean | null;
 	/** @description What came back. */
 	response_note?: string | null;
-	/** @description Tagged people: [{ kind, id, name }]. */
+	/** @description Extra non-contact tags (team / portal): [{ kind, id, name }]. */
 	participants?: Record<string, any> | null;
+}
+
+export interface TouchpointsContact {
+	/** @primaryKey */
+	id: number;
+	touchpoints_id?: Touchpoint | number | null;
+	contacts_id?: Contact | string | null;
 }
 
 export interface Prompt {
@@ -5836,7 +5845,8 @@ export interface Schema {
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
-	project_touchpoints: ProjectTouchpoint[];
+	touchpoints: Touchpoint[];
+	touchpoints_contacts: TouchpointsContact[];
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
@@ -6105,7 +6115,8 @@ export enum CollectionNames {
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',
-	project_touchpoints = 'project_touchpoints',
+	touchpoints = 'touchpoints',
+	touchpoints_contacts = 'touchpoints_contacts',
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',

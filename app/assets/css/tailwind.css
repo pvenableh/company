@@ -290,14 +290,19 @@
    ============================================ */
 
 @layer utilities {
-	/* Hide scrollbar but keep functionality */
+	/* Hide scrollbar but keep functionality. `!important` is required: the
+	 * global `* { scrollbar-width: thin }` in theme.css is UNLAYERED and so
+	 * beats this @layer utilities rule on cascade order (not specificity),
+	 * which silently re-showed the bar everywhere `.scrollbar-hide` is used. */
 	.scrollbar-hide {
 		-ms-overflow-style: none;
-		scrollbar-width: none;
+		scrollbar-width: none !important;
 	}
 
 	.scrollbar-hide::-webkit-scrollbar {
-		display: none;
+		display: none !important;
+		width: 0 !important;
+		height: 0 !important;
 	}
 
 	/* Text balance for headings */

@@ -1,15 +1,9 @@
 <template>
 	<div class="w-full mx-auto relative tickets-board">
-		<!-- Loading Overlay -->
-		<!--  -->
-		<transition name="fade">
-			<div
-				v-if="isLoading"
-				class="absolute h-svh inset-0 bg-white/70 dark:bg-gray-800/70 z-50 flex items-center justify-center"
-			>
-				<LayoutLoader text="Loading Tickets" />
-			</div>
-		</transition>
+		<!-- No full-screen loading overlay: the board paints its column shells
+		     immediately and shows per-column skeletons (below) while the first
+		     REST fetch lands, matching the Tasks board's inline-skeleton feel.
+		     Realtime updates then stream in without any blocking spinner. -->
 		<!-- Connection Status -->
 		<transition name="fade">
 			<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
@@ -227,14 +221,13 @@
 					</div>
 				</div>
 
-				<!-- Loading Skeletons -->
+				<!-- Loading Skeletons — subtle rounded card stubs (matches the
+				     Tasks board), shown in place until the first fetch resolves. -->
 				<div
 					v-if="isLoading && !localTickets[column.id]?.length"
-					class="min-h-[90svh] p-2 bg-muted"
+					class="p-3 space-y-3"
 				>
-					<div class="space-y-3">
-						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
-					</div>
+					<div v-for="n in 4" :key="n" class="h-24 rounded-xl bg-muted/20 animate-pulse" />
 				</div>
 
 				<!-- Draggable Column Content — drag disabled in portal mode (clients can't move tickets) -->

@@ -29,7 +29,18 @@ const { push: pushPanel } = useAppSlideOverStack();
 const toast = useToast();
 const taskItems = useDirectusItems('tasks');
 const userItems = useDirectusItems('directus_users');
-const { getStatusBadgeClasses } = useStatusStyle();
+// Shared status/priority styling — the same segmented-pill gradients tickets
+// use, so the two edit forms feel identical (priority colors live here, not
+// hardcoded per-surface).
+const { getStatusBadgeClasses, statusGradient, priorityGradient, priorityOptions } = useStatusStyle();
+
+// Task status is a lowercase enum with friendly labels; rendered as the same
+// gradient segmented pill as ticket status.
+const TASK_STATUS_OPTIONS = [
+  { value: 'new', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Done' },
+];
 const { awardEvent } = useArcadeAwards();
 
 // Task type options a user can set. Linked categories (ticket/project/…) are
@@ -55,12 +66,6 @@ const statusLabels: Record<string, string> = {
   completed: 'Done',
 };
 
-const priorityOptions = [
-  { value: 'low', label: 'Low', activeClass: 'bg-blue-500/10 text-blue-500' },
-  { value: 'medium', label: 'Medium', activeClass: 'bg-warning/10 text-warning' },
-  { value: 'high', label: 'High', activeClass: 'bg-destructive/10 text-destructive' },
-];
-
 const isCompleted = computed(() => task.value?.status === 'completed');
 
 const assigneeId = computed<string>(() => {
@@ -79,37 +84,12 @@ const projectInfo = computed(() => {
   return { id: p.id, title: p.title || 'Project' };
 });
 
-// Inline "Details" editor — plain scalar fields that autosave straight back to
-// Directus. Status/assignee/category are intentionally omitted: they're handled
-// by the dedicated controls below (arcade EP + date_completed + junction logic)
-// which the generic PATCH would bypass.
-const detailFields = [
-  { key: 'title', label: 'Title', type: 'text' as const, placeholder: 'Task title…' },
-  {
-    key: 'priority', label: 'Priority', type: 'select' as const, options: [
-      { value: 'low', label: 'Low' },
-      { value: 'medium', label: 'Medium' },
-      { value: 'high', label: 'High' },
-      { value: 'urgent', label: 'Urgent' },
-    ],
-  },
-  {
-    key: 'schedule', label: 'Schedule', type: 'select' as const, options: [
-      { value: 'today', label: 'Today' },
-      { value: 'this_week', label: 'This week' },
-      { value: 'later', label: 'Later' },
-      { value: 'unscheduled', label: 'Unscheduled' },
-    ],
-  },
-  { key: 'due_date', label: 'Due Date', type: 'date' as const },
+const scheduleOptions = [
+  { value: 'today', label: 'Today' },
+  { value: 'this_week', label: 'This week' },
+  { value: 'later', label: 'Later' },
+  { value: 'unscheduled', label: 'Unscheduled' },
 ];
-
-const detailValues = computed(() => ({
-  title: task.value?.title ?? '',
-  priority: task.value?.priority ?? '',
-  schedule: task.value?.schedule ?? '',
-  due_date: (task.value?.due_date || '').slice(0, 10),
-}));
 
 async function loadTask() {
   loading.value = true;
@@ -293,68 +273,64 @@ function openProject() {
         />
       </div>
 
-      <!-- Details (inline autosaving editor) -->
-      <div class="mb-5">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Details</span>
-        <AppsInlineDetailsEditor
-          collection="tasks"
-          :item-id="String(task.id)"
-          :model-value="detailValues"
-          :fields="detailFields"
-          @updated="patch => Object.assign(task, patch)"
-        />
-      </div>
-
-      <!-- Fields -->
-      <div class="space-y-3 mb-5">
-        <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Status</span>
-          <select
-            v-model="task.status"
-            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
-            @change="onStatusChange(task.status)"
-          >
-            <option value="new">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Done</option>
-          </select>
+      <!-- Fields — two columns so the form reads at a glance instead of a long
+           stack. Each cell is label-over-control. Project spans the full row. -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5 mb-5">
+        <!-- Status — gradient segmented pill (matches ticket status) -->
+        <div class="space-y-1.5">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+          <FormSegmentedControl
+            :model-value="task.status === 'approved' ? 'new' : task.status"
+            :options="TASK_STATUS_OPTIONS"
+            hide-label
+            :custom-gradient="statusGradient"
+            @update:model-value="onStatusChange"
+          />
         </div>
 
-        <!-- Type — only offered for standalone tasks (not ticket/project/etc.
-             which derive their category from an association). Marking a task as
-             a Follow-up makes completing it earn CRM/growth EP. -->
-        <div v-if="!task.category || task.category === 'quick' || task.category === 'follow_up'" class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Type</span>
+        <!-- Priority — gradient segmented pill (matches ticket priority) -->
+        <div class="space-y-1.5">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Priority</label>
+          <FormSegmentedControl
+            :model-value="task.priority || 'medium'"
+            :options="priorityOptions"
+            hide-label
+            :custom-gradient="priorityGradient"
+            @update:model-value="(v) => { task.priority = v; saveField('priority', v); }"
+          />
+        </div>
+
+        <!-- Type — only for standalone tasks (ticket/project tasks derive their
+             category from the association). Follow-ups earn CRM/growth EP. -->
+        <div v-if="!task.category || task.category === 'quick' || task.category === 'follow_up'" class="space-y-1">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Type</label>
           <select
             :value="task.category || 'quick'"
-            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
+            class="w-full h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="saveField('category', ($event.target as HTMLSelectElement).value)"
           >
             <option v-for="t in typeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
           </select>
         </div>
 
-        <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Priority</span>
-          <div class="flex gap-1">
-            <button
-              v-for="p in priorityOptions"
-              :key="p.value"
-              type="button"
-              class="px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors"
-              :class="task.priority === p.value ? p.activeClass : 'text-muted-foreground hover:bg-muted/40'"
-              @click="task.priority = p.value; saveField('priority', p.value)"
-            >
-              {{ p.label }}
-            </button>
-          </div>
+        <!-- Schedule -->
+        <div class="space-y-1">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schedule</label>
+          <select
+            :value="task.schedule || 'unscheduled'"
+            class="w-full h-8 rounded-lg glass-field px-2.5 text-xs"
+            @change="saveField('schedule', ($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="s in scheduleOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+          </select>
         </div>
 
-        <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Assignee</span>
+        <!-- Assignee -->
+        <div class="space-y-1">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assignee</label>
           <select
             :value="assigneeId"
-            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
+            class="w-full h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="onAssigneeChange(($event.target as HTMLSelectElement).value || null)"
           >
             <option value="">Unassigned</option>
@@ -364,21 +340,23 @@ function openProject() {
           </select>
         </div>
 
-        <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Due Date</span>
+        <!-- Due Date -->
+        <div class="space-y-1">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Due Date</label>
           <input
             v-model="task.due_date"
             type="date"
-            class="flex-1 h-8 rounded-lg glass-field px-2.5 text-xs"
+            class="w-full h-8 rounded-lg glass-field px-2.5 text-xs"
             @change="saveField('due_date', task.due_date || null)"
           />
         </div>
 
-        <div v-if="projectInfo" class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-20">Project</span>
+        <!-- Project — full width -->
+        <div v-if="projectInfo" class="space-y-1 sm:col-span-2">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project</label>
           <button
             type="button"
-            class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            class="inline-flex items-center gap-1.5 h-8 rounded-lg glass-field px-2.5 text-xs text-muted-foreground hover:text-foreground w-full"
             @click="openProject"
           >
             <Icon name="lucide:folder" class="w-3.5 h-3.5" />

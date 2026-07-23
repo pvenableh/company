@@ -1,6 +1,7 @@
 <script setup>
 const props = defineProps({
 	projectId: { type: String, required: true },
+	hideHeader: { type: Boolean, default: false },
 });
 
 const activityItems = useDirectusItems('directus_activity');
@@ -146,7 +147,7 @@ const getUserAvatar = (u) => {
 
 <template>
 	<div>
-		<div class="flex items-center justify-between mb-4">
+		<div v-if="!hideHeader" class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
 				<UIcon name="i-heroicons-clock" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Activity</h3>

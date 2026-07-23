@@ -1,18 +1,17 @@
 #!/usr/bin/env npx tsx
 /**
- * project_touchpoints — Permissions Setup
+ * touchpoints — Permissions Setup
  *
- * Grants every non-admin role full CRUD scoped to the user's organizations:
- *   - create: filter on the denormalized `organization` field (Directus 11
- *             cannot FK-walk on create, so we key on a direct column).
- *             { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } }
- *   - read / update / delete: FK-walk through `project.organization` so a user
- *             only touches touchpoints on projects in an org they belong to.
+ * Grants every non-admin role full CRUD scoped to the user's organizations via
+ * the denormalized, always-populated `organization` column:
+ *   { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } }
+ *
+ * Unlike project_touchpoints (which FK-walked `project.organization` for reads),
+ * `touchpoints.project` is now nullable — a client-only touch has no project —
+ * so all four actions key on the direct `organization` column instead.
  *
  * Idempotent — re-running is safe.
- *
- * Run:
- *   pnpm tsx scripts/setup-project-touchpoints-permissions.ts
+ *   pnpm tsx scripts/setup-touchpoints-permissions.ts
  */
 import 'dotenv/config';
 
@@ -21,7 +20,7 @@ const DIRECTUS_TOKEN = process.env.DIRECTUS_SERVER_TOKEN || process.env.DIRECTUS
 if (!DIRECTUS_TOKEN) { console.error('DIRECTUS_SERVER_TOKEN required'); process.exit(1); }
 
 const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-const COLLECTION = 'project_touchpoints';
+const COLLECTION = 'touchpoints';
 
 async function req<T = unknown>(path: string, method: 'GET' | 'POST' | 'PATCH' = 'GET', body?: unknown): Promise<{ data: T | null; error: string | null }> {
 	try {
@@ -40,14 +39,23 @@ async function req<T = unknown>(path: string, method: 'GET' | 'POST' | 'PATCH' =
 interface Rule { action: 'create' | 'read' | 'update' | 'delete'; permissions: Record<string, unknown> | null; fields: string[] | null; }
 
 const ORG_IN = { _in: '$CURRENT_USER.organizations.organizations_id' };
-const CREATE_FILTER = { organization: ORG_IN };
-const WALK_FILTER = { project: { organization: ORG_IN } };
+const ORG_FILTER = { organization: ORG_IN };
 
 const RULES: Rule[] = [
-	{ action: 'create', permissions: CREATE_FILTER, fields: ['*'] },
-	{ action: 'read', permissions: WALK_FILTER, fields: ['*'] },
-	{ action: 'update', permissions: WALK_FILTER, fields: ['*'] },
-	{ action: 'delete', permissions: WALK_FILTER, fields: null },
+	{ action: 'create', permissions: ORG_FILTER, fields: ['*'] },
+	{ action: 'read', permissions: ORG_FILTER, fields: ['*'] },
+	{ action: 'update', permissions: ORG_FILTER, fields: ['*'] },
+	{ action: 'delete', permissions: ORG_FILTER, fields: null },
+];
+
+// The m2m junction inherits access from the parent; grant it CRUD too so tagging
+// contacts on a touchpoint works for non-admins.
+const JUNCTION = 'touchpoints_contacts';
+const JUNCTION_RULES: Rule[] = [
+	{ action: 'create', permissions: {}, fields: ['*'] },
+	{ action: 'read', permissions: {}, fields: ['*'] },
+	{ action: 'update', permissions: {}, fields: ['*'] },
+	{ action: 'delete', permissions: {}, fields: null },
 ];
 
 async function findPolicyForRole(roleId: string): Promise<string | null> {
@@ -66,42 +74,40 @@ async function getNonAdminRoles() {
 	return data || [];
 }
 
-async function findPermission(policyId: string, action: string) {
+async function findPermission(policyId: string, collection: string, action: string) {
 	const { data } = await req<Array<{ id: string; permissions: unknown; fields: string[] | null }>>(
-		`/permissions?filter[policy][_eq]=${policyId}&filter[collection][_eq]=${COLLECTION}&filter[action][_eq]=${action}&limit=1`,
+		`/permissions?filter[policy][_eq]=${policyId}&filter[collection][_eq]=${collection}&filter[action][_eq]=${action}&limit=1`,
 	);
 	return data?.[0] ?? null;
 }
 
-async function upsert(policyId: string, rule: Rule) {
-	const existing = await findPermission(policyId, rule.action);
+async function upsert(policyId: string, collection: string, rule: Rule) {
+	const existing = await findPermission(policyId, collection, rule.action);
 	if (!existing) {
-		const { error } = await req('/permissions', 'POST', { policy: policyId, collection: COLLECTION, action: rule.action, permissions: rule.permissions, validation: null, presets: null, fields: rule.fields });
-		if (error) { console.error(`    [fail] ${rule.action}: ${error}`); return 'failed'; }
-		console.log(`    [ok]   ${rule.action} created`);
+		const { error } = await req('/permissions', 'POST', { policy: policyId, collection, action: rule.action, permissions: rule.permissions, validation: null, presets: null, fields: rule.fields });
+		if (error) { console.error(`    [fail] ${collection}.${rule.action}: ${error}`); return 'failed'; }
+		console.log(`    [ok]   ${collection}.${rule.action} created`);
 		return 'created';
 	}
 	const same = JSON.stringify(existing.permissions || null) === JSON.stringify(rule.permissions || null)
 		&& JSON.stringify(existing.fields || null) === JSON.stringify(rule.fields || null);
-	if (same) { console.log(`    [skip] ${rule.action} up-to-date`); return 'unchanged'; }
+	if (same) { console.log(`    [skip] ${collection}.${rule.action} up-to-date`); return 'unchanged'; }
 	const { error } = await req(`/permissions/${existing.id}`, 'PATCH', { permissions: rule.permissions, fields: rule.fields });
-	if (error) { console.error(`    [fail] ${rule.action}: ${error}`); return 'failed'; }
-	console.log(`    [ok]   ${rule.action} updated`);
+	if (error) { console.error(`    [fail] ${collection}.${rule.action}: ${error}`); return 'failed'; }
+	console.log(`    [ok]   ${collection}.${rule.action} updated`);
 	return 'updated';
 }
 
 async function main() {
-	console.log(`project_touchpoints — Permissions Setup @ ${DIRECTUS_URL}\n`);
+	console.log(`touchpoints — Permissions Setup @ ${DIRECTUS_URL}\n`);
 	const roles = await getNonAdminRoles();
 	let failed = 0;
 	for (const role of roles) {
 		console.log(`--- ${role.name} ---`);
 		const policyId = await findPolicyForRole(role.id);
 		if (!policyId) { console.log('  no policy attached; skipping'); continue; }
-		for (const rule of RULES) {
-			const res = await upsert(policyId, rule);
-			if (res === 'failed') failed++;
-		}
+		for (const rule of RULES) if (await upsert(policyId, COLLECTION, rule) === 'failed') failed++;
+		for (const rule of JUNCTION_RULES) if (await upsert(policyId, JUNCTION, rule) === 'failed') failed++;
 	}
 	console.log(failed ? `\nDone with ${failed} failure(s).` : '\nDone.');
 	if (failed) process.exit(1);

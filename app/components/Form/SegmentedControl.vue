@@ -1,7 +1,10 @@
 <template>
 	<div class="segmented-control">
-		<UFormGroup :label="label + ':'">
-			<!-- Interactive Segmented Control -->
+		<!-- Label is optional: inside a labelled grid cell (task/ticket edit
+		     forms) pass `hide-label` and the cell owns the label (UFormGroup
+		     renders no label when `label` is undefined). -->
+		<UFormGroup :label="hideLabel ? undefined : label + ':'">
+			<!-- Interactive segmented control (status / priority pill). -->
 			<div class="relative">
 				<!-- Steps Bar -->
 				<div class="segmented-track relative flex items-center rounded-full overflow-hidden h-6">
@@ -57,6 +60,11 @@ const props = defineProps({
 	modelValue: {
 		type: [String, Number],
 		required: true,
+	},
+	// Skip the built-in UFormGroup label (the parent cell supplies its own).
+	hideLabel: {
+		type: Boolean,
+		default: false,
 	},
 	options: {
 		type: Array,

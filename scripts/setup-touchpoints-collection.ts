@@ -1,33 +1,22 @@
 #!/usr/bin/env npx tsx
 /**
- * project_touchpoints Collection — Setup Script
+ * touchpoints Collection — Setup Script
  *
- * A lightweight communication log for projects (CardDesk-style touch points).
- * Each row records an outreach effort ("Sent email", "Phone call") and can be
- * flagged as having received a response — mirroring cd_activities' is_response
- * / response_note pair.
+ * A GENERAL communication log (supersedes project_touchpoints). Each row records
+ * an outreach effort ("Sent email", "Phone call") that can attach to any mix of:
+ *   - a client   (touchpoints.client,  nullable, SET NULL)
+ *   - a project  (touchpoints.project, nullable, SET NULL)
+ *   - contacts   (touchpoints.contacts, m2m via touchpoints_contacts)
+ * and always carries a denormalized `organization` (required) for the create
+ * permission (Directus 11 can't FK-walk on create).
  *
- * Schema:
- *   - id (auto-increment int)
- *   - project      -> projects (m2o, required, CASCADE)
- *   - organization -> organizations (m2o, required) — denormalized for the
- *                     create permission (Directus 11 can't FK-walk on create).
- *   - type         enum: email | call | text | meeting | note | other
- *   - summary      string  — short label ("Kickoff follow-up")
- *   - note         text    — details
- *   - occurred_at  timestamp — when the touch happened (defaults to now)
- *   - awaiting_response boolean — expecting a reply
- *   - is_response  boolean — this touch received / is a response
- *   - response_note text   — what came back
- *   - participants json    — tagged people [{ kind, id, name }]
- *   - sort, date_created, user_created (audit)
- *
- * Inverse alias:
- *   - projects.touchpoints (o2m, reverse of project_touchpoints.project)
+ * Multiple client contacts are a real m2m relation (queryable), while the
+ * `participants` JSON stays for the occasional NON-contact tag (team member /
+ * portal user) that has no contacts row.
  *
  * Idempotent + additive. Run then apply permissions:
- *   pnpm tsx scripts/setup-project-touchpoints-collection.ts
- *   pnpm tsx scripts/setup-project-touchpoints-permissions.ts
+ *   pnpm tsx scripts/setup-touchpoints-collection.ts
+ *   pnpm tsx scripts/setup-touchpoints-permissions.ts
  */
 import 'dotenv/config';
 
@@ -75,39 +64,15 @@ async function createRelation(data: Record<string, any>) {
 	console.log('    -> created');
 }
 
-async function fieldExists(collection: string, field: string) {
-	const { status } = await req(`/fields/${collection}/${field}`);
-	return status === 200;
-}
-
-async function ensureInverseAlias(parent: string, alias: string, child: string, childFk: string, note: string) {
-	if (!(await fieldExists(parent, alias))) {
-		console.log(`  alias ${parent}.${alias}`);
-		const { error } = await req(`/fields/${parent}`, 'POST', {
-			collection: parent, field: alias, type: 'alias',
-			meta: { interface: 'list-o2m', special: ['o2m'], note }, schema: null,
-		});
-		if (error && error !== 'already_exists' && !error.includes('already exists')) { console.error(`    -> error: ${error}`); process.exit(1); }
-		console.log('    -> created');
-	} else { console.log(`  alias ${parent}.${alias} -> exists`); }
-
-	const { data: rels } = await req<any[]>('/relations?limit=-1');
-	const rel = rels?.find((r) => r.collection === child && r.field === childFk);
-	if (rel && rel.meta?.one_field !== alias) {
-		const { error } = await req(`/relations/${child}/${childFk}`, 'PATCH', { meta: { ...rel.meta, one_field: alias } });
-		if (error) { console.error(`    -> alias-bind error: ${error}`); process.exit(1); }
-		console.log(`  bound ${child}.${childFk}.one_field = ${alias}`);
-	}
-}
-
-const C = 'project_touchpoints';
+const C = 'touchpoints';
+const J = 'touchpoints_contacts';
 
 async function main() {
 	console.log(`Setting up ${C} @ ${DIRECTUS_URL}`);
 
 	await createCollection(C, {
 		icon: 'forum',
-		note: 'Lightweight communication log for a project (CardDesk-style touch points) with a response concept.',
+		note: 'General communication log — a touch (email/call/meeting/note) that can attach to a client, project, and/or contacts, with a response concept.',
 		color: '#0EA5E9',
 		sort_field: 'sort',
 		accountability: 'all',
@@ -119,8 +84,9 @@ async function main() {
 	await createField(C, { field: 'date_created', type: 'timestamp', meta: { special: ['date-created'], interface: 'datetime', readonly: true, hidden: true, width: 'half' }, schema: {} });
 	await createField(C, { field: 'user_created', type: 'uuid', meta: { special: ['user-created'], interface: 'select-dropdown-m2o', readonly: true, hidden: true, width: 'half' }, schema: {} });
 
-	await createField(C, { field: 'project', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, options: { template: '{{title}}' } }, schema: { is_nullable: false } });
-	await createField(C, { field: 'organization', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, note: 'Denormalized from project.organization for the create permission.' }, schema: { is_nullable: false } });
+	await createField(C, { field: 'organization', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, note: 'Denormalized owner org for the create permission.' }, schema: { is_nullable: false } });
+	await createField(C, { field: 'client', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], options: { template: '{{name}}' }, note: 'The client this touchpoint is about (optional).' }, schema: { is_nullable: true } });
+	await createField(C, { field: 'project', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], options: { template: '{{title}}' }, note: 'Optional project context.' }, schema: { is_nullable: true } });
 
 	await createField(C, {
 		field: 'type', type: 'string',
@@ -141,14 +107,24 @@ async function main() {
 	await createField(C, { field: 'awaiting_response', type: 'boolean', meta: { interface: 'boolean', special: ['cast-boolean'], note: 'Expecting a reply.' }, schema: { default_value: false } });
 	await createField(C, { field: 'is_response', type: 'boolean', meta: { interface: 'boolean', special: ['cast-boolean'], note: 'This touch received / is a response.' }, schema: { default_value: false } });
 	await createField(C, { field: 'response_note', type: 'text', meta: { interface: 'input-multiline', note: 'What came back.' }, schema: {} });
-	await createField(C, { field: 'participants', type: 'json', meta: { interface: 'input-code', options: { language: 'json' }, special: ['cast-json'], note: 'Tagged people: [{ kind, id, name }].' }, schema: {} });
+	await createField(C, { field: 'participants', type: 'json', meta: { interface: 'input-code', options: { language: 'json' }, special: ['cast-json'], note: 'Extra non-contact tags (team members / portal users): [{ kind, id, name }].' }, schema: {} });
 
-	await createRelation({ collection: C, field: 'project', related_collection: 'projects', schema: { on_delete: 'CASCADE' }, meta: { sort_field: null } });
 	await createRelation({ collection: C, field: 'organization', related_collection: 'organizations', schema: { on_delete: 'CASCADE' }, meta: { sort_field: null } });
+	await createRelation({ collection: C, field: 'client', related_collection: 'clients', schema: { on_delete: 'SET NULL' }, meta: { sort_field: null } });
+	await createRelation({ collection: C, field: 'project', related_collection: 'projects', schema: { on_delete: 'SET NULL' }, meta: { sort_field: null } });
 
-	await ensureInverseAlias('projects', 'touchpoints', C, 'project', 'Communication touch points logged on this project. Inverse of project_touchpoints.project.');
+	// ── Contacts m2m (real multi-contact relation) ──────────────────────────
+	await createCollection(J, { icon: 'import_export', hidden: true, note: 'Junction: touchpoints ↔ contacts.' });
+	await createField(J, { field: 'id', type: 'integer', meta: { interface: 'input', readonly: true, hidden: true }, schema: { is_primary_key: true, has_auto_increment: true } });
+	await createField(J, { field: 'touchpoints_id', type: 'integer', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], hidden: true }, schema: {} });
+	await createField(J, { field: 'contacts_id', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], hidden: true }, schema: {} });
 
-	console.log('Done. Next: pnpm tsx scripts/setup-project-touchpoints-permissions.ts');
+	await createField(C, { field: 'contacts', type: 'alias', meta: { interface: 'list-m2m', special: ['m2m'], note: 'Client contacts involved in this touchpoint (m2m).', options: { template: '{{contacts_id.first_name}} {{contacts_id.last_name}}' } }, schema: null });
+
+	await createRelation({ collection: J, field: 'touchpoints_id', related_collection: C, schema: { on_delete: 'CASCADE' }, meta: { one_field: 'contacts', junction_field: 'contacts_id', sort_field: null } });
+	await createRelation({ collection: J, field: 'contacts_id', related_collection: 'contacts', schema: { on_delete: 'CASCADE' }, meta: { junction_field: 'touchpoints_id', sort_field: null } });
+
+	console.log('Done. Next: pnpm tsx scripts/setup-touchpoints-permissions.ts');
 }
 
 main().catch((err) => { console.error('Fatal:', err); process.exit(1); });

@@ -68,6 +68,10 @@ export interface ChatSessionSummary {
   id: string;
   title: string | null;
   status?: string;
+  /** Bucket the session was created under — `{ entityType, entityId }` for
+   * entity chats, `{ scope, route }` for route chats. Used to scope the
+   * history list to whatever entity a surface is focused on. */
+  context?: { entityType?: string | null; entityId?: string | null; scope?: string; route?: string; canvas?: string } | null;
   date_created: string;
   date_updated: string;
 }

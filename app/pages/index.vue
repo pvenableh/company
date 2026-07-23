@@ -575,6 +575,10 @@ const goTo = (route: string) => {
 				     Order still flips via :style based on the same toggle. -->
 				<section :style="{ order: youOrder }" class="space-y-4">
 
+				<!-- Pinned work — the projects/clients you've kept close, surfaced as
+				     recommended work. Self-hides when nothing is pinned. -->
+				<CommandCenterPinnedWork />
+
 				<!-- Priority Actions + Quick Tasks | Earnest Score + My Goals -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<!-- Left Column: Priority Actions + Quick Tasks (2/3 width) -->

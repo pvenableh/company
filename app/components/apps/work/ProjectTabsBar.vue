@@ -54,11 +54,13 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 </script>
 
 <template>
-	<div class="flex flex-wrap gap-1.5">
+	<!-- One horizontal, swipeable row that scrolls instead of wrapping into
+	     stacked rows on narrow screens (mirrors the UTabs overflow pattern). -->
+	<div class="flex flex-nowrap gap-1.5 overflow-x-auto -mx-1 px-1 scrollbar-hide">
 		<button
 			v-for="tab in tabs"
 			:key="tab.key"
-			class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
+			class="inline-flex shrink-0 items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
 			:class="modelValue === tab.key
 				? 'bg-primary text-primary-foreground border-primary'
 				: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
