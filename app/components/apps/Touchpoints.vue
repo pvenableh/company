@@ -43,6 +43,9 @@ const loading = ref(true);
 interface ContactOption { id: string; name: string; }
 const members = ref<TouchpointParticipant[]>([]);
 const clientContacts = ref<ContactOption[]>([]);
+// The client's primary contact (billing first, else first) — pre-selected as a
+// sensible default when logging a touchpoint on a client/project surface.
+const defaultClientContactId = ref<string | null>(null);
 
 async function loadPeople() {
 	// Team / org members → participants JSON (no contacts row).
@@ -58,7 +61,7 @@ async function loadPeople() {
 	try {
 		if (props.clientId) {
 			const rows = (await contactItems.list({
-				fields: ['id', 'first_name', 'last_name', 'email'],
+				fields: ['id', 'first_name', 'last_name', 'email', 'is_billing_contact'],
 				filter: { client: { _eq: props.clientId } },
 				sort: ['first_name'],
 				limit: 100,
@@ -67,6 +70,8 @@ async function loadPeople() {
 				id: String(c.id),
 				name: [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Contact',
 			}));
+			const billing = rows.find((c) => c.is_billing_contact);
+			defaultClientContactId.value = billing ? String(billing.id) : (rows[0] ? String(rows[0].id) : null);
 		} else if (props.contactId) {
 			const c = (await contactItems.get(props.contactId, { fields: ['id', 'first_name', 'last_name', 'email'] })) as any;
 			if (c) clientContacts.value = [{ id: String(c.id), name: [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Contact' }];
@@ -101,8 +106,11 @@ function resetForm() {
 	form.note = '';
 	form.occurred_at = '';
 	form.awaiting_response = false;
-	// On a contact surface, pre-tag that contact.
-	form.contactIds = props.contactId ? [String(props.contactId)] : [];
+	// Pre-tag a sensible default: the contact on a contact surface, else the
+	// client's primary contact (billing first). Editable — it's a checklist.
+	form.contactIds = props.contactId
+		? [String(props.contactId)]
+		: (defaultClientContactId.value ? [defaultClientContactId.value] : []);
 	form.participants = [];
 }
 

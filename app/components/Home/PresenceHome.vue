@@ -457,11 +457,8 @@ function renderMarkdown(text: string): string {
 				</button>
 			</div>
 
-			<!-- Pinned work — a quiet strip of what you've kept close, only when
-			     idle and only when something is pinned (the rail self-hides). -->
-			<div v-if="!conversing" class="ph__pinned">
-				<CommandCenterPinnedWork />
-			</div>
+			<!-- Pinned work lives once, at the top of the "Everything" section
+			     (index.vue). The calm hero deliberately doesn't repeat it. -->
 
 			<!-- reach for everything -->
 			<button type="button" class="ph__reveal" @click="emit('reveal')">
@@ -726,7 +723,6 @@ function renderMarkdown(text: string): string {
 .ph__resume:hover { opacity: 1; gap: 8px; }
 
 .ph__openers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.ph__pinned { width: 100%; max-width: 560px; margin: 6px auto 0; text-align: left; }
 .ph__opener {
 	padding: 7px 14px; border-radius: 999px; border: 1px solid hsl(var(--border));
 	background: hsl(var(--card)); color: hsl(var(--muted-foreground));

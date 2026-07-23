@@ -414,6 +414,28 @@ const addContact = (contact: any) => {
 	contactSearchResults.value = [];
 };
 
+// Pre-fill invitees from a client's roster (create mode). Billing contact
+// first, capped so a large roster doesn't flood the chips. Editable — each
+// chip can be removed, and the host can add more via the search.
+async function seedInviteesFromClient(clientId: string) {
+	try {
+		const { data } = await getContacts({ client: clientId, limit: 50 });
+		const list: any[] = Array.isArray(data) ? data : [];
+		const billing = list.filter((c) => c.is_billing_contact);
+		const rest = list.filter((c) => !c.is_billing_contact);
+		form.contacts = [...billing, ...rest].slice(0, 3).map((c) => ({
+			id: c.id,
+			first_name: c.first_name || '',
+			last_name: c.last_name || '',
+			email: c.email || '',
+			phone: c.phone || '',
+			avatar_initial: (c.first_name || c.email || '?')[0]?.toUpperCase() || '?',
+			client_name: (c.client && typeof c.client === 'object' ? c.client.name : null) || null,
+			label: `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || 'Contact',
+		}));
+	} catch { /* non-fatal — the host can still add people manually */ }
+}
+
 const removeContact = (id: string) => {
 	form.contacts = form.contacts.filter(c => c.id !== id);
 };
@@ -705,6 +727,12 @@ watch(isOpen, async (open) => {
 			form.client = cid ? { id: cid, name: cname || 'Client' } : null;
 		} else {
 			form.client = null;
+		}
+
+		// Pre-fill invitees from the pinned client's roster (create mode only;
+		// edit mode restores the meeting's own attendees just below).
+		if (!isEditing.value && form.client?.id) {
+			await seedInviteesFromClient(form.client.id);
 		}
 
 		// In edit mode, pre-populate members from the appointment's junction so
