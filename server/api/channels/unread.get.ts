@@ -20,6 +20,8 @@ export default defineEventHandler(async (event) => {
   const userId = (session as any).user?.id;
   if (!userId) throw createError({ statusCode: 401, message: 'Authentication required' });
 
+  try {
+  return await withTransientRetry(async () => {
   const directus = getTypedDirectus();
 
   // Active org memberships → org ids + per-org "floor" (join date) for the
@@ -146,4 +148,12 @@ export default defineEventHandler(async (event) => {
   );
 
   return { channels, total };
+  }, { label: 'channels/unread' });
+  } catch (err: any) {
+    // Unread badges are non-critical chrome — after retries, a Directus blip
+    // during the post-login request burst must not surface as a hard 500. Log the
+    // REAL error (so prod logs show the true cause) and report "nothing unread".
+    console.error('[channels/unread] Failed, returning empty:', err?.message || err);
+    return { channels: {}, total: 0 };
+  }
 });

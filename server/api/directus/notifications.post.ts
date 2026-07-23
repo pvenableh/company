@@ -32,7 +32,17 @@ export default defineEventHandler(async (event) => {
 
     switch (operation) {
       case "list":
-        return await directus.request(readNotifications(query || {}));
+        // Fires on every page load — a transient Directus blip during the burst
+        // must not 500 the shell. Retry, then degrade to an empty list.
+        try {
+          return await withTransientRetry(
+            () => directus.request(readNotifications(query || {})),
+            { label: "notifications:list" },
+          );
+        } catch (err: any) {
+          console.error("[notifications:list] Error (returning empty):", err?.message || err);
+          return [];
+        }
 
       case "get":
         if (!id) throw createError({ statusCode: 400, message: "ID required" });

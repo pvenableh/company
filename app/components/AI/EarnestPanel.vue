@@ -1,5 +1,17 @@
 <script setup lang="ts">
 /**
+ * ⚠️ RETIRED (2026-07-22) — NO LONGER MOUNTED ANYWHERE.
+ *
+ * The docked Earnest panel was retired when Earnest collapsed to two altitudes:
+ * inline (on the thing you're viewing) and Focus (full-screen). Every former
+ * caller now opens Focus — `useEarnestPanel`'s `panelOpen`/`openEarnestPanel`
+ * resolve to size 'full', and this component's mounts were removed from
+ * layouts/apps.vue, layouts/email.vue and pages/meeting/[roomName].vue. Its
+ * "Proposals" tab (trust dial + ai_actions list) moved into Earnest/Mirror.vue.
+ * Kept in the tree for reference/rollback; safe to delete once the new model is
+ * settled. See memory: project_earnest_dock_retirement.
+ *
+ * ── Original doc ──
  * AIEarnestPanel — the single, unified Earnest assistant panel. Replaces the
  * old per-entity ContextualSidebar AND the global CommandCenter AITray with one
  * route + user + org + entity-aware surface:

@@ -37,6 +37,13 @@ interface SocialOverview {
  *
  * `hasRichData` controls which widget renders: false → compact, true → rich.
  */
+// Module-level inflight guard so the 3 widgets that call load() on the same org
+// collapse into ONE request (the loadedFor guard only helps AFTER a fetch
+// completes; concurrent callers all slipped past it). Mirrors the
+// active-clients / channel-unread guards.
+let _marketingInflight: Promise<void> | null = null;
+let _marketingInflightOrg: string | null = null;
+
 export const useMarketingPulse = () => {
 	const { selectedOrg } = useOrganization();
 	const { socialPublishingEnabled } = useSocialPublishing();
@@ -80,7 +87,10 @@ export const useMarketingPulse = () => {
 		}
 		// Allow refetch when SSR failed (loadedFor set but metrics still null)
 		if (!force && loadedFor.value === orgId && metrics.value !== null) return;
-
+		// Coalesce concurrent callers for the same org into one request.
+		if (!force && _marketingInflight && _marketingInflightOrg === orgId) return _marketingInflight;
+		_marketingInflightOrg = orgId;
+		_marketingInflight = (async () => {
 		loading.value = true;
 		const fetchFn = useRequestFetch();
 		try {
@@ -124,7 +134,10 @@ export const useMarketingPulse = () => {
 			loadedFor.value = orgId;
 		} finally {
 			loading.value = false;
+			_marketingInflight = null;
 		}
+		})();
+		return _marketingInflight;
 	}
 
 	return {

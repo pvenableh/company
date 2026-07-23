@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		const recommendations = await directus.request(
+		const recommendations = await withTransientRetry(() => directus.request(
 			readItems('marketing_recommendations', {
 				filter,
 				fields: [
@@ -69,11 +69,14 @@ export default defineEventHandler(async (event) => {
 				sort: ['-urgency', '-surfaced_at'],
 				limit: 10,
 			}),
-		);
+		), { label: 'marketing/recommendations' });
 
 		return { recommendations };
 	} catch (error: any) {
-		console.error('[recommendations/list] Error:', error.message);
-		throw createError({ statusCode: 500, message: 'Failed to fetch recommendations' });
+		// The recommendation feed is a non-critical marketing surface — a transient
+		// Directus blip during the login burst must not 500 the page. Degrade to an
+		// empty feed and log the real error.
+		console.error('[recommendations/list] Error (returning empty):', error?.message || error);
+		return { recommendations: [] };
 	}
 });

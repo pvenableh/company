@@ -30,7 +30,6 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const updatingStatus = ref(false);
 
-const STATUS_OPTIONS = ['Pending', 'Scheduled', 'In Progress', 'Completed'];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
 
 const TICKET_FIELDS = [
@@ -172,22 +171,13 @@ onBeforeUnmount(() => {
 				</template>
 			</AppsWorkTicketIdentityStrip>
 
-			<!-- Quick-change status -->
-			<div class="flex items-center gap-1.5 flex-wrap">
-				<button
-					v-for="s in STATUS_OPTIONS"
-					:key="s"
-					type="button"
-					:disabled="updatingStatus || s === ticket.status"
-					class="text-[10px] uppercase tracking-wider px-2 h-6 rounded-full border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-					:class="s === ticket.status
-						? 'border-primary/40 bg-primary/10 text-primary font-semibold'
-						: 'border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground'"
-					@click="changeStatus(s)"
-				>
-					{{ s }}
-				</button>
-			</div>
+			<!-- Quick-change status — gradient segmented pill, same control the
+			     full page uses so the two surfaces can't drift. -->
+			<TicketsDetailsStatus
+				:model-value="ticket.status"
+				:animation-duration="0.25"
+				@update:model-value="changeStatus"
+			/>
 
 			<!-- Description -->
 			<div v-if="ticket.description" class="pt-3 border-t border-border/30">

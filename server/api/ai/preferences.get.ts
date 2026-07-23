@@ -17,20 +17,22 @@ export default defineEventHandler(async (event) => {
     .with(staticToken(config.directusServerToken));
 
   try {
-    const records = await directus.request(
-      readItems('ai_preferences', {
-        filter: { user: { _eq: userId } },
-        fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'token_budget_monthly', 'ai_enabled', 'organization'],
-        limit: 1,
-      }),
+    const records = await withTransientRetry(
+      () => directus.request(
+        readItems('ai_preferences', {
+          filter: { user: { _eq: userId } },
+          fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'token_budget_monthly', 'ai_enabled', 'organization'],
+          limit: 1,
+        }),
+      ),
+      { label: 'ai/preferences' },
     );
 
     return { success: true, data: records[0] || null };
   } catch (err: any) {
-    console.error('[ai/preferences] Error reading:', err);
-    throw createError({
-      statusCode: 500,
-      message: err.message || 'Failed to read preferences',
-    });
+    // Preferences are non-critical — the client falls back to sane defaults.
+    // A transient Directus blip during the login burst must not 500 the page.
+    console.error('[ai/preferences] Error reading (returning null):', err?.message || err);
+    return { success: true, data: null };
   }
 });

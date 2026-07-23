@@ -186,6 +186,22 @@ export function useStatusStyle() {
     { value: 'high', label: 'High' },
   ] as const;
 
+  /** CSS gradient for the ticket-status segmented control. Reads the same
+   *  palette-driven CSS vars as the badges/dots so it re-tints on palette
+   *  switch. Left→right traces the ticket lifecycle:
+   *    Pending(amber) → Scheduled(sky) → In Progress(teal) → Completed(green) */
+  const statusGradient = 'linear-gradient(to right, hsl(var(--warning)), hsl(var(--status-scheduled)), hsl(var(--status-active)), hsl(var(--success)))';
+
+  /** Ticket status options for the segmented control. Values are Capitalized
+   *  to match TICKET_BOARD_COLUMNS (app/utils/ticketColumns.ts) — ticket
+   *  status is case-sensitive, unlike task status. */
+  const statusOptions = [
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Scheduled', label: 'Scheduled' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'Completed', label: 'Completed' },
+  ] as const;
+
   return {
     getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusPillClass, getStatusOpacityClass,
     getStatusDotClass, getStatusBorderedBadgeClasses,
@@ -193,5 +209,6 @@ export function useStatusStyle() {
     getPriorityBadgeClass, getPriorityBadgeClasses,
     getPriorityBg, getPriorityAccent, getPriorityIconClass,
     priorityGradient, priorityOptions,
+    statusGradient, statusOptions,
   };
 }

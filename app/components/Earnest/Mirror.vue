@@ -174,6 +174,23 @@ function fireLever(prompt: string) { emit('lever', prompt); }
 
 					<p class="mirror__foot">A reflection, not a verdict. You decide what it means.</p>
 				</template>
+
+				<!-- Working autonomy + proposals — relocated here from the retired
+				     dock. Always available whenever the Mirror is open, independent
+				     of whether there's enough history to reflect on yet. The gauge
+				     sets how much Earnest does on its own; the list is what it's
+				     proposing (the same ai_actions queue the Boardroom reviews). -->
+				<section class="mirror__agency">
+					<p class="mirror__eyebrow mirror__agency-eyebrow">Working together</p>
+					<div class="mirror__agency-card mirror__agency-card--dial">
+						<p class="mirror__num-label mirror__num-label--center">How much I handle on my own</p>
+						<EarnestTrustDial />
+					</div>
+					<div class="mirror__agency-card">
+						<p class="mirror__num-label">What I'm proposing</p>
+						<AiActivityList show-filters />
+					</div>
+				</section>
 			</div>
 		</div>
 	</div>
@@ -263,6 +280,15 @@ function fireLever(prompt: string) { emit('lever', prompt); }
 .mirror__stats b { display: block; font-size: 19px; font-weight: 600; color: #fff; line-height: 1.1; }
 
 .mirror__foot { text-align: center; margin: 8px 0 0; font-size: 12px; color: rgba(238,242,248,.4); font-style: italic; }
+
+/* Working autonomy + proposals (relocated from the retired dock). Framed to
+   match the insight / number cards so the app-styled TrustDial + AiActivityList
+   sit on a surface that belongs to the Mirror's dark aura ground. */
+.mirror__agency { margin-top: 26px; padding-top: 20px; border-top: 1px solid rgba(238,242,248,.09); display: flex; flex-direction: column; gap: 12px; }
+.mirror__agency-eyebrow { text-align: center; margin-bottom: 2px; }
+.mirror__agency-card { border-radius: 16px; padding: 14px 15px; border: 1px solid rgba(238,242,248,.09); background: rgba(255,255,255,.03); }
+.mirror__agency-card--dial { text-align: center; }
+.mirror__num-label--center { justify-content: center; margin-bottom: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
 	.mirror__insight { animation: none !important; }

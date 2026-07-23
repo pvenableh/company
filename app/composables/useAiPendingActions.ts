@@ -12,11 +12,19 @@ export function useAiPendingActions() {
 
   const pendingCount = useState<number>('ai-pending-actions-count', () => 0);
   const loading = useState<boolean>('ai-pending-actions-loading', () => false);
+  const boot = useBootstrap();
 
-  async function refresh() {
+  async function refresh(opts?: { force?: boolean }) {
     if (!organizationId.value) {
       pendingCount.value = 0;
       return;
+    }
+    // Coalesce the login-time fetch onto /api/bootstrap (which seeds the count)
+    // instead of firing our own; `force` and later refreshes still fetch direct.
+    if (!opts?.force) {
+      const inflight = boot.whenReady();
+      if (inflight) { await inflight; return; }
+      if (boot.isFresh()) return;
     }
     if (loading.value) return;
     loading.value = true;

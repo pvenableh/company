@@ -864,8 +864,11 @@ watch(() => props.projectId, () => {
 			/>
 
 			<div class="ios-card p-4 sm:p-6">
-				<!-- Overview — inline-editable core project fields. -->
-				<div v-if="activeTab === 'overview'">
+				<!-- Overview — a work-first dashboard: health, Earnest's next
+				     moves, then the live pulse (recent activity + touchpoints).
+				     The raw field editor is demoted to a disclosure below so the
+				     landing leads with work, not a form. -->
+				<div v-if="activeTab === 'overview'" class="space-y-6">
 					<AppsAtAGlance :metrics="overviewGlance.metrics" :attention="overviewGlance.attention" />
 					<!-- Earnest, focused on THIS project: scoped prompts + a Boardroom
 					     convene, so opening a project surfaces work + next moves. -->
@@ -875,15 +878,48 @@ watch(() => props.projectId, () => {
 						:entity-id="String(project.id)"
 						:label="project.title || 'this project'"
 					/>
-					<AppsInlineDetailsEditor
-						v-if="project.id"
-						collection="projects"
-						:item-id="String(project.id)"
-						:model-value="projectOverviewValues"
-						:fields="PROJECT_OVERVIEW_FIELDS"
-						:suggest-client-id="projectClientId"
-						@updated="onProjectOverviewUpdated"
-					/>
+
+					<!-- Live pulse: recent activity/events + latest touchpoints. -->
+					<div class="grid gap-6 lg:grid-cols-2">
+						<div class="min-w-0">
+							<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+								<ProjectsActivityTimeline :project-id="projectId" />
+							</div>
+						</div>
+						<div class="min-w-0">
+							<div class="flex items-center gap-2 mb-4">
+								<Icon name="lucide:radio" class="w-5 h-5 text-primary" />
+								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Touchpoints</h3>
+							</div>
+							<AppsWorkProjectTouchpoints
+								:project-id="projectId"
+								:organization-id="organizationId"
+								:client-id="clientId"
+							/>
+						</div>
+					</div>
+
+					<!-- Project details — inline editor, demoted to a disclosure. -->
+					<details class="group rounded-2xl border border-border/50 bg-muted/10">
+						<summary class="flex items-center justify-between gap-2 cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground">
+							<span class="inline-flex items-center gap-2">
+								<Icon name="lucide:sliders-horizontal" class="w-4 h-4 text-muted-foreground" />
+								Project details
+							</span>
+							<Icon name="lucide:chevron-down" class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+						</summary>
+						<div class="px-4 pb-4 pt-1 border-t border-border/40">
+							<AppsInlineDetailsEditor
+								v-if="project.id"
+								collection="projects"
+								:item-id="String(project.id)"
+								:model-value="projectOverviewValues"
+								:fields="PROJECT_OVERVIEW_FIELDS"
+								:suggest-client-id="projectClientId"
+								@updated="onProjectOverviewUpdated"
+							/>
+						</div>
+					</details>
 				</div>
 
 				<!-- Activity -->

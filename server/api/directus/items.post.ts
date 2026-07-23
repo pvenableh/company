@@ -279,9 +279,17 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Check for permission/not-found errors from Directus
+    // Map Directus errors precisely. A missing collection/field is a schema /
+    // developer error — surface it as 404 so it isn't mistaken for (and logged
+    // as) a permission 403. Only genuine permission denials become 403.
     const msg = error.message || "";
-    if (msg.includes("permission") || msg.includes("does not exist")) {
+    if (msg.includes("does not exist") || msg.includes("doesn't exist")) {
+      throw createError({
+        statusCode: 404,
+        message: msg,
+      });
+    }
+    if (msg.includes("permission") || msg.includes("forbidden")) {
       throw createError({
         statusCode: 403,
         message: msg,

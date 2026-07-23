@@ -16,16 +16,36 @@ interface UnreadState {
 	total: number;
 }
 
+// Module-level guard so the ~6 consumers that call refresh() on mount collapse
+// into ONE request (this composable had no concurrency guard, so a home load
+// fired /api/channels/unread 4×). Mirrors the active-clients inflight guard.
+let _unreadInflight: Promise<void> | null = null;
+
 export function useChannelUnread() {
 	const state = useState<UnreadState>('channel-unread', () => ({ channels: {}, total: 0 }));
+	const boot = useBootstrap();
 
-	async function refresh() {
-		try {
-			const data = await $fetch<UnreadState>('/api/channels/unread');
-			state.value = { channels: data?.channels || {}, total: data?.total || 0 };
-		} catch {
-			// non-fatal — leave the last known counts in place
+	async function refresh(opts?: { force?: boolean }) {
+		// Coalesce the login-time fetch onto /api/bootstrap (which seeds `state`)
+		// instead of firing our own. `force` (and the 45s poll after the seed goes
+		// stale) still fetches directly.
+		if (!opts?.force) {
+			const inflight = boot.whenReady();
+			if (inflight) { await inflight; return; }
+			if (boot.isFresh()) return;
+			if (_unreadInflight) return _unreadInflight; // collapse concurrent callers
 		}
+		_unreadInflight = (async () => {
+			try {
+				const data = await $fetch<UnreadState>('/api/channels/unread');
+				state.value = { channels: data?.channels || {}, total: data?.total || 0 };
+			} catch {
+				// non-fatal — leave the last known counts in place
+			} finally {
+				_unreadInflight = null;
+			}
+		})();
+		return _unreadInflight;
 	}
 
 	/**

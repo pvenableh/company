@@ -720,12 +720,16 @@ watch(
 
 /* ── Bell button ────────────────────────────────────────────────────── */
 .notif-bell {
-	@apply relative inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground transition-colors;
-	background: transparent;
+	/* Matches .apps-shell__chrome-btn — a 28px circle with the same subtle
+	 * liquid-glass fill + refracted rim so the bell reads as one of the set. */
+	@apply relative inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground transition-all;
+	background: hsl(var(--muted) / 0.35);
+	box-shadow: var(--glass-edge-shadow);
 }
 
 .notif-bell:hover {
-	background: hsl(var(--muted) / 0.5);
+	background: hsl(var(--muted) / 0.6);
+	color: hsl(var(--foreground));
 }
 
 .notif-bell:disabled {
