@@ -261,6 +261,7 @@
 <script setup lang="ts">
 import type { Invoice, Product } from '~~/shared/directus';
 import type { LineItemFormData } from '~/components/Invoices/LineItemRow.vue';
+import { billingRecipientsFromLevel } from '~~/shared/billing-recipients';
 import { Button } from '~/components/ui/button';
 
 const props = defineProps<{
@@ -677,7 +678,7 @@ onMounted(async () => {
         fields: [
           'id', 'name', 'organization', 'parent_client',
           'billing_email', 'billing_name', 'billing_address', 'billing_contacts',
-          'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
+          'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact', 'contacts.sort',
         ],
         limit: 500,
       }) as Promise<any[]>,
@@ -696,14 +697,12 @@ onMounted(async () => {
       clientMap.set(c.id, c);
     }
 
+    // First level (self → parent chain) that has any billing recipient, via the
+    // one shared resolver the send + UI use.
     function resolveBillingSource(start: any): any {
       let current = start;
       for (let depth = 0; depth < 4; depth++) {
-        const legacy = Array.isArray(current.billing_contacts)
-          && current.billing_contacts.some((bc: any) => bc.email?.trim());
-        const contactRows = Array.isArray(current.contacts)
-          && current.contacts.some((c: any) => c.is_billing_contact && c.email?.trim());
-        if (legacy || contactRows || current.billing_email) return current;
+        if (billingRecipientsFromLevel(current).length || current.billing_email) return current;
         const parentId = typeof current.parent_client === 'object' ? current.parent_client?.id : current.parent_client;
         const parent = parentId ? clientMap.get(parentId) : null;
         if (!parent) return current;
@@ -713,21 +712,8 @@ onMounted(async () => {
     }
 
     function buildBillingContacts(source: any): Array<{ name: string; email: string }> | undefined {
-      const legacyList = Array.isArray(source.billing_contacts)
-        ? source.billing_contacts.filter((bc: any) => bc.email?.trim())
-        : [];
-      if (legacyList.length) return legacyList.map((bc: any) => ({ name: bc.name || '', email: bc.email }));
-
-      const flagged = Array.isArray(source.contacts)
-        ? source.contacts.filter((c: any) => c.is_billing_contact && c.email?.trim())
-        : [];
-      if (flagged.length) {
-        return flagged.map((c: any) => ({
-          name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email,
-          email: c.email,
-        }));
-      }
-      return undefined;
+      const recips = billingRecipientsFromLevel(source);
+      return recips.length ? recips : undefined;
     }
 
     for (const c of clientList) {

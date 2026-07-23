@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Client, ContactConnection } from '~~/shared/directus';
+import { billingRecipientsFromLevel } from '~~/shared/billing-recipients';
 import { Button } from '~/components/ui/button';
 import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 
@@ -230,7 +231,7 @@ async function resolveEffectiveBilling() {
     fields: [
       'id', 'name', 'billing_email', 'billing_name', 'billing_address',
       'billing_contacts', 'payment_terms',
-      'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
+      'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact', 'contacts.sort',
     ],
   }) as Promise<any>;
 
@@ -247,22 +248,12 @@ async function resolveEffectiveBilling() {
   for (let i = 0; i < chain.length; i++) {
     const level = chain[i];
     const data = level.data;
-    const legacy = Array.isArray(data.billing_contacts)
-      ? data.billing_contacts.find((c: any) => c.email?.trim())
-      : null;
-    const flagged = Array.isArray(data.contacts)
-      ? data.contacts.find((c: any) => c.is_billing_contact && c.email?.trim())
-      : null;
-    if (!legacy && !flagged && !data.billing_email) continue;
+    // Same source-of-truth resolution the send + UI use.
+    const primary = billingRecipientsFromLevel(data)[0];
+    if (!primary && !data.billing_email) continue;
 
-    const primaryEmail = legacy?.email
-      || (flagged?.email)
-      || data.billing_email
-      || null;
-    const primaryName = legacy?.name
-      || (flagged ? `${flagged.first_name || ''} ${flagged.last_name || ''}`.trim() : null)
-      || data.billing_name
-      || null;
+    const primaryEmail = primary?.email || data.billing_email || null;
+    const primaryName = primary?.name || data.billing_name || null;
 
     effectiveBilling.value = {
       source: i === 0 ? 'self' : 'inherited',

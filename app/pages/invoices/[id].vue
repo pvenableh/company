@@ -4,6 +4,7 @@
 // an unauthenticated payer should never see. `blank` still inherits the root
 // theme (dark-default colorMode + data-theme/data-style + palette applied on
 // <html> by app.vue), so the page stays on-brand without the internal nav.
+import { resolveBillingRecipients } from '~~/shared/billing-recipients';
 definePageMeta({ layout: 'blank' });
 useHead({ title: 'Invoice | Earnest' });
 
@@ -53,7 +54,9 @@ const showAnonymousForm = computed(() => {
 });
 
 const defaultEmail = computed(() => {
-	return invoice.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.client?.billing_email || invoice.bill_to?.emails?.[0] || '';
+	// Same source of truth as the send (client billing contacts), then snapshot,
+	// client scalar, org.
+	return resolveBillingRecipients([invoice.client]).to?.email || invoice.billing_email || invoice.client?.billing_email || invoice.bill_to?.emails?.[0] || '';
 });
 
 // const handleAnonymousSubmit = async (formData) => {

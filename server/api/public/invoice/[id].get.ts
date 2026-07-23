@@ -45,10 +45,14 @@ export default defineEventHandler(async (event) => {
           'client.id', 'client.name', 'client.organization',
           'client.billing_name', 'client.billing_email', 'client.billing_address',
           'client.billing_contacts',
+          // Billing contacts (source of truth) — filtered to is_billing_contact
+          // via `deep` so the public page never exposes the whole contact list.
+          'client.contacts.email', 'client.contacts.first_name', 'client.contacts.last_name', 'client.contacts.is_billing_contact', 'client.contacts.sort',
           'line_items.id', 'line_items.description', 'line_items.quantity',
           'line_items.rate', 'line_items.amount', 'line_items.product.name',
           'payments.*',
         ],
+        deep: { client: { contacts: { _filter: { is_billing_contact: { _eq: true } } } } },
       }),
     )
     .catch(() => null)) as any;

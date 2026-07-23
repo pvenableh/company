@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveBillingRecipients } from '~~/shared/billing-recipients';
 definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
@@ -22,9 +23,11 @@ try {
 
 const portalUser = computed(() => (sessionUser.value ? { email: sessionUser.value.email } : null));
 const defaultEmail = computed(() => {
+	// Same source of truth as the send (client billing contacts), then the
+	// invoice snapshot, the client scalar, the org, and finally the portal user.
 	return (
-		invoice.value?.billing_email
-		|| invoice.value?.client?.billing_contacts?.[0]?.email
+		resolveBillingRecipients([invoice.value?.client]).to?.email
+		|| invoice.value?.billing_email
 		|| invoice.value?.client?.billing_email
 		|| invoice.value?.bill_to?.emails?.[0]
 		|| sessionUser.value?.email
