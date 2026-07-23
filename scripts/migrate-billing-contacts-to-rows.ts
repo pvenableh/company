@@ -114,10 +114,13 @@ async function main() {
 		console.log(`\nClient: "${client.name}" (org=${client.organization})`);
 		console.log(`  ${entries.length} legacy entrie(s)`);
 
-		for (const entry of entries) {
+		for (let idx = 0; idx < entries.length; idx++) {
+			const entry = entries[idx]!;
 			totalEntries++;
 			const email = entry.email!.trim();
 			const { first, last } = splitName(entry.name);
+			// Preserve the legacy array order as contacts.sort so the first entry
+			// stays the primary (To) once resolution reads the flagged rows.
 
 			// 2. Look up an existing contact in the same org with this email.
 			const sameOrgQuery =
@@ -142,7 +145,7 @@ async function main() {
 					if (APPLY) {
 						await api(`/items/contacts/${sameClient.id}`, {
 							method: 'PATCH',
-							body: JSON.stringify({ is_billing_contact: true }),
+							body: JSON.stringify({ is_billing_contact: true, sort: idx }),
 						});
 					}
 				}
@@ -155,6 +158,7 @@ async function main() {
 						body: JSON.stringify({
 							client: client.id,
 							is_billing_contact: true,
+							sort: idx,
 						}),
 					});
 				}
@@ -172,6 +176,7 @@ async function main() {
 							email,
 							client: client.id,
 							is_billing_contact: true,
+							sort: idx,
 							status: 'published',
 							source: 'billing-migration',
 						}),
@@ -196,6 +201,7 @@ async function main() {
 							email,
 							client: client.id,
 							is_billing_contact: true,
+							sort: idx,
 							status: 'published',
 							source: 'billing-migration',
 						}),

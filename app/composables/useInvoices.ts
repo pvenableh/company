@@ -1,4 +1,5 @@
 import type { Invoice, Product } from '~~/shared/directus';
+import { billingRecipientsFromLevel } from '~~/shared/billing-recipients';
 
 export function useInvoices() {
   const items = useDirectusItems<Invoice>('invoices');
@@ -89,6 +90,9 @@ export function useInvoices() {
         '*',
         'bill_to.*', 'bill_to.owner.email', 'check_image.id', 'check_image.filename_download', 'check_image.type',
         'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts', 'client.parent_client.id', 'client.parent_client.name', 'client.parent_client.billing_email', 'client.parent_client.billing_name', 'client.parent_client.billing_address', 'client.parent_client.billing_contacts',
+        // Billing contacts (source of truth for who an invoice email reaches).
+        'client.contacts.id', 'client.contacts.email', 'client.contacts.first_name', 'client.contacts.last_name', 'client.contacts.is_billing_contact', 'client.contacts.sort',
+        'client.parent_client.contacts.email', 'client.parent_client.contacts.first_name', 'client.parent_client.contacts.last_name', 'client.parent_client.contacts.is_billing_contact', 'client.parent_client.contacts.sort',
         'projects.projects_id.id', 'projects.projects_id.title',
         'line_items.*', 'line_items.product.*',
         'payments.*',
@@ -112,7 +116,7 @@ export function useInvoices() {
           fields: [
             'id', 'name', 'organization',
             'billing_email', 'billing_name', 'billing_address', 'billing_contacts',
-            'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
+            'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact', 'contacts.sort',
           ],
         }) as Promise<any>;
 
@@ -132,23 +136,11 @@ export function useInvoices() {
             }
 
             for (const level of chain) {
-              const legacyContact = Array.isArray(level.billing_contacts)
-                ? level.billing_contacts.find((c: any) => c.email?.trim())
-                : null;
-              const contactRow = Array.isArray(level.contacts)
-                ? level.contacts.find((c: any) => c.is_billing_contact && c.email?.trim())
-                : null;
-              const hasBilling = legacyContact || contactRow || level.billing_email;
-              if (!hasBilling) continue;
-
-              const primary = legacyContact
-                ? { email: legacyContact.email, name: legacyContact.name }
-                : contactRow
-                  ? {
-                      email: contactRow.email,
-                      name: `${contactRow.first_name || ''} ${contactRow.last_name || ''}`.trim() || null,
-                    }
-                  : null;
+              // Same source-of-truth resolution the send + UI use: contacts
+              // flagged is_billing_contact (ordered by sort) → legacy JSON →
+              // billing_email scalar. First level with a recipient wins.
+              const primary = billingRecipientsFromLevel(level)[0];
+              if (!primary && !level.billing_email) continue;
 
               payload.billing_email = primary?.email || level.billing_email || null;
               payload.billing_name = primary?.name || level.billing_name || level.name || null;

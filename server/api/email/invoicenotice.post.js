@@ -1,7 +1,10 @@
 import sgMail from '@sendgrid/mail';
+import { readItem } from '@directus/sdk';
 import { resolveMonitoringBcc } from '~~/server/utils/email-send';
 import { evaluateMoneyGate } from '~~/server/utils/outbound-gate';
 import { persistHeldEmail } from '~~/server/utils/held-email';
+import { getServerDirectus } from '~~/server/utils/directus';
+import { resolveBillingRecipients } from '~~/shared/billing-recipients';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -122,44 +125,57 @@ export default defineEventHandler(async (event) => {
 				return Array.isArray(emails) ? emails : [emails];
 			};
 
-			// Build recipient list:
-			// - All client billing_contacts get the email (first = TO, rest = CC)
-			// - Invoice snapshot billing_email overrides TO if set
-			// - Organization owner is always CC'd
-			// - Organization emails are fallback if no billing contacts exist
+			// Resolve who this invoice email reaches from the client's LIVE billing
+			// contacts — contacts flagged is_billing_contact, ordered by sort (the
+			// single source of truth). Fetched fresh (not the posted snapshot) so a
+			// billing-contact change is reflected in reminders. Legacy billing_contacts
+			// JSON + billing_email are fallbacks for un-migrated clients; the invoice
+			// snapshot, then org emails, are the last resort if the client has nobody.
+			//   TO  = live primary → invoice snapshot → client scalar → org
+			//   CC  = remaining live recipients + invoice CC field + org owner
 			const firstInvoice = invoices[0];
+			const clientId = typeof firstInvoice?.client === 'object' ? firstInvoice.client?.id : firstInvoice?.client;
 
-			// Parse billing_contacts — may be a JSON string or already an array
-			let rawContacts = firstInvoice?.client?.billing_contacts || firstInvoice?.billing_contacts || [];
-			if (typeof rawContacts === 'string') {
-				try { rawContacts = JSON.parse(rawContacts); } catch { rawContacts = []; }
+			let resolved = { to: null, cc: [], all: [] };
+			if (clientId) {
+				try {
+					const directus = getServerDirectus();
+					const LEVEL_FIELDS = [
+						'billing_email', 'billing_name', 'billing_contacts',
+						'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact', 'contacts.sort',
+					];
+					const clientRow = await directus.request(readItem('clients', clientId, {
+						fields: [
+							'id', ...LEVEL_FIELDS,
+							'parent_client.id', ...LEVEL_FIELDS.map((f) => `parent_client.${f}`),
+							'parent_client.parent_client.id', ...LEVEL_FIELDS.map((f) => `parent_client.parent_client.${f}`),
+						],
+					}));
+					const chain = [clientRow, clientRow?.parent_client, clientRow?.parent_client?.parent_client].filter(Boolean);
+					resolved = resolveBillingRecipients(chain);
+				} catch (err) {
+					console.error('[invoicenotice] billing-contact resolve failed; falling back to snapshot', err?.message || err);
+				}
 			}
-			const billingContacts = Array.isArray(rawContacts) ? rawContacts : [];
-			const contactEmails = billingContacts.filter((c) => c.email?.trim()).map((c) => c.email.trim());
 
-			// Determine primary recipient (TO)
-			let primaryEmail;
-			if (firstInvoice?.billing_email) {
-				primaryEmail = firstInvoice.billing_email;
-			} else if (contactEmails.length > 0) {
-				primaryEmail = contactEmails[0];
-			} else if (firstInvoice?.client?.billing_email) {
-				primaryEmail = firstInvoice.client.billing_email;
-			} else {
-				const orgEmails = formatEmails(organization.bill_to?.emails || organization.emails);
-				primaryEmail = orgEmails[0] || organization.email;
-			}
+			const orgEmails = formatEmails(organization.bill_to?.emails || organization.emails);
+			const primaryEmail =
+				resolved.to?.email ||
+				firstInvoice?.billing_email ||
+				firstInvoice?.client?.billing_email ||
+				orgEmails[0] ||
+				organization.email;
 
-			// Build CC list: remaining billing contacts + invoice CC field + org owner
-			const remainingContacts = contactEmails.slice(1).filter((e) => e !== primaryEmail);
 			const invoiceExtraEmails = Array.isArray(firstInvoice?.emails) ? firstInvoice.emails : [];
-
-			// Resolve organization owner email
 			const orgOwner = organization.owner;
 			const ownerEmail = typeof orgOwner === 'object' ? orgOwner?.email : null;
 
-			const allCcEmails = [...new Set([...remainingContacts, ...invoiceExtraEmails, ...(ownerEmail ? [ownerEmail] : [])])]
-				.filter((e) => e && e !== primaryEmail);
+			// Every live billing recipient except the TO, plus per-invoice CC + owner.
+			const allCcEmails = [...new Set([
+				...resolved.all.map((r) => r.email),
+				...invoiceExtraEmails,
+				...(ownerEmail ? [ownerEmail] : []),
+			])].filter((e) => e && e !== primaryEmail);
 
 			// Monitoring BCC = global SENDGRID_BCC_EMAIL + this org's optional
 			// email_bcc, excluding the to/cc recipients. Both are optional — if

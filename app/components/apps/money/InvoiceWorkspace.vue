@@ -31,6 +31,7 @@
 -->
 <script setup lang="ts">
 import type { Invoice, PaymentsReceived } from '~~/shared/directus';
+import { resolveBillingRecipients } from '~~/shared/billing-recipients';
 import { Button } from '~/components/ui/button';
 
 const props = defineProps<{
@@ -334,38 +335,29 @@ async function handleSendEmail() {
   }
 }
 
-// Who the invoice email actually goes TO — mirrors the server's recipient
-// precedence in /api/email/invoicenotice (billing_email → first client billing
-// contact → client billing_email). All of these are already loaded client-side
-// (see useInvoices.getInvoice fields), so the notice needs no extra fetch. When
-// none resolves, the server falls back to the org's own address — surfaced as a
-// gentle "no billing email" warning so the user knows to add one.
-function billingContactEmails(raw: any): string[] {
-  let arr = raw;
-  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch { arr = []; } }
-  if (!Array.isArray(arr)) arr = [];
-  return arr.map((c: any) => String(c?.email || '').trim()).filter(Boolean);
-}
-const reminderRecipient = computed<string | null>(() => {
+// Who the invoice email reaches — resolved from the client's billing contacts
+// (contacts flagged is_billing_contact, ordered by sort) via the ONE shared
+// resolver the server send also uses, so the notice and the actual send can't
+// disagree. Legacy billing_contacts JSON / billing_email are fallbacks for
+// un-migrated clients; the invoice snapshot is the last resort. No extra fetch —
+// getInvoice already loads client.contacts.
+const resolvedBilling = computed(() => {
   const inv = invoice.value as any;
-  if (!inv) return null;
-  if (inv.billing_email?.trim()) return inv.billing_email.trim();
-  const contactEmails = billingContactEmails(inv.client?.billing_contacts ?? inv.billing_contacts);
-  if (contactEmails.length) return contactEmails[0]!;
-  if (inv.client?.billing_email?.trim()) return inv.client.billing_email.trim();
-  return null;
+  if (!inv) return { to: null, cc: [], all: [] };
+  const chain = [inv.client, inv.client?.parent_client].filter(Boolean);
+  return resolveBillingRecipients(chain);
 });
-// Count the additional CC recipients (remaining billing contacts + the invoice's
-// own CC list), de-duped against the primary — for a subtle "+N more".
+const reminderRecipient = computed<string | null>(() =>
+  resolvedBilling.value.to?.email || (invoice.value as any)?.billing_email?.trim() || null);
+// Additional CC recipients (remaining billing recipients + the invoice's own CC
+// list), de-duped against the primary — for a subtle "+N more".
 const reminderCcCount = computed<number>(() => {
-  const inv = invoice.value as any;
-  if (!inv) return 0;
   const primary = (reminderRecipient.value || '').toLowerCase();
   const extra = new Set<string>();
-  for (const e of billingContactEmails(inv.client?.billing_contacts ?? inv.billing_contacts)) {
-    if (e.toLowerCase() !== primary) extra.add(e.toLowerCase());
+  for (const r of resolvedBilling.value.all) {
+    if (r.email.toLowerCase() !== primary) extra.add(r.email.toLowerCase());
   }
-  let ccList = inv.emails;
+  let ccList = (invoice.value as any)?.emails;
   if (typeof ccList === 'string') { try { ccList = JSON.parse(ccList); } catch { ccList = []; } }
   if (Array.isArray(ccList)) {
     for (const e of ccList) {
@@ -376,15 +368,13 @@ const reminderCcCount = computed<number>(() => {
   return extra.size;
 });
 
-// ── Billing recipients editor (writes back to the CLIENT) ─────────────────
-// The invoice send resolves recipients from the client's `billing_contacts`
-// list (first = To, the rest = Cc) — the same field the client form manages and
-// that future invoices snapshot from. So this editor writes there: the change
-// applies to this invoice AND every future one for the client. Because the
-// billing contact changes often, it's reachable from both the empty state and
-// the "Sends to …" line. Contacts load lazily on first open.
-const { updateClient } = useClients();
-const contactItems = useDirectusItems('contacts');
+// ── Billing recipients editor (writes the CLIENT's contacts) ──────────────
+// Source of truth = contacts flagged is_billing_contact (ordered by sort; first
+// = To). Toggling a contact flags/unflags it; adding an email creates a
+// lightweight contact on the client. The change applies to this invoice AND
+// every future one. Reachable from both the empty state and the "Sends to …"
+// line, since the billing contact changes often. Contacts load lazily on open.
+const { loadClientContacts, currentBillingChoices, syncBillingRecipients } = useBillingRecipients();
 const showRecipientPicker = ref(false);
 const clientContacts = ref<any[]>([]);
 const clientContactsLoaded = ref(false);
@@ -396,8 +386,9 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const clientName = computed(() => (invoice.value as any)?.client?.name || 'the client');
 
-// The client's current billing_contacts (may arrive as a JSON string).
-function currentClientBillingContacts(): { name: string; email: string }[] {
+// Legacy billing_contacts JSON (may be a stringified array) — only used to seed
+// the editor for clients not yet migrated to contact rows.
+function legacyBillingContacts(): { name: string; email: string }[] {
   let raw = (invoice.value as any)?.client?.billing_contacts;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = []; } }
   if (!Array.isArray(raw)) return [];
@@ -411,14 +402,7 @@ async function loadClientContactsForPicker() {
   if (!cid || clientContactsLoading.value) return;
   clientContactsLoading.value = true;
   try {
-    const rows = await contactItems.list({
-      fields: ['id', 'first_name', 'last_name', 'email', 'is_billing_contact'],
-      filter: { client: { _eq: cid } },
-      limit: -1,
-    }).catch(() => []) as any[];
-    clientContacts.value = rows
-      .filter((c) => String(c?.email || '').trim())
-      .sort((a, b) => Number(!!b.is_billing_contact) - Number(!!a.is_billing_contact));
+    clientContacts.value = await loadClientContacts(cid);
     clientContactsLoaded.value = true;
   } finally {
     clientContactsLoading.value = false;
@@ -427,10 +411,12 @@ async function loadClientContactsForPicker() {
 
 async function openRecipientPicker() {
   showRecipientPicker.value = true;
-  // Seed from whatever the client already has, so editing preserves the list.
-  chosenRecipients.value = currentClientBillingContacts();
   newRecipientEmail.value = '';
   if (!clientContactsLoaded.value) await loadClientContactsForPicker();
+  // Seed from the source of truth (flagged contacts, ordered), falling back to
+  // the legacy JSON for un-migrated clients.
+  const current = currentBillingChoices(clientContacts.value);
+  chosenRecipients.value = current.length ? current : legacyBillingContacts();
 }
 
 function contactLabel(c: any): string {
@@ -464,9 +450,9 @@ async function saveRecipients() {
   if (!cid) { toast.add({ title: 'This invoice has no client to save to', color: 'amber' }); return; }
   savingRecipient.value = true;
   try {
-    // Persist to the client — the send reads billing_contacts (To = first).
-    await updateClient(cid, { billing_contacts: chosenRecipients.value } as any);
-    await loadInvoice(); // refreshes invoice.client.billing_contacts → notice recomputes
+    await syncBillingRecipients(cid, chosenRecipients.value, clientContacts.value);
+    clientContactsLoaded.value = false; // force a fresh contacts read next open
+    await loadInvoice();                // refreshes client.contacts → notice recomputes
     showRecipientPicker.value = false;
     toast.add({
       title: chosenRecipients.value.length ? 'Billing recipients saved' : 'Billing recipients cleared',

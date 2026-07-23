@@ -245,6 +245,12 @@ const { getAncestorClientIds } = useContactConnections();
 const contactItemsApi = useDirectusItems('contacts');
 const { selectedOrg } = useOrganization();
 const parentClientOptions = ref<Array<{ label: string; value: string }>>([]);
+// Billing recipients are stored as the client's contacts (is_billing_contact).
+// The rows below are the editing surface; on save (for an existing client) they
+// are synced to contacts via this one write path. `existingContacts` is this
+// client's current contact list, needed to flag/create the right rows.
+const { loadClientContacts, currentBillingChoices, syncBillingRecipients } = useBillingRecipients();
+const existingContacts = ref<any[]>([]);
 
 const formData = reactive({
   name: props.client?.name || '',
@@ -376,6 +382,16 @@ onMounted(async () => {
       ? opts.filter(o => o.value !== props.client?.id)
       : opts;
   } catch { /* options may not be accessible */ }
+
+  // Editing an existing client: the billing rows come from the source of truth
+  // (contacts flagged is_billing_contact), falling back to the legacy JSON.
+  if (props.client?.id) {
+    try {
+      existingContacts.value = await loadClientContacts(props.client.id);
+      const current = currentBillingChoices(existingContacts.value);
+      if (current.length) formData.billing_contacts = current;
+    } catch { /* contacts may not be accessible */ }
+  }
 });
 
 const newTag = ref('');
@@ -410,14 +426,15 @@ function removeTag(tag: string) {
   formData.tags = formData.tags.filter((t: string) => t !== tag);
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   // Flush pending tag input
   if (newTag.value.trim()) addTag();
 
-  const validContacts = formData.billing_contacts.filter(c => c.email?.trim());
-  const primaryContact = validContacts[0];
+  const validContacts = formData.billing_contacts
+    .filter(c => c.email?.trim())
+    .map(c => ({ name: (c.name || '').trim(), email: c.email!.trim() }));
 
-  emit('save', {
+  const base = {
     name: formData.name,
     slug: formData.slug || undefined,
     account_state: accountStateModel.value,
@@ -426,16 +443,35 @@ function handleSubmit() {
     parent_client: formData.parent_client || null,
     notes: formData.notes || undefined,
     tags: formData.tags.length ? formData.tags : undefined,
-    billing_contacts: validContacts.length ? validContacts : undefined,
-    // Keep billing_email/billing_name in sync with primary billing contact
-    billing_email: primaryContact?.email?.trim() || undefined,
-    billing_name: primaryContact?.name?.trim() || undefined,
     billing_address: formData.billing_address || undefined,
     brand_direction: formData.brand_direction || undefined,
     goals: formData.goals || undefined,
     target_audience: formData.target_audience || undefined,
     location: formData.location || undefined,
-  });
+  };
+
+  if (props.client?.id) {
+    // Existing client → billing recipients live on contacts (source of truth).
+    // Sync writes the flags + mirrors billing_email/name + clears the JSON blob,
+    // so we omit those from the emitted client payload.
+    try {
+      await syncBillingRecipients(props.client.id, validContacts, existingContacts.value);
+    } catch (err) {
+      console.error('[ClientForm] billing-recipient sync failed:', err);
+    }
+    emit('save', base);
+  } else {
+    // New client has no id yet, so contacts can't be flagged pre-create. Fall
+    // back to the legacy JSON snapshot (the resolver still reads it, and the
+    // next edit normalizes it into contacts).
+    const primary = validContacts[0];
+    emit('save', {
+      ...base,
+      billing_contacts: validContacts.length ? validContacts : undefined,
+      billing_email: primary?.email || undefined,
+      billing_name: primary?.name || undefined,
+    });
+  }
 }
 
 defineExpose({
