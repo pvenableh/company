@@ -123,6 +123,98 @@ watch(floor, (next) => {
 const { getInvoices, updateInvoice } = useInvoices();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 
+// ── Org money pipeline (value → paid → to-hunt, the whole studio) ────────────
+// The org altitude of the reporting the project + client surfaces show. Scoped
+// by invoice `bill_to` (matching fetchCashflow). Paid = summed payments so
+// partials count; per-invoice paid clamped so segments sum to invoiced. Contract
+// value = Σ the org's non-archived projects. Hunt rows span every client.
+interface OrgHuntRow { id: string; code: string; who: string; outstanding: number; dueDate: string | null }
+const orgContractValue = ref<number | null>(null);
+const orgPaid = ref(0);
+const orgCurrentOutstanding = ref(0);
+const orgOverdue = ref(0);
+const orgHuntRows = ref<OrgHuntRow[]>([]);
+const orgPipelineLoading = ref(false);
+const orgPipelineReady = ref(false);
+let orgPipelineLoaded = false;
+
+async function fetchOrgPipeline() {
+  const orgId = selectedOrg.value;
+  orgPipelineLoading.value = true;
+  try {
+    const invoiceItems = useDirectusItems('invoices');
+    const projectItems = useDirectusItems('projects');
+    const invoiceFilter: any = orgId ? { bill_to: { _eq: orgId } } : {};
+    const projectFilter: any = orgId
+      ? { organization: { _eq: orgId }, status: { _neq: 'Archived' } }
+      : { status: { _neq: 'Archived' } };
+    const [invoices, projects] = await Promise.all([
+      invoiceItems.list({
+        fields: [
+          'id', 'invoice_code', 'status', 'total_amount', 'due_date',
+          'client.name', 'payments.amount', 'payments.status', 'payments.livemode',
+        ],
+        filter: invoiceFilter, limit: -1,
+      }).catch(() => []) as Promise<any[]>,
+      projectItems.list({
+        fields: ['contract_value', 'status'], filter: projectFilter, limit: -1,
+      }).catch(() => []) as Promise<any[]>,
+    ]);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let paid = 0, current = 0, overdue = 0;
+    const hunt: OrgHuntRow[] = [];
+
+    for (const inv of invoices) {
+      if (inv?.status === 'archived') continue;
+      const total = Number(inv?.total_amount) || 0;
+      const invPaidRaw = (inv?.payments || []).reduce((s: number, p: any) => {
+        if (p?.status !== 'paid' || p?.livemode === false) return s;
+        return s + (Number(p?.amount) || 0);
+      }, 0);
+      const invPaid = Math.min(Math.max(invPaidRaw, 0), total);
+      const invOut = total - invPaid;
+      paid += invPaid;
+      if (invOut <= 0.005) continue;
+
+      const due = inv?.due_date ? new Date(inv.due_date) : null;
+      if (due) due.setHours(0, 0, 0, 0);
+      const isOverdue = !!due && due.getTime() < today.getTime();
+      if (isOverdue) overdue += invOut; else current += invOut;
+      hunt.push({
+        id: String(inv.id),
+        code: inv?.invoice_code || 'Invoice',
+        who: inv?.client?.name || 'Client',
+        outstanding: invOut,
+        dueDate: inv?.due_date || null,
+      });
+    }
+
+    orgContractValue.value = projects.reduce((s, p) => s + (Number(p?.contract_value) || 0), 0);
+    orgPaid.value = paid;
+    orgCurrentOutstanding.value = current;
+    orgOverdue.value = overdue;
+    orgHuntRows.value = hunt;
+    orgPipelineReady.value = true;
+  } catch {
+    orgPipelineReady.value = false;
+  } finally {
+    orgPipelineLoading.value = false;
+  }
+}
+
+// Load once when the Insights floor is first opened; refetch on org switch.
+watch(floor, (next) => {
+  if (next === 'insights' && !orgPipelineLoaded) {
+    orgPipelineLoaded = true;
+    fetchOrgPipeline();
+  }
+}, { immediate: true });
+watch(selectedOrg, () => { if (orgPipelineLoaded) fetchOrgPipeline(); });
+
+// Hunt-list row → the invoices floor (the actionable list).
+function openHuntInvoice(_id: string) { floor.value = 'invoices'; }
+
 // ── Deposits floor (Stripe Connect — money the org RECEIVES from its clients) ─
 // Relocated here from the Organization app's Billing tab: getting paid is a
 // Money concern, distinct from the org's own SaaS subscription. Onboarding +
@@ -1631,6 +1723,17 @@ const headerAction = computed(() => {
 
       <!-- ── Insights floor ────────────────────────────────────────────── -->
       <template v-else-if="floor === 'insights'">
+        <!-- Whole-studio money pipeline: value → paid → to-hunt across every
+             client, with the org-wide hunt list. Leads the Insights floor. -->
+        <div v-if="orgPipelineReady || orgPipelineLoading" class="grid gap-4 lg:grid-cols-2 mb-5">
+          <MoneyPipeline
+            :contract-value="orgContractValue"
+            :paid="orgPaid"
+            :current-outstanding="orgCurrentOutstanding"
+            :overdue="orgOverdue"
+          />
+          <MoneyHuntList :rows="orgHuntRows" :loading="orgPipelineLoading" @open="openHuntInvoice" />
+        </div>
         <MoneyInsightsView :snapshot="moneyInsightsSnapshot" :loading="moneyInsightsLoading" />
       </template>
       </div>

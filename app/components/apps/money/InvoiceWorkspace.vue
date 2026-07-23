@@ -334,6 +334,151 @@ async function handleSendEmail() {
   }
 }
 
+// Who the invoice email actually goes TO — mirrors the server's recipient
+// precedence in /api/email/invoicenotice (billing_email → first client billing
+// contact → client billing_email). All of these are already loaded client-side
+// (see useInvoices.getInvoice fields), so the notice needs no extra fetch. When
+// none resolves, the server falls back to the org's own address — surfaced as a
+// gentle "no billing email" warning so the user knows to add one.
+function billingContactEmails(raw: any): string[] {
+  let arr = raw;
+  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch { arr = []; } }
+  if (!Array.isArray(arr)) arr = [];
+  return arr.map((c: any) => String(c?.email || '').trim()).filter(Boolean);
+}
+const reminderRecipient = computed<string | null>(() => {
+  const inv = invoice.value as any;
+  if (!inv) return null;
+  if (inv.billing_email?.trim()) return inv.billing_email.trim();
+  const contactEmails = billingContactEmails(inv.client?.billing_contacts ?? inv.billing_contacts);
+  if (contactEmails.length) return contactEmails[0]!;
+  if (inv.client?.billing_email?.trim()) return inv.client.billing_email.trim();
+  return null;
+});
+// Count the additional CC recipients (remaining billing contacts + the invoice's
+// own CC list), de-duped against the primary — for a subtle "+N more".
+const reminderCcCount = computed<number>(() => {
+  const inv = invoice.value as any;
+  if (!inv) return 0;
+  const primary = (reminderRecipient.value || '').toLowerCase();
+  const extra = new Set<string>();
+  for (const e of billingContactEmails(inv.client?.billing_contacts ?? inv.billing_contacts)) {
+    if (e.toLowerCase() !== primary) extra.add(e.toLowerCase());
+  }
+  let ccList = inv.emails;
+  if (typeof ccList === 'string') { try { ccList = JSON.parse(ccList); } catch { ccList = []; } }
+  if (Array.isArray(ccList)) {
+    for (const e of ccList) {
+      const t = String(e || '').trim().toLowerCase();
+      if (t && t !== primary) extra.add(t);
+    }
+  }
+  return extra.size;
+});
+
+// ── Billing recipients editor (writes back to the CLIENT) ─────────────────
+// The invoice send resolves recipients from the client's `billing_contacts`
+// list (first = To, the rest = Cc) — the same field the client form manages and
+// that future invoices snapshot from. So this editor writes there: the change
+// applies to this invoice AND every future one for the client. Because the
+// billing contact changes often, it's reachable from both the empty state and
+// the "Sends to …" line. Contacts load lazily on first open.
+const { updateClient } = useClients();
+const contactItems = useDirectusItems('contacts');
+const showRecipientPicker = ref(false);
+const clientContacts = ref<any[]>([]);
+const clientContactsLoaded = ref(false);
+const clientContactsLoading = ref(false);
+const chosenRecipients = ref<{ name: string; email: string }[]>([]);
+const newRecipientEmail = ref('');
+const savingRecipient = ref(false);
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+const clientName = computed(() => (invoice.value as any)?.client?.name || 'the client');
+
+// The client's current billing_contacts (may arrive as a JSON string).
+function currentClientBillingContacts(): { name: string; email: string }[] {
+  let raw = (invoice.value as any)?.client?.billing_contacts;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = []; } }
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c: any) => String(c?.email || '').trim())
+    .map((c: any) => ({ name: String(c?.name || '').trim(), email: String(c.email).trim() }));
+}
+
+async function loadClientContactsForPicker() {
+  const cid = (invoice.value as any)?.client?.id;
+  if (!cid || clientContactsLoading.value) return;
+  clientContactsLoading.value = true;
+  try {
+    const rows = await contactItems.list({
+      fields: ['id', 'first_name', 'last_name', 'email', 'is_billing_contact'],
+      filter: { client: { _eq: cid } },
+      limit: -1,
+    }).catch(() => []) as any[];
+    clientContacts.value = rows
+      .filter((c) => String(c?.email || '').trim())
+      .sort((a, b) => Number(!!b.is_billing_contact) - Number(!!a.is_billing_contact));
+    clientContactsLoaded.value = true;
+  } finally {
+    clientContactsLoading.value = false;
+  }
+}
+
+async function openRecipientPicker() {
+  showRecipientPicker.value = true;
+  // Seed from whatever the client already has, so editing preserves the list.
+  chosenRecipients.value = currentClientBillingContacts();
+  newRecipientEmail.value = '';
+  if (!clientContactsLoaded.value) await loadClientContactsForPicker();
+}
+
+function contactLabel(c: any): string {
+  const name = `${c?.first_name || ''} ${c?.last_name || ''}`.trim();
+  return name ? `${name} · ${c.email}` : c.email;
+}
+function isChosen(email: string): boolean {
+  const e = String(email).toLowerCase();
+  return chosenRecipients.value.some((r) => r.email.toLowerCase() === e);
+}
+function toggleContact(c: any) {
+  const email = String(c.email).trim();
+  if (isChosen(email)) {
+    chosenRecipients.value = chosenRecipients.value.filter((r) => r.email.toLowerCase() !== email.toLowerCase());
+  } else {
+    chosenRecipients.value = [...chosenRecipients.value, { name: `${c.first_name || ''} ${c.last_name || ''}`.trim(), email }];
+  }
+}
+function addManualRecipient() {
+  const email = newRecipientEmail.value.trim();
+  if (!EMAIL_RE.test(email)) { toast.add({ title: 'Enter a valid email address', color: 'amber' }); return; }
+  if (!isChosen(email)) chosenRecipients.value = [...chosenRecipients.value, { name: '', email }];
+  newRecipientEmail.value = '';
+}
+function removeRecipient(email: string) {
+  chosenRecipients.value = chosenRecipients.value.filter((r) => r.email.toLowerCase() !== String(email).toLowerCase());
+}
+
+async function saveRecipients() {
+  const cid = (invoice.value as any)?.client?.id;
+  if (!cid) { toast.add({ title: 'This invoice has no client to save to', color: 'amber' }); return; }
+  savingRecipient.value = true;
+  try {
+    // Persist to the client — the send reads billing_contacts (To = first).
+    await updateClient(cid, { billing_contacts: chosenRecipients.value } as any);
+    await loadInvoice(); // refreshes invoice.client.billing_contacts → notice recomputes
+    showRecipientPicker.value = false;
+    toast.add({
+      title: chosenRecipients.value.length ? 'Billing recipients saved' : 'Billing recipients cleared',
+      color: 'green',
+    });
+  } catch (e: any) {
+    toast.add({ title: 'Could not save recipients', description: e?.message || 'Something went wrong', color: 'red' });
+  } finally {
+    savingRecipient.value = false;
+  }
+}
+
 // ── Inline-editable Details ───────────────────────────────────────
 const detailValues = computed(() => ({
   status: invoice.value?.status ?? '',
@@ -798,20 +943,114 @@ if (!props.compact) {
               Actions
             </h3>
             <div class="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                class="w-full justify-start"
-                :disabled="sendingEmail"
-                @click="handleSendEmail"
-              >
-                <Icon
-                  :name="sendingEmail ? 'lucide:loader-2' : 'lucide:send'"
-                  class="w-4 h-4 mr-2"
-                  :class="{ 'animate-spin': sendingEmail }"
-                />
-                {{ sendingEmail ? 'Sending...' : 'Send Invoice Email' }}
-              </Button>
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="w-full justify-start"
+                  :disabled="sendingEmail"
+                  @click="handleSendEmail"
+                >
+                  <Icon
+                    :name="sendingEmail ? 'lucide:loader-2' : 'lucide:send'"
+                    class="w-4 h-4 mr-2"
+                    :class="{ 'animate-spin': sendingEmail }"
+                  />
+                  {{ sendingEmail ? 'Sending...' : 'Send Invoice Email' }}
+                </Button>
+                <!-- Recipient notice + inline editor. Who the email reaches,
+                     editable anytime (billing contacts change often). -->
+                <div class="mt-1.5 px-1">
+                  <template v-if="!showRecipientPicker">
+                    <!-- Has recipient(s): show primary + count, with Change. -->
+                    <p
+                      v-if="reminderRecipient"
+                      class="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0"
+                    >
+                      <Icon name="lucide:mail" class="w-3 h-3 shrink-0" />
+                      <span class="truncate">
+                        Sends to <span class="font-medium text-foreground/80">{{ reminderRecipient }}</span><span v-if="reminderCcCount"> +{{ reminderCcCount }} more</span>
+                      </span>
+                      <button type="button" class="ml-auto shrink-0 text-primary hover:underline" @click="openRecipientPicker">Change</button>
+                    </p>
+                    <!-- No recipient: gentle warning + one-tap fix. -->
+                    <div v-else class="flex items-center gap-1.5 text-[11px] text-warning flex-wrap">
+                      <Icon name="lucide:alert-circle" class="w-3 h-3 shrink-0" />
+                      <span>No recipient yet.</span>
+                      <button type="button" class="font-medium text-primary hover:underline" @click="openRecipientPicker">
+                        Add a recipient
+                      </button>
+                    </div>
+                  </template>
+
+                  <!-- Editor: choose one or more client contacts, or add emails.
+                       Saved to the client, so it applies to future invoices. -->
+                  <div v-else class="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-2.5">
+                    <p class="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Billing recipients · saved to {{ clientName }}
+                    </p>
+
+                    <!-- Chosen recipients (first = To, rest = Cc). -->
+                    <div v-if="chosenRecipients.length" class="flex flex-wrap gap-1">
+                      <span
+                        v-for="(r, i) in chosenRecipients"
+                        :key="r.email"
+                        class="inline-flex items-center gap-1 rounded-full bg-muted/70 pl-1.5 pr-1 py-0.5 text-[11px]"
+                      >
+                        <span class="text-[9px] font-semibold uppercase tracking-wide" :class="i === 0 ? 'text-success' : 'text-muted-foreground'">{{ i === 0 ? 'To' : 'Cc' }}</span>
+                        <span class="truncate max-w-[150px]">{{ r.email }}</span>
+                        <button type="button" class="text-muted-foreground hover:text-destructive" :aria-label="`Remove ${r.email}`" @click="removeRecipient(r.email)">
+                          <Icon name="lucide:x" class="w-3 h-3" />
+                        </button>
+                      </span>
+                    </div>
+
+                    <!-- Pick from the client's contacts. -->
+                    <div v-if="clientContactsLoading" class="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" /> Loading contacts…
+                    </div>
+                    <div v-else-if="clientContacts.length" class="flex flex-col gap-0.5 max-h-32 overflow-y-auto -mx-0.5 px-0.5">
+                      <label
+                        v-for="c in clientContacts"
+                        :key="c.id"
+                        class="flex items-center gap-2 text-[11px] cursor-pointer rounded px-1 py-0.5 hover:bg-muted/40"
+                      >
+                        <input type="checkbox" class="rounded" :checked="isChosen(c.email)" @change="toggleContact(c)" />
+                        <span class="truncate">{{ contactLabel(c) }}</span>
+                        <span v-if="c.is_billing_contact" class="text-[9px] font-semibold uppercase tracking-wide text-success shrink-0">Billing</span>
+                      </label>
+                    </div>
+
+                    <!-- Add an ad-hoc email. -->
+                    <div class="flex items-center gap-1.5">
+                      <input
+                        v-model="newRecipientEmail"
+                        type="email"
+                        inputmode="email"
+                        placeholder="Add another email…"
+                        class="flex-1 min-w-0 rounded-lg glass-field px-2.5 py-1.5 text-xs"
+                        aria-label="Add a recipient email"
+                        @keydown.enter.prevent="addManualRecipient"
+                      />
+                      <Button variant="outline" size="sm" class="h-7 text-xs shrink-0" @click="addManualRecipient">Add</Button>
+                    </div>
+
+                    <p class="text-[10px] text-muted-foreground leading-snug">
+                      First recipient is the main one (To); the rest are Cc’d. Saved to the client, so future invoices use it too.
+                    </p>
+
+                    <div class="flex items-center gap-2">
+                      <Button size="sm" class="h-7 text-xs" :disabled="savingRecipient" @click="saveRecipients">
+                        <Icon v-if="savingRecipient" name="lucide:loader-2" class="w-3 h-3 mr-1 animate-spin" />
+                        Save
+                      </Button>
+                      <button type="button" class="text-[11px] text-muted-foreground hover:text-foreground" @click="showRecipientPicker = false">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <NuxtLink :to="`/invoices/${invoice.id}`" target="_blank" class="block">
                 <Button variant="outline" size="sm" class="w-full justify-start">
                   <Icon name="lucide:eye" class="w-4 h-4 mr-2" />

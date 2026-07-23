@@ -160,6 +160,19 @@ const projectsLoaded = ref(false);
 const invoicesLoaded = ref(false);
 const channelsLoaded = ref(false);
 
+// ── Money pipeline (value → paid → to-hunt) ─────────────────────────────────
+// The client altitude of the same reporting the project surface shows. Unlike
+// the project version it catches EVERY invoice on the client (many orgs bill at
+// the client level, not per-project), so this is where the numbers actually
+// populate. Contract value = sum of the client's non-archived projects.
+interface HuntRow { id: string; code: string; who: string; outstanding: number; dueDate: string | null }
+const clientContractValue = ref<number | null>(null);
+const billedTotal = ref<number | null>(null);
+const paidTotal = ref<number | null>(null);
+const currentOutstanding = ref<number | null>(null);
+const overdueTotal = ref<number | null>(null);
+const huntRows = ref<HuntRow[]>([]);
+
 const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
 const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
 
@@ -381,9 +394,13 @@ async function loadClient(force = false) {
 		// only invalidates the contacts cache. Force-bust so the reload
 		// reflects the just-linked contact instead of the stale client.
 		if (force) clientItemsApi.invalidateCache();
+		// Reset the money pipeline so a client switch can't flash stale figures.
+		billedTotal.value = null; paidTotal.value = null; clientContractValue.value = null;
+		currentOutstanding.value = null; overdueTotal.value = null; huntRows.value = [];
 		const c = await getClient(props.clientId);
 		client.value = c;
 		if (c) emit('loaded', c);
+		loadBillingSummary();  // fire-and-forget; the Overview reveals it when ready
 		await loadRelated();
 	} catch (e: any) {
 		error.value = e?.message || 'Failed to load client';
@@ -490,6 +507,78 @@ async function loadInvoices() {
 	} finally {
 		invoicesLoading.value = false;
 	}
+}
+
+// Client money pipeline — mirrors the project surface's loadBillingSummary but
+// scoped to the client (all its invoices) with contract value summed from its
+// non-archived projects. Paid is derived from summed payments (partials count
+// correctly); livemode===false test rows excluded; per-invoice paid clamped so
+// segments sum to invoiced. Independent of the projects/invoices tabs.
+async function loadBillingSummary() {
+	try {
+		const [invoices, projects] = await Promise.all([
+			invoiceItemsApi.list({
+				fields: [
+					'id', 'invoice_code', 'status', 'total_amount', 'due_date',
+					'payments.amount', 'payments.status', 'payments.livemode',
+				],
+				filter: { client: { _eq: props.clientId } },
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+			projectItemsApi.list({
+				fields: ['contract_value', 'status'],
+				filter: { client: { _eq: props.clientId }, status: { _neq: 'Archived' } },
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+		]);
+
+		const today = new Date(); today.setHours(0, 0, 0, 0);
+		let billed = 0, paid = 0, current = 0, overdue = 0;
+		const hunt: HuntRow[] = [];
+
+		for (const inv of invoices) {
+			if (inv?.status === 'archived') continue;
+			const total = Number(inv?.total_amount) || 0;
+			billed += total;
+			const invPaidRaw = (inv?.payments || []).reduce((s: number, p: any) => {
+				if (p?.status !== 'paid' || p?.livemode === false) return s;
+				return s + (Number(p?.amount) || 0);
+			}, 0);
+			const invPaid = Math.min(Math.max(invPaidRaw, 0), total);
+			const invOut = total - invPaid;
+			paid += invPaid;
+			if (invOut <= 0.005) continue;
+
+			const due = inv?.due_date ? new Date(inv.due_date) : null;
+			if (due) due.setHours(0, 0, 0, 0);
+			const isOverdue = !!due && due.getTime() < today.getTime();
+			if (isOverdue) overdue += invOut; else current += invOut;
+			hunt.push({
+				id: String(inv.id),
+				code: '',
+				who: inv?.invoice_code || 'Invoice',
+				outstanding: invOut,
+				dueDate: inv?.due_date || null,
+			});
+		}
+
+		clientContractValue.value = projects.reduce((s, p) => s + (Number(p?.contract_value) || 0), 0);
+		billedTotal.value = billed;
+		paidTotal.value = paid;
+		currentOutstanding.value = current;
+		overdueTotal.value = overdue;
+		huntRows.value = hunt;
+	} catch {
+		clientContractValue.value = null;
+		billedTotal.value = 0; paidTotal.value = 0;
+		currentOutstanding.value = 0; overdueTotal.value = 0;
+		huntRows.value = [];
+	}
+}
+
+// Hunt-list row → jump to the invoices tab (loads lazily via loadForTab).
+function openInvoiceFromHunt(_id: string) {
+	activeTab.value = 'invoices';
 }
 
 async function loadChannels() {
@@ -973,6 +1062,24 @@ watch(() => props.clientId, () => {
 					<!-- Rating / Projects / Invoices stats intentionally omitted here —
 					     the identity strip above already shows the rating breakdown
 					     and the tab counts carry Projects/Invoices. -->
+
+					<!-- Money: value → paid → to-hunt across ALL the client's invoices
+					     (this is where the numbers populate — most orgs bill at the
+					     client level). Shows once billing has loaded and there's either
+					     a contract value or something invoiced. -->
+					<div
+						v-if="paidTotal != null && ((clientContractValue || 0) > 0 || (billedTotal || 0) > 0)"
+						class="grid gap-4 lg:grid-cols-2"
+					>
+						<MoneyPipeline
+							:contract-value="clientContractValue"
+							:paid="paidTotal || 0"
+							:current-outstanding="currentOutstanding || 0"
+							:overdue="overdueTotal || 0"
+						/>
+						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+					</div>
+
 					<!-- Earnest, focused on THIS client: scoped prompts. The Convene
 					     button is hidden here — the identity strip above owns it. -->
 					<AppsEntityEarnestCard

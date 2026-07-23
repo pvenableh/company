@@ -413,6 +413,7 @@ async function loadProject() {
 	loading.value = true;
 	error.value = null;
 	billedTotal.value = null;  // reset so a project switch doesn't flash a stale figure
+	paidTotal.value = null; currentOutstanding.value = null; overdueTotal.value = null; huntRows.value = [];
 	try {
 		const p = await projectItemsApi.get(props.projectId, {
 			fields: [
@@ -574,20 +575,80 @@ async function loadInvoices() {
 	}
 }
 
-// Billing summary — sum of total_amount across every invoice linked to this
-// project (mirrors the legacy page's loadStats invoiceTotal). Attributes the
-// full invoice to the project, matching how the Financial Summary computes it.
+// Billing summary — the full "value → paid → to-hunt" split for this project.
+// Sums total_amount across every invoice linked to the project (billedTotal,
+// mirrors the legacy loadStats invoiceTotal), and additionally derives Paid /
+// Outstanding / Overdue from the nested payments. We use *summed payments*
+// (not invoice.status) so partial payments count correctly — a $10k invoice
+// with $6k received leaves $4k to hunt, not $0 or $10k. livemode===false rows
+// are Stripe test-mode and excluded; refunds are negative rows and net out.
+interface HuntRow { id: string; code: string; who: string; outstanding: number; dueDate: string | null }
+const paidTotal = ref<number | null>(null);
+const currentOutstanding = ref<number | null>(null);
+const overdueTotal = ref<number | null>(null);
+const huntRows = ref<HuntRow[]>([]);
+
 async function loadBillingSummary() {
 	try {
 		const rows = await invoiceItemsApi.list({
-			fields: ['total_amount'],
+			fields: [
+				'id', 'invoice_code', 'status', 'total_amount', 'due_date',
+				'client.name', 'bill_to.name',
+				'payments.amount', 'payments.status', 'payments.livemode',
+			],
 			filter: { projects: { projects_id: { _eq: props.projectId } } },
 			limit: -1,
 		}).catch(() => []) as any[];
-		billedTotal.value = rows.reduce((sum, r) => sum + (Number(r?.total_amount) || 0), 0);
+
+		const today = new Date(); today.setHours(0, 0, 0, 0);
+		let billed = 0, paid = 0, current = 0, overdue = 0;
+		const hunt: HuntRow[] = [];
+
+		for (const inv of rows) {
+			if (inv?.status === 'archived') continue;
+			const total = Number(inv?.total_amount) || 0;
+			billed += total;
+			const invPaidRaw = (inv?.payments || []).reduce((s: number, p: any) => {
+				if (p?.status !== 'paid' || p?.livemode === false) return s;
+				return s + (Number(p?.amount) || 0);
+			}, 0);
+			// Clamp so per-invoice paid + outstanding == total (over/under-payment
+			// edges don't skew the pipeline segments, which must sum to invoiced).
+			const invPaid = Math.min(Math.max(invPaidRaw, 0), total);
+			const invOut = total - invPaid;
+			paid += invPaid;
+			if (invOut <= 0.005) continue;
+
+			const due = inv?.due_date ? new Date(inv.due_date) : null;
+			if (due) due.setHours(0, 0, 0, 0);
+			const isOverdue = !!due && due.getTime() < today.getTime();
+			if (isOverdue) overdue += invOut; else current += invOut;
+			hunt.push({
+				id: String(inv.id),
+				code: inv?.invoice_code || 'Invoice',
+				who: inv?.client?.name || inv?.bill_to?.name || 'Client',
+				outstanding: invOut,
+				dueDate: inv?.due_date || null,
+			});
+		}
+
+		billedTotal.value = billed;
+		paidTotal.value = paid;
+		currentOutstanding.value = current;
+		overdueTotal.value = overdue;
+		huntRows.value = hunt;
 	} catch {
 		billedTotal.value = 0;
+		paidTotal.value = 0;
+		currentOutstanding.value = 0;
+		overdueTotal.value = 0;
+		huntRows.value = [];
 	}
+}
+
+// Hunt-list row → jump to the invoices tab (loads lazily via loadForTab).
+function openInvoiceFromHunt(_id: string) {
+	activeTab.value = 'invoices';
 }
 
 // ── Manual event creation (Timeline tab) ───────────────────────────────────
@@ -1192,6 +1253,21 @@ watch(() => props.projectId, () => {
 				     landing leads with work, not a form. -->
 				<div v-if="activeTab === 'overview'" class="space-y-6">
 					<AppsAtAGlance :metrics="overviewGlance.metrics" :attention="overviewGlance.attention" />
+
+					<!-- Money: value → paid → to-hunt. Shows once billing has loaded
+					     and there's either a contract value or something invoiced. -->
+					<div
+						v-if="paidTotal != null && (contractValueNum != null || (billedTotal || 0) > 0)"
+						class="grid gap-4 lg:grid-cols-2"
+					>
+						<MoneyPipeline
+							:contract-value="contractValueNum"
+							:paid="paidTotal || 0"
+							:current-outstanding="currentOutstanding || 0"
+							:overdue="overdueTotal || 0"
+						/>
+						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+					</div>
 
 					<!-- Key contacts — inherited from the client roster (billing
 					     first), so you see who to reach without opening the tab. -->
