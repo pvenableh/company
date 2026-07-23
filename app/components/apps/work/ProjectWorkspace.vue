@@ -77,6 +77,9 @@ const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
 const invoiceItemsApi = useDirectusItems('invoices');
+const eventItemsApi = useDirectusItems('project_events');
+const proposalItemsApi = useDirectusItems('proposals');
+const contractItemsApi = useDirectusItems('contracts');
 const projectsContactsApi = useDirectusItems('projects_contacts');
 const contactItemsApi = useDirectusItems('contacts');
 
@@ -84,7 +87,13 @@ const project = ref<any | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const activeTab = ref<ProjectTabKey>(props.initialTab || 'overview');
+// Legacy deep-links (?tab=files / ?tab=documents) now resolve to the merged
+// Files & Docs surface so old bookmarks don't land on a blank tab.
+function normalizeTab(t: ProjectTabKey | undefined | null): ProjectTabKey {
+	if (t === 'files' as any || t === 'documents' as any) return 'library';
+	return (t || 'overview') as ProjectTabKey;
+}
+const activeTab = ref<ProjectTabKey>(normalizeTab(props.initialTab));
 
 // Overview "live pulse" sub-tabs. Timeline (events + tickets + tasks, in time
 // order) leads as the default read; Activity (audit feed) is one tap away.
@@ -143,6 +152,10 @@ const meetings = ref<any[]>([]);
 const meetingsLoading = ref(false);
 const invoices = ref<any[]>([]);
 const invoicesLoading = ref(false);
+// Invoiced-to-date across this project's invoices. Fetched eagerly (one field)
+// so the Overview can show "left to bill" against the contract value without
+// opening the Invoices tab. null = not yet loaded.
+const billedTotal = ref<number | null>(null);
 const files = ref<any[]>([]);
 const filesLoading = ref(false);
 
@@ -151,7 +164,10 @@ const filesLoading = ref(false);
 // the junction itself so the same contact can be pinned to multiple projects
 // with different orderings.
 const projectContactRows = ref<any[]>([]);  // raw junction rows w/ contact nested
-const directProjectContactsOrdered = ref<any[]>([]); // ordered for drag-reorder
+const directProjectContactsOrdered = ref<any[]>([]); // project-ONLY extras (drag-reorder)
+// The project's client roster (contacts where contact.client === project.client).
+// Inherited onto the project by default — you manage these on the client.
+const clientContacts = ref<any[]>([]);
 const contactsLoading = ref(false);
 const contactsLoaded = ref(false);
 const projectContactCount = ref(0);
@@ -170,6 +186,130 @@ watch(documentsRefreshTick, () => {
 	documentsContractsRef.value?.refresh?.();
 });
 
+// ── Files & Docs (merged library surface) ───────────────────────────────────
+// One tab unifies uploaded files with authored proposals/contracts. Files are
+// classified by their native `tags` (see fileKind) so the same folder + tag
+// system already in Directus drives the filter chips — no new schema.
+const filesApi = useDirectusFiles();
+const LIBRARY_TAGS = ['contract', 'proposal', 'document', 'asset', 'brief'];
+type LibraryFilter = 'all' | 'contracts' | 'proposals' | 'documents' | 'assets';
+const libraryFilter = ref<LibraryFilter>('all');
+const libraryFolder = ref<string | null>(null);
+
+// Classify a file row (junction → directus_files_id) into one bucket: an
+// explicit known tag wins, else images are assets and everything else is a
+// generic document.
+function fileKind(row: any): 'contract' | 'proposal' | 'document' | 'asset' {
+	const doc = row?.directus_files_id || {};
+	const tags = (Array.isArray(doc.tags) ? doc.tags : []).map((t: any) => String(t).toLowerCase());
+	if (tags.includes('contract')) return 'contract';
+	if (tags.includes('proposal')) return 'proposal';
+	if (tags.includes('asset')) return 'asset';
+	if (tags.includes('document') || tags.includes('brief') || tags.includes('doc')) return 'document';
+	if (String(doc.type || '').startsWith('image/')) return 'asset';
+	return 'document';
+}
+const KIND_BADGE: Record<string, { label: string; class: string }> = {
+	contract: { label: 'Contract', class: 'bg-primary/15 text-primary' },
+	proposal: { label: 'Proposal', class: 'bg-info/15 text-info' },
+	document: { label: 'Document', class: 'bg-muted/50 text-foreground/70' },
+	asset:    { label: 'Asset', class: 'bg-success/15 text-success' },
+};
+
+const filteredLibraryFiles = computed(() => {
+	return files.value.filter((row) => {
+		if (libraryFolder.value && (row.directus_files_id?.folder?.id || null) !== libraryFolder.value) return false;
+		if (libraryFilter.value === 'all') return true;
+		const k = fileKind(row);
+		if (libraryFilter.value === 'assets') return k === 'asset';
+		if (libraryFilter.value === 'documents') return k === 'document';
+		if (libraryFilter.value === 'contracts') return k === 'contract';
+		if (libraryFilter.value === 'proposals') return k === 'proposal';
+		return true;
+	});
+});
+
+// Folders present among this project's files — drives the folder filter row.
+const libraryFolders = computed(() => {
+	const map = new Map<string, string>();
+	for (const row of files.value) {
+		const fl = row.directus_files_id?.folder;
+		if (fl?.id) map.set(fl.id, fl.name || 'Folder');
+	}
+	return [...map.entries()].map(([id, name]) => ({ id, name }));
+});
+
+// Whether the authored proposal/contract lists show under the current filter.
+const showContractsSection = computed(() => libraryFilter.value === 'all' || libraryFilter.value === 'contracts');
+const showProposalsSection = computed(() => libraryFilter.value === 'all' || libraryFilter.value === 'proposals');
+
+const libraryFilterChips: Array<{ key: LibraryFilter; label: string; icon: string }> = [
+	{ key: 'all', label: 'All', icon: 'lucide:layers' },
+	{ key: 'contracts', label: 'Contracts', icon: 'lucide:file-signature' },
+	{ key: 'proposals', label: 'Proposals', icon: 'lucide:file-text' },
+	{ key: 'documents', label: 'Documents', icon: 'lucide:file' },
+	{ key: 'assets', label: 'Assets', icon: 'lucide:image' },
+];
+
+// Re-tag a file into a single library bucket (clears other known tags first).
+async function setFileKind(row: any, tag: string | null) {
+	const doc = row?.directus_files_id;
+	if (!doc?.id) return;
+	const current = Array.isArray(doc.tags) ? doc.tags.slice() : [];
+	const next = current.filter((t: any) => !LIBRARY_TAGS.includes(String(t).toLowerCase()));
+	if (tag) next.push(tag);
+	try {
+		await filesApi.update(doc.id, { tags: next });
+		doc.tags = next;  // optimistic — keeps the badge in sync without a refetch
+	} catch (e: any) {
+		toast.error(e?.data?.message || e?.message || 'Failed to update tag');
+	}
+}
+
+// Attach an already-uploaded file (search-driven so we never dump the whole
+// asset library). Reuses the admin-token attach-file proxy.
+const showAttachFileModal = ref(false);
+const attachSearch = ref('');
+const attachResults = ref<any[]>([]);
+const attachSearching = ref(false);
+const attachedFileIds = computed(() => new Set(files.value.map((r) => r.directus_files_id?.id).filter(Boolean)));
+let attachSearchTimer: ReturnType<typeof setTimeout> | null = null;
+function onAttachSearchInput() {
+	if (attachSearchTimer) clearTimeout(attachSearchTimer);
+	attachSearchTimer = setTimeout(searchOrgFiles, 250);
+}
+async function searchOrgFiles() {
+	const q = attachSearch.value.trim();
+	if (q.length < 2) { attachResults.value = []; return; }
+	attachSearching.value = true;
+	try {
+		const res: any = await filesApi.list({
+			search: q,
+			fields: ['id', 'title', 'filename_download', 'type', 'filesize', 'uploaded_on'],
+			sort: ['-uploaded_on'],
+			limit: 25,
+		});
+		const rows = Array.isArray(res) ? res : (res?.data ?? []);
+		attachResults.value = rows.filter((f: any) => !attachedFileIds.value.has(f.id));
+	} catch {
+		attachResults.value = [];
+	} finally {
+		attachSearching.value = false;
+	}
+}
+async function attachExistingFile(f: any) {
+	try {
+		await $fetch('/api/projects/attach-file', { method: 'POST', body: { projectId: props.projectId, fileId: f.id } });
+		toast.success('File attached');
+		showAttachFileModal.value = false;
+		attachSearch.value = '';
+		attachResults.value = [];
+		await loadFiles();
+	} catch (e: any) {
+		toast.error(e?.data?.message || e?.message || 'Failed to attach file');
+	}
+}
+
 // Toggle between Board / List for tasks + tickets. Stored per-surface in
 // a cookie so the panel and page can share their preference.
 const tasksView = useCookie<'board' | 'list'>('apps-project-tasks-view', { default: () => 'list' });
@@ -181,9 +321,9 @@ const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
 	channels: channels.value.length,
 	meetings: meetings.value.length,
 	invoices: invoices.value.length,
-	documents: documentsProposalCount.value + documentsContractCount.value,
+	// Files & Docs = uploaded files + authored proposals + authored contracts.
+	library: files.value.length + documentsProposalCount.value + documentsContractCount.value,
 	contacts: projectContactCount.value,
-	files: files.value.length,
 }));
 
 // Overview "at a glance" — read-first health so the landing tab leads with
@@ -212,19 +352,29 @@ const overviewGlance = computed(() => {
 		}
 	}
 
-	const value = p.contract_value != null && p.contract_value !== ''
-		? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(p.contract_value))
-		: '—';
+	const usd0 = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+	const value = contractValueNum.value != null ? usd0(contractValueNum.value) : '—';
 
-	return {
-		metrics: [
-			{ label: 'Status', value: status },
-			{ label: 'Timeline', value: timeline, tone: timelineTone },
-			{ label: 'Client', value: p.client?.name || '—' },
-			{ label: 'Value', value },
-		],
-		attention,
-	};
+	const metrics: Array<{ label: string; value: string | number; tone?: 'default' | 'good' | 'warn' | 'danger' }> = [
+		{ label: 'Status', value: status },
+		{ label: 'Timeline', value: timeline, tone: timelineTone },
+		{ label: 'Client', value: p.client?.name || '—' },
+		{ label: 'Value', value },
+	];
+
+	// "Left to bill" sits right beside Value: contract value minus everything
+	// invoiced so far. Fully-billed (≤ 0) reads as good; a negative means
+	// over-billed, which we surface plainly ("−$X").
+	if (remainingToBill.value != null && contractValueNum.value != null) {
+		const rem = remainingToBill.value;
+		metrics.push({
+			label: 'Left to bill',
+			value: rem < 0 ? `−${usd0(Math.abs(rem))}` : usd0(rem),
+			tone: rem <= 0 ? 'good' : 'default',
+		});
+	}
+
+	return { metrics, attention };
 });
 
 const projectTeamMembers = computed(() => {
@@ -248,9 +398,9 @@ function loadForTab(tab: ProjectTabKey) {
 		case 'meetings': if (!meetings.value.length && !meetingsLoading.value) loadMeetings(); break;
 		case 'invoices': if (!invoices.value.length && !invoicesLoading.value) loadInvoices(); break;
 		case 'contacts': if (!contactsLoaded.value && !contactsLoading.value) loadProjectContacts(); break;
-		case 'files':    if (!files.value.length && !filesLoading.value) loadFiles(); break;
-		// 'activity' (ProjectsActivityTimeline) + 'documents' (Money*List)
-		// self-fetch; nothing to warm here.
+		// Files & Docs — warm the file list (proposals/contracts self-fetch).
+		case 'library':  if (!files.value.length && !filesLoading.value) loadFiles(); break;
+		// 'activity' (ProjectsActivityTimeline) self-fetches; nothing to warm.
 	}
 }
 
@@ -262,6 +412,7 @@ watch(activeTab, (next) => {
 async function loadProject() {
 	loading.value = true;
 	error.value = null;
+	billedTotal.value = null;  // reset so a project switch doesn't flash a stale figure
 	try {
 		const p = await projectItemsApi.get(props.projectId, {
 			fields: [
@@ -286,6 +437,8 @@ async function loadProject() {
 		refreshTaskCount();
 		refreshTicketCount();
 		refreshProjectContactCount();
+		loadBillingSummary();
+		loadClientContacts();  // eager: powers the Overview "key contacts" strip
 	} catch (e: any) {
 		error.value = e?.message || 'Failed to load project';
 	} finally {
@@ -421,6 +574,101 @@ async function loadInvoices() {
 	}
 }
 
+// Billing summary — sum of total_amount across every invoice linked to this
+// project (mirrors the legacy page's loadStats invoiceTotal). Attributes the
+// full invoice to the project, matching how the Financial Summary computes it.
+async function loadBillingSummary() {
+	try {
+		const rows = await invoiceItemsApi.list({
+			fields: ['total_amount'],
+			filter: { projects: { projects_id: { _eq: props.projectId } } },
+			limit: -1,
+		}).catch(() => []) as any[];
+		billedTotal.value = rows.reduce((sum, r) => sum + (Number(r?.total_amount) || 0), 0);
+	} catch {
+		billedTotal.value = 0;
+	}
+}
+
+// ── Manual event creation (Timeline tab) ───────────────────────────────────
+// The apps/work surface previously had no way to add a project_event by hand
+// (only the AI wizard on the legacy page). This lightweight modal creates one
+// and remounts the Gantt via `timelineRefreshKey` so the new event appears.
+const showNewEventModal = ref(false);
+const creatingEvent = ref(false);
+const timelineRefreshKey = ref(0);
+const EVENT_TYPE_OPTIONS = [
+	{ label: 'General', value: 'General' },
+	{ label: 'Design', value: 'Design' },
+	{ label: 'Content', value: 'Content' },
+	{ label: 'Timeline', value: 'Timeline' },
+	{ label: 'Financial', value: 'Financial' },
+	{ label: 'Hours', value: 'Hours' },
+];
+const EVENT_STATUS_OPTIONS = [
+	{ label: 'Scheduled', value: 'Scheduled' },
+	{ label: 'Active', value: 'Active' },
+	{ label: 'Completed', value: 'Completed' },
+];
+const newEventForm = reactive({
+	title: '',
+	description: '',
+	type: 'General',
+	status: 'Active',
+	date: '',
+	end_date: '',
+	is_milestone: false,
+});
+function resetNewEventForm() {
+	newEventForm.title = '';
+	newEventForm.description = '';
+	newEventForm.type = 'General';
+	newEventForm.status = 'Active';
+	newEventForm.date = '';
+	newEventForm.end_date = '';
+	newEventForm.is_milestone = false;
+}
+async function handleCreateEvent() {
+	if (!newEventForm.title.trim() || creatingEvent.value) return;
+	creatingEvent.value = true;
+	try {
+		const data: Record<string, any> = {
+			title: newEventForm.title.trim(),
+			type: newEventForm.type,
+			status: newEventForm.status,
+			project: props.projectId,
+			is_milestone: newEventForm.is_milestone,
+		};
+		if (newEventForm.description.trim()) data.description = newEventForm.description.trim();
+		// Mirror event_date into date (the Gantt prefers event_date, older code
+		// reads date) so the new event lands on the timeline immediately.
+		if (newEventForm.date) { data.date = newEventForm.date; data.event_date = newEventForm.date; }
+		if (newEventForm.end_date) data.end_date = newEventForm.end_date;
+		await eventItemsApi.create(data);
+		toast.success('Event added');
+		showNewEventModal.value = false;
+		resetNewEventForm();
+		timelineRefreshKey.value++;  // remount the Gantt so it refetches
+	} catch (e: any) {
+		toast.error(e?.data?.message || e?.message || 'Failed to add event');
+	} finally {
+		creatingEvent.value = false;
+	}
+}
+
+// Contract value + "left to bill" = contract_value − invoiced-to-date. Null
+// until both a contract value and the billed total are known.
+const contractValueNum = computed<number | null>(() => {
+	const raw = (project.value as any)?.contract_value;
+	if (raw == null || raw === '') return null;
+	const n = Number(raw);
+	return Number.isFinite(n) ? n : null;
+});
+const remainingToBill = computed<number | null>(() => {
+	if (contractValueNum.value == null || billedTotal.value == null) return null;
+	return contractValueNum.value - billedTotal.value;
+});
+
 // Project Contacts — fetched lazily via the projects_contacts junction.
 // We pull the nested contact row so the UI can render names/emails without
 // an extra round trip. Junction rows are sorted by their own `sort` column
@@ -437,19 +685,39 @@ const PROJECT_CONTACT_FIELDS = [
 	'contact.is_billing_contact',
 ];
 
+// The project's client's roster — inherited onto the project by default. A
+// contact belongs to one client (contact.client), so this is a direct filter.
+const CLIENT_CONTACT_FIELDS = ['id', 'first_name', 'last_name', 'email', 'title', 'is_billing_contact', 'sort'];
+async function loadClientContacts() {
+	const cid = projectClientId.value;
+	if (!cid) { clientContacts.value = []; return; }
+	clientContacts.value = await contactItemsApi.list({
+		fields: CLIENT_CONTACT_FIELDS,
+		filter: { client: { _eq: cid } },
+		sort: ['sort'],
+		limit: -1,
+	}).catch(() => []) as any[];
+}
+
 async function loadProjectContacts() {
 	contactsLoading.value = true;
 	try {
-		const rows = await projectsContactsApi.list({
-			fields: PROJECT_CONTACT_FIELDS,
-			filter: { project: { _eq: props.projectId } },
-			sort: ['sort'],
-			limit: -1,
-		}).catch(() => []) as any[];
+		// Client roster (inherited) + the project-only junction, in parallel.
+		const [rows] = await Promise.all([
+			projectsContactsApi.list({
+				fields: PROJECT_CONTACT_FIELDS,
+				filter: { project: { _eq: props.projectId } },
+				sort: ['sort'],
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+			loadClientContacts(),
+		]);
 		projectContactRows.value = rows;
-		// Order by junction `sort`; rows missing a sort fall to the end and
-		// sub-sort alphabetically so first-load looks tidy.
-		const ordered = [...rows];
+		// Extras = pinned contacts that AREN'T already in the client roster (so a
+		// client contact never shows twice). Order by junction `sort`; rows
+		// missing a sort fall to the end and sub-sort alphabetically.
+		const inheritedIds = new Set(clientContacts.value.map((c) => c.id));
+		const ordered = rows.filter((r) => r?.contact && !inheritedIds.has(r.contact.id));
 		ordered.sort((a, b) => {
 			const sa = a?.sort, sb = b?.sort;
 			if (sa != null && sb != null && sa !== sb) return sa - sb;
@@ -460,18 +728,42 @@ async function loadProjectContacts() {
 			return an.localeCompare(bn);
 		});
 		directProjectContactsOrdered.value = ordered;
-		projectContactCount.value = rows.length;
+		projectContactCount.value = clientContacts.value.length + ordered.length;
 		contactsLoaded.value = true;
 	} finally {
 		contactsLoading.value = false;
 	}
 }
 
+// Sorted client roster for display (inherited section).
+const inheritedClientContacts = computed(() => {
+	return [...clientContacts.value].sort((a, b) => {
+		const sa = a?.sort, sb = b?.sort;
+		if (sa != null && sb != null && sa !== sb) return sa - sb;
+		const an = `${a?.first_name || ''} ${a?.last_name || ''}`.toLowerCase();
+		const bn = `${b?.first_name || ''} ${b?.last_name || ''}`.toLowerCase();
+		return an.localeCompare(bn);
+	});
+});
+const projectClientName = computed(() => (project.value as any)?.client?.name || 'the client');
+
+// Overview "key contacts" strip — billing contact first, then a couple more.
+const keyContacts = computed(() => {
+	const list = inheritedClientContacts.value;
+	const billing = list.filter((c) => c.is_billing_contact);
+	const rest = list.filter((c) => !c.is_billing_contact);
+	return [...billing, ...rest].slice(0, 3);
+});
+
 async function refreshProjectContactCount() {
 	try {
-		projectContactCount.value = await projectsContactsApi
-			.count({ project: { _eq: props.projectId } })
-			.catch(() => 0);
+		const cid = projectClientId.value;
+		const [proj, cli] = await Promise.all([
+			projectsContactsApi.count({ project: { _eq: props.projectId } }).catch(() => 0),
+			cid ? contactItemsApi.count({ client: { _eq: cid } }).catch(() => 0) : Promise.resolve(0),
+		]);
+		// Upper bound for the badge (exact de-dupe happens once the tab loads).
+		projectContactCount.value = (proj || 0) + (cli || 0);
 	} catch {
 		projectContactCount.value = 0;
 	}
@@ -630,6 +922,8 @@ const showAttachChannelModal = ref(false);
 const showCreateMeetingModal = ref(false);
 const showCreateProposalModal = ref(false);
 const showCreateContractModal = ref(false);
+const showAttachProposalModal = ref(false);
+const showAttachContractModal = ref(false);
 const showCreateContactModal = ref(false);
 const showAttachContactModal = ref(false);
 
@@ -650,10 +944,12 @@ function onTaskAttached() {
 function onInvoiceCreated() {
 	showCreateInvoiceModal.value = false;
 	loadInvoices();
+	loadBillingSummary();
 }
 function onInvoiceAttached() {
 	showAttachInvoiceModal.value = false;
 	loadInvoices();
+	loadBillingSummary();
 }
 function onChannelAttached() {
 	showAttachChannelModal.value = false;
@@ -696,12 +992,31 @@ function onMeetingCreated() {
 	showCreateMeetingModal.value = false;
 	loadMeetings();
 }
-function onProposalCreated() {
+// Link the freshly-created doc to THIS project (the shared FormModals have no
+// project picker; now that proposals.project / contracts.project exist we set
+// it here so the doc lands under this project's Files & Docs tab).
+async function onProposalCreated(created?: any) {
 	showCreateProposalModal.value = false;
+	if (created?.id) {
+		try { await proposalItemsApi.update(created.id, { project: props.projectId } as any); } catch { /* non-fatal */ }
+	}
 	documentsRefreshTick.value++;
 }
-function onContractCreated() {
+async function onContractCreated(created?: any) {
 	showCreateContractModal.value = false;
+	if (created?.id) {
+		try { await contractItemsApi.update(created.id, { project: props.projectId } as any); } catch { /* non-fatal */ }
+	}
+	documentsRefreshTick.value++;
+}
+// Attaching an EXISTING proposal/contract just sets its `project` FK (handled
+// by AppsWorkAttachExistingModal). Refresh the lists so it appears.
+function onProposalAttached() {
+	showAttachProposalModal.value = false;
+	documentsRefreshTick.value++;
+}
+function onContractAttached() {
+	showAttachContractModal.value = false;
 	documentsRefreshTick.value++;
 }
 
@@ -877,6 +1192,28 @@ watch(() => props.projectId, () => {
 				     landing leads with work, not a form. -->
 				<div v-if="activeTab === 'overview'" class="space-y-6">
 					<AppsAtAGlance :metrics="overviewGlance.metrics" :attention="overviewGlance.attention" />
+
+					<!-- Key contacts — inherited from the client roster (billing
+					     first), so you see who to reach without opening the tab. -->
+					<div v-if="keyContacts.length" class="flex items-center gap-2 flex-wrap -mt-3">
+						<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Key contacts</span>
+						<button
+							v-for="c in keyContacts"
+							:key="c.id"
+							type="button"
+							class="inline-flex items-center gap-1.5 h-6 pl-2 pr-2.5 rounded-full bg-muted/40 text-[12px] text-foreground/80 hover:bg-muted/70 hover:text-foreground transition-colors"
+							@click="openContactSlideOver(c.id)"
+						>
+							<span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.is_billing_contact ? 'bg-success' : 'bg-primary/60'" />
+							{{ c.first_name }} {{ c.last_name }}
+							<span v-if="c.is_billing_contact" class="text-[9px] font-semibold uppercase tracking-wide text-success">Billing</span>
+						</button>
+						<button
+							type="button"
+							class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+							@click="activeTab = 'contacts'"
+						>View all →</button>
+					</div>
 					<!-- Earnest, focused on THIS project: scoped prompts + a Boardroom
 					     convene, so opening a project surfaces work + next moves. -->
 					<AppsEntityEarnestCard
@@ -937,6 +1274,26 @@ watch(() => props.projectId, () => {
 							/>
 						</div>
 					</details>
+				</div>
+
+				<!-- Timeline — a project-scoped Gantt: this project's events/
+				     milestones + tickets + tasks on one time axis. Self-fetching
+				     (isolated single-project state), so nothing to warm here. -->
+				<div v-else-if="activeTab === 'timeline'">
+					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+						<p class="text-xs text-muted-foreground">
+							Events, milestones, tickets, and tasks for this project on one timeline.
+						</p>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+							@click="showNewEventModal = true"
+						>
+							<Icon name="lucide:plus" class="w-3 h-3" />
+							New Event
+						</button>
+					</div>
+					<ProjectTimelineUnifiedGantt :key="timelineRefreshKey" :project-id="projectId" />
 				</div>
 
 				<!-- Activity -->
@@ -1260,12 +1617,75 @@ watch(() => props.projectId, () => {
 					</div>
 				</div>
 
-				<!-- Documents (proposals + contracts) — scoped to this project via
-				     the proposals.project / contracts.project FK added by
-				     scripts/setup-doc-project-fk.ts. Empty state until rows are
-				     linked. Mirrors ClientWorkspace Documents tab. -->
-				<div v-else-if="activeTab === 'documents'" class="space-y-6">
-					<section>
+				<!-- Files & Docs — one surface merging authored proposals/
+				     contracts with uploaded files, classified by the native file
+				     tags + folders that already exist in Directus. Filter chips
+				     switch the population; folder chips narrow it. Authored
+				     proposals/contracts still depend on the doc→project FK
+				     (setup-doc-project-fk.ts); files work regardless. -->
+				<div v-else-if="activeTab === 'library'" class="space-y-6">
+					<!-- Filter chips + file actions -->
+					<div class="flex items-center justify-between gap-2 flex-wrap">
+						<div class="flex flex-wrap items-center gap-1.5">
+							<button
+								v-for="chip in libraryFilterChips"
+								:key="chip.key"
+								type="button"
+								class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-medium border transition-colors"
+								:class="libraryFilter === chip.key
+									? 'bg-primary text-primary-foreground border-primary'
+									: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+								@click="libraryFilter = chip.key"
+							>
+								<Icon :name="chip.icon" class="w-3 h-3" />
+								{{ chip.label }}
+							</button>
+						</div>
+						<div class="flex items-center gap-2 shrink-0">
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+								@click="showAttachFileModal = true"
+							>
+								<Icon name="lucide:link" class="w-3 h-3" />
+								Attach file
+							</button>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+								:disabled="uploadingFile"
+								@click="triggerFileUpload"
+							>
+								<Icon :name="uploadingFile ? 'lucide:loader-2' : 'lucide:upload'" :class="['w-3 h-3', uploadingFile && 'animate-spin']" />
+								{{ uploadingFile ? 'Uploading…' : 'Upload' }}
+							</button>
+							<input ref="fileInputRef" type="file" multiple class="hidden" @change="onFileInputChange" />
+						</div>
+					</div>
+
+					<!-- Folder filter — only when the project's files carry folders. -->
+					<div v-if="libraryFolders.length" class="flex flex-wrap items-center gap-1.5">
+						<span class="text-[10px] uppercase tracking-wider text-muted-foreground mr-0.5">Folder</span>
+						<button
+							type="button"
+							class="inline-flex items-center h-6 px-2.5 rounded-full text-[10px] font-medium border transition-colors"
+							:class="!libraryFolder ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="libraryFolder = null"
+						>All</button>
+						<button
+							v-for="fl in libraryFolders"
+							:key="fl.id"
+							type="button"
+							class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-medium border transition-colors"
+							:class="libraryFolder === fl.id ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:bg-muted/60'"
+							@click="libraryFolder = fl.id"
+						>
+							<Icon name="lucide:folder" class="w-2.5 h-2.5" />
+							{{ fl.name }}
+						</button>
+					</div>
+
+					<section v-if="showProposalsSection">
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
@@ -1274,23 +1694,38 @@ watch(() => props.projectId, () => {
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ documentsProposalCount }}</span>
 							</div>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateProposalModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Proposal
-							</button>
+							<div class="flex items-center gap-2">
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+									@click="showAttachProposalModal = true"
+								>
+									<Icon name="lucide:link" class="w-3 h-3" />
+									Attach Existing
+								</button>
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+									@click="showCreateProposalModal = true"
+								>
+									<Icon name="lucide:plus" class="w-3 h-3" />
+									New Proposal
+								</button>
+							</div>
 						</div>
 						<MoneyProposalsList
 							ref="documentsProposalsRef"
 							:project-id="projectId"
 							@count="documentsProposalCount = $event"
 						/>
+						<!-- Inherited: the client's proposals not tied to any project. -->
+						<div v-if="projectClientId" class="mt-4">
+							<p class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2">From {{ projectClientName }} · client-level</p>
+							<MoneyProposalsList :client-id="projectClientId" client-level-only />
+						</div>
 					</section>
 
-					<section>
+					<section v-if="showContractsSection">
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Icon name="lucide:file-signature" class="w-4 h-4 text-muted-foreground" />
@@ -1299,20 +1734,118 @@ watch(() => props.projectId, () => {
 								</h4>
 								<span class="text-[10px] text-muted-foreground/70">{{ documentsContractCount }}</span>
 							</div>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateContractModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Contract
-							</button>
+							<div class="flex items-center gap-2">
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+									@click="showAttachContractModal = true"
+								>
+									<Icon name="lucide:link" class="w-3 h-3" />
+									Attach Existing
+								</button>
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+									@click="showCreateContractModal = true"
+								>
+									<Icon name="lucide:plus" class="w-3 h-3" />
+									New Contract
+								</button>
+							</div>
 						</div>
 						<MoneyContractsList
 							ref="documentsContractsRef"
 							:project-id="projectId"
 							@count="documentsContractCount = $event"
 						/>
+						<!-- Inherited: the client's contracts not tied to any project. -->
+						<div v-if="projectClientId" class="mt-4">
+							<p class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2">From {{ projectClientName }} · client-level</p>
+							<MoneyContractsList :client-id="projectClientId" client-level-only />
+						</div>
+					</section>
+
+					<!-- Files — uploaded attachments, filtered by chip + folder.
+					     Each file carries a classifier (its tag) so a signed PDF
+					     reads as a Contract, a brief as a Document, etc. -->
+					<section>
+						<div class="flex items-center gap-2 mb-3">
+							<Icon name="lucide:folder" class="w-4 h-4 text-muted-foreground" />
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Files</h4>
+							<span class="text-[10px] text-muted-foreground/70">{{ filteredLibraryFiles.length }}</span>
+						</div>
+						<div
+							class="rounded-2xl border-2 border-dashed transition-colors"
+							:class="isDraggingFile ? 'border-primary bg-primary/5 p-2' : 'border-transparent'"
+							@dragover.prevent="isDraggingFile = true"
+							@dragleave.prevent="isDraggingFile = false"
+							@drop.prevent="onFileDrop"
+						>
+							<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
+								<div v-for="i in skeletonRows(files.length, 4, 6)" :key="`file-skel-${i}`" class="ios-card p-3 flex items-center gap-3">
+									<USkeleton class="w-4 h-4 shrink-0" />
+									<div class="flex-1 space-y-1.5">
+										<USkeleton class="h-3.5 w-3/4" />
+										<USkeleton class="h-2.5 w-20" />
+									</div>
+								</div>
+							</div>
+							<button
+								v-else-if="!files.length"
+								type="button"
+								class="w-full text-sm text-muted-foreground text-center py-10 hover:text-foreground transition-colors"
+								@click="triggerFileUpload"
+							>
+								Drag files here, click to upload, or attach an existing file.
+							</button>
+							<div v-else-if="!filteredLibraryFiles.length" class="text-sm text-muted-foreground text-center py-10">
+								No files in this view.
+							</div>
+							<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+								<div
+									v-for="row in filteredLibraryFiles"
+									:key="row.id"
+									class="ios-card p-3 flex items-center gap-2.5 hover:bg-muted/30 transition-colors"
+								>
+									<Icon :name="getFileIcon(row.directus_files_id?.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+									<a
+										:href="`${config.public.directusUrl}/assets/${row.directus_files_id?.id}`"
+										target="_blank"
+										rel="noopener"
+										class="flex-1 min-w-0"
+									>
+										<p class="text-sm font-medium text-foreground truncate">{{ row.directus_files_id?.title || row.directus_files_id?.filename_download }}</p>
+										<div class="flex items-center gap-2 mt-0.5">
+											<span class="text-[10px] text-muted-foreground">{{ formatFileSize(row.directus_files_id?.filesize) }}</span>
+											<span v-if="row.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">{{ fmtDate(row.directus_files_id.uploaded_on) }}</span>
+											<span v-if="row.directus_files_id?.folder?.name" class="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+												<Icon name="lucide:folder" class="w-2.5 h-2.5" />{{ row.directus_files_id.folder.name }}
+											</span>
+										</div>
+									</a>
+									<select
+										:value="fileKind(row)"
+										class="shrink-0 h-6 rounded-full border border-border bg-muted/30 text-[10px] font-medium px-2 text-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
+										title="Classify this file"
+										@change="setFileKind(row, ($event.target as HTMLSelectElement).value)"
+									>
+										<option value="document">Document</option>
+										<option value="contract">Contract</option>
+										<option value="proposal">Proposal</option>
+										<option value="asset">Asset</option>
+									</select>
+									<a
+										:href="`${config.public.directusUrl}/assets/${row.directus_files_id?.id}`"
+										target="_blank"
+										rel="noopener"
+										class="shrink-0 text-muted-foreground/40 hover:text-muted-foreground"
+										title="Download"
+									>
+										<Icon name="lucide:download" class="w-3.5 h-3.5" />
+									</a>
+								</div>
+							</div>
+						</div>
 					</section>
 				</div>
 
@@ -1343,7 +1876,7 @@ watch(() => props.projectId, () => {
 						</button>
 					</div>
 
-					<div v-if="contactsLoading && !directProjectContactsOrdered.length" class="space-y-px" aria-busy="true" aria-label="Loading contacts">
+					<div v-if="contactsLoading && !contactsLoaded" class="space-y-px" aria-busy="true" aria-label="Loading contacts">
 						<div
 							v-for="i in skeletonRows(projectContactCount)"
 							:key="`pc-skel-${i}`"
@@ -1354,141 +1887,217 @@ watch(() => props.projectId, () => {
 						</div>
 					</div>
 
-					<div v-else-if="!directProjectContactsOrdered.length" class="text-sm text-muted-foreground text-center py-10">
-						No contacts pinned to this project yet.
-						<span v-if="(project as any)?.client?.name" class="block mt-1 text-xs">
-							Client roster lives on
-							<NuxtLink :to="`/apps/clients/${(project as any).client.id}`" class="text-primary hover:underline">
-								{{ (project as any).client.name }}
-							</NuxtLink>.
-						</span>
-					</div>
+					<template v-else>
+						<!-- Empty only when neither the client roster nor extras exist. -->
+						<div v-if="!inheritedClientContacts.length && !directProjectContactsOrdered.length" class="text-sm text-muted-foreground text-center py-10">
+							No contacts yet.
+							<span class="block mt-1 text-xs">
+								{{ (project as any)?.client?.name ? 'This client has no contacts — add one above.' : 'Add a client to inherit its contacts, or attach one above.' }}
+							</span>
+						</div>
 
-					<VueDraggable
-						v-else
-						v-model="directProjectContactsOrdered"
-						handle=".pc-row-drag-handle"
-						item-key="id"
-						class="space-y-px"
-						ghost-class="contact-row__ghost"
-						chosen-class="contact-row__chosen"
-						drag-class="contact-row__drag"
-						@end="onProjectContactDragEnd"
-					>
-						<template #item="{ element: row }">
-							<div
-								class="flex items-stretch gap-1 h-12 hover:bg-muted/40 border-b border-border/30 transition-colors group"
-							>
-								<span
-									class="pc-row-drag-handle flex items-center justify-center w-6 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground"
-									title="Drag to reorder"
-								>
-									<Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
-								</span>
+						<!-- Inherited from the client — the default roster. Read-only here;
+						     managed on the client. -->
+						<section v-if="inheritedClientContacts.length" class="mb-5">
+							<div class="flex items-center gap-2 mb-2">
+								<Icon name="lucide:building-2" class="w-3.5 h-3.5 text-muted-foreground" />
+								<h4 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+									From
+									<NuxtLink
+										v-if="(project as any)?.client?.id"
+										:to="`/apps/clients/${(project as any).client.id}`"
+										class="text-foreground/70 hover:text-primary hover:underline"
+									>{{ projectClientName }}</NuxtLink>
+									<span v-else>{{ projectClientName }}</span>
+								</h4>
+								<span class="text-[10px] text-muted-foreground/60">{{ inheritedClientContacts.length }}</span>
+							</div>
+							<div class="space-y-px">
 								<button
-									v-if="row.contact"
+									v-for="c in inheritedClientContacts"
+									:key="c.id"
 									type="button"
-									class="flex flex-1 min-w-0 items-center gap-3 px-2 text-left"
-									@click="openContactSlideOver(row.contact.id)"
+									class="w-full text-left flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+									@click="openContactSlideOver(c.id)"
 								>
-									<span
-										class="w-1.5 h-1.5 rounded-full shrink-0"
-										:class="row.contact.is_billing_contact ? 'bg-success' : 'bg-primary/60'"
-									/>
+									<span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.is_billing_contact ? 'bg-success' : 'bg-primary/60'" />
 									<div class="flex-1 min-w-0 flex items-center gap-2">
-										<p class="text-sm font-medium truncate">
-											{{ row.contact.first_name }} {{ row.contact.last_name }}
-										</p>
-										<span v-if="row.contact.title" class="text-[11px] text-muted-foreground truncate hidden sm:inline">
-											· {{ row.contact.title }}
-										</span>
+										<p class="text-sm font-medium truncate">{{ c.first_name }} {{ c.last_name }}</p>
+										<span v-if="c.title" class="text-[11px] text-muted-foreground truncate hidden sm:inline">· {{ c.title }}</span>
 									</div>
-									<span v-if="row.contact.email" class="hidden md:inline text-[11px] text-muted-foreground font-mono truncate max-w-[200px]">
-										{{ row.contact.email }}
-									</span>
-									<span v-if="row.contact.is_billing_contact" class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success shrink-0">
-										Billing
-									</span>
+									<span v-if="c.email" class="hidden md:inline text-[11px] text-muted-foreground font-mono truncate max-w-[200px]">{{ c.email }}</span>
+									<span v-if="c.is_billing_contact" class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success shrink-0">Billing</span>
 									<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
 								</button>
-								<div v-else class="flex flex-1 min-w-0 items-center px-2 text-xs text-muted-foreground italic">
-									Contact removed
-								</div>
 							</div>
-						</template>
-					</VueDraggable>
-				</div>
+						</section>
 
-				<!-- Files -->
-				<div v-else-if="activeTab === 'files'">
-					<div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
-						<p class="text-xs text-muted-foreground">Files attached to this project.</p>
-						<button
-							class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all disabled:opacity-50"
-							:disabled="uploadingFile"
-							@click="triggerFileUpload"
-						>
-							<Icon :name="uploadingFile ? 'lucide:loader-2' : 'lucide:upload'" :class="['w-3.5 h-3.5', uploadingFile && 'animate-spin']" />
-							{{ uploadingFile ? 'Uploading…' : 'Upload' }}
-						</button>
-						<input ref="fileInputRef" type="file" multiple class="hidden" @change="onFileInputChange" />
-					</div>
-
-					<div
-						class="rounded-2xl border-2 border-dashed transition-colors"
-						:class="isDraggingFile ? 'border-primary bg-primary/5 p-2' : 'border-transparent'"
-						@dragover.prevent="isDraggingFile = true"
-						@dragleave.prevent="isDraggingFile = false"
-						@drop.prevent="onFileDrop"
-					>
-						<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
-							<div
-								v-for="i in skeletonRows(files.length, 4, 6)"
-								:key="`file-skel-${i}`"
-								class="ios-card p-3 flex items-center gap-3"
-							>
-								<USkeleton class="w-4 h-4 shrink-0" />
-								<div class="flex-1 space-y-1.5">
-									<USkeleton class="h-3.5 w-3/4" />
-									<USkeleton class="h-2.5 w-20" />
-								</div>
+						<!-- Project-only extras — pinned via projects_contacts, not part of
+						     the client roster (a stakeholder, freelancer, etc.). Reorderable. -->
+						<section v-if="directProjectContactsOrdered.length">
+							<div class="flex items-center gap-2 mb-2">
+								<Icon name="lucide:pin" class="w-3.5 h-3.5 text-muted-foreground" />
+								<h4 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Added to this project</h4>
+								<span class="text-[10px] text-muted-foreground/60">{{ directProjectContactsOrdered.length }}</span>
 							</div>
-						</div>
-						<button
-							v-else-if="!files.length"
-							type="button"
-							class="w-full text-sm text-muted-foreground text-center py-10 hover:text-foreground transition-colors"
-							@click="triggerFileUpload"
-						>
-							Drag files here or click to upload documents.
-						</button>
-						<div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-							<a
-								v-for="doc in files"
-								:key="doc.id"
-								:href="`${config.public.directusUrl}/assets/${doc.directus_files_id?.id}`"
-								target="_blank"
-								rel="noopener"
-								class="ios-card p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+							<VueDraggable
+								v-model="directProjectContactsOrdered"
+								handle=".pc-row-drag-handle"
+								item-key="id"
+								class="space-y-px"
+								ghost-class="contact-row__ghost"
+								chosen-class="contact-row__chosen"
+								drag-class="contact-row__drag"
+								@end="onProjectContactDragEnd"
 							>
-								<Icon :name="getFileIcon(doc.directus_files_id?.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
-								<div class="flex-1 min-w-0">
-									<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
-									<div class="flex items-center gap-2 mt-0.5">
-										<span class="text-[10px] text-muted-foreground">{{ formatFileSize(doc.directus_files_id?.filesize) }}</span>
-										<span v-if="doc.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">
-											{{ fmtDate(doc.directus_files_id.uploaded_on) }}
+								<template #item="{ element: row }">
+									<div
+										class="flex items-stretch gap-1 h-12 hover:bg-muted/40 border-b border-border/30 transition-colors group"
+									>
+										<span
+											class="pc-row-drag-handle flex items-center justify-center w-6 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground"
+											title="Drag to reorder"
+										>
+											<Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
 										</span>
+										<button
+											v-if="row.contact"
+											type="button"
+											class="flex flex-1 min-w-0 items-center gap-3 px-2 text-left"
+											@click="openContactSlideOver(row.contact.id)"
+										>
+											<span
+												class="w-1.5 h-1.5 rounded-full shrink-0"
+												:class="row.contact.is_billing_contact ? 'bg-success' : 'bg-primary/60'"
+											/>
+											<div class="flex-1 min-w-0 flex items-center gap-2">
+												<p class="text-sm font-medium truncate">
+													{{ row.contact.first_name }} {{ row.contact.last_name }}
+												</p>
+												<span v-if="row.contact.title" class="text-[11px] text-muted-foreground truncate hidden sm:inline">
+													· {{ row.contact.title }}
+												</span>
+											</div>
+											<span v-if="row.contact.email" class="hidden md:inline text-[11px] text-muted-foreground font-mono truncate max-w-[200px]">
+												{{ row.contact.email }}
+											</span>
+											<span v-if="row.contact.is_billing_contact" class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success shrink-0">
+												Billing
+											</span>
+											<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+										</button>
+										<div v-else class="flex flex-1 min-w-0 items-center px-2 text-xs text-muted-foreground italic">
+											Contact removed
+										</div>
 									</div>
-								</div>
-								<Icon name="lucide:download" class="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
-							</a>
-						</div>
-					</div>
+								</template>
+							</VueDraggable>
+						</section>
+					</template>
 				</div>
 
 			</div>
 		</template>
+
+		<!-- New Event — manual project_event creation from the Timeline tab.
+		     UModal contract: v-model + DEFAULT slot (not v-model:open/#content). -->
+		<UModal v-if="project" v-model="showNewEventModal" title="New Event">
+			<template #header>
+				<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
+			</template>
+			<form class="space-y-4" @submit.prevent="handleCreateEvent">
+				<div class="space-y-1">
+					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Title *</label>
+					<UInput v-model="newEventForm.title" placeholder="Event title" autofocus />
+				</div>
+				<div class="space-y-1">
+					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Description</label>
+					<UTextarea v-model="newEventForm.description" placeholder="What happens at this milestone?" :rows="3" />
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Type</label>
+						<USelectMenu v-model="newEventForm.type" :options="EVENT_TYPE_OPTIONS" option-attribute="label" value-attribute="value" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</label>
+						<USelectMenu v-model="newEventForm.status" :options="EVENT_STATUS_OPTIONS" option-attribute="label" value-attribute="value" />
+					</div>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-1">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Date</label>
+						<UInput v-model="newEventForm.date" type="date" />
+					</div>
+					<div class="space-y-1">
+						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">End date</label>
+						<UInput v-model="newEventForm.end_date" type="date" />
+					</div>
+				</div>
+				<label class="flex items-center gap-2 text-xs text-foreground/80 cursor-pointer select-none">
+					<input v-model="newEventForm.is_milestone" type="checkbox" class="rounded border-border" />
+					Mark as milestone (diamond on the timeline)
+				</label>
+			</form>
+			<template #footer>
+				<div class="flex justify-end gap-3 w-full">
+					<Button variant="outline" size="sm" @click="showNewEventModal = false">Cancel</Button>
+					<Button size="sm" :disabled="creatingEvent || !newEventForm.title.trim()" @click="handleCreateEvent">
+						<Icon v-if="creatingEvent" name="lucide:loader-2" class="animate-spin w-3 h-3 mr-1" />
+						Add Event
+					</Button>
+				</div>
+			</template>
+		</UModal>
+
+		<!-- Attach existing file — search the file library and link one to this
+		     project via the admin-token attach-file proxy. Search-driven so we
+		     never dump the whole asset library. -->
+		<UModal v-if="project" v-model="showAttachFileModal" title="Attach existing file">
+			<template #header>
+				<h3 class="text-sm font-bold uppercase tracking-wide">Attach existing file</h3>
+			</template>
+			<div class="space-y-3">
+				<div class="flex items-center gap-1.5 h-9 rounded-full border border-border/50 bg-muted/30 px-3 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+					<Icon name="lucide:search" class="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+					<input
+						v-model="attachSearch"
+						type="text"
+						placeholder="Search files by name…"
+						class="flex-1 min-w-0 bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none"
+						@input="onAttachSearchInput"
+					>
+					<Icon v-if="attachSearching" name="lucide:loader-2" class="w-3.5 h-3.5 text-muted-foreground/50 animate-spin shrink-0" />
+				</div>
+				<p v-if="attachSearch.trim().length < 2" class="text-xs text-muted-foreground text-center py-6">
+					Type at least 2 characters to search your files.
+				</p>
+				<p v-else-if="!attachSearching && !attachResults.length" class="text-xs text-muted-foreground text-center py-6">
+					No files match “{{ attachSearch }}”.
+				</p>
+				<div v-else class="max-h-72 overflow-y-auto space-y-px -mx-1 px-1">
+					<button
+						v-for="f in attachResults"
+						:key="f.id"
+						type="button"
+						class="w-full text-left flex items-center gap-3 h-12 px-3 rounded-lg hover:bg-muted/50 transition-colors group"
+						@click="attachExistingFile(f)"
+					>
+						<Icon :name="getFileIcon(f.type)" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium truncate">{{ f.title || f.filename_download }}</p>
+							<span class="text-[10px] text-muted-foreground">{{ formatFileSize(f.filesize) }}</span>
+						</div>
+						<Icon name="lucide:plus" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary shrink-0" />
+					</button>
+				</div>
+			</div>
+			<template #footer>
+				<div class="flex justify-end w-full">
+					<Button variant="outline" size="sm" @click="showAttachFileModal = false">Done</Button>
+				</div>
+			</template>
+		</UModal>
 
 		<!-- Create modals — UModal teleports to body, escapes the slide-over's
 		     transformed container. -->
@@ -1594,6 +2203,44 @@ watch(() => props.projectId, () => {
 			:get-current-project-name="(r) => r.project && r.project.title"
 			:get-search-haystack="(r) => r.name || ''"
 			@attached="onChannelAttached"
+		/>
+
+		<!-- Attach existing proposal / contract — sets the doc's `project` FK
+		     (now that proposals.project / contracts.project exist). Surfaces
+		     unlinked docs and those on other projects. -->
+		<AppsWorkAttachExistingModal
+			v-if="project"
+			v-model="showAttachProposalModal"
+			:project-id="projectId"
+			collection="proposals"
+			entity-singular="Proposal"
+			entity-plural="proposals"
+			fk-field="project"
+			row-icon="lucide:file-text"
+			:fields="['id', 'title', 'proposal_status', 'total_value', 'date_created', 'project.id', 'project.title']"
+			:build-org-filter="(orgId) => ({ organization: { _eq: orgId } })"
+			:get-label="(r) => r.title || 'Untitled proposal'"
+			:get-subtitle="(r) => [r.proposal_status, r.total_value != null && fmtCurrency(r.total_value)].filter(Boolean).join(' · ')"
+			:get-current-project-name="(r) => r.project && r.project.title"
+			:get-search-haystack="(r) => `${r.title || ''} ${r.proposal_status || ''}`"
+			@attached="onProposalAttached"
+		/>
+		<AppsWorkAttachExistingModal
+			v-if="project"
+			v-model="showAttachContractModal"
+			:project-id="projectId"
+			collection="contracts"
+			entity-singular="Contract"
+			entity-plural="contracts"
+			fk-field="project"
+			row-icon="lucide:file-signature"
+			:fields="['id', 'title', 'contract_status', 'total_value', 'date_created', 'project.id', 'project.title']"
+			:build-org-filter="(orgId) => ({ organization: { _eq: orgId } })"
+			:get-label="(r) => r.title || 'Untitled contract'"
+			:get-subtitle="(r) => [r.contract_status, r.total_value != null && fmtCurrency(r.total_value)].filter(Boolean).join(' · ')"
+			:get-current-project-name="(r) => r.project && r.project.title"
+			:get-search-haystack="(r) => `${r.title || ''} ${r.contract_status || ''}`"
+			@attached="onContractAttached"
 		/>
 
 		<!-- Contacts: create + attach. ContactsFormModal handles writing

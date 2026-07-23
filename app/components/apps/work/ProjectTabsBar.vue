@@ -6,6 +6,7 @@
 <script setup lang="ts">
 export type ProjectTabKey =
 	| 'overview'
+	| 'timeline'
 	| 'activity'
 	| 'touchpoints'
 	| 'tasks'
@@ -13,9 +14,8 @@ export type ProjectTabKey =
 	| 'channels'
 	| 'meetings'
 	| 'invoices'
-	| 'documents'
-	| 'contacts'
-	| 'files';
+	| 'library'
+	| 'contacts';
 
 defineProps<{
 	modelValue: ProjectTabKey;
@@ -39,15 +39,15 @@ function prefetch(key: ProjectTabKey) {
 
 const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'overview', label: 'Overview', icon: 'lucide:info' },
+	{ key: 'timeline', label: 'Timeline', icon: 'lucide:gantt-chart' },
 	{ key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
 	{ key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
 	{ key: 'channels', label: 'Channels', icon: 'lucide:message-square' },
 	{ key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
-	{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
+	{ key: 'library', label: 'Files & Docs', icon: 'lucide:files' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
 	{ key: 'touchpoints', label: 'Touchpoints', icon: 'lucide:megaphone' },
-	{ key: 'files', label: 'Files', icon: 'lucide:folder' },
 	// Activity lives last — the deepest history, not the landing view.
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 ];
@@ -71,7 +71,7 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 		>
 			<Icon :name="tab.icon" class="w-3.5 h-3.5" />
 			{{ tab.label }}
-			<span v-if="!['overview', 'activity'].includes(tab.key) && counts[tab.key] !== undefined" class="text-[10px] opacity-70 ml-0.5">
+			<span v-if="!['overview', 'timeline', 'activity'].includes(tab.key) && counts[tab.key] !== undefined" class="text-[10px] opacity-70 ml-0.5">
 				{{ counts[tab.key] }}
 			</span>
 		</button>

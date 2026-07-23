@@ -41,7 +41,7 @@ export interface UnifiedTimelineData {
 	tasks: TimelineTask[];
 }
 
-export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
+export function useUnifiedTimeline(opts: { portal?: boolean; projectId?: () => string | null | undefined } = {}) {
 	const ticketItems = opts.portal ? (usePortalItems('tickets') as any) : useDirectusItems('tickets');
 	const taskItems = opts.portal ? (usePortalItems('tasks') as any) : useDirectusItems('tasks');
 	const { selectedOrg } = useOrganization();
@@ -92,6 +92,11 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 			// the row-level guard for plain members.
 			const restrictToMine = !opts.portal && isMine.value && myId;
 
+			// Single-project mode (detail-page Gantt): scope tickets + tasks to
+			// this one project and ignore the Mine/All + client-selector lenses,
+			// so the project's own timeline shows everything on it.
+			const singleId = opts.projectId?.();
+
 			// Projects are loaded by useProjectTimeline (shallow list +
 			// per-project lazy detail expand). The unified Gantt only reads
 			// tickets and personal tasks from this composable, so we no
@@ -100,21 +105,26 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 			const projects: ProjectWithRelations[] = [];
 
 			// Fetch tickets
-			const ticketFilter: any = opts.portal ? undefined : { _and: [{ organization: { _eq: orgId } }] };
-			if (restrictToMine && ticketFilter) {
-				ticketFilter._and.push({
-					_or: [
-						{ user_created: { _eq: myId } },
-						{ assigned_to: { directus_users_id: { _eq: myId } } },
-					],
-				});
-			}
-			// Honor the header client selector for non-portal mode.
-			if (!opts.portal && ticketFilter && selectedClient.value) {
-				if (selectedClient.value === 'org') {
-					ticketFilter._and.push({ client: { _null: true } });
-				} else {
-					ticketFilter._and.push({ client: { _eq: selectedClient.value } });
+			let ticketFilter: any;
+			if (singleId) {
+				ticketFilter = { _and: [{ project: { _eq: singleId } }] };
+			} else {
+				ticketFilter = opts.portal ? undefined : { _and: [{ organization: { _eq: orgId } }] };
+				if (restrictToMine && ticketFilter) {
+					ticketFilter._and.push({
+						_or: [
+							{ user_created: { _eq: myId } },
+							{ assigned_to: { directus_users_id: { _eq: myId } } },
+						],
+					});
+				}
+				// Honor the header client selector for non-portal mode.
+				if (!opts.portal && ticketFilter && selectedClient.value) {
+					if (selectedClient.value === 'org') {
+						ticketFilter._and.push({ client: { _null: true } });
+					} else {
+						ticketFilter._and.push({ client: { _eq: selectedClient.value } });
+					}
 				}
 			}
 			const tickets = await ticketItems.list({
@@ -128,25 +138,31 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 			// Portal users don't have a personal "quick task" stream — clients
 			// don't author standalone tasks — so skip this fetch entirely
 			// and the unified-timeline `personalTasks` swimlane stays empty.
-			const taskFilter: any = {
-				_and: [
-					{ organization_id: { _eq: orgId } },
-					{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
-				],
-			};
-			if (restrictToMine) {
-				taskFilter._and.push({
-					_or: [
-						{ user_created: { _eq: myId } },
-						{ assigned_to: { directus_users_id: { _eq: myId } } },
+			let taskFilter: any;
+			if (singleId) {
+				// Every task tied to this project (no category / owner clamp).
+				taskFilter = { _and: [{ project_id: { _eq: singleId } }] };
+			} else {
+				taskFilter = {
+					_and: [
+						{ organization_id: { _eq: orgId } },
+						{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
 					],
-				});
-			}
-			if (selectedClient.value) {
-				if (selectedClient.value === 'org') {
-					taskFilter._and.push({ client_id: { _null: true } });
-				} else {
-					taskFilter._and.push({ client_id: { _eq: selectedClient.value } });
+				};
+				if (restrictToMine) {
+					taskFilter._and.push({
+						_or: [
+							{ user_created: { _eq: myId } },
+							{ assigned_to: { directus_users_id: { _eq: myId } } },
+						],
+					});
+				}
+				if (selectedClient.value) {
+					if (selectedClient.value === 'org') {
+						taskFilter._and.push({ client_id: { _null: true } });
+					} else {
+						taskFilter._and.push({ client_id: { _eq: selectedClient.value } });
+					}
 				}
 			}
 			const tasks = opts.portal

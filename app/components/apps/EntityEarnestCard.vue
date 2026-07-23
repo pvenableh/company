@@ -45,6 +45,14 @@ function convene() {
 		label: props.label,
 	});
 }
+
+// Project-only: ask Earnest to propose a full timeline of events + tasks. The
+// page has already set the entity context, so Earnest's add_event / add_task
+// tools target THIS project and its proposals land in the HITL queue for
+// approval (nothing is created without a yes).
+function draftTimeline() {
+	ask(`Draft a timeline for the project "${props.label}": propose the key events, milestones, and tasks it needs to get done, in a sensible order, and add them to this project. Check with me before anything with a cost or a hard deadline.`);
+}
 </script>
 
 <template>
@@ -56,10 +64,16 @@ function convene() {
 					Earnest is focused on <span class="text-primary">{{ label }}</span>
 				</p>
 			</div>
-			<Button v-if="!hideConvene" variant="outline" size="sm" class="shrink-0" @click="convene">
-				<DirectorChairIcon class="w-4 h-4 mr-1.5" />
-				Convene the Boardroom
-			</Button>
+			<div class="flex items-center gap-2 shrink-0">
+				<Button v-if="entityType === 'project'" size="sm" class="shrink-0" @click="draftTimeline">
+					<Icon name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
+					Draft a timeline
+				</Button>
+				<Button v-if="!hideConvene" variant="outline" size="sm" class="shrink-0" @click="convene">
+					<DirectorChairIcon class="w-4 h-4 mr-1.5" />
+					Convene the Boardroom
+				</Button>
+			</div>
 		</div>
 		<div class="flex flex-wrap gap-2">
 			<button

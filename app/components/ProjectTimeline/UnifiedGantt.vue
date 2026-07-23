@@ -31,7 +31,16 @@ const props = defineProps<{
 	 * removed global filter.
 	 */
 	clientId?: string | null;
+	/**
+	 * SINGLE-project mode. When set, the Gantt renders just this one project's
+	 * timeline (its events/milestones + tickets + tasks) — used by the project
+	 * detail workspace. Hides the multi-project chrome and auto-expands.
+	 */
+	projectId?: string;
 }>();
+
+// True when scoped to a single project (detail-page timeline tab).
+const single = computed(() => !!props.projectId);
 
 // ── Data composables ──
 const {
@@ -41,12 +50,14 @@ const {
 	data: timelineData,
 	fetchAll,
 	ticketsByProject,
+	tasksByProject,
 	personalTasks,
-} = useUnifiedTimeline({ portal: props.portal });
+} = useUnifiedTimeline({ portal: props.portal, ...(props.projectId ? { projectId: () => props.projectId } : {}) });
 
 const { projects, loading: projectsLoading, error, fetchProjects, fetchProjectDetails, showAllCompleted, toggleShowAllCompleted } = useProjectTimeline({
 	portal: props.portal,
 	clientId: () => props.clientId,
+	...(props.projectId ? { projectId: () => props.projectId } : {}),
 });
 // Pin-to-top: same optimistic composable ProjectWorkspace + the carousel use.
 // Portal mode is read-only, so the toggle is hidden there.
@@ -176,7 +187,9 @@ const autoExpandedOnce = ref(false);
 watch(
 	() => projects.value.length,
 	(len) => {
-		const threshold = props.autoExpandThreshold ?? 0;
+		// Single-project mode always expands its one row so events/tickets/
+		// tasks are visible without a click.
+		const threshold = single.value ? Number.MAX_SAFE_INTEGER : (props.autoExpandThreshold ?? 0);
 		if (
 			!autoExpandedOnce.value &&
 			threshold > 0 &&
@@ -364,6 +377,29 @@ const rows = computed<GanttRow[]>(() => {
 						link: props.portal ? '/portal/tickets' : `/tickets/${ticket.id}`,
 					});
 				}
+				// Single-project mode: also surface tasks attached directly to the
+				// project (project_id set, not nested under an event). The org-wide
+				// Gantt only shows event-nested tasks; here we want the project's
+				// full task list. Dedupe against event tasks already rendered above.
+				if (props.projectId) {
+					const eventTaskIds = new Set<string>();
+					for (const e of sortedEvents) {
+						for (const t of ((e as any).tasks || [])) eventTaskIds.add(t.id);
+					}
+					for (const task of (tasksByProject.value.get(project.id) || [])) {
+						if (eventTaskIds.has(task.id)) continue;
+						result.push({
+							id: task.id,
+							label: task.title || 'Task',
+							type: 'task',
+							depth: 1,
+							color: '#8b5cf6',
+							status: task.status === 'completed' ? 'Completed' : 'In Progress',
+							dueDate: task.due_date,
+							projectId: project.id,
+						});
+					}
+				}
 			}
 		}
 	} else {
@@ -396,7 +432,9 @@ const rows = computed<GanttRow[]>(() => {
 		}
 	}
 
-	if (personalTasks.value.length > 0) {
+	// The synthetic "My Tasks" swimlane is a multi-project concept — never show
+	// it when scoped to a single project.
+	if (personalTasks.value.length > 0 && !props.projectId) {
 		result.push({
 			id: 'tasks-section',
 			label: 'My Tasks',
@@ -717,10 +755,20 @@ function openProject(id: string) {
 
 function handleRowClick(row: GanttRow) {
 	if (row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section') {
+		// Already inside this project's workspace — the row is just a header.
+		if (single.value) return;
 		openProject(row.id);
 	} else if (row.type === 'event') {
 		selectedEventId.value = row.id;
 		showEventDetail.value = true;
+	} else if (row.type === 'ticket') {
+		// Inside the apps shell, open the ticket in the slide-over stack (keeps
+		// project context) instead of navigating out to the legacy /tickets/:id.
+		if (!props.portal && route.path.startsWith('/apps')) {
+			pushSlideOver('ticket', row.id);
+		} else if (row.link) {
+			navigateTo(row.link);
+		}
 	} else if (row.link) {
 		navigateTo(row.link);
 	}
@@ -793,7 +841,9 @@ const eventItems = props.portal
 const selectedEventFull = ref<any>(null);
 const loadingEventDetail = ref(false);
 const eventDetailRef = ref<any>(null);
-const { updateEvent, deleteEvent } = useProjectTimeline();
+// Keep this instance scoped too in single mode so its trailing fetchProjects()
+// after a mutation stays isolated to the one project (and off the shared list).
+const { updateEvent, deleteEvent } = useProjectTimeline(props.projectId ? { projectId: () => props.projectId } : {});
 
 const eventStatusOptions = [
 	{ value: 'Pending', label: 'Pending' },
@@ -926,7 +976,7 @@ const showUndated = ref(false);
 		<!-- Toolbar -->
 		<div class="gantt__toolbar">
 			<div class="flex items-center gap-2">
-				<div class="flex items-center rounded-lg bg-muted/40 p-0.5">
+				<div v-if="!single" class="flex items-center rounded-lg bg-muted/40 p-0.5">
 					<button
 						@click="setViewMode('nested')"
 						class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
@@ -947,7 +997,7 @@ const showUndated = ref(false);
 			</div>
 			<div class="flex items-center gap-2">
 				<button
-					v-if="completedProjectCount > 0"
+					v-if="completedProjectCount > 0 && !single"
 					@click="showCompleted = !showCompleted"
 					class="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors"
 					:class="showCompleted
@@ -958,7 +1008,7 @@ const showUndated = ref(false);
 					{{ completedProjectCount }} completed
 				</button>
 				<button
-					v-if="undatedProjects.length > 0"
+					v-if="undatedProjects.length > 0 && !single"
 					@click="showUndated = !showUndated"
 					class="flex items-center gap-1 text-[9px] font-medium text-warning dark:text-warning bg-warning/10 hover:bg-warning/15 px-2 py-0.5 rounded-full transition-colors"
 				>
@@ -971,7 +1021,7 @@ const showUndated = ref(false);
 					fetchProjects() with the date window dropped.
 				-->
 				<button
-					v-if="!portal"
+					v-if="!portal && !single"
 					@click="toggleShowAllCompleted"
 					:disabled="loading"
 					class="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors disabled:opacity-50"
@@ -991,7 +1041,7 @@ const showUndated = ref(false);
 
 		<!-- Undated projects panel -->
 		<Transition name="fade">
-			<div v-if="showUndated && undatedProjects.length > 0" class="mb-4 rounded-xl border border-border/50 bg-muted/20 p-3">
+			<div v-if="showUndated && undatedProjects.length > 0 && !single" class="mb-4 rounded-xl border border-border/50 bg-muted/20 p-3">
 				<div class="flex items-center justify-between mb-2">
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projects without dates</span>
 					<button @click="showUndated = false" class="text-muted-foreground hover:text-foreground">
@@ -1031,7 +1081,11 @@ const showUndated = ref(false);
 		<!-- Empty -->
 		<div v-else-if="rows.length === 0 && !loading" class="gantt__empty">
 			<Icon name="lucide:gantt-chart" class="h-10 w-10 text-muted-foreground/20 mb-3" />
-			<template v-if="undatedProjects.length > 0">
+			<template v-if="single">
+				<p class="text-sm font-medium text-foreground">Nothing to schedule yet</p>
+				<p class="text-xs text-muted-foreground mt-1">Add dates to this project's events, tickets, or tasks to see them on the timeline.</p>
+			</template>
+			<template v-else-if="undatedProjects.length > 0">
 				<p class="text-sm font-medium text-foreground">All projects need dates</p>
 				<p class="text-xs text-muted-foreground mt-1">Add start or end dates to your projects to see them on the timeline.</p>
 				<button @click="showUndated = true" class="mt-3 text-xs text-primary hover:underline">
@@ -1121,11 +1175,16 @@ const showUndated = ref(false);
 						}"
 						@click="handleRowClick(row)"
 					>
-						<!-- Absolute toggle button for projects -->
+						<!-- Absolute toggle button for projects. `.stop.prevent` keeps
+						     the click from bubbling to the label's open-details
+						     handler, and the widened hit area (see CSS) means a click
+						     aimed at expand won't clip the label and open the panel. -->
 						<button
 							v-if="row.hasChildren && row.type === 'project' && row.id !== 'tasks-section'"
 							class="gantt__toggle"
-							@click.stop="toggleProject(row.id)"
+							:title="row.expanded ? 'Collapse' : 'Expand'"
+							:aria-label="row.expanded ? 'Collapse project' : 'Expand project'"
+							@click.stop.prevent="toggleProject(row.id)"
 						>
 							<Icon :name="row.expanded ? 'lucide:minus' : 'lucide:plus'" class="w-2.5 h-2.5" />
 						</button>
@@ -1642,18 +1701,21 @@ const showUndated = ref(false);
 /* ── Toggle button (+/-) — absolute so labels align ── */
 .gantt__toggle {
 	position: absolute;
-	left: 2px;
-	width: 14px;
-	height: 14px;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 20px;
+	height: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	border-radius: 3px;
+	border-radius: 4px;
+	cursor: pointer;
 	color: hsl(var(--muted-foreground) / 0.5);
 	border: 1px solid hsl(var(--border) / 0.5);
 	transition: all 0.15s;
-	z-index: 1;
+	z-index: 2;
 }
 .gantt__toggle:hover {
 	color: hsl(var(--foreground));

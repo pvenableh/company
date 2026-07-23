@@ -25,10 +25,25 @@ export function useProjectTimeline(opts: {
    * so fetches read the live value.
    */
   clientId?: () => string | null | undefined;
+  /**
+   * SINGLE-project mode (detail-page Gantt). When provided, the fetch is
+   * scoped to just this one project (any status) and this instance's state is
+   * kept ISOLATED from the org-wide list — see below. Pass a getter so the id
+   * is read live.
+   */
+  projectId?: () => string | null | undefined;
 } = {}) {
   const { user } = useDirectusAuth();
   const { selectedOrg } = useOrganization();
   const { getClientFilter } = useClients();
+
+  // Single-project mode drives the detail-page timeline tab. Its state must be
+  // ISOLATED from the shared org-wide list: the multi-project Gantt persists
+  // its list via useState, and a project slide-over (which mounts a scoped
+  // instance) can be open *over* the Work list Gantt. Sharing the useState key
+  // would let the scoped fetch clobber the list. So single mode falls back to
+  // plain per-instance refs.
+  const isSingle = !!opts.projectId;
 
   // Portal-only users have no Directus role granting read on
   // projects/project_events/tasks. Route reads through the portal
@@ -55,24 +70,30 @@ export function useProjectTimeline(opts: {
     throw new Error('Mutations are disabled in portal mode');
   };
 
-  const projectList = useState<ProjectWithRelations[]>('project-timeline', () => []);
+  const projectList = isSingle
+    ? ref<ProjectWithRelations[]>([])
+    : useState<ProjectWithRelations[]>('project-timeline', () => []);
   const loading = ref(true);
   const error = ref<string | null>(null);
 
   // When true, the 90-day date window on completed projects is dropped and
   // every completed project is loaded. Off by default — the toggle UI in
-  // the Gantt toolbar flips it and re-fetches.
-  const showAllCompleted = useState('project-timeline-all-completed', () => false);
+  // the Gantt toolbar flips it and re-fetches. (Unused in single mode.)
+  const showAllCompleted = isSingle
+    ? ref(false)
+    : useState('project-timeline-all-completed', () => false);
 
   // Per-project lazy-load state. The shallow list query (below) doesn't
   // walk into events/tasks/files; those arrive via fetchProjectDetails()
   // when the user expands a project row. This map gates the detail fetch
   // so re-expanding a row doesn't re-issue the request.
   type ProjectDetailState = 'idle' | 'loading' | 'loaded';
-  const projectDetailState = useState<Record<string, ProjectDetailState>>(
-    'project-timeline-detail-state',
-    () => ({}),
-  );
+  const projectDetailState = isSingle
+    ? ref<Record<string, ProjectDetailState>>({})
+    : useState<Record<string, ProjectDetailState>>(
+        'project-timeline-detail-state',
+        () => ({}),
+      );
 
   // Shallow fields for the list query — just enough for the Gantt to
   // render the project bar, parent/child grouping, and the toolbar
@@ -191,22 +212,33 @@ export function useProjectTimeline(opts: {
             ],
           };
 
-      const filter: Record<string, any> = { _and: [statusBranch] };
+      const singleId = opts.projectId?.();
+      const filter: Record<string, any> = { _and: [] };
 
-      // Portal proxy auto-scopes to org + client (parent_client walk),
-      // so don't add manual conditions there — they'd just AND with the
-      // proxy filter.
-      if (!opts.portal) {
-        filter._and.push({ organization: { _eq: selectedOrg.value } });
-        // A locally-supplied client filter wins over the legacy global one.
-        if (opts.clientId) {
-          const id = opts.clientId();
-          if (id === 'org') filter._and.push({ client: { _null: true } });
-          else if (id) filter._and.push({ client: { _eq: id } });
-        } else {
-          const clientFilter = getClientFilter();
-          if (Object.keys(clientFilter).length > 0) {
-            filter._and.push(clientFilter);
+      if (singleId) {
+        // Detail-page Gantt: exactly this project, regardless of status (a
+        // completed project should still render its own timeline tab).
+        filter._and.push({ id: { _eq: singleId } });
+        if (!opts.portal && selectedOrg.value) {
+          filter._and.push({ organization: { _eq: selectedOrg.value } });
+        }
+      } else {
+        filter._and.push(statusBranch);
+        // Portal proxy auto-scopes to org + client (parent_client walk),
+        // so don't add manual conditions there — they'd just AND with the
+        // proxy filter.
+        if (!opts.portal) {
+          filter._and.push({ organization: { _eq: selectedOrg.value } });
+          // A locally-supplied client filter wins over the legacy global one.
+          if (opts.clientId) {
+            const id = opts.clientId();
+            if (id === 'org') filter._and.push({ client: { _null: true } });
+            else if (id) filter._and.push({ client: { _eq: id } });
+          } else {
+            const clientFilter = getClientFilter();
+            if (Object.keys(clientFilter).length > 0) {
+              filter._and.push(clientFilter);
+            }
           }
         }
       }

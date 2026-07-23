@@ -40,6 +40,13 @@ export default defineEventHandler(async (event) => {
         'directus_files_id.type',
         'directus_files_id.filesize',
         'directus_files_id.uploaded_on',
+        // Classification + organization (surfaced by the merged Files & Docs
+        // tab): native file tags/categories, description, and folder.
+        'directus_files_id.tags',
+        'directus_files_id.categories',
+        'directus_files_id.description',
+        'directus_files_id.folder.id',
+        'directus_files_id.folder.name',
       ],
       filter: { projects_id: { _eq: projectId } },
       sort: ['-directus_files_id.uploaded_on'],

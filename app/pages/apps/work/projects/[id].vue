@@ -19,7 +19,9 @@ watch(aiMutationSignal, () => { onProjectUpdated(); });
 
 import type { ProjectTabKey } from '~/components/apps/work/ProjectTabsBar.vue';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu';
-const VALID_TABS: ProjectTabKey[] = ['activity', 'touchpoints', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'documents', 'files'];
+const VALID_TABS: ProjectTabKey[] = ['activity', 'touchpoints', 'tasks', 'tickets', 'channels', 'meetings', 'invoices', 'library', 'contacts', 'timeline'];
+// Legacy deep-links (?tab=files / ?tab=documents) fold into the merged surface.
+const LEGACY_TAB_ALIAS: Record<string, ProjectTabKey> = { files: 'library', documents: 'library' };
 
 const PROJECT_STATUSES = [
   { label: 'Pending', value: 'Pending' },
@@ -31,7 +33,9 @@ const PROJECT_STATUSES = [
 
 const initialTab: ProjectTabKey = (() => {
   const v = route.query.tab;
-  return typeof v === 'string' && (VALID_TABS as string[]).includes(v) ? (v as ProjectTabKey) : 'overview';
+  if (typeof v !== 'string') return 'overview';
+  if (LEGACY_TAB_ALIAS[v]) return LEGACY_TAB_ALIAS[v];
+  return (VALID_TABS as string[]).includes(v) ? (v as ProjectTabKey) : 'overview';
 })();
 
 const project = ref<any | null>(null);
