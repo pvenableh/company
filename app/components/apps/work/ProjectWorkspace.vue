@@ -69,10 +69,6 @@ const { awardEvent } = useArcadeAwards();
 
 const projectItemsApi = useDirectusItems('projects');
 const taskItemsApi = useDirectusItems('tasks');
-// Same "Mine vs. Everyone" lens the Tasks list applies, so the tab badge
-// count can't diverge from what the list actually renders.
-const { isMine } = useDataScope();
-const { user: scopeUser } = useDirectusAuth();
 const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
@@ -480,7 +476,8 @@ async function patchProject(fields: Record<string, any>) {
 
 async function refreshTaskCount() {
 	try {
-		const myId = (scopeUser.value as any)?.id;
+		// Count ALL of the project's tasks (matches the Tasks tab + timeline).
+		// No Mine/Everyone lens inside a single project.
 		const filter: any = {
 			_and: [
 				{
@@ -491,25 +488,12 @@ async function refreshTaskCount() {
 				},
 			],
 		};
-		// Mirror Tasks/ListView.vue: when scoped to "mine", only count tasks
-		// assigned to or created by the current user, so the badge matches
-		// the list instead of counting other people's tasks.
-		if (isMine.value && myId) {
-			filter._and.push({
-				_or: [
-					{ assigned_to: { directus_users_id: { _eq: myId } } },
-					{ user_created: { _eq: myId } },
-				],
-			});
-		}
 		taskCount.value = await taskItemsApi.count(filter).catch(() => 0);
 	} catch {
 		taskCount.value = 0;
 	}
 }
 
-// Keep the badge in sync when an admin flips the global Mine/Everyone lens.
-watch(isMine, () => refreshTaskCount());
 
 async function refreshTicketCount() {
 	try {
@@ -1249,11 +1233,14 @@ watch(() => props.projectId, () => {
 						@click="conveneMeeting"
 					>
 						<DirectorChairIcon class="w-4 h-4 shrink-0" />
-						<span class="hidden sm:inline">Convene</span>
+						<!-- Icon-only inside the narrow slide-over (compact); labelled on
+						     the full page. Native title tooltip covers the icon-only case. -->
+						<span v-if="!compact" class="hidden sm:inline">Convene</span>
 					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
-					     its AppHeader. One opener per surface. -->
-					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel()">
+					     its AppHeader. One opener per surface. Icon-only + tooltip so it
+					     doesn't crowd the narrow panel header. -->
+					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="always" title="Ask Earnest" @click="openEarnestPanel()">
 						Ask Earnest
 					</UiActionButton>
 					<slot name="actions" />
@@ -1284,14 +1271,21 @@ watch(() => props.projectId, () => {
 							title="Collected on this project"
 							class="mb-4"
 						/>
-						<div class="grid gap-4 lg:grid-cols-2">
+						<!-- Two-up only when there's something to hunt AND room for it
+						     (full page). Nothing to hunt → hide the Hunt card and let the
+						     pipeline span full width. Narrow slide-over (compact) always
+						     stacks so the widgets aren't crushed. -->
+						<div
+							class="grid gap-4"
+							:class="!compact && huntRows.length ? 'lg:grid-cols-2' : 'grid-cols-1'"
+						>
 							<MoneyPipeline
 								:contract-value="contractValueNum"
 								:paid="paidTotal || 0"
 								:current-outstanding="currentOutstanding || 0"
 								:overdue="overdueTotal || 0"
 							/>
-							<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+							<MoneyHuntList v-if="huntRows.length" :rows="huntRows" @open="openInvoiceFromHunt" />
 						</div>
 					</template>
 
@@ -1326,8 +1320,9 @@ watch(() => props.projectId, () => {
 						hide-convene
 					/>
 
-					<!-- Live pulse: recent activity/events + latest touchpoints. -->
-					<div class="grid gap-6 lg:grid-cols-2">
+					<!-- Live pulse: recent activity/events + latest touchpoints.
+					     Stacks in the narrow slide-over (compact); two-up on the page. -->
+					<div class="grid gap-6" :class="compact ? 'grid-cols-1' : 'lg:grid-cols-2'">
 						<div class="min-w-0">
 							<ETabs :items="overviewPulseTabs">
 								<template #timeline>

@@ -64,18 +64,26 @@ function draftTimeline() {
 					Earnest is focused on <span class="text-primary">{{ label }}</span>
 				</p>
 			</div>
-			<div class="flex items-center gap-2 shrink-0">
-				<Button v-if="entityType === 'project'" size="sm" class="shrink-0" @click="draftTimeline">
-					<Icon name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
-					Draft a timeline
-				</Button>
-				<Button v-if="!hideConvene" variant="outline" size="sm" class="shrink-0" @click="convene">
+			<div v-if="!hideConvene" class="flex items-center gap-2 shrink-0">
+				<Button variant="outline" size="sm" class="shrink-0" @click="convene">
 					<DirectorChairIcon class="w-4 h-4 mr-1.5" />
 					Convene the Boardroom
 				</Button>
 			</div>
 		</div>
 		<div class="flex flex-wrap gap-2">
+			<!-- "Draft a timeline" is the lead suggested prompt, so it sits with the
+			     other prompts rather than as a separate header button — same pill,
+			     lightly accented to read as the primary next step. -->
+			<button
+				v-if="entityType === 'project'"
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors ios-press"
+				@click="draftTimeline"
+			>
+				<Icon name="lucide:sparkles" class="w-3 h-3" />
+				Draft a timeline
+			</button>
 			<button
 				v-for="p in suggestedPrompts"
 				:key="p"

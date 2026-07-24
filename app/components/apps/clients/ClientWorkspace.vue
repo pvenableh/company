@@ -1057,11 +1057,14 @@ watch(() => props.clientId, () => {
 						@click="conveneMeeting"
 					>
 						<DirectorChairIcon class="w-4 h-4 shrink-0" />
-						<span class="hidden sm:inline">Convene</span>
+						<!-- Icon-only inside the narrow slide-over (compact); labelled on
+						     the full page. Native title tooltip covers the icon-only case. -->
+						<span v-if="!compact" class="hidden sm:inline">Convene</span>
 					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
-					     its AppHeader. One opener per surface. -->
-					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel()">
+					     its AppHeader. One opener per surface. Icon-only + tooltip so it
+					     doesn't crowd the narrow panel header. -->
+					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="always" title="Ask Earnest" @click="openEarnestPanel()">
 						Ask Earnest
 					</UiActionButton>
 					<slot name="actions" />
@@ -1096,14 +1099,20 @@ watch(() => props.clientId, () => {
 							title="Collected from this client"
 							class="mb-4"
 						/>
-						<div class="grid gap-4 lg:grid-cols-2">
+						<!-- Two-up only when there's something to hunt AND room for it
+						     (full page). Nothing to hunt → hide the Hunt card and let the
+						     pipeline span full width. Narrow slide-over (compact) stacks. -->
+						<div
+							class="grid gap-4"
+							:class="!compact && huntRows.length ? 'lg:grid-cols-2' : 'grid-cols-1'"
+						>
 							<MoneyPipeline
 								:contract-value="clientContractValue"
 								:paid="paidTotal || 0"
 								:current-outstanding="currentOutstanding || 0"
 								:overdue="overdueTotal || 0"
 							/>
-							<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+							<MoneyHuntList v-if="huntRows.length" :rows="huntRows" @open="openInvoiceFromHunt" />
 						</div>
 					</template>
 
@@ -1147,8 +1156,8 @@ watch(() => props.clientId, () => {
 					/>
 					<!-- Live pulse: timeline of the client's work (projects/tickets/
 					     tasks) alongside the touchpoints log — mirrors the project
-					     overview's two-column pulse. -->
-					<div class="grid gap-6 lg:grid-cols-2">
+					     overview's two-column pulse. Stacks in the narrow slide-over. -->
+					<div class="grid gap-6" :class="compact ? 'grid-cols-1' : 'lg:grid-cols-2'">
 						<div class="min-w-0 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
 							<AppsClientsClientTimelineFeed :client-id="clientId" />
 						</div>

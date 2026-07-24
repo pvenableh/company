@@ -227,9 +227,6 @@ const emit = defineEmits<{
 
 const taskItems = useDirectusItems('tasks');
 const { getStatusBadgeClasses } = useStatusStyle();
-// Mine/All from the apps shell header.
-const { isMine } = useDataScope();
-const { user } = useDirectusAuth();
 
 const tasks = ref<any[]>([]);
 const loading = ref(true);
@@ -310,7 +307,10 @@ function taskAssigneeId(task: any): string | null {
 async function fetchTasks() {
 	loading.value = true;
 	try {
-		const myId = (user.value as any)?.id;
+		// Project-scoped view: always show ALL of the project's tasks so the
+		// tab matches the project timeline. The global Mine/Everyone lens
+		// belongs to the cross-project Tasks floor (<TicketsTasksList>), not
+		// inside a single project — filtering here just hid teammates' tasks.
 		const filter: any = {
 			_and: [
 				{
@@ -321,14 +321,6 @@ async function fetchTasks() {
 				},
 			],
 		};
-		if (isMine.value && myId) {
-			filter._and.push({
-				_or: [
-					{ assigned_to: { directus_users_id: { _eq: myId } } },
-					{ user_created: { _eq: myId } },
-				],
-			});
-		}
 		const data = await taskItems.list({
 			fields: [
 				'id', 'title', 'description', 'status', 'priority', 'due_date', 'date_completed', 'sort',
@@ -407,7 +399,4 @@ function getAssigneeName(id: string) {
 }
 
 onMounted(fetchTasks);
-
-// Refetch when the Mine/All toggle flips.
-watch(isMine, () => fetchTasks());
 </script>

@@ -130,10 +130,6 @@ function statusToColumn(status: string | null | undefined): TaskColumn {
 	if (status === 'in_progress') return 'in_progress';
 	return 'todo';
 }
-// Mine/All from the apps shell header — restricts to tasks the user owns
-// or created when 'Mine' is active (and clamps non-admins to Mine).
-const { isMine } = useDataScope();
-const { user } = useDirectusAuth();
 
 const allTasks = ref<any[]>([]);
 const loading = ref(true);
@@ -186,7 +182,9 @@ function getColumnTasks(status: string) {
 async function fetchTasks() {
 	loading.value = true;
 	try {
-		const myId = (user.value as any)?.id;
+		// Project-scoped board: always show ALL of the project's tasks so it
+		// matches the project timeline. The global Mine/Everyone lens belongs
+		// to the cross-project Tasks floor, not a single project's board.
 		const filter: any = {
 			_and: [
 				{
@@ -197,14 +195,6 @@ async function fetchTasks() {
 				},
 			],
 		};
-		if (isMine.value && myId) {
-			filter._and.push({
-				_or: [
-					{ assigned_to: { directus_users_id: { _eq: myId } } },
-					{ user_created: { _eq: myId } },
-				],
-			});
-		}
 		const data = await taskItems.list({
 			fields: [
 				'id', 'title', 'description', 'status', 'priority', 'due_date', 'date_completed', 'sort',
@@ -301,9 +291,6 @@ async function handleColumnChange(columnKey: string, evt: any) {
 }
 
 onMounted(fetchTasks);
-
-// Refetch when the Mine/All toggle flips so the board responds live.
-watch(isMine, () => fetchTasks());
 
 // Slide-over edits + deletes notify the entity bus; refetch so the board
 // repaints with authoritative state (status changes shuffle columns, etc).

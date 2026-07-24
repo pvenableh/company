@@ -304,6 +304,14 @@
           var(--glass-shadow-far));
   }
 
+  /* ---- Helper / empty-state copy ----
+   * The universal secondary-text style: empty-state blurbs, field hints,
+   * "log the first one…" prompts. Small + muted so it reads as guidance,
+   * not content. Use in place of ad-hoc `text-sm text-muted-foreground`. */
+  .helper-text {
+    @apply text-xs leading-relaxed text-muted-foreground;
+  }
+
 }
 
 /* Focus ring for glass form controls.

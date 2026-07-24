@@ -3,6 +3,8 @@
 		class="ui-action-button inline-flex items-center rounded-full border border-border text-xs font-medium transition-[colors,transform] duration-150"
 		:class="[variantClasses, sizeClasses]"
 		:disabled="disabled || loading"
+		:title="title"
+		:aria-label="title"
 		@click="$emit('click', $event)"
 	>
 		<Icon v-if="loading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
@@ -24,7 +26,10 @@ const props = defineProps<{
 	variant?: 'default' | 'primary' | 'destructive';
 	loading?: boolean;
 	disabled?: boolean;
+	/** Hide the label responsively: 'sm'/'md' below that breakpoint, 'always' for icon-only. */
 	hideLabel?: string;
+	/** Native tooltip + accessible name — set this whenever the label may be hidden. */
+	title?: string;
 	/** Show the AI token-spend marker (this action makes an LLM call). */
 	spend?: boolean;
 	/**
@@ -55,6 +60,7 @@ const sizeClasses = computed(() => (props.size === 'md' ? 'gap-1.5 h-8 px-3' : '
 const labelClass = computed(() => {
 	if (props.hideLabel === 'sm') return 'hidden sm:inline';
 	if (props.hideLabel === 'md') return 'hidden md:inline';
+	if (props.hideLabel === 'always') return 'hidden';
 	return '';
 });
 </script>

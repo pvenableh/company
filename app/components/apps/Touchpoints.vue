@@ -356,7 +356,7 @@ function contactNames(tp: any): string[] {
 		<div v-if="loading" class="space-y-2">
 			<div v-for="n in 3" :key="n" class="h-10 rounded-lg bg-muted animate-pulse" />
 		</div>
-		<div v-else-if="!touchpoints.length" class="text-center py-10 text-sm text-muted-foreground">
+		<div v-else-if="!touchpoints.length" class="text-center py-10 helper-text">
 			No touchpoints yet. Log the first one to start tracking outreach.
 		</div>
 		<div v-else class="space-y-3">
