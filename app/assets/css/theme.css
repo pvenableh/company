@@ -24,28 +24,9 @@
   @apply bg-primary;
 }
 
-/* ---- Text ---- */
-.t-text {
-  @apply text-foreground;
-}
-.t-text-secondary {
-  @apply text-muted-foreground;
-}
-.t-text-tertiary {
-  @apply text-muted-foreground/60;
-}
-.t-text-muted {
-  @apply text-muted-foreground/40;
-}
-.t-text-accent {
-  @apply text-primary;
-}
-.t-text-accent-tertiary {
-  @apply text-primary/80;
-}
-.t-text-inverse {
-  @apply text-primary-foreground;
-}
+/* ---- Text ----
+   The `.t-text*` color aliases were retired 2026-07-24 — use the standard
+   semantic tokens directly (text-foreground / text-muted-foreground / …). */
 
 /* ---- Heading & Body fonts ---- */
 .t-heading {
