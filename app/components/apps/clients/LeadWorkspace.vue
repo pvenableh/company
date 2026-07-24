@@ -50,6 +50,11 @@ watch(view, (next) => {
 
 const docsProposalCount = ref(0);
 const docsContractCount = ref(0);
+// Tab strip items for the universal <UTabs> control (matches Client/Project).
+const viewTabs = computed(() => [
+	{ key: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
+	{ key: 'documents', label: 'Documents', icon: 'lucide:files', count: docsProposalCount.value + docsContractCount.value || null },
+]);
 const docsProposalsRef = ref<any>(null);
 const docsContractsRef = ref<any>(null);
 const showCreateProposalModal = ref(false);
@@ -574,32 +579,8 @@ function openContactPivot() {
 					/>
 				</div>
 
-				<!-- View tab strip -->
-				<div class="flex flex-wrap gap-1.5" :class="!compact && 'mb-5'">
-					<button
-						type="button"
-						class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
-						:class="view === 'overview'
-							? 'bg-primary text-primary-foreground border-primary'
-							: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
-						@click="view = 'overview'"
-					>
-						<Icon name="lucide:layout-dashboard" class="w-3.5 h-3.5" />
-						Overview
-					</button>
-					<button
-						type="button"
-						class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
-						:class="view === 'documents'
-							? 'bg-primary text-primary-foreground border-primary'
-							: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
-						@click="view = 'documents'"
-					>
-						<Icon name="lucide:files" class="w-3.5 h-3.5" />
-						Documents
-						<span class="text-[10px] opacity-70 ml-0.5">{{ docsProposalCount + docsContractCount }}</span>
-					</button>
-				</div>
+				<!-- View tab strip — the app-wide universal <UTabs> (matches Client/Project). -->
+				<UTabs v-model="view" :items="viewTabs" :class="!compact && 'mb-5'" />
 
 				<!-- Documents tab body -->
 				<div v-if="view === 'documents'" class="ios-card p-4 sm:p-6 space-y-6">
