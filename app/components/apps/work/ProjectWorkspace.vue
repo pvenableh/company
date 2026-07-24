@@ -587,18 +587,34 @@ const paidTotal = ref<number | null>(null);
 const currentOutstanding = ref<number | null>(null);
 const overdueTotal = ref<number | null>(null);
 const huntRows = ref<HuntRow[]>([]);
+// Dated payment ledger for this project's invoices → the period "Collected" card.
+const projectPayments = ref<{ amount: number; date: string | null }[]>([]);
 
 async function loadBillingSummary() {
 	try {
-		const rows = await invoiceItemsApi.list({
-			fields: [
-				'id', 'invoice_code', 'status', 'total_amount', 'due_date',
-				'client.name', 'bill_to.name',
-				'payments.amount', 'payments.status', 'payments.livemode',
-			],
-			filter: { projects: { projects_id: { _eq: props.projectId } } },
-			limit: -1,
-		}).catch(() => []) as any[];
+		const paymentItemsApi = useDirectusItems('payments_received');
+		const [rows, payments] = await Promise.all([
+			invoiceItemsApi.list({
+				fields: [
+					'id', 'invoice_code', 'status', 'total_amount', 'due_date',
+					'client.name', 'bill_to.name',
+					'payments.amount', 'payments.status', 'payments.livemode',
+				],
+				filter: { projects: { projects_id: { _eq: props.projectId } } },
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+			// Payments on invoices linked to this project (via the junction).
+			paymentItemsApi.list({
+				fields: ['amount', 'date_received', 'date_created'],
+				filter: {
+					_and: [
+						{ invoice_id: { projects: { projects_id: { _eq: props.projectId } } } },
+						{ _or: [{ livemode: { _null: true } }, { livemode: { _eq: true } }] },
+					],
+				},
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+		]);
 
 		const today = new Date(); today.setHours(0, 0, 0, 0);
 		let billed = 0, paid = 0, current = 0, overdue = 0;
@@ -637,12 +653,17 @@ async function loadBillingSummary() {
 		currentOutstanding.value = current;
 		overdueTotal.value = overdue;
 		huntRows.value = hunt;
+		projectPayments.value = (payments || []).map((p: any) => ({
+			amount: Number(p?.amount) || 0,
+			date: p?.date_received || p?.date_created || null,
+		}));
 	} catch {
 		billedTotal.value = 0;
 		paidTotal.value = 0;
 		currentOutstanding.value = 0;
 		overdueTotal.value = 0;
 		huntRows.value = [];
+		projectPayments.value = [];
 	}
 }
 
@@ -1256,18 +1277,23 @@ watch(() => props.projectId, () => {
 
 					<!-- Money: value → paid → to-hunt. Shows once billing has loaded
 					     and there's either a contract value or something invoiced. -->
-					<div
-						v-if="paidTotal != null && (contractValueNum != null || (billedTotal || 0) > 0)"
-						class="grid gap-4 lg:grid-cols-2"
-					>
-						<MoneyPipeline
-							:contract-value="contractValueNum"
-							:paid="paidTotal || 0"
-							:current-outstanding="currentOutstanding || 0"
-							:overdue="overdueTotal || 0"
+					<template v-if="paidTotal != null && (contractValueNum != null || (billedTotal || 0) > 0)">
+						<!-- Collected · [period] — payments on this project's invoices. -->
+						<MoneyCollectedCard
+							:payments="projectPayments"
+							title="Collected on this project"
+							class="mb-4"
 						/>
-						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
-					</div>
+						<div class="grid gap-4 lg:grid-cols-2">
+							<MoneyPipeline
+								:contract-value="contractValueNum"
+								:paid="paidTotal || 0"
+								:current-outstanding="currentOutstanding || 0"
+								:overdue="overdueTotal || 0"
+							/>
+							<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+						</div>
+					</template>
 
 					<!-- Key contacts — inherited from the client roster (billing
 					     first), so you see who to reach without opening the tab. -->

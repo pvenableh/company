@@ -10,12 +10,19 @@
   proposals directly on the contact OR on a lead whose primary contact is them.
 */
 import { proposalPursuitState } from '~~/shared/proposals';
+import { moneyPeriodRange, moneyPeriodMeta, inMoneyPeriod, type MoneyPeriodKey } from '~~/shared/money-period';
 
 const props = defineProps<{
 	clientId?: string | null;
 	leadId?: string | number | null;
 	contactId?: string | null;
 }>();
+
+// Period lens — scopes only the *pitch flow* (Pitched = value pitched in the
+// window, by date_sent). In-play/Cold are live; Won/Win-rate are lifetime.
+// Defaults to Lifetime so a lead's full courtship shows without a period cutting
+// older pitches (collected-money surfaces default to YTD; pursuit is longer-arc).
+const period = ref<MoneyPeriodKey>('all');
 
 const proposalItems = useDirectusItems('proposals');
 const proposalSlide = useAppSlideOver('proposal');
@@ -54,13 +61,21 @@ defineExpose({ refresh: load });
 const enriched = computed(() => rows.value.map((p) => ({ ...p, ...proposalPursuitState(p) })));
 const valueOf = (pred: (p: any) => boolean) => enriched.value.filter(pred).reduce((s, p) => s + (Number(p.total_value) || 0), 0);
 
+// Pitched, scoped to the selected period by when it was sent (flow metric).
+const pitchedInPeriod = computed(() => {
+	const range = moneyPeriodRange(period.value);
+	return enriched.value
+		.filter((p) => p.state !== 'draft' && (!range.start || inMoneyPeriod(p.date_sent || p.date_created, range)))
+		.reduce((s, p) => s + (Number(p.total_value) || 0), 0);
+});
+
 const stats = computed(() => {
 	const e = enriched.value;
 	const wonN = e.filter((p) => p.state === 'won').length;
 	const lostN = e.filter((p) => p.state === 'lost').length;
 	const decided = wonN + lostN;
 	return {
-		pitched: valueOf((p) => p.state !== 'draft'),
+		pitched: pitchedInPeriod.value,
 		inPlay: valueOf((p) => p.state === 'sent' || p.state === 'viewed'),
 		cold: valueOf((p) => p.state === 'cold'),
 		coldCount: e.filter((p) => p.state === 'cold').length,
@@ -85,17 +100,17 @@ const num = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', c
 
 <template>
 	<div v-if="hasAny" class="ios-card glass-edge rounded-2xl p-5">
-		<div class="flex items-center justify-between gap-3 mb-4">
+		<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
 			<h3 class="text-sm font-semibold text-foreground/80 flex items-center gap-2">
 				<Icon name="lucide:target" class="w-4 h-4 text-primary" />
 				Pursuit money
 			</h3>
-			<span class="text-[11px] text-muted-foreground">still out there</span>
+			<MoneyPeriodSelect v-model="period" />
 		</div>
 
 		<div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
 			<div>
-				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Pitched</p>
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Pitched<span v-if="period !== 'all'" class="text-muted-foreground/70"> · {{ moneyPeriodMeta(period).short }}</span></p>
 				<p class="text-lg font-bold tabular-nums leading-none mt-1">{{ num(stats.pitched) }}</p>
 			</div>
 			<div>
@@ -115,6 +130,10 @@ const num = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', c
 				<p class="text-lg font-bold tabular-nums leading-none mt-1">{{ stats.winRate == null ? '—' : stats.winRate + '%' }}</p>
 			</div>
 		</div>
+
+		<p v-if="period !== 'all'" class="mt-2.5 text-[10px] text-muted-foreground/80">
+			Pitched = sent <span class="font-medium text-foreground/70">{{ moneyPeriodMeta(period).label.toLowerCase() }}</span> · in play, cold &amp; won are live
+		</p>
 
 		<p v-if="stats.noResponse > 0" class="mt-3 text-[11px] text-muted-foreground">
 			<Icon name="lucide:volume-x" class="w-3 h-3 inline -mt-0.5" />
