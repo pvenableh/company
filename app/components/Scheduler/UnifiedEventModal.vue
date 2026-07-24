@@ -958,7 +958,12 @@ const sendInviteMeeting = computed(() => {
 </script>
 
 <template>
-	<AppsAppBottomSheet v-model="isOpen" :title="sheetTitle">
+	<AppSlideOver
+		v-model="isOpen"
+		:title="sheetTitle"
+		elevated
+		:ui="{ footer: '!flex-row !justify-between !items-center' }"
+	>
 		<form id="unified-event-form" @submit.prevent="handleSubmit" class="space-y-5">
 				<!-- Pinned project context (modal launched from a project page) -->
 				<div v-if="projectPinned && form.project" class="flex items-center gap-2 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
@@ -1429,5 +1434,5 @@ const sendInviteMeeting = computed(() => {
 				</button>
 			</div>
 		</template>
-	</AppsAppBottomSheet>
+	</AppSlideOver>
 </template>
