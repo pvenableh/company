@@ -128,15 +128,22 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
 			@escape-key-down="handleEscapeKeyDown"
 		>
 			<SheetHeader
-				v-if="title || $slots.header"
+				v-if="title || $slots.header || $slots.actions"
 				:class="cn('px-6 py-4 border-b border-border/40 text-left shrink-0 relative app-slide-over__header', props.ui?.header)"
 			>
 				<slot name="header">
-					<div class="flex items-center gap-2">
-						<span v-if="accent" class="app-slide-over__dot shrink-0" aria-hidden="true" />
-						<div class="min-w-0">
-							<SheetTitle v-if="title" :class="cn('truncate', props.ui?.title)">{{ title }}</SheetTitle>
-							<SheetDescription v-if="description" :class="props.ui?.description">{{ description }}</SheetDescription>
+					<!-- Title block + optional header-right #actions. pr-8 keeps
+					     actions clear of the absolute close button (top/right-4). -->
+					<div class="flex items-start justify-between gap-2" :class="{ 'pr-8': $slots.actions || !hideClose }">
+						<div class="flex items-center gap-2 min-w-0">
+							<span v-if="accent" class="app-slide-over__dot shrink-0" aria-hidden="true" />
+							<div class="min-w-0">
+								<SheetTitle v-if="title" :class="cn('truncate', props.ui?.title)">{{ title }}</SheetTitle>
+								<SheetDescription v-if="description" :class="props.ui?.description">{{ description }}</SheetDescription>
+							</div>
+						</div>
+						<div v-if="$slots.actions" class="flex items-center gap-1 shrink-0">
+							<slot name="actions" />
 						</div>
 					</div>
 				</slot>

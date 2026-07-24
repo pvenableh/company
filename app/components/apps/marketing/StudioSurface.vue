@@ -1128,10 +1128,11 @@ onMounted(() => {
     </CompositionCanvas>
 
     <!-- New Plan — iOS bottom sheet -->
-    <AppsAppBottomSheet
+    <AppSlideOver
       v-model="showNewPlan"
       title="New Content Plan"
-      subtitle="Bundle a strategy + a month of posts under a single review link for your client."
+      description="Bundle a strategy + a month of posts under a single review link for your client."
+      elevated
     >
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3 min-w-0">
@@ -1205,14 +1206,15 @@ onMounted(() => {
           </UiActionButton>
         </div>
       </div>
-    </AppsAppBottomSheet>
+    </AppSlideOver>
 
     <!-- Detail — iOS bottom sheet (post drafts get the same chrome as the
          New Plan flow so the whole Studio interaction language is iOS). -->
-    <AppsAppBottomSheet
+    <AppSlideOver
       :model-value="!!selectedPost"
       :title="editing ? 'Edit Draft' : 'Content Draft'"
-      :subtitle="selectedPost?.target_month ? formatYearMonth(selectedPost.target_month) : 'No target month'"
+      :description="selectedPost?.target_month ? formatYearMonth(selectedPost.target_month) : 'No target month'"
+      elevated
       @update:model-value="(v) => { if (!v) { selectedPost = null; editing = false } }"
     >
       <template v-if="selectedPost && !editing && !editLocked" #actions>
@@ -1449,7 +1451,7 @@ onMounted(() => {
           </div>
         </template>
       </div>
-    </AppsAppBottomSheet>
+    </AppSlideOver>
 
     <!-- Media picker (Directus files) -->
     <SocialMediaFilePicker
