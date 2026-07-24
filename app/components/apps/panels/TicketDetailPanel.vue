@@ -15,6 +15,7 @@
 -->
 <script setup lang="ts">
 import { Icon } from '#components';
+import { notifyEntityChange } from '~/composables/useEntityStore';
 import AppSlideOverShell from '../AppSlideOverShell.vue';
 
 const props = defineProps<{ id: string; mode?: string }>();
@@ -93,6 +94,7 @@ async function changeStatus(next: string) {
 	updatingStatus.value = true;
 	try {
 		await ticketItems.update(ticket.value.id, { status: next });
+			notifyEntityChange('tickets', { id: String(ticket.value.id), op: 'update' });
 		// Arcade reward — only when a ticket transitions into Completed.
 		if (next === 'Completed' && prev !== 'Completed') {
 			awardEvent('ticket_closed');
@@ -111,6 +113,7 @@ async function changePriority(next: string) {
 	ticket.value = { ...ticket.value, priority: next };
 	try {
 		await ticketItems.update(ticket.value.id, { priority: next });
+			notifyEntityChange('tickets', { id: String(ticket.value.id), op: 'update' });
 	} catch (err: any) {
 		ticket.value = { ...ticket.value, priority: prev };
 		toast.add({ title: 'Failed to update priority', description: err?.message, color: 'red' });
@@ -125,6 +128,7 @@ async function handleStripUpdate(fields: Record<string, any>) {
 	ticket.value = { ...ticket.value, ...fields };
 	try {
 		await ticketItems.update(ticket.value.id, fields);
+			notifyEntityChange('tickets', { id: String(ticket.value.id), op: 'update' });
 	} catch (err: any) {
 		ticket.value = prev;
 		toast.add({ title: 'Failed to update ticket', description: err?.message, color: 'red' });

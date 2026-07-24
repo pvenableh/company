@@ -1481,7 +1481,12 @@ watch(() => props.projectId, () => {
 						</div>
 					</div>
 
-					<TicketsBoard :projectId="projectId" :organizationId="organizationId" hide-create />
+					<TicketsProjectBoard
+						:project-id="projectId"
+						:organization-id="organizationId || undefined"
+						:compact="compact"
+						@stats-changed="refreshTicketCount"
+					/>
 				</div>
 
 				<!-- Touchpoints — lightweight communication log (outreach + follow-up). -->
