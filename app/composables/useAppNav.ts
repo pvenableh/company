@@ -71,6 +71,7 @@ const FLOORS: Partial<Record<AppId, AppFloor[]>> = {
 		{ key: 'clients', label: 'Clients', icon: 'lucide:building-2' },
 		{ key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
 		{ key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
+		{ key: 'pipeline', label: 'Pipeline', icon: 'lucide:target' },
 		{ key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
 		{ key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
 	],
@@ -85,7 +86,7 @@ const FLOORS: Partial<Record<AppId, AppFloor[]>> = {
 	money: [
 		{ key: 'cashflow', label: 'Cash flow', icon: 'lucide:trending-up' },
 		{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
-		{ key: 'pipeline', label: 'Pipeline', icon: 'lucide:target' },
+		{ key: 'pipeline', label: 'Forecast', icon: 'lucide:trending-up' },
 		{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 		{ key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
 		{ key: 'deposits', label: 'Deposits', icon: 'lucide:banknote' },

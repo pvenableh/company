@@ -20,8 +20,8 @@ const config = useRuntimeConfig();
 // simple list/table for clients/contacts/partners, dashboard-shaped for
 // Card Desk and Intelligence. The page wrapper stays the same; the body
 // switches via v-if/v-else-if blocks below.
-type ViewKey = 'clients' | 'contacts' | 'leads' | 'carddesk' | 'intelligence';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'leads', 'carddesk', 'intelligence'];
+type ViewKey = 'clients' | 'contacts' | 'leads' | 'pipeline' | 'carddesk' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'leads', 'pipeline', 'carddesk', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
@@ -962,6 +962,14 @@ watch(view, (next) => {
           :organization-id="selectedOrg"
           @created="handleLeadCreated"
         />
+      </template>
+
+      <!-- ── Pipeline view (proposal pursuit board) ───────────────────────
+           The sales pipeline lives here in People now (moved out of Money,
+           which keeps only the read-only Forecast floor). Portfolio-wide
+           board of every proposal in flight for leads AND clients. -->
+      <template v-else-if="view === 'pipeline'">
+        <MoneyProposalPipeline />
       </template>
 
       <!-- ── Card Desk view ───────────────────────────────────────────── -->

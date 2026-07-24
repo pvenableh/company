@@ -1235,9 +1235,12 @@ const headerAction = computed(() => {
         />
       </template>
 
-      <!-- ── Pipeline floor (proposal pursuit board) ──────────────────── -->
+      <!-- ── Forecast floor (read-only "value in flight") ─────────────────
+           The editable pursuit board moved to People (/apps/clients?view=
+           pipeline). Money keeps only the cash-side forecast rollup, whose
+           rows deep-link back to the owning client/lead. -->
       <template v-else-if="floor === 'pipeline'">
-        <MoneyProposalPipeline />
+        <MoneyPipelineForecast />
       </template>
 
       <!-- ── Invoices floor ───────────────────────────────────────────── -->
