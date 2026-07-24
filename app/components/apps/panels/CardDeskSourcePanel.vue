@@ -30,7 +30,7 @@ interface CdCard {
 	notes: string | null;
 	is_client: boolean;
 	is_partner?: boolean;
-	pipeline_stage?: string | null;
+	earnest_lead_id?: string | number | null;
 	client_at?: string | null;
 	partner_at?: string | null;
 	conversion_reason?: string | null;
@@ -64,12 +64,25 @@ interface CdTaskRow {
 	plan: string | null;
 }
 
+interface LinkedLead {
+	id: string | number;
+	name: string | null;
+	stage: string | null;
+}
+
 const card = ref<CdCard | null>(null);
+const lead = ref<LinkedLead | null>(null);
 const activities = ref<CdActivity[]>([]);
 const plans = ref<CdPlanRow[]>([]);
 const tasks = ref<CdTaskRow[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+const slideOverStack = useAppSlideOverStack();
+const leadStageLabel = computed(() => (lead.value?.stage || '').replace(/_/g, ' ') || '—');
+function openLead() {
+	if (lead.value?.id) slideOverStack.push('lead', String(lead.value.id));
+}
 
 // Group tasks under their plan (with a trailing "Other follow-ups" bucket for
 // tasks not tied to a plan). Pending tasks lead each group; done/skipped sink.
@@ -179,10 +192,11 @@ watch(
 		card.value = null;
 		activities.value = [];
 		try {
-			const res = await $fetch<{ cd_contact: CdCard | null; activities: CdActivity[]; plans?: CdPlanRow[]; tasks?: CdTaskRow[] }>(
+			const res = await $fetch<{ cd_contact: CdCard | null; lead?: LinkedLead | null; activities: CdActivity[]; plans?: CdPlanRow[]; tasks?: CdTaskRow[] }>(
 				`/api/carddesk/by-contact/${id}`,
 			);
 			card.value = res.cd_contact;
+			lead.value = res.lead || null;
 			activities.value = res.activities;
 			plans.value = res.plans || [];
 			tasks.value = res.tasks || [];
@@ -269,6 +283,26 @@ watch(
 				<p v-if="card.notes" class="mt-3 text-xs italic text-muted-foreground border-t border-border pt-3">
 					{{ card.notes }}
 				</p>
+			</div>
+
+			<!-- Linked Earnest lead — the SINGLE pipeline. The card reflects its
+			     lead's stage (leads.stage) instead of a parallel CardDesk stage. -->
+			<div v-if="lead" class="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-3">
+				<div class="min-w-0">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Lead stage</p>
+					<span class="mt-1 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary capitalize">
+						<Icon name="lucide:target" class="w-3 h-3" />
+						{{ leadStageLabel }}
+					</span>
+				</div>
+				<button
+					type="button"
+					class="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+					@click="openLead"
+				>
+					Open lead
+					<Icon name="lucide:arrow-up-right" class="w-3 h-3" />
+				</button>
 			</div>
 
 			<!-- Plans & Tasks — CardDesk follow-up plan, grouped by plan. -->

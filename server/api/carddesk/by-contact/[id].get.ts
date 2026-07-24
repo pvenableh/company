@@ -31,8 +31,9 @@ export default defineEventHandler(async (event) => {
         'id', 'name', 'first_name', 'last_name', 'email', 'phone',
         'company', 'title', 'rating', 'industry', 'met_at', 'notes',
         'is_client', 'hibernated', 'date_created',
-        // Graduation / pipeline context (2026-06 CardDesk restructure):
-        'pipeline_stage', 'is_partner', 'client_at', 'partner_at',
+        // Graduation context + the linked Earnest lead (the single pipeline —
+        // CardDesk's own pipeline_stage is retired in favour of leads.stage).
+        'is_partner', 'client_at', 'partner_at', 'earnest_lead_id',
         'conversion_reason', 'estimated_value',
       ],
       filter: {
@@ -46,7 +47,34 @@ export default defineEventHandler(async (event) => {
   );
 
   const card = cards[0] || null;
-  if (!card) return { cd_contact: null, activities: [], plans: [], tasks: [] };
+  if (!card) return { cd_contact: null, lead: null, activities: [], plans: [], tasks: [] };
+
+  // Resolve the linked Earnest lead so the card reflects the SINGLE pipeline
+  // (leads.stage). Prefer the explicit FK; fall back to the lead attached to
+  // this same contact (covers cards promoted before earnest_lead_id was set).
+  let lead: any = null;
+  try {
+    const leadFields = ['id', 'name', 'stage', 'estimated_value'];
+    let leadRows: any[] = [];
+    if (card.earnest_lead_id) {
+      leadRows = await directus.request(
+        readItems('leads', { fields: leadFields, filter: { id: { _eq: card.earnest_lead_id } }, limit: 1 }),
+      );
+    }
+    if (!leadRows.length) {
+      leadRows = await directus.request(
+        readItems('leads', {
+          fields: leadFields,
+          filter: { related_contact: { _eq: contactId } },
+          sort: ['-date_created'],
+          limit: 1,
+        }),
+      );
+    }
+    lead = leadRows[0] || null;
+  } catch {
+    lead = null;
+  }
 
   // Activities + follow-up plans/tasks are all user-scoped on the same card.
   // Plans/tasks are read-only context (authored by the CardDesk app); we fetch
@@ -94,5 +122,5 @@ export default defineEventHandler(async (event) => {
     ).catch(() => []),
   ]);
 
-  return { cd_contact: card, activities, plans, tasks };
+  return { cd_contact: card, lead, activities, plans, tasks };
 });

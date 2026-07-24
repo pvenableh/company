@@ -233,6 +233,18 @@ export default defineEventHandler(async (event) => {
           lead_score: LEAD_SCORE_FROM_RATING[cd.rating] || 25,
         }),
       );
+      // Stamp the lead FK back onto the card so the pursuit lives in ONE
+      // pipeline (leads.stage) — the card links to its lead rather than
+      // carrying its own parallel pipeline_stage.
+      if (lead?.id) {
+        await directus
+          .request(updateItem('cd_contacts', cdContactId, { earnest_lead_id: lead.id }))
+          .catch((e: any) =>
+            console.error('[promote] failed to set cd_contacts.earnest_lead_id', {
+              cdContactId, leadId: lead.id, error: e?.message,
+            }),
+          );
+      }
     } catch (e: any) {
       console.error('[promote] failed to create lead', {
         cdContactId, contactId: contact.id, rating: cd.rating, error: e?.message,
