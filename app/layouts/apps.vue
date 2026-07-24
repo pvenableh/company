@@ -139,9 +139,6 @@
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
 		</ClientOnly>
 		<ClientOnly>
-			<OrganizationTokenManagementModal v-model="tokenModalVisible" />
-		</ClientOnly>
-		<ClientOnly>
 			<TimeTrackerFloatingIndicator class="md:hidden" />
 		</ClientOnly>
 		<ClientOnly>
@@ -174,7 +171,6 @@
 
 <script setup lang="ts">
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
-import { tokenModalOpen } from '~/composables/useTokenModal';
 import { openEarnestPanel } from '~/composables/useEarnestPanel';
 import { spotlightOpen, toggleSpotlight } from '~/composables/useSpotlight';
 
@@ -205,7 +201,6 @@ watch(bootstrapOrg, (o) => { if (o) loadBootstrap(); }, { immediate: true });
 
 const showOrgSwitcher = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
-const tokenModalVisible = tokenModalOpen;
 
 if (import.meta.client) {
 	onMounted(() => {

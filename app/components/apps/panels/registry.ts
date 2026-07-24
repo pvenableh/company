@@ -49,6 +49,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'account-subscription': () => import('./AccountSubscriptionPanel.vue'),
 	'email-template': () => import('./EmailTemplatePanel.vue'),
 	'ai-note': () => import('./AiNotePanel.vue'),
+	'token-management': () => import('./TokenManagementPanel.vue'),
 };
 
 const componentCache = new Map<string, Component>();

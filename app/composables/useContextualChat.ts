@@ -368,10 +368,9 @@ export function useContextualChat() {
         } catch {}
 
         if (response.status === 402 || (response.status === 403 && errorData?.sellSheet)) {
-          // Both routes share the same modal — it's the existing
-          // OrganizationTokenManagementModal mounted globally in the default
-          // layout. The modal copy already covers both "no tokens" and
-          // "upgrade for AI" states.
+          // Both routes share the same surface — the `token-management`
+          // slide-over panel (openTokenModal pushes it). Its copy already
+          // covers both "no tokens" and "upgrade for AI" states.
           const { openTokenModal } = await import('~/composables/useTokenModal');
           openTokenModal();
         } else if (response.status === 429) {
