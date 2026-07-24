@@ -269,20 +269,22 @@ export default defineEventHandler(async (event) => {
 			}
 		}
 
-		// Auto-create lead activity if linked to a lead
+		// Auto-log a touchpoint (unified pursuit log) if linked to a lead.
 		if (body.related_lead) {
 			try {
-				await directus.request(
-					createItem('lead_activities', {
-						activity_type: 'meeting',
-						activity_date: scheduledStart.toISOString(),
-						subject: body.title,
-						description: `Video meeting scheduled: ${body.title}`,
-						lead: body.related_lead,
-						related_video_meeting: videoMeeting.id,
-						status: 'published',
-					}),
-				);
+				if (orgIdForDefaults) {
+					await directus.request(
+						createItem('touchpoints', {
+							organization: orgIdForDefaults,
+							lead: body.related_lead,
+							type: 'meeting',
+							occurred_at: scheduledStart.toISOString(),
+							summary: body.title,
+							note: `Video meeting scheduled: ${body.title}`,
+							participants: [{ kind: 'video_meeting', id: videoMeeting.id, name: body.title }],
+						}),
+					);
+				}
 
 				// Card Desk writeback: if the lead's contact was sourced from a
 				// Card Desk card, mirror the scheduled meeting onto its timeline.

@@ -12,6 +12,8 @@ export function useLeads() {
   const leads = useDirectusItems('leads');
   const { selectedOrg } = useOrganization();
   const { awardEvent } = useArcadeAwards();
+  // Lead lifecycle events log to the unified touchpoints collection (lead FK).
+  const { logTouchpoint } = useTouchpoints();
 
   const getLeads = async (filters?: LeadFilters) => {
     // Tenant-data safety: never query leads without an org. Null-org leads
@@ -179,12 +181,12 @@ export function useLeads() {
 
     await leads.update(leadId, { next_follow_up: nextFollowUp } as any);
 
-    const { createActivity } = useLeadActivities();
-    await createActivity({
+    await logTouchpoint({
+      organization: selectedOrg.value!,
       lead: Number(leadId),
-      activity_type: 'follow_up',
-      subject: `Auto follow-up scheduled (${stage})`,
-      description: `Follow-up automatically scheduled ${intervalDays} day${intervalDays > 1 ? 's' : ''} after stage change to ${stage}.`,
+      type: 'follow_up',
+      summary: `Auto follow-up scheduled (${stage})`,
+      note: `Follow-up automatically scheduled ${intervalDays} day${intervalDays > 1 ? 's' : ''} after stage change to ${stage}.`,
       next_action: `Follow up on ${nextDate.toLocaleDateString()}`,
       next_action_date: nextFollowUp,
     });
@@ -280,13 +282,13 @@ export function useLeads() {
 
     await leads.update(id, { stage: newStage, date_updated: new Date() } as any);
 
-    // Log stage change activity
-    const { createActivity } = useLeadActivities();
-    await createActivity({
+    // Log stage change
+    await logTouchpoint({
+      organization: selectedOrg.value!,
       lead: Number(id),
-      activity_type: 'note',
-      subject: `Stage changed to ${newStage}`,
-      description: oldStage ? `Pipeline stage moved from ${oldStage} to ${newStage}.` : `Pipeline stage set to ${newStage}.`,
+      type: 'note',
+      summary: `Stage changed to ${newStage}`,
+      note: oldStage ? `Pipeline stage moved from ${oldStage} to ${newStage}.` : `Pipeline stage set to ${newStage}.`,
     });
 
     // Auto-schedule follow-up
@@ -408,13 +410,13 @@ export function useLeads() {
       date_updated: new Date(),
     } as any);
 
-    // Log conversion activity
-    const { createActivity } = useLeadActivities();
-    await createActivity({
+    // Log conversion
+    await logTouchpoint({
+      organization: selectedOrg.value!,
       lead: Number(leadId),
-      activity_type: 'note',
-      subject: 'Lead converted to client',
-      description: `Created client "${clientData.name}" and marked lead as won.`,
+      type: 'note',
+      summary: 'Lead converted to client',
+      note: `Created client "${clientData.name}" and marked lead as won.`,
     });
 
     // Fire marketing-automation rules for the won transition
@@ -432,12 +434,12 @@ export function useLeads() {
       date_updated: new Date(),
     } as any);
 
-    const { createActivity } = useLeadActivities();
-    await createActivity({
+    await logTouchpoint({
+      organization: selectedOrg.value!,
       lead: Number(leadId),
-      activity_type: 'note',
-      subject: 'Lead marked as lost',
-      description: `Reason: ${lostReason}`,
+      type: 'note',
+      summary: 'Lead marked as lost',
+      note: `Reason: ${lostReason}`,
     });
 
     // Fire marketing-automation rules for the lost transition

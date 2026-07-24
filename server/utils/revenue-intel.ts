@@ -121,7 +121,7 @@ export async function buildColdEffortIntel(
   // Activity counts per lead (the follow-up/contact log).
   const counts = new Map<string, number>();
   try {
-    const rows = (await directus.request((aggregate as any)('lead_activities', {
+    const rows = (await directus.request((aggregate as any)('touchpoints', {
       aggregate: { count: ['*'] },
       groupBy: ['lead'],
       query: { filter: { lead: { _in: leads.map((l) => l.id) } } },

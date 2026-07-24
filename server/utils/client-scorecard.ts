@@ -90,7 +90,7 @@ export async function buildClientScorecard(
   let leadActivities = 0;
   if (leads.length) {
     try {
-      const rows = (await directus.request((aggregate as any)('lead_activities', {
+      const rows = (await directus.request((aggregate as any)('touchpoints', {
         aggregate: { count: ['*'] },
         query: { filter: { lead: { _in: leads.map((l) => l.id) } } },
       }))) as any[];
@@ -199,7 +199,7 @@ export async function buildOrgClientScores(
   }
   if (leadToClient.size) {
     try {
-      const rows = (await directus.request((aggregate as any)('lead_activities', {
+      const rows = (await directus.request((aggregate as any)('touchpoints', {
         aggregate: { count: ['*'] },
         groupBy: ['lead'],
         query: { filter: { lead: { _in: [...leadToClient.keys()] } } },

@@ -483,17 +483,20 @@ async function logBookingToPipeline(opts: {
 
 	const description = `Booked via public scheduler.${opts.bookingNotes ? '\n\n' + opts.bookingNotes : ''}${intakeBlock}`;
 
-	await admin.request(
-		createItem('lead_activities' as any, {
-			activity_type: 'meeting',
-			activity_date: opts.scheduledStart,
-			subject: `${opts.eventTypeTitle} with ${opts.inviteeName || email}`,
-			description,
-			duration_minutes: opts.durationMinutes,
-			contact: contact.id,
-			lead: leadId,
-		} as any),
-	);
+	// Log a touchpoint (the unified pursuit log) on the lead. Requires an org.
+	if (opts.organizationId) {
+		await admin.request(
+			createItem('touchpoints' as any, {
+				organization: opts.organizationId,
+				lead: leadId,
+				type: 'meeting',
+				occurred_at: opts.scheduledStart,
+				summary: `${opts.eventTypeTitle} with ${opts.inviteeName || email}`,
+				note: description,
+				contacts: contact.id ? [{ contacts_id: contact.id }] : undefined,
+			} as any),
+		);
+	}
 
 	return { matched: true, clientId };
 }

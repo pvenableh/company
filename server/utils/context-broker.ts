@@ -643,16 +643,20 @@ export async function buildContactSummary(contactId: string): Promise<string> {
       ).catch(() => []) as Promise<any[]>,
 
       directus.request(
-        (readItems as any)('lead_activities', {
+        (readItems as any)('touchpoints', {
           filter: { lead: { related_contact: { _eq: contactId } } },
           fields: [
-            'id', 'activity_type', 'subject', 'outcome', 'activity_date',
+            'id', 'type', 'summary', 'outcome', 'occurred_at', 'date_created',
             'next_action', 'next_action_date', 'lead',
           ],
-          sort: ['-activity_date'],
+          sort: ['-occurred_at', '-date_created'],
           limit: 5,
         }),
-      ).catch(() => []) as Promise<any[]>,
+      ).then((rows: any[]) => rows.map((tp) => ({
+        id: tp.id, activity_type: tp.type, subject: tp.summary, outcome: tp.outcome,
+        activity_date: tp.occurred_at || tp.date_created, next_action: tp.next_action,
+        next_action_date: tp.next_action_date, lead: tp.lead,
+      }))).catch(() => []) as Promise<any[]>,
 
       directus.request(
         (readItems as any)('contact_connections', {

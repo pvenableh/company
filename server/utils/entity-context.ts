@@ -462,13 +462,16 @@ async function buildLeadContext(directus: any, leadId: string, now: Date): Promi
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('lead_activities', {
+      readItems('touchpoints', {
         filter: { lead: { _eq: leadKey } },
-        fields: ['id', 'activity_type', 'subject', 'description', 'outcome', 'next_action', 'activity_date'],
-        sort: ['-activity_date'],
+        fields: ['id', 'type', 'summary', 'note', 'outcome', 'next_action', 'occurred_at', 'date_created'],
+        sort: ['-occurred_at', '-date_created'],
         limit: 10,
       }),
-    ).catch(() => []) as Promise<any[]>,
+    ).then((rows: any[]) => rows.map((tp) => ({
+      id: tp.id, activity_type: tp.type, subject: tp.summary, description: tp.note,
+      outcome: tp.outcome, next_action: tp.next_action, activity_date: tp.occurred_at || tp.date_created,
+    }))).catch(() => []) as Promise<any[]>,
   ]);
 
   if (!lead) return '';

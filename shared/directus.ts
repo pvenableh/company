@@ -4074,6 +4074,14 @@ export interface Touchpoint {
 	response_note?: string | null;
 	/** @description Extra non-contact tags (team / portal): [{ kind, id, name }]. */
 	participants?: Record<string, any> | null;
+	/** @description Lead this touch is about (nullable). Unifies lead_activities into touchpoints; carries forward on conversion. */
+	lead?: Lead | number | null;
+	/** @description How the touch landed (absorbed from lead_activities.outcome). */
+	outcome?: 'positive' | 'neutral' | 'negative' | 'no_response' | null;
+	/** @description Planned next follow-up for this pursuit. */
+	next_action?: string | null;
+	/** @description When the next follow-up is due. */
+	next_action_date?: string | null;
 }
 
 export interface TouchpointsContact {

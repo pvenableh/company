@@ -62,7 +62,10 @@ function onDocCreated() {
 }
 
 const { getLead, updateLeadStageWithAutomation, addLeadToList } = useLeads();
-const { getActivitiesForLead, createActivity } = useLeadActivities();
+// Lead pursuit history now lives in the unified `touchpoints` collection (via a
+// `lead` FK) instead of the legacy lead_activities. We keep this UI and adapt
+// touchpoint rows back to the activity shape the timeline expects.
+const { listForScope, logTouchpoint } = useTouchpoints();
 const { getPriorityBadgeClass } = useStatusStyle();
 const { getLists } = useMailingLists();
 const { removeFromList } = useContacts();
@@ -139,6 +142,29 @@ const newActivity = reactive({
 });
 const activitySaving = ref(false);
 
+// touchpoint row → the activity shape <LeadsActivityTimeline> renders.
+function tpToActivity(tp: any) {
+	const c = tp?.contacts?.[0]?.contacts_id;
+	return {
+		id: tp.id,
+		activity_type: tp.type,
+		subject: tp.summary,
+		description: tp.note,
+		outcome: tp.outcome,
+		next_action: tp.next_action,
+		activity_date: tp.occurred_at || tp.date_created,
+		date_created: tp.date_created,
+		contact: c ? { id: c.id, first_name: c.first_name, last_name: c.last_name } : null,
+	};
+}
+async function loadLeadActivities() {
+	const rows = await listForScope({ leadId: props.leadId }).catch((err) => {
+		console.warn('[LeadWorkspace] touchpoints fetch failed (degrading to empty):', err);
+		return [];
+	});
+	activities.value = (rows as any[]).map(tpToActivity);
+}
+
 // Stage statuses for FormStatusTimeline
 const stageStatuses = Object.entries(LEAD_STAGE_LABELS).map(([id, name]) => ({ id, name }));
 
@@ -150,10 +176,7 @@ async function fetchData() {
 			useHead({ title: `${lead.value?.related_contact?.first_name || 'Lead'} | Earnest` });
 		}
 		if (lead.value) emit('loaded', lead.value);
-		activities.value = await getActivitiesForLead(props.leadId).catch((err) => {
-			console.warn('[LeadWorkspace] activities fetch failed (degrading to empty):', err);
-			return [];
-		}) as any[];
+		await loadLeadActivities();
 	} catch (e) {
 		console.error('Failed to load lead:', e);
 	} finally {
@@ -179,7 +202,7 @@ async function handleStageChange(e: { oldStatus: string; newStatus: string }) {
 	try {
 		await updateLeadStageWithAutomation(props.leadId, newStage, lead.value?.stage);
 		lead.value.stage = newStage;
-		activities.value = await getActivitiesForLead(props.leadId) as any[];
+		await loadLeadActivities();
 	} finally {
 		stageUpdating.value = false;
 	}
@@ -189,17 +212,19 @@ async function handleAddActivity() {
 	if (!newActivity.subject.trim()) return;
 	activitySaving.value = true;
 	try {
-		await createActivity({
+		await logTouchpoint({
+			organization: lead.value?.organization?.id || lead.value?.organization,
 			lead: Number(props.leadId),
-			activity_type: newActivity.activity_type,
-			subject: newActivity.subject,
-			description: newActivity.description || undefined,
+			type: newActivity.activity_type,
+			summary: newActivity.subject,
+			note: newActivity.description || undefined,
 			outcome: newActivity.outcome || undefined,
 			next_action: newActivity.next_action || undefined,
+			contactIds: lead.value?.related_contact?.id ? [String(lead.value.related_contact.id)] : [],
 		});
 		showActivityForm.value = false;
 		Object.assign(newActivity, { activity_type: 'note', subject: '', description: '', outcome: '', next_action: '' });
-		activities.value = await getActivitiesForLead(props.leadId) as any[];
+		await loadLeadActivities();
 	} finally {
 		activitySaving.value = false;
 	}
@@ -350,7 +375,7 @@ async function fetchUpcomingMeetings() {
 const handleMeetingCreated = () => {
 	showMeetingModal.value = false;
 	fetchUpcomingMeetings();
-	getActivitiesForLead(props.leadId).then((r) => { activities.value = r as any[]; });
+	loadLeadActivities();
 };
 
 onMounted(() => {

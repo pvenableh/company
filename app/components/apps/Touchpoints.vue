@@ -21,6 +21,8 @@ const props = defineProps<{
 	clientId?: string | null;
 	projectId?: string | null;
 	contactId?: string | null;
+	/** Lead scope — pursuit history before a client exists. */
+	leadId?: string | number | null;
 }>();
 
 const { listForScope, logTouchpoint, markResponded, deleteTouchpoint } = useTouchpoints();
@@ -82,7 +84,7 @@ async function loadPeople() {
 async function load() {
 	loading.value = true;
 	try {
-		touchpoints.value = await listForScope({ clientId: props.clientId, projectId: props.projectId, contactId: props.contactId });
+		touchpoints.value = await listForScope({ clientId: props.clientId, projectId: props.projectId, contactId: props.contactId, leadId: props.leadId });
 	} catch {
 		touchpoints.value = [];
 	} finally {
@@ -91,7 +93,7 @@ async function load() {
 }
 
 onMounted(() => { load(); loadPeople(); });
-watch(() => [props.clientId, props.projectId, props.contactId], () => { load(); loadPeople(); });
+watch(() => [props.clientId, props.projectId, props.contactId, props.leadId], () => { load(); loadPeople(); });
 
 // ── Log form ─────────────────────────────────────────────────────────────
 const formOpen = ref(false);
@@ -141,6 +143,7 @@ async function save() {
 			organization: props.organizationId,
 			client: props.clientId || null,
 			project: props.projectId || null,
+			lead: props.leadId || null,
 			contactIds: form.contactIds,
 			type: form.type,
 			summary: form.summary.trim() || undefined,
