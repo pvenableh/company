@@ -13,8 +13,9 @@ const props = withDefaults(defineProps<{ projectId: string; hideHeader?: boolean
 const eventItems = useDirectusItems('project_events');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('tasks');
+const touchpointItems = useDirectusItems('touchpoints');
 
-type TimelineKind = 'milestone' | 'event' | 'ticket' | 'task';
+type TimelineKind = 'milestone' | 'event' | 'ticket' | 'task' | 'touchpoint';
 interface FeedItem {
 	id: string;
 	rawId: string;
@@ -56,14 +57,33 @@ async function toggleTaskComplete(item: FeedItem) {
 	}
 }
 
-const items = ref<FeedItem[]>([]);
+// Base stream (events/tickets/tasks) vs the opt-in touchpoints layer, kept
+// separate so the toggle folds touchpoints in/out without a refetch.
+const baseItems = ref<FeedItem[]>([]);
+const touchpointFeed = ref<FeedItem[]>([]);
+const showTouchpoints = ref(false);
 const loading = ref(true);
+
+const items = computed<FeedItem[]>(() => {
+	const merged = showTouchpoints.value
+		? [...baseItems.value, ...touchpointFeed.value]
+		: baseItems.value;
+	// Newest / soonest first — surfaces what's next and what just happened.
+	return [...merged]
+		.sort((a, b) => {
+			const ta = a.when ? new Date(a.when).getTime() : 0;
+			const tb = b.when ? new Date(b.when).getTime() : 0;
+			return tb - ta;
+		})
+		.slice(0, 60);
+});
 
 const KIND_META: Record<TimelineKind, { icon: string; label: string; chip: string; dot: string }> = {
 	milestone: { icon: 'lucide:flag', label: 'Milestone', chip: 'text-info bg-info/10', dot: 'bg-info' },
 	event: { icon: 'lucide:calendar-days', label: 'Event', chip: 'text-primary bg-primary/10', dot: 'bg-primary' },
 	ticket: { icon: 'lucide:ticket', label: 'Ticket', chip: 'text-warning bg-warning/10', dot: 'bg-warning' },
 	task: { icon: 'lucide:check-circle-2', label: 'Task', chip: 'text-purple-500 bg-purple-500/10', dot: 'bg-purple-500' },
+	touchpoint: { icon: 'lucide:megaphone', label: 'Touchpoint', chip: 'text-emerald-500 bg-emerald-500/10', dot: 'bg-emerald-500' },
 };
 
 function firstDate(...vals: Array<string | null | undefined>): string | null {
@@ -74,7 +94,7 @@ function firstDate(...vals: Array<string | null | undefined>): string | null {
 const load = async () => {
 	loading.value = true;
 	try {
-		const [events, tickets, tasks] = await Promise.all([
+		const [events, tickets, tasks, touchpoints] = await Promise.all([
 			eventItems.list({
 				fields: ['id', 'title', 'status', 'date', 'event_date', 'end_date', 'is_milestone', 'date_created'],
 				filter: { project: { _eq: props.projectId } },
@@ -88,6 +108,11 @@ const load = async () => {
 			taskItems.list({
 				fields: ['id', 'title', 'status', 'due_date', 'date_created'],
 				filter: { project_id: { _eq: props.projectId } },
+				limit: 100,
+			}).catch(() => []),
+			touchpointItems.list({
+				fields: ['id', 'type', 'summary', 'occurred_at', 'date_created'],
+				filter: { project: { _eq: props.projectId } },
 				limit: 100,
 			}).catch(() => []),
 		]);
@@ -132,13 +157,22 @@ const load = async () => {
 			}),
 		];
 
-		// Newest / soonest first — surfaces what's next and what just happened.
-		merged.sort((a, b) => {
-			const ta = a.when ? new Date(a.when).getTime() : 0;
-			const tb = b.when ? new Date(b.when).getTime() : 0;
-			return tb - ta;
+		baseItems.value = merged;
+
+		// Touchpoints kept in their own array; the `items` computed folds them
+		// in only when the toggle is on. Non-openable (no slide-over yet).
+		touchpointFeed.value = (touchpoints || []).map((tp: any): FeedItem => {
+			const when = firstDate(tp.occurred_at, tp.date_created);
+			return {
+				id: `tp-${tp.id}`,
+				rawId: String(tp.id),
+				kind: 'touchpoint',
+				title: tp.summary || (tp.type ? `${tp.type} touchpoint` : 'Touchpoint'),
+				status: tp.type,
+				when,
+				upcoming: false,
+			};
 		});
-		items.value = merged.slice(0, 60);
 	} catch (err) {
 		console.error('ProjectTimelineFeed: failed to load', err);
 	} finally {
@@ -176,6 +210,24 @@ const formatWhen = (ts: string | null) => {
 			</div>
 			<button :disabled="loading" class="text-xs text-primary hover:underline disabled:opacity-50" @click="load">
 				Refresh
+			</button>
+		</div>
+
+		<!-- Touchpoints layer toggle — folds the outreach log into the stream.
+		     Shown (even with the header hidden) whenever the project has
+		     touchpoints to reveal, so it doesn't clutter empty projects. -->
+		<div v-if="touchpointFeed.length" class="flex items-center justify-end mb-3">
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-medium border transition-colors"
+				:class="showTouchpoints
+					? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+					: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+				:aria-pressed="showTouchpoints"
+				@click="showTouchpoints = !showTouchpoints"
+			>
+				<Icon name="lucide:megaphone" class="w-3 h-3" />
+				Touchpoints
 			</button>
 		</div>
 

@@ -91,6 +91,23 @@ function normalizeTab(t: ProjectTabKey | undefined | null): ProjectTabKey {
 }
 const activeTab = ref<ProjectTabKey>(normalizeTab(props.initialTab));
 
+// Directional tab-content animation. `tabDir` reflects whether we moved to a
+// later tab ('fwd') or an earlier one ('back') in the strip order; a
+// `data-tab-dir` attribute on the tab-content card drives a CSS mount
+// animation so the incoming panel slides in from the direction of travel —
+// matching the sliding tab indicator + the apps floor nav. Attribute-driven
+// (not a <Transition> wrapper) so it can't destabilise the big template.
+const TAB_ORDER: ProjectTabKey[] = [
+	'overview', 'timeline', 'tasks', 'tickets', 'touchpoints', 'channels',
+	'meetings', 'invoices', 'library', 'contacts', 'activity',
+];
+const tabDir = ref<'fwd' | 'back'>('fwd');
+watch(activeTab, (next, prev) => {
+	const ni = TAB_ORDER.indexOf(next);
+	const pi = TAB_ORDER.indexOf(prev);
+	tabDir.value = ni >= pi ? 'fwd' : 'back';
+});
+
 // Overview "live pulse" sub-tabs. Timeline (events + tickets + tasks, in time
 // order) leads as the default read; Activity (audit feed) is one tap away.
 const overviewPulseTabs = [
@@ -1255,7 +1272,7 @@ watch(() => props.projectId, () => {
 				@prefetch="loadForTab"
 			/>
 
-			<div class="ios-card p-4 sm:p-6">
+			<div class="ios-card p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
 				<!-- Overview — a work-first dashboard: health, Earnest's next
 				     moves, then the live pulse (recent activity + touchpoints).
 				     The raw field editor is demoted to a disclosure below so the
@@ -2371,5 +2388,29 @@ watch(() => props.projectId, () => {
 .project-workspace {
 	display: flex;
 	flex-direction: column;
+}
+
+/* Directional tab-content slide — the active tab body is the only direct
+ * child of the `[data-tab-dir]` card, so it plays this enter animation each
+ * time a tab switch mounts a new body. Direction comes from `data-tab-dir`
+ * (fwd = later tab → slide in from the right; back = earlier → from the
+ * left), mirroring the sliding tab indicator. Enter-only (v-if unmounts the
+ * old body instantly) which keeps tall, scrolling content from double-stacking. */
+@keyframes tab-slide-fwd {
+	from { opacity: 0; transform: translateX(22px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes tab-slide-back {
+	from { opacity: 0; transform: translateX(-22px); }
+	to { opacity: 1; transform: none; }
+}
+.ios-card[data-tab-dir='fwd'] > div {
+	animation: tab-slide-fwd 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.ios-card[data-tab-dir='back'] > div {
+	animation: tab-slide-back 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+	.ios-card[data-tab-dir] > div { animation: none; }
 }
 </style>

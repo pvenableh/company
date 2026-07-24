@@ -318,6 +318,21 @@ function normalizeTab(t: ClientTabKey | undefined | null): ClientTabKey {
 }
 const activeTab = ref<ClientTabKey>(normalizeTab(props.initialTab));
 
+// Directional tab-content animation — mirrors ProjectWorkspace. `data-tab-dir`
+// on the tab-content card drives a CSS mount animation so the incoming panel
+// slides in from the direction of travel. Attribute-driven (not a Transition
+// wrapper) so it can't destabilise the template.
+const TAB_ORDER: ClientTabKey[] = [
+	'overview', 'contacts', 'projects', 'library', 'tickets', 'tasks',
+	'meetings', 'content', 'invoices', 'partners', 'messages', 'activity',
+];
+const tabDir = ref<'fwd' | 'back'>('fwd');
+watch(activeTab, (next, prev) => {
+	const ni = TAB_ORDER.indexOf(next);
+	const pi = TAB_ORDER.indexOf(prev);
+	tabDir.value = ni >= pi ? 'fwd' : 'back';
+});
+
 // Tab-activation loader. Shared by the active-tab watcher AND the
 // hover-prefetch handler from <ClientTabsBar>, so a hover and a click
 // converge on the same fetch (the `loading` flags prevent doubles, and
@@ -1079,7 +1094,7 @@ watch(() => props.clientId, () => {
 				@prefetch="loadForTab"
 			/>
 
-			<div class="ios-card p-4 sm:p-6">
+			<div class="ios-card p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
 				<!-- Overview — inline-editable "who they are": website, industry,
 				     location, brand direction, goals, target audience, notes.
 				     Autosaves each field; no need to leave the slide-over. -->
@@ -2350,6 +2365,28 @@ watch(() => props.clientId, () => {
 .client-workspace {
 	display: flex;
 	flex-direction: column;
+}
+
+/* Directional tab-content slide — mirrors ProjectWorkspace. The active tab
+ * body is the only direct child of the `[data-tab-dir]` card, so it plays
+ * this enter animation on each tab switch (fwd = from the right, back = from
+ * the left). Enter-only so scrolling content doesn't double-stack. */
+@keyframes tab-slide-fwd {
+	from { opacity: 0; transform: translateX(22px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes tab-slide-back {
+	from { opacity: 0; transform: translateX(-22px); }
+	to { opacity: 1; transform: none; }
+}
+.ios-card[data-tab-dir='fwd'] > div {
+	animation: tab-slide-fwd 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+.ios-card[data-tab-dir='back'] > div {
+	animation: tab-slide-back 240ms cubic-bezier(0.36, 0.66, 0.04, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+	.ios-card[data-tab-dir] > div { animation: none; }
 }
 
 .contact-row__ghost {

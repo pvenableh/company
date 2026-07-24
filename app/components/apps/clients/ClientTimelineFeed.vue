@@ -13,8 +13,9 @@ const props = withDefaults(defineProps<{ clientId: string; hideHeader?: boolean 
 const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('tasks');
+const touchpointItems = useDirectusItems('touchpoints');
 
-type TimelineKind = 'project' | 'ticket' | 'task';
+type TimelineKind = 'project' | 'ticket' | 'task' | 'touchpoint';
 interface FeedItem {
 	id: string;
 	rawId: string;
@@ -54,13 +55,31 @@ async function toggleTaskComplete(item: FeedItem) {
 	}
 }
 
-const items = ref<FeedItem[]>([]);
+// Base stream (projects/tickets/tasks) vs the opt-in touchpoints layer, kept
+// separate so the toggle folds touchpoints in/out without a refetch.
+const baseItems = ref<FeedItem[]>([]);
+const touchpointFeed = ref<FeedItem[]>([]);
+const showTouchpoints = ref(false);
 const loading = ref(true);
+
+const items = computed<FeedItem[]>(() => {
+	const merged = showTouchpoints.value
+		? [...baseItems.value, ...touchpointFeed.value]
+		: baseItems.value;
+	return [...merged]
+		.sort((a, b) => {
+			const ta = a.when ? new Date(a.when).getTime() : 0;
+			const tb = b.when ? new Date(b.when).getTime() : 0;
+			return tb - ta;
+		})
+		.slice(0, 60);
+});
 
 const KIND_META: Record<TimelineKind, { icon: string; label: string; chip: string }> = {
 	project: { icon: 'lucide:folder-kanban', label: 'Project', chip: 'text-primary bg-primary/10' },
 	ticket: { icon: 'lucide:ticket', label: 'Ticket', chip: 'text-warning bg-warning/10' },
 	task: { icon: 'lucide:check-circle-2', label: 'Task', chip: 'text-purple-500 bg-purple-500/10' },
+	touchpoint: { icon: 'lucide:megaphone', label: 'Touchpoint', chip: 'text-emerald-500 bg-emerald-500/10' },
 };
 
 function firstDate(...vals: Array<string | null | undefined>): string | null {
@@ -71,7 +90,7 @@ function firstDate(...vals: Array<string | null | undefined>): string | null {
 const load = async () => {
 	loading.value = true;
 	try {
-		const [projects, tickets, tasks] = await Promise.all([
+		const [projects, tickets, tasks, touchpoints] = await Promise.all([
 			projectItems.list({
 				fields: ['id', 'title', 'status', 'due_date', 'date_created'],
 				filter: { client: { _eq: props.clientId } },
@@ -85,6 +104,11 @@ const load = async () => {
 			taskItems.list({
 				fields: ['id', 'title', 'status', 'due_date', 'date_created'],
 				filter: { _or: [{ client_id: { _eq: props.clientId } }, { project_id: { client: { _eq: props.clientId } } }] },
+				limit: 100,
+			}).catch(() => []),
+			touchpointItems.list({
+				fields: ['id', 'type', 'summary', 'occurred_at', 'date_created'],
+				filter: { client: { _eq: props.clientId } },
 				limit: 100,
 			}).catch(() => []),
 		]);
@@ -103,18 +127,26 @@ const load = async () => {
 			};
 		};
 
-		const merged: FeedItem[] = [
+		baseItems.value = [
 			...(projects || []).map(mapRow('project')),
 			...(tickets || []).map(mapRow('ticket')),
 			...(tasks || []).map(mapRow('task')),
 		];
 
-		merged.sort((a, b) => {
-			const ta = a.when ? new Date(a.when).getTime() : 0;
-			const tb = b.when ? new Date(b.when).getTime() : 0;
-			return tb - ta;
+		// Touchpoints kept separate; the `items` computed folds them in only
+		// when the toggle is on. Non-openable (no slide-over).
+		touchpointFeed.value = (touchpoints || []).map((tp: any): FeedItem => {
+			const when = firstDate(tp.occurred_at, tp.date_created);
+			return {
+				id: `tp-${tp.id}`,
+				rawId: String(tp.id),
+				kind: 'touchpoint',
+				title: tp.summary || (tp.type ? `${tp.type} touchpoint` : 'Touchpoint'),
+				status: tp.type,
+				when,
+				upcoming: false,
+			};
 		});
-		items.value = merged.slice(0, 60);
 	} catch (err) {
 		console.error('ClientTimelineFeed: failed to load', err);
 	} finally {
@@ -152,6 +184,24 @@ const formatWhen = (ts: string | null) => {
 			</div>
 			<button :disabled="loading" class="text-xs text-primary hover:underline disabled:opacity-50" @click="load">
 				Refresh
+			</button>
+		</div>
+
+		<!-- Touchpoints layer toggle — folds the outreach log into the stream.
+		     Shown (even with the header hidden) whenever the client has
+		     touchpoints to reveal. -->
+		<div v-if="touchpointFeed.length" class="flex items-center justify-end mb-3">
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-medium border transition-colors"
+				:class="showTouchpoints
+					? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+					: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+				:aria-pressed="showTouchpoints"
+				@click="showTouchpoints = !showTouchpoints"
+			>
+				<Icon name="lucide:megaphone" class="w-3 h-3" />
+				Touchpoints
 			</button>
 		</div>
 
