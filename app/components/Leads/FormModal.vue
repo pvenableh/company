@@ -20,12 +20,12 @@
 
 		<!-- Contact (read-only for edit, preselected for new-from-contact flow) -->
 		<div v-if="displayContact" class="ios-card p-3 space-y-1">
-			<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Contact</p>
-			<p class="text-sm font-medium t-text">
+			<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Contact</p>
+			<p class="text-sm font-medium text-foreground">
 				{{ displayContact.first_name }} {{ displayContact.last_name }}
 			</p>
-			<p v-if="displayContact.email" class="text-xs t-text-secondary">{{ displayContact.email }}</p>
-			<p v-if="displayContact.company" class="text-xs t-text-secondary">{{ displayContact.company }}</p>
+			<p v-if="displayContact.email" class="text-xs text-muted-foreground">{{ displayContact.email }}</p>
+			<p v-if="displayContact.company" class="text-xs text-muted-foreground">{{ displayContact.company }}</p>
 		</div>
 
 		<!-- Estimated Value + Source -->

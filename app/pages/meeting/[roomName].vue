@@ -1,7 +1,7 @@
 <!-- pages/meeting/[roomName].vue -->
 <!-- Daily.co prebuilt iframe integration -->
 <template>
-	<div class="min-h-screen t-bg t-text">
+	<div class="min-h-screen t-bg text-foreground">
 		<!-- Loading State -->
 		<div v-if="loading" class="flex items-center justify-center min-h-screen">
 			<div class="text-center">

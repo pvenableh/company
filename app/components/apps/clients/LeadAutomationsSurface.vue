@@ -177,8 +177,8 @@ defineExpose({ openNew });
 					<Icon name="lucide:chevron-left" class="w-4 h-4" />
 				</NuxtLink>
 				<div>
-					<h1 class="text-xl font-bold t-text">Lead Automations</h1>
-					<p class="text-sm t-text-secondary">
+					<h1 class="text-xl font-bold text-foreground">Lead Automations</h1>
+					<p class="text-sm text-muted-foreground">
 						Auto-add or remove a lead's contact from mailing lists when its pipeline stage changes.
 					</p>
 				</div>
@@ -206,8 +206,8 @@ defineExpose({ openNew });
 		<!-- Access gate -->
 		<div v-else-if="!isOrgManagerOrAbove" class="rounded-lg border border-border bg-muted/20 px-6 py-12 text-center">
 			<Icon name="lucide:lock" class="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-			<p class="text-sm font-medium t-text">Manager access required</p>
-			<p class="text-xs t-text-secondary mt-1">
+			<p class="text-sm font-medium text-foreground">Manager access required</p>
+			<p class="text-xs text-muted-foreground mt-1">
 				Automation rules affect the whole org, so only owners, admins, and managers can edit them.
 			</p>
 		</div>
@@ -215,8 +215,8 @@ defineExpose({ openNew });
 		<!-- Empty -->
 		<div v-else-if="!rules.length" class="rounded-lg border border-dashed border-border px-6 py-16 text-center">
 			<Icon name="lucide:zap" class="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-			<p class="text-sm font-medium t-text">No automation rules yet</p>
-			<p class="text-xs t-text-secondary mt-1 max-w-sm mx-auto">
+			<p class="text-sm font-medium text-foreground">No automation rules yet</p>
+			<p class="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
 				Create a rule to automatically move contacts between mailing lists when a lead reaches a specific stage.
 			</p>
 			<Button size="sm" class="mt-4" @click="openNew">
@@ -243,7 +243,7 @@ defineExpose({ openNew });
 							<!-- Main content -->
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-2 flex-wrap">
-									<p class="text-sm font-medium t-text truncate">{{ ruleLabel(rule) }}</p>
+									<p class="text-sm font-medium text-foreground truncate">{{ ruleLabel(rule) }}</p>
 									<span v-if="!rule.enabled" class="text-[10px] uppercase tracking-wider text-muted-foreground">
 										Paused
 									</span>

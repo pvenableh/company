@@ -248,7 +248,7 @@ if (!props.compact) {
 <template>
   <div>
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
     </div>
 
     <template v-else-if="proposal">
@@ -422,28 +422,28 @@ if (!props.compact) {
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Value</p>
-                <p class="font-medium t-text">{{ proposal.total_value ? `$${Number(proposal.total_value).toLocaleString()}` : '—' }}</p>
+                <p class="font-medium text-foreground">{{ proposal.total_value ? `$${Number(proposal.total_value).toLocaleString()}` : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</p>
-                <p class="font-medium t-text">{{ proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString() : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Sent</p>
-                <p class="font-medium t-text">{{ proposal.date_sent ? new Date(proposal.date_sent).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ proposal.date_sent ? new Date(proposal.date_sent).toLocaleDateString() : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Created</p>
-                <p class="font-medium t-text">{{ proposal.date_created ? new Date(proposal.date_created).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ proposal.date_created ? new Date(proposal.date_created).toLocaleDateString() : '—' }}</p>
               </div>
             </div>
           </div>
 
           <div v-if="proposal.contact" class="ios-card p-5 space-y-2">
             <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
-            <p class="text-sm font-medium t-text">{{ proposal.contact.first_name }} {{ proposal.contact.last_name }}</p>
-            <p v-if="proposal.contact.email" class="text-xs t-text-secondary">{{ proposal.contact.email }}</p>
-            <p v-if="proposal.contact.phone" class="text-xs t-text-secondary">{{ proposal.contact.phone }}</p>
+            <p class="text-sm font-medium text-foreground">{{ proposal.contact.first_name }} {{ proposal.contact.last_name }}</p>
+            <p v-if="proposal.contact.email" class="text-xs text-muted-foreground">{{ proposal.contact.email }}</p>
+            <p v-if="proposal.contact.phone" class="text-xs text-muted-foreground">{{ proposal.contact.phone }}</p>
           </div>
 
           <div v-if="proposal.lead" class="ios-card p-5">
@@ -454,9 +454,9 @@ if (!props.compact) {
           </div>
 
           <div v-if="proposal.file" class="ios-card p-5 flex items-center gap-3">
-            <UIcon name="i-heroicons-paper-clip" class="w-5 h-5 t-text-muted shrink-0" />
+            <UIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-muted-foreground/40 shrink-0" />
             <div class="min-w-0">
-              <p class="text-sm font-medium t-text truncate">{{ proposal.file.title || 'Attachment' }}</p>
+              <p class="text-sm font-medium text-foreground truncate">{{ proposal.file.title || 'Attachment' }}</p>
               <p class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ proposal.file.type }}</p>
             </div>
           </div>

@@ -10,7 +10,7 @@
 		<div v-if="!compact" class="flex items-center justify-between mb-6">
 			<div>
 				<h2 class="text-2xl font-semibold">Roles &amp; Permissions</h2>
-				<p class="text-sm t-text-secondary mt-1">Manage what each role can access in this organization</p>
+				<p class="text-sm text-muted-foreground mt-1">Manage what each role can access in this organization</p>
 			</div>
 		</div>
 
@@ -29,7 +29,7 @@
 		<UCard v-else-if="!roles.length" class="mb-6 text-center py-8">
 			<UIcon name="i-heroicons-shield-check" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
 			<h3 class="text-lg font-medium mb-2">No Roles Found</h3>
-			<p class="t-text-secondary mb-4">Seed the default roles for this organization to get started.</p>
+			<p class="text-muted-foreground mb-4">Seed the default roles for this organization to get started.</p>
 			<UButton color="primary" :loading="seeding" @click="seedRoles">Seed Default Roles</UButton>
 		</UCard>
 
@@ -51,8 +51,8 @@
 						<span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: getRoleColor(role.slug) }" />
 						<span class="font-medium text-sm">{{ role.name }}</span>
 					</div>
-					<p class="text-xs t-text-secondary">{{ getRoleDescription(role.slug) }}</p>
-					<div class="mt-2 text-xs t-text-muted">
+					<p class="text-xs text-muted-foreground">{{ getRoleDescription(role.slug) }}</p>
+					<div class="mt-2 text-xs text-muted-foreground/40">
 						{{ getMemberCount(role.id) }} member{{ getMemberCount(role.id) === 1 ? '' : 's' }}
 					</div>
 				</button>
@@ -104,12 +104,12 @@
 					<table class="w-full text-sm">
 						<thead>
 							<tr class="border-b t-border">
-								<th class="text-left py-3 px-4 font-medium t-text-secondary w-48">Feature</th>
-								<th class="text-center py-3 px-2 font-medium t-text-secondary w-20">Access</th>
-								<th class="text-center py-3 px-2 font-medium t-text-secondary w-20">Create</th>
-								<th class="text-center py-3 px-2 font-medium t-text-secondary w-20">Read</th>
-								<th class="text-center py-3 px-2 font-medium t-text-secondary w-20">Update</th>
-								<th class="text-center py-3 px-2 font-medium t-text-secondary w-20">Delete</th>
+								<th class="text-left py-3 px-4 font-medium text-muted-foreground w-48">Feature</th>
+								<th class="text-center py-3 px-2 font-medium text-muted-foreground w-20">Access</th>
+								<th class="text-center py-3 px-2 font-medium text-muted-foreground w-20">Create</th>
+								<th class="text-center py-3 px-2 font-medium text-muted-foreground w-20">Read</th>
+								<th class="text-center py-3 px-2 font-medium text-muted-foreground w-20">Update</th>
+								<th class="text-center py-3 px-2 font-medium text-muted-foreground w-20">Delete</th>
 							</tr>
 						</thead>
 						<tbody>

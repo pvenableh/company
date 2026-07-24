@@ -123,7 +123,7 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 <template>
 	<div class="w-full flex flex-col items-center justify-start min-h-screen bg-gray-50 dark:bg-gray-900">
 		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
 		</div>
 		<div v-else-if="errorMsg" class="py-20 text-sm text-muted-foreground text-center">
 			<UIcon name="lucide:file-x" class="w-12 h-12 mx-auto mb-3 opacity-50" />

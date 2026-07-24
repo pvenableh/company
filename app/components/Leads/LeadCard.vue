@@ -9,13 +9,13 @@
 				/>
 				<div>
 					<div class="flex items-center gap-1.5">
-						<p class="text-sm font-medium t-text">
+						<p class="text-sm font-medium text-foreground">
 							{{ lead.related_contact?.first_name }} {{ lead.related_contact?.last_name }}
 						</p>
 						<!-- Once a lead converts to a client, reference that account's rating. -->
 						<ClientsClientRatingBadge v-if="linkedClientId" :client-id="linkedClientId" size="xs" />
 					</div>
-					<p class="text-xs t-text-secondary">
+					<p class="text-xs text-muted-foreground">
 						{{ lead.related_contact?.company || lead.related_contact?.email }}
 					</p>
 				</div>
@@ -37,7 +37,7 @@
 					:style="{ width: `${lead.lead_score || 0}%`, backgroundColor: scoreColor }"
 				/>
 			</div>
-			<span class="text-[10px] font-mono t-text-muted">{{ lead.lead_score || 0 }}</span>
+			<span class="text-[10px] font-mono text-muted-foreground/40">{{ lead.lead_score || 0 }}</span>
 		</div>
 
 		<div class="flex items-center justify-between">
@@ -49,9 +49,9 @@
 				>
 					{{ lead.priority }}
 				</span>
-				<span v-if="lead.source" class="text-[10px] t-text-muted">{{ lead.source }}</span>
+				<span v-if="lead.source" class="text-[10px] text-muted-foreground/40">{{ lead.source }}</span>
 			</div>
-			<span v-if="lead.estimated_value" class="text-xs font-medium t-text">
+			<span v-if="lead.estimated_value" class="text-xs font-medium text-foreground">
 				${{ Number(lead.estimated_value).toLocaleString() }}
 			</span>
 		</div>

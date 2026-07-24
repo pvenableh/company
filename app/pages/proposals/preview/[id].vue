@@ -94,7 +94,7 @@ function formatTotal(n: number | null | undefined) {
 <template>
 	<div class="w-full flex flex-col items-center justify-start">
 		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
 		</div>
 		<div v-else-if="!proposal" class="py-20 text-sm text-muted-foreground">Proposal not found.</div>
 		<div v-else class="w-full flex flex-col items-center justify-center relative z-10 mt-12">

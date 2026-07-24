@@ -455,7 +455,7 @@ function openContactPivot() {
 	<div :class="compact ? '' : 'max-w-[2600px] mx-auto'">
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
 		</div>
 
 		<template v-else-if="lead">
@@ -472,10 +472,10 @@ function openContactPivot() {
 				<BackButton to="/apps/clients?view=leads" label="Back to leads" class="mb-3" />
 				<div class="flex items-start justify-between">
 					<div>
-						<h1 class="text-xl font-bold t-text">
+						<h1 class="text-xl font-bold text-foreground">
 							{{ lead.related_contact?.first_name }} {{ lead.related_contact?.last_name }}
 						</h1>
-						<p class="text-sm t-text-secondary">
+						<p class="text-sm text-muted-foreground">
 							{{ lead.related_contact?.company }}
 							<span v-if="lead.related_contact?.email"> · {{ lead.related_contact.email }}</span>
 						</p>
@@ -563,7 +563,7 @@ function openContactPivot() {
 
 				<!-- Pipeline Stage Timeline -->
 				<div class="ios-card p-4" :class="!compact && 'mb-6'">
-					<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-3">Pipeline Stage</p>
+					<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider mb-3">Pipeline Stage</p>
 					<FormStatusTimeline
 						:currentStatus="lead.stage"
 						:statuses="stageStatuses"
@@ -665,7 +665,7 @@ function openContactPivot() {
 					<div :class="compact ? 'space-y-4' : 'lg:col-span-1 space-y-4'">
 						<!-- Editable Details -->
 						<div class="ios-card p-4 space-y-3">
-							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Details</p>
+							<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Details</p>
 							<AppsInlineDetailsEditor
 								collection="leads"
 								:item-id="String(lead.id)"
@@ -677,14 +677,14 @@ function openContactPivot() {
 
 						<!-- At-a-glance -->
 						<div class="ios-card p-4 space-y-3">
-							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">At a Glance</p>
+							<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">At a Glance</p>
 							<div class="grid grid-cols-2 gap-2 text-xs">
 								<div>
-									<p class="t-text-muted">Score</p>
-									<p class="font-medium t-text">{{ lead.lead_score || 0 }}/100</p>
+									<p class="text-muted-foreground/40">Score</p>
+									<p class="font-medium text-foreground">{{ lead.lead_score || 0 }}/100</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Priority</p>
+									<p class="text-muted-foreground/40">Priority</p>
 									<span
 										class="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded text-white"
 										:class="getPriorityBadgeClass(lead.priority)"
@@ -693,20 +693,20 @@ function openContactPivot() {
 									</span>
 								</div>
 								<div>
-									<p class="t-text-muted">Source</p>
-									<p class="font-medium t-text">{{ lead.source || '—' }}</p>
+									<p class="text-muted-foreground/40">Source</p>
+									<p class="font-medium text-foreground">{{ lead.source || '—' }}</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Value</p>
-									<p class="font-medium t-text">{{ lead.estimated_value ? `$${Number(lead.estimated_value).toLocaleString()}` : '—' }}</p>
+									<p class="text-muted-foreground/40">Value</p>
+									<p class="font-medium text-foreground">{{ lead.estimated_value ? `$${Number(lead.estimated_value).toLocaleString()}` : '—' }}</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Timeline</p>
-									<p class="font-medium t-text capitalize">{{ lead.timeline || '—' }}</p>
+									<p class="text-muted-foreground/40">Timeline</p>
+									<p class="font-medium text-foreground capitalize">{{ lead.timeline || '—' }}</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Next Follow-up</p>
-									<p class="font-medium" :class="isOverdueFollowUp ? 'text-destructive' : 't-text'">
+									<p class="text-muted-foreground/40">Next Follow-up</p>
+									<p class="font-medium" :class="isOverdueFollowUp ? 'text-destructive' : 'text-foreground'">
 										{{ lead.next_follow_up ? new Date(lead.next_follow_up).toLocaleDateString() : '—' }}
 										<span v-if="isOverdueFollowUp" class="text-[9px] font-semibold ml-1">OVERDUE</span>
 									</p>
@@ -717,7 +717,7 @@ function openContactPivot() {
 						<!-- Contact -->
 						<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
 							<div class="flex items-center justify-between">
-								<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Contact</p>
+								<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Contact</p>
 								<button
 									type="button"
 									class="text-[10px] text-primary hover:underline"
@@ -726,15 +726,15 @@ function openContactPivot() {
 									View
 								</button>
 							</div>
-							<p class="text-sm font-medium t-text">{{ lead.related_contact.first_name }} {{ lead.related_contact.last_name }}</p>
-							<p v-if="lead.related_contact.email" class="text-xs t-text-secondary">{{ lead.related_contact.email }}</p>
-							<p v-if="lead.related_contact.phone" class="text-xs t-text-secondary">{{ lead.related_contact.phone }}</p>
-							<p v-if="lead.related_contact.company" class="text-xs t-text-secondary">{{ lead.related_contact.company }}</p>
+							<p class="text-sm font-medium text-foreground">{{ lead.related_contact.first_name }} {{ lead.related_contact.last_name }}</p>
+							<p v-if="lead.related_contact.email" class="text-xs text-muted-foreground">{{ lead.related_contact.email }}</p>
+							<p v-if="lead.related_contact.phone" class="text-xs text-muted-foreground">{{ lead.related_contact.phone }}</p>
+							<p v-if="lead.related_contact.company" class="text-xs text-muted-foreground">{{ lead.related_contact.company }}</p>
 						</div>
 
 						<!-- Email Engagement -->
 						<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
-							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Email Engagement</p>
+							<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Email Engagement</p>
 							<div v-if="lead.related_contact.email_bounced" class="flex items-center gap-1.5 text-[11px] text-destructive dark:text-destructive">
 								<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
 								Bounced{{ lead.related_contact.email_bounce_type ? ` (${lead.related_contact.email_bounce_type})` : '' }}
@@ -744,23 +744,23 @@ function openContactPivot() {
 							</div>
 							<div class="grid grid-cols-3 gap-2 text-xs">
 								<div>
-									<p class="t-text-muted">Sent</p>
-									<p class="font-medium t-text">{{ lead.related_contact.total_emails_sent || 0 }}</p>
+									<p class="text-muted-foreground/40">Sent</p>
+									<p class="font-medium text-foreground">{{ lead.related_contact.total_emails_sent || 0 }}</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Opens</p>
-									<p class="font-medium t-text">{{ lead.related_contact.total_opens || 0 }}</p>
+									<p class="text-muted-foreground/40">Opens</p>
+									<p class="font-medium text-foreground">{{ lead.related_contact.total_opens || 0 }}</p>
 								</div>
 								<div>
-									<p class="t-text-muted">Clicks</p>
-									<p class="font-medium t-text">{{ lead.related_contact.total_clicks || 0 }}</p>
+									<p class="text-muted-foreground/40">Clicks</p>
+									<p class="font-medium text-foreground">{{ lead.related_contact.total_clicks || 0 }}</p>
 								</div>
 							</div>
 							<div v-if="lead.related_contact.last_opened_at || lead.related_contact.last_clicked_at" class="pt-1 border-t border-border/60 space-y-0.5">
-								<p v-if="lead.related_contact.last_opened_at" class="text-[11px] t-text-secondary">
+								<p v-if="lead.related_contact.last_opened_at" class="text-[11px] text-muted-foreground">
 									Last opened {{ new Date(lead.related_contact.last_opened_at).toLocaleDateString() }}
 								</p>
-								<p v-if="lead.related_contact.last_clicked_at" class="text-[11px] t-text-secondary">
+								<p v-if="lead.related_contact.last_clicked_at" class="text-[11px] text-muted-foreground">
 									Last clicked {{ new Date(lead.related_contact.last_clicked_at).toLocaleDateString() }}
 								</p>
 							</div>
@@ -769,7 +769,7 @@ function openContactPivot() {
 						<!-- Mailing Lists -->
 						<div class="ios-card p-4 space-y-2">
 							<div class="flex items-center justify-between">
-								<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Mailing Lists</p>
+								<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Mailing Lists</p>
 								<button
 									v-if="!showListPicker && listsToShow.length"
 									class="text-[10px] text-primary hover:underline"
@@ -824,14 +824,14 @@ function openContactPivot() {
 
 						<!-- Notes -->
 						<div v-if="lead.notes" class="ios-card p-4">
-							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Notes</p>
-							<p class="text-sm t-text-secondary whitespace-pre-wrap">{{ lead.notes }}</p>
+							<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider mb-2">Notes</p>
+							<p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ lead.notes }}</p>
 						</div>
 
 						<!-- Upcoming Meetings -->
 						<div class="ios-card p-4">
 							<div class="flex items-center justify-between mb-3">
-								<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Upcoming Meetings</p>
+								<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Upcoming Meetings</p>
 								<button
 									@click="showMeetingModal = true"
 									class="text-[10px] text-primary hover:underline"
@@ -877,7 +877,7 @@ function openContactPivot() {
 					<!-- Right: Activity Timeline -->
 					<div :class="compact ? '' : 'lg:col-span-2'">
 						<div class="flex items-center justify-between mb-4 gap-2">
-							<h2 class="text-sm font-semibold t-text">Pursuit Timeline</h2>
+							<h2 class="text-sm font-semibold text-foreground">Pursuit Timeline</h2>
 							<div class="flex items-center gap-1.5">
 								<UButton size="xs" variant="ghost" :icon="reApproaching ? 'i-lucide-loader-2' : 'i-lucide-sparkles'" :class="{ 'animate-pulse': reApproaching }" :disabled="reApproaching" @click="draftReApproach">
 									{{ reApproaching ? 'Thinking…' : 'Re-approach' }}

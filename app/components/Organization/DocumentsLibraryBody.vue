@@ -11,7 +11,7 @@
 		<div v-if="!compact" class="flex items-center justify-between mb-6">
 			<div>
 				<h2 class="text-2xl font-semibold">Documents Library</h2>
-				<p class="text-sm t-text-secondary mt-1">
+				<p class="text-sm text-muted-foreground mt-1">
 					The reusable pieces that compose into proposals and contracts — content blocks (bio, references, terms) and service offerings (scope + pricing presets).
 				</p>
 			</div>
@@ -43,7 +43,7 @@
 						@click="setTab(t.key)"
 					>
 						{{ t.label }}
-						<span class="text-xs t-text-muted ml-1">({{ t.count }})</span>
+						<span class="text-xs text-muted-foreground/40 ml-1">({{ t.count }})</span>
 					</button>
 				</div>
 				<UButton v-if="compact" size="xs" color="primary" @click="openNew">
@@ -75,14 +75,14 @@
 				<UCard v-else-if="!filteredBlocks.length && !blocks.length" class="text-center py-10">
 					<UIcon name="i-heroicons-rectangle-group" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
 					<h3 class="text-base font-medium mb-1">No blocks yet</h3>
-					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
+					<p class="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
 						Save the boilerplate sections you reuse — studio bio, standard terms, references, case studies. Drag them into any proposal or contract.
 					</p>
 					<UButton color="primary" @click="openNew">Add your first block</UButton>
 				</UCard>
 
 				<UCard v-else-if="!filteredBlocks.length" class="text-center py-8">
-					<p class="t-text-secondary text-sm">No blocks in this category.</p>
+					<p class="text-muted-foreground text-sm">No blocks in this category.</p>
 				</UCard>
 
 				<div v-else :class="cardGridClass">
@@ -95,7 +95,7 @@
 					>
 						<div class="flex items-start justify-between gap-2 mb-2">
 							<div class="flex-1 min-w-0">
-								<p class="text-[10px] uppercase tracking-wider t-text-muted">{{ blockCategoryLabel(b.category) }}</p>
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground/40">{{ blockCategoryLabel(b.category) }}</p>
 								<h3 class="text-base font-semibold truncate">{{ b.name }}</h3>
 							</div>
 							<span
@@ -103,8 +103,8 @@
 								:class="statusChipClass(b.status)"
 							>{{ b.status }}</span>
 						</div>
-						<p v-if="b.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ b.description }}</p>
-						<div class="flex items-center justify-between text-xs t-text-muted">
+						<p v-if="b.description" class="text-sm text-muted-foreground line-clamp-2 mb-3">{{ b.description }}</p>
+						<div class="flex items-center justify-between text-xs text-muted-foreground/40">
 							<span>{{ wordCount(b.content) }} words</span>
 							<span class="flex gap-1">
 								<span v-if="b.applies_to?.includes('proposals')" class="px-1.5 py-0.5 rounded bg-success/10 text-success dark:bg-success/30 dark:text-success">P</span>
@@ -124,7 +124,7 @@
 				<UCard v-else-if="!offerings.length" class="text-center py-10">
 					<UIcon name="i-heroicons-rectangle-stack" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
 					<h3 class="text-base font-medium mb-1">No offerings yet</h3>
-					<p class="t-text-secondary text-sm mb-4 max-w-md mx-auto">
+					<p class="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
 						Add the services you offer most often. Each captures a scope template (phased deliverables) + default pricing — the AI uses them as the spine when drafting proposals, and the in-app scope tree editor can drop them in directly.
 					</p>
 					<UButton color="primary" @click="openNew">Add your first offering</UButton>
@@ -159,8 +159,8 @@
 								:class="statusChipClass(t.status)"
 							>{{ t.status }}</span>
 						</div>
-						<p v-if="t.description" class="text-sm t-text-secondary line-clamp-2 mb-3">{{ t.description }}</p>
-						<div class="flex items-center justify-between text-xs t-text-muted">
+						<p v-if="t.description" class="text-sm text-muted-foreground line-clamp-2 mb-3">{{ t.description }}</p>
+						<div class="flex items-center justify-between text-xs text-muted-foreground/40">
 							<span>{{ phaseCount(t) }} phases</span>
 							<div class="flex items-center gap-3">
 								<span v-if="t.default_total != null">{{ formatMoney(t.default_total) }}</span>

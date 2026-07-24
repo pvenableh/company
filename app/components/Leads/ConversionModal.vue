@@ -19,19 +19,19 @@
 
 			<!-- Primary Contact (read-only) -->
 			<div v-if="lead?.related_contact" class="ios-card p-3">
-				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-1">Primary Contact</p>
-				<p class="text-sm font-medium t-text">
+				<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider mb-1">Primary Contact</p>
+				<p class="text-sm font-medium text-foreground">
 					{{ lead.related_contact.first_name }} {{ lead.related_contact.last_name }}
 				</p>
-				<p v-if="lead.related_contact.email" class="text-xs t-text-secondary">{{ lead.related_contact.email }}</p>
+				<p v-if="lead.related_contact.email" class="text-xs text-muted-foreground">{{ lead.related_contact.email }}</p>
 			</div>
 
 			<!-- New contact (when lead has no related_contact) -->
 			<div v-else class="ios-card p-3 space-y-2">
-				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">
+				<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">
 					New Contact
 				</p>
-				<p class="text-[11px] t-text-secondary">
+				<p class="text-[11px] text-muted-foreground">
 					This lead has no contact yet. We&rsquo;ll create one and link it to the new client.
 				</p>
 				<div class="grid grid-cols-2 gap-2">
@@ -45,7 +45,7 @@
 			<div class="space-y-3">
 				<div class="flex items-center gap-3">
 					<UToggle v-model="createProject" />
-					<span class="text-xs font-medium t-text">Also create a project</span>
+					<span class="text-xs font-medium text-foreground">Also create a project</span>
 				</div>
 
 				<template v-if="createProject">

@@ -19,10 +19,10 @@
 		</div>
 
 		<!-- Contact name -->
-		<p class="text-sm font-medium t-text truncate">
+		<p class="text-sm font-medium text-foreground truncate">
 			{{ lead.related_contact?.first_name }} {{ lead.related_contact?.last_name }}
 		</p>
-		<p class="text-[11px] t-text-secondary truncate mb-2">
+		<p class="text-[11px] text-muted-foreground truncate mb-2">
 			{{ lead.related_contact?.company || lead.related_contact?.email || '' }}
 		</p>
 
@@ -48,15 +48,15 @@
 					:style="{ width: `${lead.lead_score || 0}%`, backgroundColor: scoreColor }"
 				/>
 			</div>
-			<span class="text-[9px] font-mono t-text-muted tabular-nums">{{ lead.lead_score || 0 }}</span>
+			<span class="text-[9px] font-mono text-muted-foreground/40 tabular-nums">{{ lead.lead_score || 0 }}</span>
 		</div>
 
 		<!-- Footer: Value + Avatar -->
 		<div class="flex items-center justify-between">
-			<span v-if="lead.estimated_value" class="text-xs font-medium t-text">
+			<span v-if="lead.estimated_value" class="text-xs font-medium text-foreground">
 				${{ Number(lead.estimated_value).toLocaleString() }}
 			</span>
-			<span v-else class="text-[10px] t-text-muted">No value</span>
+			<span v-else class="text-[10px] text-muted-foreground/40">No value</span>
 
 			<UAvatar
 				v-if="lead.assigned_to?.avatar"

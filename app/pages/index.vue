@@ -460,7 +460,7 @@ const goTo = (route: string) => {
 </script>
 
 <template>
-	<div class="min-h-screen t-bg t-text">
+	<div class="min-h-screen t-bg text-foreground">
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
 			<!-- Fatigue-aware invite into Focus mode when the board gets heavy. -->

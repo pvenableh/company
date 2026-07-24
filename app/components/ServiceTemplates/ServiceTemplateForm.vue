@@ -97,7 +97,7 @@
 		     the picked colour with a contrast-adapted foreground. Whatever
 		     the user picks, the chip below proves the text stays legible. -->
 		<div>
-			<div class="text-[10px] uppercase tracking-wider t-text-muted mb-1.5">Preview</div>
+			<div class="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1.5">Preview</div>
 			<span
 				class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium"
 				:style="previewChipStyle"
@@ -106,7 +106,7 @@
 				<span v-else class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: previewChipStyle.color }" />
 				{{ form.name || 'Service name' }}
 			</span>
-			<p class="text-xs t-text-muted mt-1.5">Used as the swatch wherever this service is surfaced. Leave empty to fall through to the Work-app accent.</p>
+			<p class="text-xs text-muted-foreground/40 mt-1.5">Used as the swatch wherever this service is surfaced. Leave empty to fall through to the Work-app accent.</p>
 		</div>
 
 		<div class="space-y-1">
@@ -115,8 +115,8 @@
 				v-model="form.scope_payload"
 				:enable-service-import="false"
 			/>
-			<p class="text-xs t-text-muted">Phased deliverables. Same primitive used in proposals — when this offering is dropped into a proposal, these phases are appended directly to the scope tree.</p>
-			<details v-if="legacyScopeText" class="text-xs t-text-muted mt-2">
+			<p class="text-xs text-muted-foreground/40">Phased deliverables. Same primitive used in proposals — when this offering is dropped into a proposal, these phases are appended directly to the scope tree.</p>
+			<details v-if="legacyScopeText" class="text-xs text-muted-foreground/40 mt-2">
 				<summary class="cursor-pointer">Legacy free-text scope (read-only)</summary>
 				<pre class="whitespace-pre-wrap p-2 rounded bg-muted/40 mt-1 max-h-40 overflow-auto">{{ legacyScopeText }}</pre>
 			</details>

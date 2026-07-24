@@ -8,7 +8,7 @@
 			</div>
 			<div class="flex-1 min-w-0">
 				<div class="flex items-center justify-between">
-					<p class="text-sm font-medium t-text">{{ activity.subject }}</p>
+					<p class="text-sm font-medium text-foreground">{{ activity.subject }}</p>
 					<span
 						v-if="activity.outcome"
 						class="text-[9px] font-semibold px-1.5 py-0.5 rounded"
@@ -17,14 +17,14 @@
 						{{ activity.outcome }}
 					</span>
 				</div>
-				<p v-if="activity.description" class="text-xs t-text-secondary mt-0.5 line-clamp-2">
+				<p v-if="activity.description" class="text-xs text-muted-foreground mt-0.5 line-clamp-2">
 					{{ activity.description }}
 				</p>
 				<div class="flex items-center gap-2 mt-1">
-					<span class="text-[10px] t-text-muted">
+					<span class="text-[10px] text-muted-foreground/40">
 						{{ activity.activity_date ? new Date(activity.activity_date).toLocaleDateString() : '' }}
 					</span>
-					<span v-if="activity.duration_minutes" class="text-[10px] t-text-muted">
+					<span v-if="activity.duration_minutes" class="text-[10px] text-muted-foreground/40">
 						{{ activity.duration_minutes }}min
 					</span>
 				</div>
@@ -35,7 +35,7 @@
 			</div>
 		</div>
 
-		<div v-if="!activities.length" class="text-center py-8 text-sm t-text-muted">
+		<div v-if="!activities.length" class="text-center py-8 text-sm text-muted-foreground/40">
 			No activity yet
 		</div>
 	</div>

@@ -2,8 +2,8 @@
 	<div class="ios-card p-4 cursor-pointer hover:shadow-md transition-all" @click="$emit('click', contract)">
 		<div class="flex items-start justify-between mb-2">
 			<div>
-				<p class="text-sm font-medium t-text">{{ contract.title || 'Untitled Contract' }}</p>
-				<p class="text-xs t-text-secondary">
+				<p class="text-sm font-medium text-foreground">{{ contract.title || 'Untitled Contract' }}</p>
+				<p class="text-xs text-muted-foreground">
 					{{ contract.organization?.name || (contract.contact?.first_name + ' ' + contract.contact?.last_name) }}
 				</p>
 			</div>
@@ -17,13 +17,13 @@
 		</div>
 
 		<div class="flex items-center justify-between mt-3">
-			<span v-if="contract.total_value" class="text-sm font-medium t-text">
+			<span v-if="contract.total_value" class="text-sm font-medium text-foreground">
 				${{ Number(contract.total_value).toLocaleString() }}
 			</span>
-			<span v-if="contract.signed_at" class="text-[10px] t-text-muted">
+			<span v-if="contract.signed_at" class="text-[10px] text-muted-foreground/40">
 				Signed {{ new Date(contract.signed_at).toLocaleDateString() }}
 			</span>
-			<span v-else-if="contract.valid_until" class="text-[10px] t-text-muted">
+			<span v-else-if="contract.valid_until" class="text-[10px] text-muted-foreground/40">
 				Valid until {{ new Date(contract.valid_until).toLocaleDateString() }}
 			</span>
 		</div>

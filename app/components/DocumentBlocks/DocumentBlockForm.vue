@@ -71,7 +71,7 @@
 				:rows="10"
 				placeholder="The block content. Markdown supported. The user can override per-document without changing this."
 			/>
-			<p class="text-xs t-text-muted">Markdown. Per-document overrides won't mutate this — your library stays clean.</p>
+			<p class="text-xs text-muted-foreground/40">Markdown. Per-document overrides won't mutate this — your library stays clean.</p>
 		</div>
 	</form>
 </template>

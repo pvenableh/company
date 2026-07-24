@@ -2,8 +2,8 @@
 	<div class="ios-card p-4 cursor-pointer hover:shadow-md transition-all" @click="$emit('click', proposal)">
 		<div class="flex items-start justify-between mb-2">
 			<div>
-				<p class="text-sm font-medium t-text">{{ proposal.title || 'Untitled Proposal' }}</p>
-				<p class="text-xs t-text-secondary">
+				<p class="text-sm font-medium text-foreground">{{ proposal.title || 'Untitled Proposal' }}</p>
+				<p class="text-xs text-muted-foreground">
 					{{ proposal.organization?.name || proposal.contact?.first_name + ' ' + proposal.contact?.last_name }}
 				</p>
 			</div>
@@ -17,10 +17,10 @@
 		</div>
 
 		<div class="flex items-center justify-between mt-3">
-			<span v-if="proposal.total_value" class="text-sm font-medium t-text">
+			<span v-if="proposal.total_value" class="text-sm font-medium text-foreground">
 				${{ Number(proposal.total_value).toLocaleString() }}
 			</span>
-			<span v-if="proposal.valid_until" class="text-[10px] t-text-muted">
+			<span v-if="proposal.valid_until" class="text-[10px] text-muted-foreground/40">
 				Expires {{ new Date(proposal.valid_until).toLocaleDateString() }}
 			</span>
 		</div>

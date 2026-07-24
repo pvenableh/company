@@ -12,5 +12,5 @@ if (import.meta.server) {
 }
 </script>
 <template>
-	<div class="flex items-center justify-center py-16 t-text-muted text-sm">Redirecting to Documents Library…</div>
+	<div class="flex items-center justify-center py-16 text-muted-foreground/40 text-sm">Redirecting to Documents Library…</div>
 </template>

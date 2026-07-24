@@ -287,7 +287,7 @@ if (!props.compact) {
 <template>
   <div>
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
     </div>
 
     <template v-else-if="contract">
@@ -400,7 +400,7 @@ if (!props.compact) {
       >
         <div class="min-w-0">
           <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Public signing link</p>
-          <p class="text-xs t-text truncate">{{ `/contracts/sign/${contract.signing_token}` }}</p>
+          <p class="text-xs text-foreground truncate">{{ `/contracts/sign/${contract.signing_token}` }}</p>
         </div>
         <button
           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted shrink-0"
@@ -419,7 +419,7 @@ if (!props.compact) {
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="text-[10px] uppercase tracking-wider text-success dark:text-success">Signed</p>
-            <p class="text-sm t-text mt-0.5">
+            <p class="text-sm text-foreground mt-0.5">
               {{ contract.signed_by_name }} <span class="text-muted-foreground">&lt;{{ contract.signed_by_email }}&gt;</span>
             </p>
             <p class="text-xs text-muted-foreground">
@@ -526,27 +526,27 @@ if (!props.compact) {
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Value</p>
-                <p class="font-medium t-text">{{ contract.total_value ? `$${Number(contract.total_value).toLocaleString()}` : '—' }}</p>
+                <p class="font-medium text-foreground">{{ contract.total_value ? `$${Number(contract.total_value).toLocaleString()}` : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Effective</p>
-                <p class="font-medium t-text">{{ contract.effective_date ? new Date(contract.effective_date).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ contract.effective_date ? new Date(contract.effective_date).toLocaleDateString() : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Sent</p>
-                <p class="font-medium t-text">{{ contract.date_sent ? new Date(contract.date_sent).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ contract.date_sent ? new Date(contract.date_sent).toLocaleDateString() : '—' }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</p>
-                <p class="font-medium t-text">{{ contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : '—' }}</p>
+                <p class="font-medium text-foreground">{{ contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : '—' }}</p>
               </div>
             </div>
           </div>
 
           <div v-if="contract.contact" class="ios-card p-5 space-y-2">
             <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
-            <p class="text-sm font-medium t-text">{{ contract.contact.first_name }} {{ contract.contact.last_name }}</p>
-            <p v-if="contract.contact.email" class="text-xs t-text-secondary">{{ contract.contact.email }}</p>
+            <p class="text-sm font-medium text-foreground">{{ contract.contact.first_name }} {{ contract.contact.last_name }}</p>
+            <p v-if="contract.contact.email" class="text-xs text-muted-foreground">{{ contract.contact.email }}</p>
           </div>
 
           <div v-if="contract.proposal" class="ios-card p-5">
