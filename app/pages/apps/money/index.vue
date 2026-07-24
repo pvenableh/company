@@ -1728,6 +1728,15 @@ const headerAction = computed(() => {
 
       <!-- ── Insights floor ────────────────────────────────────────────── -->
       <template v-else-if="floor === 'insights'">
+        <!-- Whole money picture in one bar: banked → owed → in play → cold. -->
+        <MoneyRevenueCertainty
+          v-if="orgPipelineReady"
+          :paid="orgPaid"
+          :outstanding="orgCurrentOutstanding"
+          :overdue="orgOverdue"
+          class="mb-5"
+        />
+
         <!-- Whole-studio money pipeline: value → paid → to-hunt across every
              client, with the org-wide hunt list. Leads the Insights floor. -->
         <div v-if="orgPipelineReady || orgPipelineLoading" class="grid gap-4 lg:grid-cols-2 mb-5">
