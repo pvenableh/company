@@ -1,10 +1,12 @@
 <!--
   FormModal — shared chrome for every form-collection modal in the app
-  (new X / edit X / delete X). Originally a centered UModal; since the
-  iOS UX sweep (P2, 2026-05-20) it renders as an iOS bottom sheet so
-  every consumer modal — Contacts, Projects, Tickets, Invoices,
-  Proposals, Contracts, Lists, Leads, Expenses, etc. — feels native on
-  touch and stays consistent with the Studio sheets ([[project_studio_ios_native]]).
+  (new X / edit X / delete X). Renders as a right-side slide-over
+  (<AppSlideOver>) on desktop and a bottom sheet on mobile, so every
+  consumer modal — Contacts, Projects, Tickets, Invoices, Proposals,
+  Contracts, Lists, Leads, Expenses, etc. — reads as part of the same
+  slide-over family as the detail panels. `elevated` keeps it above the
+  slide-over stack (and its focus trap) since these forms are frequently
+  launched from inside a detail panel.
 
   API is unchanged from the UModal era:
     - Pass `title`, `isEditing`, `saving`, `submitDisabled`, optional
@@ -18,7 +20,16 @@
   forms scroll (e.g. ProjectsFormModal with timeline stages).
 -->
 <template>
-	<AppsAppBottomSheet v-model="isOpen" :title="title">
+	<!-- Right-side slide-over (bottom sheet on mobile). `elevated` lifts it
+	     above the slide-over stack + suspends the stack's focus trap, since
+	     consumer forms (edit contact/project/ticket…) open from inside detail
+	     panels. Footer overridden to the delete-left / save-right layout. -->
+	<AppSlideOver
+		v-model="isOpen"
+		:title="title"
+		elevated
+		:ui="{ footer: '!flex-row !justify-between !items-center' }"
+	>
 		<FormStatusTimeline
 			v-if="isEditing && statuses.length"
 			:currentStatus="currentStatus"
@@ -63,7 +74,7 @@
 				{{ submitLabel || (isEditing ? 'Save' : 'Create') }}
 			</Button>
 		</template>
-	</AppsAppBottomSheet>
+	</AppSlideOver>
 </template>
 
 <script setup>

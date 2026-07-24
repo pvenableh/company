@@ -22,6 +22,9 @@ interface SheetContentProps extends DialogContentProps {
   class?: HTMLAttributes["class"]
   side?: SheetVariants["side"]
   showCloseButton?: boolean
+  /** Extra classes for the backdrop overlay — used to lift its z-index above
+   *  the slide-over stack when the sheet opens over an open panel. */
+  overlayClass?: HTMLAttributes["class"]
 }
 
 const props = withDefaults(defineProps<SheetContentProps>(), {
@@ -30,14 +33,14 @@ const props = withDefaults(defineProps<SheetContentProps>(), {
 })
 const emits = defineEmits<DialogContentEmits>()
 
-const delegatedProps = reactiveOmit(props, "class", "side", "showCloseButton")
+const delegatedProps = reactiveOmit(props, "class", "side", "showCloseButton", "overlayClass")
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
   <DialogPortal>
     <DialogOverlay
-      class="dialog-overlay-glass data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50"
+      :class="cn('dialog-overlay-glass data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50', props.overlayClass)"
     />
     <DialogContent
       data-slot="sheet-content"

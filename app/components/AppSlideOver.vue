@@ -35,6 +35,14 @@ const props = withDefaults(
 		description?: string
 		preventClose?: boolean
 		hideClose?: boolean
+		/**
+		 * Render ABOVE the slide-over stack. Set this when the slide-over can
+		 * open over an already-open stack panel (e.g. a FormModal launched from
+		 * inside a detail panel). Lifts the content + backdrop z-index above the
+		 * z-60 stack AND suspends the stack's focus trap so inputs stay
+		 * focusable — mirrors what AppBottomSheet did (z-70 + trap suspend).
+		 */
+		elevated?: boolean
 		class?: string
 		ui?: {
 			content?: string
@@ -68,6 +76,27 @@ const isOpen = computed({
 const isDesktop = useMediaQuery('(min-width: 768px)')
 const sheetSide = computed(() => (isDesktop.value ? 'right' : 'bottom'))
 
+// When `elevated`, suspend the slide-over stack's FocusScope trap while this
+// sheet is open (its teleported inputs live at <body>, outside the trapped
+// panel, so focusin would otherwise bounce back). Counter-based, released on
+// close/unmount. See useSlideOverFocusTrapSuspend.
+const { suspend: suspendStackTrap } = useSlideOverFocusTrapSuspend()
+let releaseTrap: (() => void) | null = null
+function acquireTrap() {
+	if (props.elevated && !releaseTrap) releaseTrap = suspendStackTrap()
+}
+function releaseTrapIfHeld() {
+	if (releaseTrap) {
+		releaseTrap()
+		releaseTrap = null
+	}
+}
+watch(isOpen, (open) => {
+	if (open) acquireTrap()
+	else releaseTrapIfHeld()
+}, { immediate: true })
+onBeforeUnmount(releaseTrapIfHeld)
+
 const handleInteractOutside = (event: Event) => {
 	if (props.preventClose) event.preventDefault()
 }
@@ -87,9 +116,11 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
 			:side="sheetSide"
 			:show-close-button="!hideClose"
 			:style="accentStyle"
+			:overlay-class="elevated ? '!z-[70]' : undefined"
 			:class="cn(
 				'p-0 gap-0 flex flex-col app-slide-over__content',
 				isDesktop ? 'w-full sm:max-w-2xl' : 'max-h-[90vh] rounded-t-xl',
+				elevated ? '!z-[71]' : '',
 				props.ui?.content,
 				props.class,
 			)"
