@@ -180,6 +180,19 @@ export class MockClaudeProvider implements LLMProvider {
       });
     }
 
+    // Pursuit strategist — cold-proposal re-approach.
+    if (/"strategic_read"|"next_touchpoint"/.test(p)) {
+      return JSON.stringify({
+        strategic_read: 'The proposal was viewed but then went quiet — the full scope likely felt like a big first commitment. Change the medium (a quick call beats another email) and offer a smaller, lower-risk entry point.',
+        next_touchpoint: {
+          type: 'call',
+          summary: 'Quick 10-min call — a phased option',
+          note: 'Hi — no pressure on the full build. Could I grab 10 minutes to walk you through a smaller Phase 1 so you can see how we work before committing to the whole thing?',
+        },
+        proposal_angle: 'Offer a trimmed Phase 1 (identity + one landing page) as a low-risk first step, with the full scope as an optional Phase 2.',
+      });
+    }
+
     // Looser fallbacks for prompts that describe the shape without quoting fields.
     if (/\bevents?\b|timeline/.test(p)) return JSON.stringify({ events: [], summary: '', totalDays: 0 });
     if (/\bposts?\b|caption|hashtag/.test(p)) return JSON.stringify({ posts: [] });

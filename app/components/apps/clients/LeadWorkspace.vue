@@ -122,6 +122,50 @@ async function generateDraft() {
 	}
 }
 
+// Earnest pursuit strategist — reads the full pursuit history and drafts a fresh
+// re-approach for a stalled/cold deal. One-shot structured suggestion; the user
+// can turn the suggested touch into a real one with a tap.
+const reApproach = ref<{ strategic_read: string; next_touchpoint: { type: string; summary: string; note: string }; proposal_angle: string | null } | null>(null);
+const reApproaching = ref(false);
+const addingReApproach = ref(false);
+async function draftReApproach() {
+	if (!lead.value?.id || reApproaching.value) return;
+	reApproaching.value = true;
+	reApproach.value = null;
+	try {
+		reApproach.value = await $fetch<any>(`/api/ai/pursuit-strategy/${lead.value.id}`, { method: 'POST' });
+	} catch (err: any) {
+		toast.add({ title: 'Could not draft a re-approach', description: err?.data?.message || err?.message || 'Try again.', color: 'red' });
+	} finally {
+		reApproaching.value = false;
+	}
+}
+async function addReApproachTouch() {
+	const t = reApproach.value?.next_touchpoint;
+	if (!t || addingReApproach.value) return;
+	addingReApproach.value = true;
+	try {
+		await logTouchpoint({
+			organization: lead.value?.organization?.id || lead.value?.organization,
+			lead: Number(props.leadId),
+			type: t.type,
+			summary: t.summary,
+			note: t.note || undefined,
+			awaiting_response: true,
+			...(reApproach.value?.proposal_angle ? { next_action: reApproach.value.proposal_angle } : {}),
+			contactIds: lead.value?.related_contact?.id ? [String(lead.value.related_contact.id)] : [],
+		});
+		reApproach.value = null;
+		await loadLeadActivities();
+		pursuitRef.value?.refresh?.();
+		toast.add({ title: 'Added as a touchpoint', color: 'green' });
+	} catch (err: any) {
+		toast.add({ title: 'Could not add touchpoint', description: err?.message, color: 'red' });
+	} finally {
+		addingReApproach.value = false;
+	}
+}
+
 // One "New" menu for the Documents tab — collapses the three per-section
 // create buttons (AI-draft proposal / blank proposal / blank contract) into a
 // single entry point.
@@ -830,11 +874,41 @@ function openContactPivot() {
 
 					<!-- Right: Activity Timeline -->
 					<div :class="compact ? '' : 'lg:col-span-2'">
-						<div class="flex items-center justify-between mb-4">
-							<h2 class="text-sm font-semibold t-text">Activity Timeline</h2>
-							<UButton size="xs" variant="outline" icon="i-heroicons-plus" @click="showActivityForm = !showActivityForm">
-								Log Activity
-							</UButton>
+						<div class="flex items-center justify-between mb-4 gap-2">
+							<h2 class="text-sm font-semibold t-text">Pursuit Timeline</h2>
+							<div class="flex items-center gap-1.5">
+								<UButton size="xs" variant="ghost" :icon="reApproaching ? 'i-lucide-loader-2' : 'i-lucide-sparkles'" :class="{ 'animate-pulse': reApproaching }" :disabled="reApproaching" @click="draftReApproach">
+									{{ reApproaching ? 'Thinking…' : 'Re-approach' }}
+								</UButton>
+								<UButton size="xs" variant="outline" icon="i-heroicons-plus" @click="showActivityForm = !showActivityForm">
+									Log
+								</UButton>
+							</div>
+						</div>
+
+						<!-- Earnest's re-approach for a stalled/cold deal. -->
+						<div v-if="reApproach" class="ios-card p-4 mb-4 space-y-3 border-primary/30">
+							<div class="flex items-start gap-2">
+								<span class="inline-grid place-items-center w-6 h-6 rounded-lg bg-primary text-primary-foreground text-[13px] font-serif shrink-0" style="font-family: Georgia, serif;">E</span>
+								<div class="min-w-0">
+									<p class="text-[11px] uppercase tracking-wider text-primary font-semibold">Earnest · re-approach</p>
+									<p class="text-[13px] text-foreground/90 mt-1">{{ reApproach.strategic_read }}</p>
+								</div>
+							</div>
+							<div class="rounded-lg bg-muted/30 p-3 space-y-1">
+								<div class="flex items-center gap-2">
+									<span class="text-[9px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{{ reApproach.next_touchpoint.type }}</span>
+									<span class="text-[12.5px] font-medium">{{ reApproach.next_touchpoint.summary }}</span>
+								</div>
+								<p class="text-[12.5px] text-muted-foreground whitespace-pre-wrap">{{ reApproach.next_touchpoint.note }}</p>
+							</div>
+							<p v-if="reApproach.proposal_angle" class="text-[12px] text-foreground/80">
+								<span class="text-[10px] uppercase tracking-wide text-muted-foreground">Proposal angle · </span>{{ reApproach.proposal_angle }}
+							</p>
+							<div class="flex items-center gap-2">
+								<UButton size="xs" :loading="addingReApproach" icon="i-lucide-check" @click="addReApproachTouch">Add as touchpoint</UButton>
+								<UButton size="xs" variant="ghost" @click="reApproach = null">Dismiss</UButton>
+							</div>
 						</div>
 
 						<div v-if="showActivityForm" class="ios-card p-4 mb-4 space-y-3">

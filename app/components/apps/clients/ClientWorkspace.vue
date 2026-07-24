@@ -172,6 +172,8 @@ const paidTotal = ref<number | null>(null);
 const currentOutstanding = ref<number | null>(null);
 const overdueTotal = ref<number | null>(null);
 const huntRows = ref<HuntRow[]>([]);
+// Pursuit disclosure — lazy-mounts the merged timeline + proposal board.
+const showPursuit = ref(false);
 
 const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
 const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
@@ -1078,6 +1080,33 @@ watch(() => props.clientId, () => {
 							:overdue="overdueTotal || 0"
 						/>
 						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+					</div>
+
+					<!-- Pursuit — the whole courtship (touchpoints + proposals merged)
+					     and the client's proposal pipeline. Lazy-mounted disclosure so
+					     it never fetches unless opened. -->
+					<div class="rounded-2xl border border-border/50 bg-muted/10">
+						<button
+							type="button"
+							class="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground"
+							@click="showPursuit = !showPursuit"
+						>
+							<span class="inline-flex items-center gap-2">
+								<Icon name="lucide:target" class="w-4 h-4 text-muted-foreground" />
+								Pursuit history &amp; proposals
+							</span>
+							<Icon name="lucide:chevron-down" class="w-4 h-4 text-muted-foreground transition-transform" :class="{ 'rotate-180': showPursuit }" />
+						</button>
+						<div v-if="showPursuit" class="px-4 pb-4 pt-1 border-t border-border/40 space-y-6">
+							<div>
+								<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Pursuit timeline</h4>
+								<AppsPursuitTimeline :client-id="clientId" />
+							</div>
+							<div>
+								<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Proposal pipeline</h4>
+								<MoneyProposalPipeline :client-id="clientId" />
+							</div>
+						</div>
 					</div>
 
 					<!-- Earnest, focused on THIS client: scoped prompts. The Convene
