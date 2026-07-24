@@ -1,8 +1,8 @@
 <!--
-  NewEmailSheet — bottom sheet for creating a new email template.
+  NewEmailSheet — right-side slide-over for creating a new email template.
 
   Mirrors the two-step modal from the legacy email landing (method
-  picker → name/source picker) but as an `<AppsAppBottomSheet>`. On
+  picker → name/source picker) but as a right-side `<AppSlideOver>`. On
   create, opens the EmailTemplatePanel (fullscreen slide-over hosting
   NewsletterBlockBuilder) so the editor lives inside the apps shell
   instead of route-navigating out to `/email/templates/[id]`. Replaces
@@ -10,7 +10,6 @@
   user on the legacy landing page two hops before the create flow.
 -->
 <script setup lang="ts">
-import AppBottomSheet from '../AppBottomSheet.vue';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -125,10 +124,11 @@ const canSubmit = computed(() => {
 </script>
 
 <template>
-	<AppBottomSheet
+	<AppSlideOver
 		:model-value="modelValue"
 		:title="sheetTitle"
-		:subtitle="sheetSubtitle ?? ''"
+		:description="sheetSubtitle ?? ''"
+		elevated
 		@update:model-value="emit('update:modelValue', $event)"
 	>
 		<!-- Step 1: pick start method -->
@@ -328,5 +328,5 @@ const canSubmit = computed(() => {
 				</div>
 			</div>
 		</template>
-	</AppBottomSheet>
+	</AppSlideOver>
 </template>

@@ -563,11 +563,12 @@ const viewTabs = [
 			@saved="onGoalSaved"
 		/>
 
-		<!-- Progress Update — iOS bottom sheet -->
-		<AppBottomSheet
+		<!-- Progress Update — right-side slide-over (bottom sheet on mobile). -->
+		<AppSlideOver
 			v-model="showProgressSheet"
 			title="Update Progress"
-			:subtitle="progressGoal?.title || ''"
+			:description="progressGoal?.title || ''"
+			elevated
 		>
 			<div v-if="progressGoal" class="space-y-4">
 				<div>
@@ -624,13 +625,14 @@ const viewTabs = [
 					</button>
 				</div>
 			</template>
-		</AppBottomSheet>
+		</AppSlideOver>
 
-		<!-- Coach Me — iOS bottom sheet -->
-		<AppBottomSheet
+		<!-- Coach Me — right-side slide-over (bottom sheet on mobile). -->
+		<AppSlideOver
 			v-model="showCoachSheet"
 			title="Coach me"
-			:subtitle="coachGoal?.title || ''"
+			:description="coachGoal?.title || ''"
+			elevated
 		>
 			<div v-if="coachGoal" class="space-y-4">
 				<!-- Loading -->
@@ -669,7 +671,7 @@ const viewTabs = [
 					</div>
 				</div>
 			</div>
-		</AppBottomSheet>
+		</AppSlideOver>
 	</div>
 </template>
 

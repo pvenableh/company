@@ -140,10 +140,11 @@ async function generate() {
 </script>
 
 <template>
-  <AppBottomSheet
+  <AppSlideOver
     v-model="open"
     title="Draft with AI"
-    subtitle="Describe the deliverables — Earnest drafts editable documents. Nothing is sent."
+    description="Describe the deliverables — Earnest drafts editable documents. Nothing is sent."
+    elevated
   >
     <div class="space-y-4">
       <div>
@@ -202,5 +203,5 @@ async function generate() {
         </Button>
       </div>
     </template>
-  </AppBottomSheet>
+  </AppSlideOver>
 </template>
