@@ -35,7 +35,10 @@ const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 const contact = ref<any | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const showEditModal = ref(false);
+// Edit happens IN-PLACE inside this panel (swap the read view for the embedded
+// form) rather than overlaying an elevated modal — keeps edit in the same
+// stacked-slide-over family as everything else.
+const editing = ref(false);
 
 // Prefer the linked client's name over the manually-typed `company` field —
 // once a contact is wired to a client, that client name is the authoritative
@@ -77,12 +80,12 @@ async function reloadContact() {
 }
 
 function onContactUpdated() {
-	showEditModal.value = false;
+	editing.value = false;
 	reloadContact();
 }
 
 function onContactDeleted() {
-	showEditModal.value = false;
+	editing.value = false;
 	emit('close');
 }
 
@@ -131,6 +134,27 @@ onBeforeUnmount(() => {
 
 <template>
 	<AppSlideOverShell :title="title" @close="$emit('close')">
+		<template v-if="!isCreate && contact" #actions>
+			<button
+				v-if="!editing"
+				type="button"
+				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+				@click="editing = true"
+			>
+				<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+				Edit
+			</button>
+			<button
+				v-else
+				type="button"
+				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+				@click="editing = false"
+			>
+				<Icon name="lucide:x" class="w-3.5 h-3.5" />
+				Cancel
+			</button>
+		</template>
+
 		<!-- Create mode — host the shared contact form embedded in the shell. -->
 		<ContactsFormModal
 			v-if="isCreate"
@@ -139,18 +163,16 @@ onBeforeUnmount(() => {
 			@created="onContactCreated"
 		/>
 
-		<template v-if="!isCreate && contact" #actions>
-			<button
-				type="button"
-				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
-				@click="showEditModal = true"
-			>
-				<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-				Edit
-			</button>
-		</template>
+		<!-- Edit mode — swap the read view for the embedded form in place. -->
+		<ContactsFormModal
+			v-else-if="editing && contact"
+			embedded
+			:contact="contact"
+			@updated="onContactUpdated"
+			@deleted="onContactDeleted"
+		/>
 
-		<div v-if="!isCreate && loading" class="flex flex-col items-center justify-center py-12 gap-3">
+		<div v-else-if="loading" class="flex flex-col items-center justify-center py-12 gap-3">
 			<span class="spinner-ios spinner-ios--lg" role="status" aria-label="Loading" />
 			<p class="text-xs text-muted-foreground">Loading contact…</p>
 		</div>
@@ -226,16 +248,8 @@ onBeforeUnmount(() => {
 			{{ error }}
 		</div>
 
-		<div v-else-if="!isCreate" class="text-sm text-muted-foreground py-10 text-center">
+		<div v-else class="text-sm text-muted-foreground py-10 text-center">
 			Could not load contact.
 		</div>
-
-		<ContactsFormModal
-			v-if="contact"
-			v-model="showEditModal"
-			:contact="contact"
-			@updated="onContactUpdated"
-			@deleted="onContactDeleted"
-		/>
 	</AppSlideOverShell>
 </template>
