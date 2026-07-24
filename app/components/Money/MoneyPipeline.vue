@@ -40,10 +40,22 @@ const overBilled = computed(() =>
 // (invoiced beyond contract) still renders as a full, honest bar.
 const base = computed(() => Math.max(props.contractValue ?? 0, invoiced.value) || 1);
 
-const toHunt = computed(() => props.currentOutstanding + props.overdue);
-const collectionRate = computed(() =>
-	invoiced.value > 0 ? Math.round((props.paid / invoiced.value) * 100) : 0,
-);
+// "To hunt down" = every dollar of the engagement not yet collected: invoiced-
+// but-unpaid (outstanding + overdue) PLUS contract value not yet billed. A
+// signed/in-progress project with $48k contracted and nothing invoiced still
+// has $48k to chase — it just needs billing first, not a reminder email.
+const toHunt = computed(() => props.currentOutstanding + props.overdue + notYetBilled.value);
+
+// The project/engagement total the gauge is collecting against — the contract
+// value, or (for open-ended retainers) whatever's been invoiced.
+const engagementTotal = computed(() => Math.max(props.contractValue ?? 0, invoiced.value));
+
+// Collection rate is against the full engagement (contract) when we have one,
+// so 0% shows for a signed-but-unbilled project instead of a hollow 0/0.
+const collectionRate = computed(() => {
+	const denom = props.contractValue != null ? engagementTotal.value : invoiced.value;
+	return denom > 0 ? Math.round((props.paid / denom) * 100) : 0;
+});
 
 interface Seg { key: string; label: string; amount: number; cls: string; hollow?: boolean }
 const segments = computed<Seg[]>(() => {
@@ -130,8 +142,13 @@ const gaugeOffset = computed(() => CIRC * (1 - collectionRate.value / 100));
 							class="transition-[stroke-dashoffset] duration-700 ease-out"
 						/>
 					</svg>
-					<div class="absolute inset-0 flex items-center justify-center">
+					<div class="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
 						<span class="text-lg font-bold leading-none tabular-nums">{{ collectionRate }}%</span>
+						<!-- Project/engagement total, tiny — anchors the % to a real
+						     dollar figure ("0% of $48,000") right in the gauge. -->
+						<span v-if="engagementTotal > 0" class="text-[8px] font-medium leading-none tabular-nums text-muted-foreground">
+							{{ fmt(engagementTotal) }}
+						</span>
 					</div>
 				</div>
 				<span class="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">Collected</span>
