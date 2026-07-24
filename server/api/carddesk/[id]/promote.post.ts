@@ -224,8 +224,9 @@ export default defineEventHandler(async (event) => {
     try {
       lead = await directus.request(
         createItem('leads', {
-          name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() + ' (Card Desk)',
+          name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
           stage: STAGE_FROM_RATING[cd.rating],
+          source: 'carddesk',
           related_contact: contact.id,
           assigned_to: userId,
           organization: body.org_id,

@@ -314,6 +314,7 @@ const LEAD_DETAIL_FIELDS = [
 		{ value: 'website', label: 'Website' },
 		{ value: 'referral', label: 'Referral' },
 		{ value: 'event', label: 'Event' },
+		{ value: 'carddesk', label: 'CardDesk' },
 	] },
 	{ key: 'estimated_value', label: 'Estimated Value', type: 'number', prefix: '$', placeholder: '0' },
 	{ key: 'timeline', label: 'Timeline', type: 'select', options: [

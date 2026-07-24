@@ -2794,7 +2794,7 @@ export interface Lead {
 	date_updated?: string | null;
 	priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
 	lead_score?: number | null;
-	source?: `business card` | 'call' | 'website' | 'referral' | 'event' | null;
+	source?: `business card` | 'call' | 'website' | 'referral' | 'event' | 'carddesk' | null;
 	estimated_value?: number | null;
 	related_contact?: Contact | string | null;
 	source_details?: string | null;

@@ -46,6 +46,7 @@
 					<option value="call">Call</option>
 					<option value="event">Event</option>
 					<option value="business card">Business Card</option>
+					<option value="carddesk">CardDesk</option>
 					<option value="linkedin">LinkedIn</option>
 					<option value="cold_outreach">Cold Outreach</option>
 				</select>
