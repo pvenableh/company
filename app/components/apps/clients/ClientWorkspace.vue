@@ -172,6 +172,8 @@ const paidTotal = ref<number | null>(null);
 const currentOutstanding = ref<number | null>(null);
 const overdueTotal = ref<number | null>(null);
 const huntRows = ref<HuntRow[]>([]);
+// Dated payment ledger for this client → the period-scoped "Collected" card.
+const clientPayments = ref<{ amount: number; date: string | null }[]>([]);
 // Pursuit disclosure — lazy-mounts the merged timeline + proposal board.
 const showPursuit = ref(false);
 
@@ -518,7 +520,8 @@ async function loadInvoices() {
 // segments sum to invoiced. Independent of the projects/invoices tabs.
 async function loadBillingSummary() {
 	try {
-		const [invoices, projects] = await Promise.all([
+		const paymentItemsApi = useDirectusItems('payments_received');
+		const [invoices, projects, payments] = await Promise.all([
 			invoiceItemsApi.list({
 				fields: [
 					'id', 'invoice_code', 'status', 'total_amount', 'due_date',
@@ -530,6 +533,18 @@ async function loadBillingSummary() {
 			projectItemsApi.list({
 				fields: ['contract_value', 'status'],
 				filter: { client: { _eq: props.clientId }, status: { _neq: 'Archived' } },
+				limit: -1,
+			}).catch(() => []) as Promise<any[]>,
+			// Dated ledger → the period-scoped "Collected" card. Scoped to this
+			// client's invoices; test-mode rows excluded; refunds (negatives) net out.
+			paymentItemsApi.list({
+				fields: ['amount', 'date_received', 'date_created'],
+				filter: {
+					_and: [
+						{ invoice_id: { client: { _eq: props.clientId } } },
+						{ _or: [{ livemode: { _null: true } }, { livemode: { _eq: true } }] },
+					],
+				},
 				limit: -1,
 			}).catch(() => []) as Promise<any[]>,
 		]);
@@ -570,6 +585,10 @@ async function loadBillingSummary() {
 		currentOutstanding.value = current;
 		overdueTotal.value = overdue;
 		huntRows.value = hunt;
+		clientPayments.value = (payments || []).map((p: any) => ({
+			amount: Number(p?.amount) || 0,
+			date: p?.date_received || p?.date_created || null,
+		}));
 	} catch {
 		clientContractValue.value = null;
 		billedTotal.value = 0; paidTotal.value = 0;
@@ -1069,18 +1088,24 @@ watch(() => props.clientId, () => {
 					     (this is where the numbers populate — most orgs bill at the
 					     client level). Shows once billing has loaded and there's either
 					     a contract value or something invoiced. -->
-					<div
-						v-if="paidTotal != null && ((clientContractValue || 0) > 0 || (billedTotal || 0) > 0)"
-						class="grid gap-4 lg:grid-cols-2"
-					>
-						<MoneyPipeline
-							:contract-value="clientContractValue"
-							:paid="paidTotal || 0"
-							:current-outstanding="currentOutstanding || 0"
-							:overdue="overdueTotal || 0"
+					<template v-if="paidTotal != null && ((clientContractValue || 0) > 0 || (billedTotal || 0) > 0)">
+						<!-- Collected · [period] — the flow figure the lifetime pipeline
+						     can't answer ("how much has this client paid us YTD?"). -->
+						<MoneyCollectedCard
+							:payments="clientPayments"
+							title="Collected from this client"
+							class="mb-4"
 						/>
-						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
-					</div>
+						<div class="grid gap-4 lg:grid-cols-2">
+							<MoneyPipeline
+								:contract-value="clientContractValue"
+								:paid="paidTotal || 0"
+								:current-outstanding="currentOutstanding || 0"
+								:overdue="overdueTotal || 0"
+							/>
+							<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
+						</div>
+					</template>
 
 					<!-- Pursuit money — what is still out there (proposals), beside the owed money. -->
 					<AppsPursuitMoney :client-id="clientId" />
