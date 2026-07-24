@@ -20,7 +20,7 @@
 			<!-- Project-embedded / portal boards: no filter toolbar — just the
 				 create affordance (when it isn't hoisted to a page header). -->
 			<div v-if="projectId || portal" class="flex items-center gap-3 mb-4 px-4 pt-4">
-				<TicketsCreate v-if="!portal && !hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+				<UiActionButton v-if="!portal && !hideCreate" size="md" icon="lucide:plus" @click="openTicketCreate({ projectId, organizationId })">New Ticket</UiActionButton>
 			</div>
 
 			<!-- Standalone board: single-row pill toolbar matching the Tasks floor
@@ -107,7 +107,7 @@
 					</button>
 
 					<!-- New Ticket — only when not hoisted to a page header CTA. -->
-					<TicketsCreate v-if="!hideCreate" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+					<UiActionButton v-if="!hideCreate" size="md" icon="lucide:plus" @click="openTicketCreate({ projectId, organizationId })">New Ticket</UiActionButton>
 				</div>
 
 				<div v-if="lastUpdated" class="absolute -bottom-[18px] right-0 text-[9px] text-muted-foreground font-bold uppercase">
@@ -1001,6 +1001,11 @@ const processTickets = (tickets) => {
 const handleTicketCreated = () => {
 	softRefreshTickets();
 };
+// New ticket opens as a stacked slide-over (`ticket` panel, create mode). The
+// apps shell (and its slide-over stack) is mounted on every non-portal in-app
+// page, and the create buttons below are already gated `!portal`.
+const { openCreate: openTicketCreate, onCreated: onTicketCreatedPanel } = useCreatePanel('ticket');
+onTicketCreatedPanel(() => handleTicketCreated());
 
 // Check for active filters
 const hasActiveFilters = computed(() => {

@@ -34,7 +34,10 @@ const slideOverStack = useAppSlideOverStack();
 
 const proposal = ref<any>(null);
 const loading = ref(true);
-const showEditModal = ref(false);
+// Details/metadata edit happens IN-PLACE (swap the body for the embedded form)
+// rather than overlaying an elevated modal — consistent on both the panel and
+// the full page.
+const editing = ref(false);
 const proposalItems = useDirectusItems('proposals');
 const toast = useToast();
 
@@ -84,6 +87,7 @@ async function saveBlocks() {
 }
 
 function onProposalUpdated(updated: any) {
+  editing.value = false;
   proposal.value = { ...proposal.value, ...updated };
   emit('loaded', proposal.value);
 }
@@ -377,15 +381,26 @@ if (!props.compact) {
             <span class="hidden sm:inline">Convert to contract</span>
           </button>
           <button
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
-            @click="showEditModal = true"
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border text-xs font-medium transition-colors"
+            :class="editing ? 'border-primary/40 text-primary bg-primary/10' : 'border-border hover:bg-muted'"
+            @click="editing = !editing"
           >
-            <EIcon name="lucide:settings-2" class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Details</span>
+            <EIcon :name="editing ? 'lucide:x' : 'lucide:settings-2'" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">{{ editing ? 'Cancel' : 'Details' }}</span>
           </button>
         </div>
       </div>
 
+      <!-- Metadata edit — swap the body for the embedded form in place. -->
+      <ProposalsFormModal
+        v-if="editing"
+        embedded
+        :proposal="proposal"
+        @updated="onProposalUpdated"
+        @deleted="onProposalDeleted"
+      />
+
+      <template v-else>
       <!-- AI Notices -->
       <ClientOnly>
         <AIProactiveNotices v-if="proposal?.id" entity-type="proposal" :entity-id="String(proposal.id)" />
@@ -594,12 +609,7 @@ if (!props.compact) {
         </div>
       </div>
 
-      <ProposalsFormModal
-        v-model="showEditModal"
-        :proposal="proposal"
-        @updated="onProposalUpdated"
-        @deleted="onProposalDeleted"
-      />
+      </template>
     </template>
 
     <!-- Draft with Earnest — full-screen Generative Canvas overlay. Seeds from
