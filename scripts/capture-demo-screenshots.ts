@@ -309,6 +309,28 @@ const SHOTS: Shot[] = [
 		resolveUrl: async (ctx) => `${ctx.baseUrl}/leads/${await leadWithProposal(ctx.page, ctx.baseUrl)}`,
 	},
 	{
+		// Earnest's re-approach for a cold deal — same lead, but click "Re-approach"
+		// so the AI (demo mock LLM) drafts the strategic read + suggested touch, then
+		// scroll that card into frame. Best-effort: a failed/slow draft still captures
+		// whatever rendered rather than throwing the shot away.
+		slug: 'pursuit-reapproach',
+		viewport: 'inline',
+		persona: 'agency',
+		resolveUrl: async (ctx) => `${ctx.baseUrl}/leads/${await leadWithProposal(ctx.page, ctx.baseUrl)}`,
+		waitFor: async (page) => {
+			try {
+				await page.locator('button:has-text("Re-approach")').first().click({ timeout: 8000 });
+				const card = page.getByText('Earnest · re-approach').first();
+				await card.waitFor({ state: 'visible', timeout: 45000 });
+				await page.waitForTimeout(1200);
+				await card.scrollIntoViewIfNeeded();
+				await page.waitForTimeout(600);
+			} catch (err) {
+				console.warn(`    pursuit-reapproach: ${(err as Error).message} — capturing current state`);
+			}
+		},
+	},
+	{
 		slug: 'people-dashboard',
 		viewport: 'inline',
 		persona: 'solo',
