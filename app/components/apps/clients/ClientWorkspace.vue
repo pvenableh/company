@@ -318,6 +318,14 @@ function normalizeTab(t: ClientTabKey | undefined | null): ClientTabKey {
 }
 const activeTab = ref<ClientTabKey>(normalizeTab(props.initialTab));
 
+// Overview "live pulse" sub-tabs — mirrors ProjectWorkspace. Timeline leads;
+// Touchpoints (comms log) sits second, folded in from what used to be a
+// separate side column.
+const overviewPulseTabs = [
+	{ slot: 'timeline', label: 'Timeline', icon: 'i-heroicons-chart-bar' },
+	{ slot: 'touchpoints', label: 'Touchpoints', icon: 'i-heroicons-signal' },
+];
+
 // Directional tab-content animation — mirrors ProjectWorkspace. `data-tab-dir`
 // on the tab-content card drives a CSS mount animation so the incoming panel
 // slides in from the direction of travel. Attribute-driven (not a Transition
@@ -1170,24 +1178,24 @@ watch(() => props.clientId, () => {
 						:label="client.name || 'this client'"
 						hide-convene
 					/>
-					<!-- Live pulse: timeline of the client's work (projects/tickets/
-					     tasks) alongside the touchpoints log — mirrors the project
-					     overview's two-column pulse. Stacks in the narrow slide-over. -->
-					<div class="grid gap-6" :class="compact ? 'grid-cols-1' : 'lg:grid-cols-2'">
-						<div class="min-w-0 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
-							<AppsClientsClientTimelineFeed :client-id="clientId" />
-						</div>
-						<div class="min-w-0">
-							<div class="flex items-center gap-2 mb-4">
-								<Icon name="lucide:radio" class="w-5 h-5 text-primary" />
-								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Touchpoints</h3>
+					<!-- Live pulse: Timeline of the client's work (projects/tickets/
+					     tasks) and the Touchpoints comms log, folded into one tabbed
+					     read — mirrors the project overview. Touchpoints sits second. -->
+					<ETabs :items="overviewPulseTabs" :ui="{ content: 'min-h-[22rem]' }">
+						<template #timeline>
+							<div class="max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+								<AppsClientsClientTimelineFeed :client-id="clientId" />
 							</div>
-							<AppsTouchpoints
-								:client-id="clientId"
-								:organization-id="(client as any)?.organization || null"
-							/>
-						</div>
-					</div>
+						</template>
+						<template #touchpoints>
+							<div class="max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+								<AppsTouchpoints
+									:client-id="clientId"
+									:organization-id="(client as any)?.organization || null"
+								/>
+							</div>
+						</template>
+					</ETabs>
 
 					<!-- Client details — inline editor, demoted to a disclosure (mirrors
 					     the project overview) so the landing leads with work, not a form.

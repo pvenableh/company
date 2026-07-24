@@ -109,9 +109,11 @@ watch(activeTab, (next, prev) => {
 });
 
 // Overview "live pulse" sub-tabs. Timeline (events + tickets + tasks, in time
-// order) leads as the default read; Activity (audit feed) is one tap away.
+// order) leads as the default read; Touchpoints (comms log) sits second; and
+// Activity (audit feed) is one tap further.
 const overviewPulseTabs = [
 	{ slot: 'timeline', label: 'Timeline', icon: 'i-heroicons-chart-bar' },
+	{ slot: 'touchpoints', label: 'Touchpoints', icon: 'i-heroicons-signal' },
 	{ slot: 'activity', label: 'Activity', icon: 'i-heroicons-clock' },
 ];
 
@@ -1338,35 +1340,30 @@ watch(() => props.projectId, () => {
 						hide-convene
 					/>
 
-					<!-- Live pulse: recent activity/events + latest touchpoints.
-					     Stacks in the narrow slide-over (compact); two-up on the page. -->
-					<div class="grid gap-6" :class="compact ? 'grid-cols-1' : 'lg:grid-cols-2'">
-						<div class="min-w-0">
-							<ETabs :items="overviewPulseTabs">
-								<template #timeline>
-									<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
-										<AppsWorkProjectTimelineFeed :project-id="projectId" hide-header />
-									</div>
-								</template>
-								<template #activity>
-									<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
-										<ProjectsActivityTimeline :project-id="projectId" hide-header />
-									</div>
-								</template>
-							</ETabs>
-						</div>
-						<div class="min-w-0">
-							<div class="flex items-center gap-2 mb-4">
-								<Icon name="lucide:radio" class="w-5 h-5 text-primary" />
-								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Touchpoints</h3>
+					<!-- Live pulse: Timeline, Touchpoints, and Activity as one tabbed
+					     read. Touchpoints sits second so the comms log is one tap from
+					     the timeline without leaving the overview. -->
+					<ETabs :items="overviewPulseTabs" :ui="{ content: 'min-h-[22rem]' }">
+						<template #timeline>
+							<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+								<AppsWorkProjectTimelineFeed :project-id="projectId" hide-header />
 							</div>
-							<AppsTouchpoints
-								:project-id="projectId"
-								:organization-id="organizationId"
-								:client-id="clientId"
-							/>
-						</div>
-					</div>
+						</template>
+						<template #touchpoints>
+							<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+								<AppsTouchpoints
+									:project-id="projectId"
+									:organization-id="organizationId"
+									:client-id="clientId"
+								/>
+							</div>
+						</template>
+						<template #activity>
+							<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
+								<ProjectsActivityTimeline :project-id="projectId" hide-header />
+							</div>
+						</template>
+					</ETabs>
 
 					<!-- Project details — inline editor, demoted to a disclosure. -->
 					<details class="group rounded-2xl border border-border/50 bg-muted/10">

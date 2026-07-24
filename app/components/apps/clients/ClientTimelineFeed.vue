@@ -208,7 +208,7 @@ const formatWhen = (ts: string | null) => {
 		<!-- Loading -->
 		<div v-if="loading" class="space-y-3">
 			<div v-for="n in 5" :key="n" class="flex items-start gap-3">
-				<div class="w-8 h-8 rounded-full bg-muted animate-pulse flex-shrink-0" />
+				<div class="w-7 h-7 rounded-full bg-muted animate-pulse flex-shrink-0" />
 				<div class="flex-1 space-y-1">
 					<div class="h-3 w-40 bg-muted rounded animate-pulse" />
 					<div class="h-2 w-24 bg-muted rounded animate-pulse" />
@@ -224,7 +224,7 @@ const formatWhen = (ts: string | null) => {
 
 		<!-- Timeline -->
 		<div v-else class="relative">
-			<div class="absolute left-4 top-0 bottom-0 w-px bg-border" />
+			<div class="absolute left-3.5 top-0 bottom-0 w-px bg-border" />
 			<div
 				v-for="item in items"
 				:key="item.id"
@@ -239,27 +239,27 @@ const formatWhen = (ts: string | null) => {
 					<button
 						v-if="item.kind === 'task'"
 						type="button"
-						class="w-8 h-8 rounded-full flex items-center justify-center ring-2 ring-background transition-colors"
+						class="w-7 h-7 rounded-full flex items-center justify-center ring-2 ring-background transition-colors"
 						:class="isTaskDone(item) ? 'bg-success text-white' : 'bg-background border-2 border-border text-transparent hover:border-success hover:text-success/40'"
 						:title="isTaskDone(item) ? 'Mark as not done' : 'Mark complete'"
 						:aria-pressed="isTaskDone(item) ? 'true' : 'false'"
 						@click.stop="toggleTaskComplete(item)"
 						@keydown.enter.stop="toggleTaskComplete(item)"
 					>
-						<Icon name="lucide:check" class="w-4 h-4" />
+						<Icon name="lucide:check" class="w-3.5 h-3.5" />
 					</button>
 					<div
 						v-else
-						class="w-8 h-8 rounded-full flex items-center justify-center ring-2 ring-background"
+						class="w-7 h-7 rounded-full flex items-center justify-center ring-2 ring-background"
 						:class="KIND_META[item.kind].chip"
 					>
-						<Icon :name="KIND_META[item.kind].icon" class="w-4 h-4" />
+						<Icon :name="KIND_META[item.kind].icon" class="w-3.5 h-3.5" />
 					</div>
 				</div>
 				<div class="flex-1 min-w-0 pt-0.5">
 					<div class="flex items-center gap-2 flex-wrap">
 						<span
-							class="text-sm font-medium truncate group-hover:text-primary transition-colors"
+							class="text-[13px] font-medium truncate group-hover:text-primary transition-colors"
 							:class="item.kind === 'task' && isTaskDone(item) ? 'line-through text-muted-foreground' : 'text-foreground'"
 						>{{ item.title }}</span>
 						<span v-if="item.upcoming" class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full text-success bg-success/10">

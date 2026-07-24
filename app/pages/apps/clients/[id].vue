@@ -76,12 +76,12 @@ onUnmounted(() => clearEntity());
           <span class="truncate">{{ client?.name || 'Client' }}</span>
           <span
             v-if="client?.account_state"
-            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
+            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider shrink-0"
             :class="getStatusBadgeClasses(client.account_state)"
           >{{ client.account_state }}</span>
           <span
             v-if="client?.status === 'archived'"
-            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-zinc-400/15 text-zinc-500 shrink-0"
+            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-zinc-400/15 text-zinc-500 shrink-0"
           >archived</span>
         </span>
       </template>

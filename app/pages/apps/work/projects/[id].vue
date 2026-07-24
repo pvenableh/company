@@ -92,7 +92,7 @@ onUnmounted(() => clearEntity());
             <DropdownMenuTrigger as-child>
               <button
                 type="button"
-                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 hover:opacity-80 transition-opacity"
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider shrink-0 hover:opacity-80 transition-opacity"
                 :class="project.status ? getStatusBadgeClasses(project.status) : 'bg-muted text-muted-foreground'"
                 title="Change status"
               >
