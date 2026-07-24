@@ -3,6 +3,7 @@
  * Team AI Activity — Admin-only view of all org AI conversations and notes.
  * Requires owner or admin role.
  */
+import { subscribeToCollection } from '~/composables/useEntityStore';
 
 definePageMeta({ layout: 'app', middleware: ['auth'] });
 useHead({ title: 'Team Activity | Earnest' });
@@ -39,8 +40,11 @@ const showViewer = ref(false);
 const viewerSessionId = ref('');
 
 // ── Note detail ──
-const showNoteDetail = ref(false);
-const noteDetailId = ref('');
+// Note detail is the ai-note slide-over panel now. The apps-layout middleware
+// mounts the shared stack app-wide, so we just push the panel + refresh on bus.
+const noteSlide = useAppSlideOver('ai-note');
+const unsubscribeNotes = subscribeToCollection('ai_notes', () => fetchTeamNotes());
+onBeforeUnmount(() => unsubscribeNotes());
 
 // ── Fetch sessions ──
 const fetchSessions = async () => {
@@ -132,8 +136,7 @@ const openSession = (sessionId: string) => {
 };
 
 const openNote = (noteId: string) => {
-  noteDetailId.value = noteId;
-  showNoteDetail.value = true;
+  noteSlide.open(noteId);
 };
 
 const getNoteTags = (note: any) => {
@@ -399,11 +402,5 @@ const getNoteUserName = (note: any) => {
       :organization-id="organizationId"
     />
 
-    <!-- Note Detail Modal -->
-    <AINoteDetailModal
-      v-model="showNoteDetail"
-      :note-id="noteDetailId"
-      @updated="fetchTeamNotes"
-    />
   </div>
 </template>

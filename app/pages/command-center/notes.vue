@@ -2,6 +2,7 @@
 /**
  * AI Notes browse page — search, filter by tags, view saved AI insights.
  */
+import { subscribeToCollection } from '~/composables/useEntityStore';
 
 definePageMeta({ layout: 'app' });
 
@@ -11,9 +12,17 @@ const {
   categoryTags, entityTags,
 } = useAINotes();
 
-const showDetail = ref(false);
-const detailNoteId = ref('');
 const page = ref(1);
+
+// Note detail is a slide-over panel (ai-note) now, not a bottom sheet. The
+// apps-layout middleware already mounts the shared stack app-wide, so we just
+// push the panel here.
+const noteSlide = useAppSlideOver('ai-note');
+// The panel writes through useAINotes + notifies the bus; refresh the list.
+const unsubscribeNotes = subscribeToCollection('ai_notes', () => {
+  fetchNotes({ page: page.value, tags: selectedTagIds.value, search: searchQuery.value });
+});
+onBeforeUnmount(() => unsubscribeNotes());
 
 // Fetch on mount
 onMounted(async () => {
@@ -41,8 +50,7 @@ const toggleTagFilter = (tagId: string) => {
 };
 
 const openNote = (noteId: string) => {
-  detailNoteId.value = noteId;
-  showDetail.value = true;
+  noteSlide.open(noteId);
 };
 
 const handleDelete = async (noteId: string) => {
@@ -274,12 +282,5 @@ const getNoteTags = (note: any) => {
       </div>
     </div>
 
-    <!-- Note Detail Modal -->
-    <AINoteDetailModal
-      v-model="showDetail"
-      :note-id="detailNoteId"
-      @deleted="handleDelete"
-      @updated="fetchNotes({ page, tags: selectedTagIds, search: searchQuery })"
-    />
   </div>
 </template>

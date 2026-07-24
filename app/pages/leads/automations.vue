@@ -7,16 +7,12 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Lead Automations | Earnest' });
-
-// This page uses the default layout (no apps shell), so it must host its own
-// slide-over stack for the rule editor panel (lead-automation-rule) to render
-// when opened here. Inside /apps/* the layout already mounts one.
-useAppSlideOverStackUrlSync();
+// The apps-layout middleware forces the apps shell on this page, which already
+// mounts the shared slide-over stack — the rule editor panel renders there.
 </script>
 
 <template>
 	<LayoutPageContainer>
 		<AppsClientsLeadAutomationsSurface />
 	</LayoutPageContainer>
-	<AppsAppSlideOverStack />
 </template>
