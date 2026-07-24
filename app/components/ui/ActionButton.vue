@@ -30,6 +30,8 @@ const props = defineProps<{
 	hideLabel?: string;
 	/** Native tooltip + accessible name — set this whenever the label may be hidden. */
 	title?: string;
+	/** Render as a perfect circle (icon-only) — for header/toolbar icon buttons. */
+	circle?: boolean;
 	/** Show the AI token-spend marker (this action makes an LLM call). */
 	spend?: boolean;
 	/**
@@ -55,7 +57,11 @@ const variantClasses = computed(() => {
 	}
 });
 
-const sizeClasses = computed(() => (props.size === 'md' ? 'gap-1.5 h-8 px-3' : 'gap-1 h-7 px-2.5'));
+const sizeClasses = computed(() => {
+	// Circle mode: fixed square, no horizontal padding, centred icon.
+	if (props.circle) return 'w-8 h-8 p-0 justify-center';
+	return props.size === 'md' ? 'gap-1.5 h-8 px-3' : 'gap-1 h-7 px-2.5';
+});
 
 const labelClass = computed(() => {
 	if (props.hideLabel === 'sm') return 'hidden sm:inline';

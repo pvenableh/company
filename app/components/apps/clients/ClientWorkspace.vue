@@ -1051,20 +1051,21 @@ watch(() => props.clientId, () => {
 					<PinButton :pinned="(client as any)?.pinned" always @toggle="onTogglePin" />
 					<button
 						type="button"
-						class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
+						class="inline-flex items-center justify-center h-8 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
+						:class="compact ? 'w-8 p-0' : 'gap-1.5 px-3'"
 						title="Convene the Boardroom — Earnest gathers your board on this client"
 						aria-label="Convene the Boardroom on this client"
 						@click="conveneMeeting"
 					>
 						<DirectorChairIcon class="w-4 h-4 shrink-0" />
-						<!-- Icon-only inside the narrow slide-over (compact); labelled on
-						     the full page. Native title tooltip covers the icon-only case. -->
+						<!-- Icon-only (a perfect circle) inside the narrow slide-over;
+						     labelled on the full page. Title tooltip covers icon-only. -->
 						<span v-if="!compact" class="hidden sm:inline">Convene</span>
 					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
-					     its AppHeader. One opener per surface. Icon-only + tooltip so it
-					     doesn't crowd the narrow panel header. -->
-					<UiActionButton v-if="compact" icon="earnest" variant="primary" hide-label="always" title="Ask Earnest" @click="openEarnestPanel()">
+					     its AppHeader. One opener per surface. Icon-only circle + tooltip
+					     so it doesn't crowd the narrow panel header. -->
+					<UiActionButton v-if="compact" circle icon="earnest" variant="primary" hide-label="always" title="Ask Earnest" @click="openEarnestPanel()">
 						Ask Earnest
 					</UiActionButton>
 					<slot name="actions" />

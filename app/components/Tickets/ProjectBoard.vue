@@ -37,14 +37,11 @@
 			</div>
 		</div>
 
-		<!-- Board columns. Grid (not fixed width) so columns fit the container;
-		     stacks to 2-up in the narrow slide-over, up to 4-up on the page. -->
-		<div
-			v-else
-			class="grid gap-0"
-			:class="compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'"
-		>
-			<div v-for="col in columns" :key="col.key" class="flex flex-col min-w-0 ticket-board__col">
+		<!-- Board columns — one horizontal row of all statuses, scrolling
+		     sideways when the host is too narrow to show them all (a true
+		     kanban; tickets have more statuses than tasks). -->
+		<div v-else class="flex gap-0 overflow-x-auto -mx-1 px-1 scrollbar-hide">
+			<div v-for="col in columns" :key="col.key" class="flex flex-col shrink-0 w-[15rem] ticket-board__col">
 				<!-- Column header -->
 				<div class="ticket-board__col-header">
 					<div class="flex items-center gap-2 flex-1">
@@ -80,7 +77,6 @@
 								<TicketsProjectCard
 									:ticket="ticket"
 									@select="openTicketSlideOver(ticket, $event)"
-									@toggle-complete="toggleComplete(ticket)"
 								/>
 							</div>
 						</template>
@@ -124,6 +120,7 @@ const props = defineProps<{
 const emit = defineEmits<{ statsChanged: [] }>();
 
 const ticketItems = useDirectusItems('tickets');
+const commentItems = useDirectusItems('comments');
 const ticketSlide = useAppSlideOver('ticket');
 
 function openTicketSlideOver(ticket: any, ev?: MouseEvent) {
@@ -162,6 +159,31 @@ function distribute() {
 	for (const k of COLUMN_KEYS) columnTickets[k] = buckets[k];
 }
 
+// Batch comment counts (one grouped aggregate) so each card can show how much
+// discussion a ticket carries — mirrors the old board's attachCommentCounts.
+async function attachCommentCounts(rows: any[]) {
+	const ids = rows.map((r) => r.id).filter(Boolean);
+	if (!ids.length) return;
+	try {
+		const counts = await commentItems.list({
+			filter: { collection: { _eq: 'tickets' }, item: { _in: ids } },
+			fields: ['item'],
+			aggregate: { count: ['*'] },
+			groupBy: ['item'],
+		});
+		const map: Record<string, number> = {};
+		if (Array.isArray(counts)) {
+			for (const c of counts as any[]) {
+				if (c?.item) map[c.item] = parseInt(c.count, 10) || 0;
+			}
+		}
+		for (const r of rows) r.commentsCount = map[r.id] || 0;
+	} catch (err) {
+		// Comments read perms can be absent — degrade to no count, never block.
+		for (const r of rows) r.commentsCount = 0;
+	}
+}
+
 async function fetchTickets() {
 	loading.value = true;
 	try {
@@ -169,6 +191,7 @@ async function fetchTickets() {
 			fields: [
 				'id', 'title', 'status', 'priority', 'due_date', 'date_updated',
 				'project',
+				'tasks.id', 'tasks.status',
 				'assigned_to.directus_users_id.id',
 				'assigned_to.directus_users_id.first_name',
 				'assigned_to.directus_users_id.last_name',
@@ -180,7 +203,9 @@ async function fetchTickets() {
 			sort: ['-date_updated'],
 			limit: -1,
 		});
-		allTickets.value = data || [];
+		const rows = (data || []) as any[];
+		await attachCommentCounts(rows);
+		allTickets.value = rows;
 		distribute();
 	} catch (err) {
 		console.error('Failed to load project tickets:', err);
@@ -210,28 +235,6 @@ async function quickAdd(status: string) {
 		emit('statsChanged');
 	} catch (err) {
 		console.error('Failed to create ticket:', err);
-	}
-}
-
-async function toggleComplete(ticket: any) {
-	const wasCompleted = ticket.status === 'Completed';
-	const from = COLUMN_KEYS.includes(ticket.status) ? ticket.status : 'Pending';
-	const to = wasCompleted ? 'Pending' : 'Completed';
-	const oldStatus = ticket.status;
-	ticket.status = to;
-
-	const idx = columnTickets[from].findIndex((t) => t.id === ticket.id);
-	if (idx !== -1) columnTickets[from].splice(idx, 1);
-	columnTickets[to].push(ticket);
-
-	try {
-		await ticketItems.update(ticket.id, { status: to });
-		emit('statsChanged');
-	} catch (err) {
-		ticket.status = oldStatus;
-		const back = columnTickets[to].findIndex((t) => t.id === ticket.id);
-		if (back !== -1) columnTickets[to].splice(back, 1);
-		columnTickets[from].push(ticket);
 	}
 }
 

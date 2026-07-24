@@ -1,7 +1,9 @@
 <!--
-  TicketsProjectCard — compact ticket card for the project-scoped
-  TicketsProjectBoard. Mirrors TasksCard so the tickets board reads as the
-  same surface as the tasks board (same chrome, same meta row, same avatar).
+  TicketsProjectCard — ticket card for the project-scoped TicketsProjectBoard.
+  Shares the tasks board's card chrome (ios-card, priority + due meta,
+  assignee avatar) but is ticket-specific: NO done checkbox (status is driven
+  by drag-and-drop between columns), and a footer that surfaces the ticket's
+  richer content — its task checklist progress and comment count.
 -->
 <template>
 	<div
@@ -9,24 +11,8 @@
 		@click="$emit('select', $event)"
 	>
 		<div class="flex items-start gap-2">
-			<!-- Inline-complete affordance — checked = Completed status. -->
-			<button class="shrink-0 mt-0.5" @click.stop="$emit('toggle-complete')">
-				<div
-					class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-					:class="isCompleted
-						? 'bg-primary border-primary'
-						: 'border-border hover:border-primary'"
-					:title="isCompleted ? 'Reopen ticket' : 'Mark completed'"
-				>
-					<EIcon v-if="isCompleted" name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
-				</div>
-			</button>
-
 			<div class="flex-1 min-w-0">
-				<p
-					class="text-xs font-medium leading-snug line-clamp-2"
-					:class="isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'"
-				>
+				<p class="text-xs font-medium leading-snug line-clamp-2 text-foreground">
 					{{ ticket.title }}
 				</p>
 
@@ -40,7 +26,7 @@
 						{{ ticket.priority }}
 					</span>
 					<span
-						v-if="ticket.due_date && !isCompleted"
+						v-if="ticket.due_date"
 						class="text-[10px] flex items-center gap-0.5"
 						:class="dueDateTextClass"
 					>
@@ -73,6 +59,23 @@
 				</ETooltip>
 			</div>
 		</div>
+
+		<!-- Ticket detail footer — task checklist progress + comment count.
+		     These are what make a ticket richer than a task; the full
+		     checklist + comment thread live in the ticket slide-over. -->
+		<div
+			v-if="taskTotal || commentCount"
+			class="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-border/40 text-[10px] text-muted-foreground"
+		>
+			<span v-if="taskTotal" class="inline-flex items-center gap-1" :title="`${taskDone} of ${taskTotal} tasks done`">
+				<EIcon name="i-heroicons-check-circle" class="w-3 h-3" :class="taskDone === taskTotal ? 'text-success' : ''" />
+				{{ taskDone }}/{{ taskTotal }}
+			</span>
+			<span v-if="commentCount" class="inline-flex items-center gap-1" :title="`${commentCount} comments`">
+				<EIcon name="i-heroicons-chat-bubble-left" class="w-3 h-3" />
+				{{ commentCount }}
+			</span>
+		</div>
 	</div>
 </template>
 
@@ -83,13 +86,10 @@ const props = defineProps<{
 
 defineEmits<{
 	select: [event: MouseEvent];
-	'toggle-complete': [];
 }>();
 
 const { getPriorityIconClass } = useStatusStyle();
 const config = useRuntimeConfig();
-
-const isCompleted = computed(() => props.ticket?.status === 'Completed');
 
 const priorityIconClass = computed(() => getPriorityIconClass(props.ticket?.priority));
 
@@ -103,8 +103,19 @@ const dueDateTextClass = computed(() => {
 	return 'text-muted-foreground';
 });
 
+// Task checklist progress (tickets own a `tasks` relation; tasks.status is the
+// lowercase task enum, so 'completed' = done).
+const taskTotal = computed(() => (Array.isArray(props.ticket?.tasks) ? props.ticket.tasks.length : 0));
+const taskDone = computed(() =>
+	Array.isArray(props.ticket?.tasks)
+		? props.ticket.tasks.filter((t: any) => (typeof t === 'object' ? t?.status : null) === 'completed').length
+		: 0,
+);
+
+const commentCount = computed(() => Number(props.ticket?.commentsCount) || 0);
+
 // tickets.assigned_to is an m2m junction array (tickets_directus_users →
-// directus_users_id). First assignee wins for the avatar, mirroring TasksCard.
+// directus_users_id). First assignee wins for the avatar.
 const assignee = computed(() => {
 	const junction = props.ticket?.assigned_to?.[0];
 	const u = typeof junction === 'string' ? null : junction?.directus_users_id;
