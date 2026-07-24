@@ -55,7 +55,7 @@ function esc(t) {
 }
 
 // Build + download a vCard 3.0 for the host so an invitee can save them to their
-// phone/desktop contacts. Mirrors the download flow in Account/MyCardSheet.vue.
+// phone/desktop contacts. Mirrors the download flow in apps/panels/MyCardPanel.vue.
 function saveContact() {
 	if (!host.value || !import.meta.client) return;
 	const lines = [

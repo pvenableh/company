@@ -1,38 +1,33 @@
 <!--
-  MyCardSheet — one iOS-native place to manage your digital business card +
-  booking link. Mounted once globally (app.vue); opened from the user menu via
-  useMyCard().open(). Edits the SAME cd_cards + scheduler_settings rows CardDesk
-  and the public /c/[id] card read — one edit, live everywhere.
+  MyCardPanel — slide-over for the current user's digital business card +
+  booking link. Singleton (id sentinel '_'); opened from the user menu via
+  useMyCard().open(), which pushes this panel. Edits the SAME cd_cards +
+  scheduler_settings rows CardDesk and the public /c/[id] card read — one
+  edit, live everywhere. Every field autosaves optimistically (no Save button);
+  a pending debounced edit is flushed when the panel unmounts.
 
-  Results-first: a live card preview + one Share row up top; every field
-  autosaves optimistically (no Save button). Earnest style throughout.
+  Ported from Account/MyCardSheet.vue (the old bottom sheet).
 -->
 <script setup lang="ts">
-const { data, loading, saving, savedAt, error, isOpen, load, touch, flush } = useMyCard();
+import AppSlideOverShell from '../AppSlideOverShell.vue';
+
+defineProps<{ id: string; mode?: string }>();
+const emit = defineEmits<{ (e: 'close'): void }>();
+
+const { data, loading, saving, savedAt, error, load, touch, flush } = useMyCard();
 const toast = useToast();
-
-// Persist any pending debounced edit when the sheet is dismissed (backdrop / drag
-// / Escape all set isOpen=false through v-model).
-watch(isOpen, (open, was) => { if (was && !open) flush(); });
-
-onMounted(() => { if (isOpen.value) load(); });
 
 // ── Derived preview bits ─────────────────────────────────────────────────────
 const card = computed(() => data.value?.card ?? {});
 function fileUrl(f: any, key = ''): string | null {
   const id = typeof f === 'object' ? f?.id : f;
   if (!id || !data.value?.assetsUrl) return null;
-  // `assetsUrl` already ends in `/assets` (see server/utils/my-card.ts) — don't
-  // append another `/assets/` or the URL becomes …/assets/assets/<id> and 404s.
   return `${data.value.assetsUrl}/${id}${key ? `?key=${key}` : ''}`;
 }
 const imageUrl = computed(() => fileUrl(card.value.image, 'avatar'));
 const coverUrl = computed(() => fileUrl(card.value.cover_image));
 const logoUrl = computed(() => fileUrl(card.value.logo_image));
 
-// Social inputs in the edit form (brand logos). The live preview's own social
-// rows come from <CardView> (the ported CardDesk SOCIALS), so this list only
-// drives the handle/URL text fields below.
 const SOCIALS: Array<{ key: string; icon: string; label: string }> = [
   { key: 'linkedin', icon: 'i-logos-linkedin-icon', label: 'LinkedIn' },
   { key: 'instagram', icon: 'i-logos-instagram-icon', label: 'Instagram' },
@@ -41,11 +36,6 @@ const SOCIALS: Array<{ key: string; icon: string; label: string }> = [
   { key: 'behance', icon: 'i-logos-behance', label: 'Behance' },
 ];
 
-// ── Live CardView preview ────────────────────────────────────────────────────
-// Feed the real ported CardDesk <CardView> the current (unsaved) edits, mapped
-// to its CardViewData shape, so the preview IS the CardDesk card in the selected
-// theme. Rendered read-only (interactive=false), exactly as CardDesk's own
-// account editor previews it — so the booking button is hidden in the preview.
 const previewCard = computed(() => {
   const c: any = card.value;
   return {
@@ -60,9 +50,6 @@ const previewCard = computed(() => {
   };
 });
 
-// The sheet column is narrower than a phone, so render CardView at a true device
-// width and uniformly scale it down to fit — a faithful miniature rather than a
-// squeezed narrow card (mirrors CardDesk website/app/pages/account.vue).
 const PREVIEW_DEVICE_W = 390;
 const previewWrapEl = ref<HTMLElement | null>(null);
 const previewDeviceEl = ref<HTMLElement | null>(null);
@@ -76,16 +63,22 @@ function measurePreview() {
   previewHeight.value = device.offsetHeight * previewScale.value;
 }
 let previewRO: ResizeObserver | null = null;
-onMounted(() => { previewRO = new ResizeObserver(() => measurePreview()); });
-// The preview elements live inside a `v-if="data"` branch, so (re)attach the
-// observer whenever they mount, and re-measure as the card content grows.
+
+onMounted(() => {
+  load();
+  previewRO = new ResizeObserver(() => measurePreview());
+});
 watch([previewWrapEl, previewDeviceEl], () => {
   if (!previewRO) return;
   if (previewWrapEl.value) previewRO.observe(previewWrapEl.value);
   if (previewDeviceEl.value) previewRO.observe(previewDeviceEl.value);
   measurePreview();
 });
-onBeforeUnmount(() => previewRO?.disconnect());
+// Persist any pending debounced edit when the panel closes, then tear down.
+onBeforeUnmount(() => {
+  flush();
+  previewRO?.disconnect();
+});
 
 const bookingUrl = computed(() => {
   const p = data.value?.bookingPath;
@@ -135,14 +128,13 @@ function downloadVcard() {
 </script>
 
 <template>
-  <AppsAppBottomSheet v-model="isOpen" title="My Card" subtitle="Your shareable business card & booking link">
+  <AppSlideOverShell title="My Card" subtitle="Your shareable business card & booking link" @close="emit('close')">
     <div v-if="loading && !data" class="flex items-center justify-center py-16 gap-2 text-sm text-muted-foreground">
       <EIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading your card…
     </div>
 
     <div v-else-if="data" class="space-y-5 pb-2">
-      <!-- Live preview — the real CardDesk card in the selected theme, rendered
-           at true device width and scaled down to fit the sheet column. -->
+      <!-- Live preview -->
       <div
         ref="previewWrapEl"
         class="my-card-preview rounded-3xl overflow-hidden ring-1 ring-border/60 shadow-[0_10px_30px_-12px_rgb(0_0_0_/_0.25)]"
@@ -205,7 +197,7 @@ function downloadVcard() {
         </div>
       </section>
 
-      <!-- Design — CardDesk swatch picker; the preview above updates to match. -->
+      <!-- Design -->
       <section class="rounded-2xl border border-border/60 bg-background/40 p-4 space-y-3">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Design</p>
         <div class="grid grid-cols-4 gap-2">
@@ -227,7 +219,6 @@ function downloadVcard() {
         <p class="text-[11px] text-muted-foreground leading-relaxed">
           {{ CARD_THEMES.find((t) => t.id === (card.card_theme || 'carddesk'))?.hint }}
         </p>
-        <!-- Minimal-layout toggle — only affects the Glass & Tech designs. -->
         <div v-if="card.card_theme === 'glass' || card.card_theme === 'tech'" class="flex items-center justify-between gap-3 pt-1">
           <div>
             <p class="text-xs font-medium">Minimal rows</p>
@@ -254,6 +245,9 @@ function downloadVcard() {
           <EInput v-model="data.booking.booking_page_title" placeholder="Booking page title (optional)" @update:model-value="touch" />
           <ETextarea v-model="data.booking.booking_page_description" :rows="2" autoresize placeholder="What this meeting is for (optional)" @update:model-value="touch" />
           <p class="text-[11px] text-muted-foreground">
+            <!-- allow-legacy-link — /scheduler/settings is a full settings page
+                 (renders inside the apps shell via the apps-layout middleware),
+                 not a slide-over panel; a plain link is correct here. -->
             Availability & meeting types live in <NuxtLink to="/scheduler/settings" class="text-primary hover:underline">Scheduler settings</NuxtLink>.
           </p>
         </template>
@@ -265,7 +259,7 @@ function downloadVcard() {
         Your card also lives on CardDesk and its public page — changes here show up there instantly.
       </p>
     </div>
-  </AppsAppBottomSheet>
+  </AppSlideOverShell>
 </template>
 
 <style scoped>
@@ -274,7 +268,6 @@ function downloadVcard() {
   @apply inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted/50
     text-foreground hover:bg-muted transition-colors;
 }
-/* Scaled CardView miniature: render at device width, scale down from top-left. */
 .my-card-preview-device {
   transform-origin: top left;
 }

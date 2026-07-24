@@ -72,16 +72,22 @@ export function useMyCard() {
     debouncedSave();
   }
 
-  // Sheet open/close (the editor is mounted once globally in app.vue).
-  const isOpen = useState<boolean>('my-card-open', () => false);
+  // Open/close (the editor is now the `my-card` slide-over panel, pushed on
+  // demand instead of a globally-mounted sheet). Wrapped in runWithContext so
+  // it works from any caller regardless of setup context. The panel loads on
+  // mount + flushes on unmount, so open/close just push/pop.
   function open() {
-    isOpen.value = true;
-    load();
+    const nuxt = useNuxtApp();
+    nuxt.runWithContext(() => useAppSlideOver('my-card').open('_'));
   }
   async function close() {
     await flush(); // make sure a pending debounced edit lands before closing
-    isOpen.value = false;
+    const nuxt = useNuxtApp();
+    nuxt.runWithContext(() => {
+      const slide = useAppSlideOver('my-card');
+      if (slide.isOpen.value) slide.close();
+    });
   }
 
-  return { data, loading, saving, savedAt, error, isOpen, load, touch, flush, open, close };
+  return { data, loading, saving, savedAt, error, load, touch, flush, open, close };
 }
