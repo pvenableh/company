@@ -141,6 +141,7 @@ const newActivity = reactive({
 	next_action: '',
 });
 const activitySaving = ref(false);
+const pursuitRef = ref<any>(null);
 
 // touchpoint row → the activity shape <LeadsActivityTimeline> renders.
 function tpToActivity(tp: any) {
@@ -878,7 +879,7 @@ function openContactPivot() {
 							</div>
 						</div>
 
-						<LeadsActivityTimeline :activities="activities" />
+						<AppsPursuitTimeline ref="pursuitRef" :lead-id="Number(leadId)" :activities="activities" />
 					</div>
 				</div>
 			</div>

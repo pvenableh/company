@@ -4133,6 +4133,8 @@ export interface Proposal {
 	valid_until?: string | null;
 	/** @description Current proposal status */
 	proposal_status?: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | null;
+	/** @description Why a proposal went cold or was rejected — the pursuit learning signal. */
+	outcome_reason?: 'price' | 'timing' | 'competitor' | 'no_response' | 'scope' | 'budget' | 'other' | null;
 	/** @description Ordered array of block entries: { block_id, heading, content, page_break_after } */
 	blocks?: Record<string, any> | null;
 }

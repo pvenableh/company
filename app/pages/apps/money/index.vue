@@ -51,8 +51,8 @@ const route = useRoute();
 // ── Floor strip ─────────────────────────────────────────────────────────────
 // Time tracking moved to /apps/work?floor=time in Phase 2 of the retainer
 // plan — any lingering `?floor=time` deep-links bounce out below.
-type FloorKey = 'cashflow' | 'documents' | 'invoices' | 'payments' | 'deposits' | 'expenses' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['cashflow', 'documents', 'invoices', 'payments', 'deposits', 'expenses', 'insights'];
+type FloorKey = 'cashflow' | 'documents' | 'pipeline' | 'invoices' | 'payments' | 'deposits' | 'expenses' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['cashflow', 'documents', 'pipeline', 'invoices', 'payments', 'deposits', 'expenses', 'insights'];
 
 if (route.query.floor === 'time') {
   await navigateTo({ path: '/apps/work', query: { floor: 'time' } }, { redirectCode: 302, replace: true });
@@ -1210,6 +1210,11 @@ const headerAction = computed(() => {
           :initial-tab="documentsTab"
           @tab-change="documentsTab = $event"
         />
+      </template>
+
+      <!-- ── Pipeline floor (proposal pursuit board) ──────────────────── -->
+      <template v-else-if="floor === 'pipeline'">
+        <MoneyProposalPipeline />
       </template>
 
       <!-- ── Invoices floor ───────────────────────────────────────────── -->

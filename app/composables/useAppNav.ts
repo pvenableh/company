@@ -85,6 +85,7 @@ const FLOORS: Partial<Record<AppId, AppFloor[]>> = {
 	money: [
 		{ key: 'cashflow', label: 'Cash flow', icon: 'lucide:trending-up' },
 		{ key: 'documents', label: 'Documents', icon: 'lucide:files' },
+		{ key: 'pipeline', label: 'Pipeline', icon: 'lucide:target' },
 		{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 		{ key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
 		{ key: 'deposits', label: 'Deposits', icon: 'lucide:banknote' },
