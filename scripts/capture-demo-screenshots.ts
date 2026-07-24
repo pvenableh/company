@@ -280,6 +280,35 @@ const SHOTS: Shot[] = [
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/money`,
 	},
 	{
+		// Revenue Certainty bar — the whole money picture ordered by certainty
+		// (Banked → Overdue → Outstanding → In play → Cold). Sits atop the Money
+		// Insights floor and self-fetches org proposals, so the agency org's
+		// seeded pursuit data (Maya's $48k cold, etc.) fills the In-play/Cold tiers.
+		slug: 'revenue-certainty',
+		viewport: 'inline',
+		persona: 'agency',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/money?floor=insights`,
+	},
+	{
+		// Proposal Pipeline board — Draft → Sent → Viewed → Cold → Won → Lost,
+		// with win-rate / open-value / cold-value KPIs and loss-reason breakdown.
+		// The Money `pipeline` floor. Agency has the richest seeded proposals.
+		slug: 'proposal-pipeline',
+		viewport: 'inline',
+		persona: 'agency',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/apps/money?floor=pipeline`,
+	},
+	{
+		// Pursuit on a lead — the lead workspace carries the Pursuit Money tiles
+		// (Pitched / In play / Cold / Won / Win-rate) and the merged Pursuit
+		// Timeline. Land on the lead behind the biggest proposal so the pursuit
+		// blocks are populated (agency's Maya Chen — cold $48k).
+		slug: 'pursuit-lead',
+		viewport: 'tall',
+		persona: 'agency',
+		resolveUrl: async (ctx) => `${ctx.baseUrl}/leads/${await leadWithProposal(ctx.page, ctx.baseUrl)}`,
+	},
+	{
 		slug: 'people-dashboard',
 		viewport: 'inline',
 		persona: 'solo',
@@ -596,6 +625,61 @@ async function firstDetailHref(page: Page, listPath: string, baseUrl: string): P
 	const collection = listPath.replace(/^\//, '');
 	const id = await firstItemId(page, collection, baseUrl);
 	return `${listPath}/${id}`;
+}
+
+/**
+ * Resolve the id of the lead behind the coldest still-open proposal (org-scoped
+ * by the pinned org). The Pursuit Money / Pursuit Timeline blocks self-hide when
+ * a lead has no proposals, so `pursuit-lead` must land on one that does — and we
+ * prefer a lead with money *still out there* (a long-silent sent/viewed proposal)
+ * over a won/lost one, so the tiles read In-play/Cold instead of $0 (agency's
+ * Maya Chen — cold $48k, the "revive this" hero). Tiered fallbacks:
+ *   1. oldest still-open (sent/viewed) proposal — the coldest, most revivable
+ *   2. highest-value still-open proposal
+ *   3. any proposal at all (won/lost included)
+ *   4. the first lead in the workspace
+ */
+async function leadWithProposal(page: Page, baseUrl: string): Promise<string> {
+	if (page.url() === 'about:blank') {
+		await page.goto(`${baseUrl}/command-center`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+	}
+	// One anonymous in-page fetch (no named inner fn — tsx's esbuild would
+	// annotate it with `__name`, which is undefined in the page). Tiering is
+	// done Node-side by calling it with progressively looser filters/sorts.
+	const leadFor = (filter: Record<string, any>, sort: string[]) =>
+		page.evaluate(
+			async ({ filt, srt }) => {
+				try {
+					const res = await fetch(`/api/directus/items`, {
+						method: 'POST',
+						credentials: 'include',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({
+							collection: 'proposals',
+							operation: 'list',
+							query: { limit: 1, fields: ['lead'], filter: filt, sort: srt },
+						}),
+					});
+					if (!res.ok) return { error: `${res.status} ${(await res.text()).slice(0, 120)}` };
+					const json = await res.json().catch(() => null);
+					const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+					return { lead: arr[0]?.lead ?? null };
+				} catch (err) {
+					return { error: String(err) };
+				}
+			},
+			{ filt: filter, srt: sort },
+		);
+
+	const open = { lead: { _nnull: true }, proposal_status: { _in: ['sent', 'viewed'] } };
+	// 1. coldest open (oldest sent) → 2. biggest open → 3. any proposal
+	let r = await leadFor({ ...open, date_sent: { _nnull: true } }, ['date_sent']);
+	if (!r.lead) r = await leadFor(open, ['-total_value']);
+	if (!r.lead) r = await leadFor({ lead: { _nnull: true } }, ['-total_value']);
+
+	if (r.lead) return String(r.lead);
+	if ('error' in r && r.error) console.warn(`  ⚠ leadWithProposal: ${r.error}`);
+	return firstItemId(page, 'leads', baseUrl);
 }
 
 /**
