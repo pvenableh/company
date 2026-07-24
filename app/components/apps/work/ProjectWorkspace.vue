@@ -73,7 +73,6 @@ const ticketItemsApi = useDirectusItems('tickets');
 const channelItemsApi = useDirectusItems('channels');
 const meetingItemsApi = useDirectusItems('video_meetings');
 const invoiceItemsApi = useDirectusItems('invoices');
-const eventItemsApi = useDirectusItems('project_events');
 const proposalItemsApi = useDirectusItems('proposals');
 const contractItemsApi = useDirectusItems('contracts');
 const projectsContactsApi = useDirectusItems('projects_contacts');
@@ -676,70 +675,13 @@ function openInvoiceFromHunt(_id: string) {
 }
 
 // ── Manual event creation (Timeline tab) ───────────────────────────────────
-// The apps/work surface previously had no way to add a project_event by hand
-// (only the AI wizard on the legacy page). This lightweight modal creates one
-// and remounts the Gantt via `timelineRefreshKey` so the new event appears.
-const showNewEventModal = ref(false);
-const creatingEvent = ref(false);
+// Adding a project_event by hand now happens in a stacked slide-over
+// (`project-event` panel, create mode) pushed via the "New Event" button. The
+// panel bumps this project-scoped signal on success; we watch it and remount
+// the Gantt via `timelineRefreshKey` so the new event appears.
 const timelineRefreshKey = ref(0);
-const EVENT_TYPE_OPTIONS = [
-	{ label: 'General', value: 'General' },
-	{ label: 'Design', value: 'Design' },
-	{ label: 'Content', value: 'Content' },
-	{ label: 'Timeline', value: 'Timeline' },
-	{ label: 'Financial', value: 'Financial' },
-	{ label: 'Hours', value: 'Hours' },
-];
-const EVENT_STATUS_OPTIONS = [
-	{ label: 'Scheduled', value: 'Scheduled' },
-	{ label: 'Active', value: 'Active' },
-	{ label: 'Completed', value: 'Completed' },
-];
-const newEventForm = reactive({
-	title: '',
-	description: '',
-	type: 'General',
-	status: 'Active',
-	date: '',
-	end_date: '',
-	is_milestone: false,
-});
-function resetNewEventForm() {
-	newEventForm.title = '';
-	newEventForm.description = '';
-	newEventForm.type = 'General';
-	newEventForm.status = 'Active';
-	newEventForm.date = '';
-	newEventForm.end_date = '';
-	newEventForm.is_milestone = false;
-}
-async function handleCreateEvent() {
-	if (!newEventForm.title.trim() || creatingEvent.value) return;
-	creatingEvent.value = true;
-	try {
-		const data: Record<string, any> = {
-			title: newEventForm.title.trim(),
-			type: newEventForm.type,
-			status: newEventForm.status,
-			project: props.projectId,
-			is_milestone: newEventForm.is_milestone,
-		};
-		if (newEventForm.description.trim()) data.description = newEventForm.description.trim();
-		// Mirror event_date into date (the Gantt prefers event_date, older code
-		// reads date) so the new event lands on the timeline immediately.
-		if (newEventForm.date) { data.date = newEventForm.date; data.event_date = newEventForm.date; }
-		if (newEventForm.end_date) data.end_date = newEventForm.end_date;
-		await eventItemsApi.create(data);
-		toast.success('Event added');
-		showNewEventModal.value = false;
-		resetNewEventForm();
-		timelineRefreshKey.value++;  // remount the Gantt so it refetches
-	} catch (e: any) {
-		toast.error(e?.data?.message || e?.message || 'Failed to add event');
-	} finally {
-		creatingEvent.value = false;
-	}
-}
+const eventsRefresh = useState<number>(`project-events-refresh:${props.projectId}`, () => 0);
+watch(eventsRefresh, () => { timelineRefreshKey.value++; });
 
 // Contract value + "left to bill" = contract_value − invoiced-to-date. Null
 // until both a contract value and the billed total are known.
@@ -880,7 +822,6 @@ async function onProjectContactDragEnd() {
 // ContactsFormModal already writes clients_contacts when client-id is
 // supplied; we just have to add the projects_contacts row on success.
 async function onContactCreatedFromProject(contact: any) {
-	showCreateContactModal.value = false;
 	const contactId = contact?.id;
 	if (!contactId) {
 		await loadProjectContacts();
@@ -1001,15 +942,26 @@ function onFileDrop(e: DragEvent) {
 // together in the tickets header (board create suppressed via `hide-create`).
 const showAttachTicketModal = ref(false);
 const showAttachTaskModal = ref(false);
-const showCreateInvoiceModal = ref(false);
+// New invoice opens as a stacked slide-over (`invoice` panel, create mode).
+const { openCreate: openInvoiceCreate, onCreated: onInvoiceCreatedPanel } = useCreatePanel('invoice');
+onInvoiceCreatedPanel(() => onInvoiceCreated());
 const showAttachInvoiceModal = ref(false);
 const showAttachChannelModal = ref(false);
-const showCreateMeetingModal = ref(false);
-const showCreateProposalModal = ref(false);
-const showCreateContractModal = ref(false);
+// New meeting opens as a stacked slide-over (`work-meeting` panel, create mode).
+const { openCreate: openMeetingCreate, onCreated: onMeetingCreatedPanel } = useCreatePanel('work-meeting');
+onMeetingCreatedPanel(() => onMeetingCreated());
+// New proposal/contract open as stacked slide-overs (create mode). The panels
+// notify via these signals; our handlers link the new doc to this project.
+const { openCreate: openProposalCreate, onCreated: onProposalCreatedPanel } = useCreatePanel('proposal');
+const { openCreate: openContractCreate, onCreated: onContractCreatedPanel } = useCreatePanel('contract');
+onProposalCreatedPanel((p) => onProposalCreated(p));
+onContractCreatedPanel((c) => onContractCreated(c));
 const showAttachProposalModal = ref(false);
 const showAttachContractModal = ref(false);
-const showCreateContactModal = ref(false);
+// New contact opens as a stacked slide-over (create mode); on success we also
+// write the projects_contacts junction (see onContactCreatedFromProject).
+const { openCreate: openContactCreate, onCreated: onContactCreatedPanel } = useCreatePanel('contact');
+onContactCreatedPanel((c) => onContactCreatedFromProject(c));
 const showAttachContactModal = ref(false);
 
 function onTicketAttached() {
@@ -1022,12 +974,14 @@ function onTicketCreated() {
 	refreshTicketCount();
 	useTicketsStore().triggerRefresh();
 }
+// New ticket opens as a stacked slide-over (`ticket` panel, create mode).
+const { openCreate: openTicketCreate, onCreated: onTicketCreatedPanel } = useCreatePanel('ticket');
+onTicketCreatedPanel(() => onTicketCreated());
 function onTaskAttached() {
 	showAttachTaskModal.value = false;
 	refreshTaskCount();
 }
 function onInvoiceCreated() {
-	showCreateInvoiceModal.value = false;
 	loadInvoices();
 	loadBillingSummary();
 }
@@ -1041,54 +995,24 @@ function onChannelAttached() {
 	loadChannels();
 }
 
-// Inline channel creation — mirrors Slack/Channels.vue. Names are slugs
-// (lowercase, hyphenated). New channels inherit the project's org + client so
-// they land tagged to this project.
-const showCreateChannel = ref(false);
-const newChannelName = ref('');
-const creatingChannel = ref(false);
-const channelSlug = (s: string) =>
-	String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const channelNameValid = computed(() => channelSlug(newChannelName.value).length >= 3);
-async function createChannel() {
-	if (!channelNameValid.value || creatingChannel.value) return;
-	creatingChannel.value = true;
-	try {
-		await $fetch('/api/channels', {
-			method: 'POST',
-			body: {
-				name: channelSlug(newChannelName.value),
-				organization: organizationId.value || undefined,
-				project: props.projectId,
-				client: clientId.value || undefined,
-			},
-		});
-		toast.success('Channel created');
-		newChannelName.value = '';
-		showCreateChannel.value = false;
-		loadChannels();
-	} catch (err: any) {
-		toast.error(err?.data?.message || err?.message || 'Failed to create channel');
-	} finally {
-		creatingChannel.value = false;
-	}
-}
+// Channel creation now happens in a stacked slide-over (`channel` panel,
+// create mode) pushed via "New Channel". The panel bumps this project-scoped
+// signal on success; we watch it and refetch the channel list.
+const channelsRefresh = useState<number>(`project-channels-refresh:${props.projectId}`, () => 0);
+watch(channelsRefresh, () => { loadChannels(); });
 function onMeetingCreated() {
-	showCreateMeetingModal.value = false;
 	loadMeetings();
 }
 // Link the freshly-created doc to THIS project (the shared FormModals have no
 // project picker; now that proposals.project / contracts.project exist we set
 // it here so the doc lands under this project's Files & Docs tab).
 async function onProposalCreated(created?: any) {
-	showCreateProposalModal.value = false;
 	if (created?.id) {
 		try { await proposalItemsApi.update(created.id, { project: props.projectId } as any); } catch { /* non-fatal */ }
 	}
 	documentsRefreshTick.value++;
 }
 async function onContractCreated(created?: any) {
-	showCreateContractModal.value = false;
 	if (created?.id) {
 		try { await contractItemsApi.update(created.id, { project: props.projectId } as any); } catch { /* non-fatal */ }
 	}
@@ -1274,7 +1198,7 @@ watch(() => props.projectId, () => {
 				@prefetch="loadForTab"
 			/>
 
-			<div class="ios-card p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
+			<div class="p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
 				<!-- Overview — a work-first dashboard: health, Earnest's next
 				     moves, then the live pulse (recent activity + touchpoints).
 				     The raw field editor is demoted to a disclosure below so the
@@ -1399,7 +1323,7 @@ watch(() => props.projectId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showNewEventModal = true"
+							@click="pushPanel('project-event', props.projectId, 'create')"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Event
@@ -1487,12 +1411,14 @@ watch(() => props.projectId, () => {
 								<Icon name="lucide:link" class="w-3 h-3" />
 								Attach Existing
 							</button>
-							<TicketsCreate
-								:columns="ticketColumns"
-								:default-project="projectId"
-								:default-organization="organizationId || undefined"
-								@ticketCreated="onTicketCreated"
-							/>
+							<button
+								type="button"
+								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+								@click="openTicketCreate({ projectId, organizationId: organizationId || null })"
+							>
+								<Icon name="lucide:plus" class="w-3 h-3" />
+								New Ticket
+							</button>
 						</div>
 					</div>
 
@@ -1526,40 +1452,14 @@ watch(() => props.projectId, () => {
 						</button>
 						<button
 							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border transition-colors"
-							:class="showCreateChannel
-								? 'border-border text-muted-foreground hover:bg-muted/60'
-								: 'border-primary/40 text-primary hover:bg-primary/10'"
-							@click="showCreateChannel = !showCreateChannel"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+							@click="pushPanel('channel', props.projectId, 'create')"
 						>
-							<Icon :name="showCreateChannel ? 'lucide:x' : 'lucide:plus'" class="w-3 h-3" />
-							{{ showCreateChannel ? 'Cancel' : 'New Channel' }}
+							<Icon name="lucide:plus" class="w-3 h-3" />
+							New Channel
 						</button>
 					</div>
 
-					<!-- Inline create -->
-					<div v-if="showCreateChannel" class="ios-card p-3 mb-3">
-						<label class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Channel name</label>
-						<div class="flex items-center gap-2">
-							<div class="flex-1 flex items-center gap-1.5 h-9 rounded-full border border-border/50 bg-muted/30 px-3 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-								<span class="text-muted-foreground/50 text-sm">#</span>
-								<input
-									v-model="newChannelName"
-									type="text"
-									placeholder="e.g. design-feedback"
-									:disabled="creatingChannel"
-									class="flex-1 min-w-0 bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none"
-									@keydown.enter="createChannel"
-								>
-							</div>
-							<Button size="sm" class="h-9 shrink-0" :disabled="!channelNameValid || creatingChannel" @click="createChannel">
-								{{ creatingChannel ? 'Creating…' : 'Create' }}
-							</Button>
-						</div>
-						<p class="text-[10px] text-muted-foreground mt-1.5">
-							Lowercase letters, numbers, and hyphens. Tagged to this project automatically.
-						</p>
-					</div>
 					<div v-if="channelsLoading && !channels.length" class="space-y-px" aria-busy="true" aria-label="Loading channels">
 						<div
 							v-for="i in skeletonRows(channels.length)"
@@ -1607,7 +1507,7 @@ watch(() => props.projectId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateMeetingModal = true"
+							@click="openMeetingCreate({ projectId, defaultVideo: true })"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Meeting
@@ -1691,7 +1591,7 @@ watch(() => props.projectId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateInvoiceModal = true"
+							@click="openInvoiceCreate(invoiceDefaults)"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Invoice
@@ -1823,7 +1723,7 @@ watch(() => props.projectId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="showCreateProposalModal = true"
+									@click="openProposalCreate()"
 								>
 									<Icon name="lucide:plus" class="w-3 h-3" />
 									New Proposal
@@ -1863,7 +1763,7 @@ watch(() => props.projectId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="showCreateContractModal = true"
+									@click="openContractCreate()"
 								>
 									<Icon name="lucide:plus" class="w-3 h-3" />
 									New Contract
@@ -1986,7 +1886,7 @@ watch(() => props.projectId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateContactModal = true"
+							@click="openContactCreate({ clientId: clientId || null })"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Contact
@@ -2116,64 +2016,10 @@ watch(() => props.projectId, () => {
 			</div>
 		</template>
 
-		<!-- New Event — manual project_event creation from the Timeline tab.
-		     UModal contract: v-model + DEFAULT slot (not v-model:open/#content). -->
-		<EModal v-if="project" v-model="showNewEventModal" title="New Event">
-			<template #header>
-				<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
-			</template>
-			<form class="space-y-4" @submit.prevent="handleCreateEvent">
-				<div class="space-y-1">
-					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Title *</label>
-					<EInput v-model="newEventForm.title" placeholder="Event title" autofocus />
-				</div>
-				<div class="space-y-1">
-					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Description</label>
-					<ETextarea v-model="newEventForm.description" placeholder="What happens at this milestone?" :rows="3" />
-				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1">
-						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Type</label>
-						<ESelectMenu v-model="newEventForm.type" :options="EVENT_TYPE_OPTIONS" option-attribute="label" value-attribute="value" />
-					</div>
-					<div class="space-y-1">
-						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</label>
-						<ESelectMenu v-model="newEventForm.status" :options="EVENT_STATUS_OPTIONS" option-attribute="label" value-attribute="value" />
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1">
-						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Date</label>
-						<EInput v-model="newEventForm.date" type="date" />
-					</div>
-					<div class="space-y-1">
-						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">End date</label>
-						<EInput v-model="newEventForm.end_date" type="date" />
-					</div>
-				</div>
-				<label class="flex items-center gap-2 text-xs text-foreground/80 cursor-pointer select-none">
-					<input v-model="newEventForm.is_milestone" type="checkbox" class="rounded border-border" />
-					Mark as milestone (diamond on the timeline)
-				</label>
-			</form>
-			<template #footer>
-				<div class="flex justify-end gap-3 w-full">
-					<Button variant="outline" size="sm" @click="showNewEventModal = false">Cancel</Button>
-					<Button size="sm" :disabled="creatingEvent || !newEventForm.title.trim()" @click="handleCreateEvent">
-						<Icon v-if="creatingEvent" name="lucide:loader-2" class="animate-spin w-3 h-3 mr-1" />
-						Add Event
-					</Button>
-				</div>
-			</template>
-		</EModal>
-
 		<!-- Attach existing file — search the file library and link one to this
 		     project via the admin-token attach-file proxy. Search-driven so we
 		     never dump the whole asset library. -->
-		<EModal v-if="project" v-model="showAttachFileModal" title="Attach existing file">
-			<template #header>
-				<h3 class="text-sm font-bold uppercase tracking-wide">Attach existing file</h3>
-			</template>
+		<AppsAppBottomSheet v-if="project" v-model="showAttachFileModal" title="Attach existing file">
 			<div class="space-y-3">
 				<div class="flex items-center gap-1.5 h-9 rounded-full border border-border/50 bg-muted/30 px-3 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
 					<Icon name="lucide:search" class="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
@@ -2208,50 +2054,15 @@ watch(() => props.projectId, () => {
 						<Icon name="lucide:plus" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary shrink-0" />
 					</button>
 				</div>
-			</div>
-			<template #footer>
-				<div class="flex justify-end w-full">
+				<div class="flex justify-end pt-1">
 					<Button variant="outline" size="sm" @click="showAttachFileModal = false">Done</Button>
 				</div>
-			</template>
-		</EModal>
+			</div>
+		</AppsAppBottomSheet>
 
 		<!-- Create modals — UModal teleports to body, escapes the slide-over's
 		     transformed container. -->
-		<InvoicesFormModal
-			v-if="project"
-			v-model="showCreateInvoiceModal"
-			:defaults="invoiceDefaults"
-			@created="onInvoiceCreated"
-		/>
-		<ClientOnly>
-			<SchedulerUnifiedEventModal
-				v-if="project"
-				v-model="showCreateMeetingModal"
-				:default-video="true"
-				:project-id="projectId"
-				@created="onMeetingCreated"
-				@saved="onMeetingCreated"
-			/>
-		</ClientOnly>
 
-		<!-- Documents create modals. Neither ProposalsFormModal nor
-		     ContractsFormModal accepts a project pre-fill today (the forms
-		     have no project picker), so they open unscoped — the user picks
-		     the lead/contact and the list re-scopes on refresh. Once a UI
-		     for attach-to-project lands, the new row will appear under the
-		     correct project via the proposals.project / contracts.project
-		     FK once set. -->
-		<ProposalsFormModal
-			v-if="project"
-			v-model="showCreateProposalModal"
-			@created="onProposalCreated"
-		/>
-		<ContractsFormModal
-			v-if="project"
-			v-model="showCreateContractModal"
-			@created="onContractCreated"
-		/>
 
 		<!-- Attach Existing modals — project-parented. -->
 		<AppsWorkAttachExistingModal
@@ -2360,15 +2171,6 @@ watch(() => props.projectId, () => {
 			@attached="onContractAttached"
 		/>
 
-		<!-- Contacts: create + attach. ContactsFormModal handles writing
-		     clients_contacts when client-id is supplied; we wrap @created to
-		     also write the projects_contacts junction row. -->
-		<ContactsFormModal
-			v-if="project"
-			v-model="showCreateContactModal"
-			:client-id="clientId || undefined"
-			@created="onContactCreatedFromProject"
-		/>
 		<AppsWorkAttachContactToProjectModal
 			v-if="project"
 			v-model="showAttachContactModal"

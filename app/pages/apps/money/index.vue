@@ -87,8 +87,11 @@ const documentsTab = ref<'proposals' | 'contracts'>(
     : 'proposals',
 );
 const documentsFloorRef = ref<any>(null);
-const showProposalModal = ref(false);
-const showContractModal = ref(false);
+// New proposal/contract open as stacked slide-overs (create mode).
+const { openCreate: openProposalCreate, onCreated: onProposalCreatedPanel } = useCreatePanel('proposal');
+const { openCreate: openContractCreate, onCreated: onContractCreatedPanel } = useCreatePanel('contract');
+onProposalCreatedPanel(() => onDocumentCreated());
+onContractCreatedPanel(() => onDocumentCreated());
 const showDraftAiModal = ref(false);
 
 watch(documentsTab, (next) => {
@@ -105,8 +108,6 @@ watch(floor, (next, prev) => {
 });
 
 function onDocumentCreated() {
-  showProposalModal.value = false;
-  showContractModal.value = false;
   documentsFloorRef.value?.refresh?.();
 }
 
@@ -595,7 +596,9 @@ const invoicesLoading = ref(false);
 const invoicesSearch = ref('');
 const invoicesStatus = ref<'all' | 'pending' | 'processing' | 'paid' | 'archived'>('all');
 const invoicesSort = ref('-due_date');
-const showInvoiceModal = ref(false);
+// New invoice opens as a stacked slide-over (`invoice` panel, create mode).
+const { openCreate: openInvoiceCreate, onCreated: onInvoiceCreatedPanel } = useCreatePanel('invoice');
+onInvoiceCreatedPanel(() => onInvoiceCreated());
 // LOCAL client filter for the invoices floor (own state; NOT the removed
 // global chrome filter). Passed to getInvoices() so it wins over the legacy
 // global selection.
@@ -904,15 +907,15 @@ watch([selectedOrg, selectedClient], () => {
 // ── Header action button ────────────────────────────────────────────────────
 const headerAction = computed(() => {
   if (floor.value === 'invoices' && isAdmin.value) {
-    return { label: 'New Invoice', icon: 'lucide:plus', onClick: () => (showInvoiceModal.value = true) };
+    return { label: 'New Invoice', icon: 'lucide:plus', onClick: () => openInvoiceCreate() };
   }
   if (floor.value === 'expenses') {
     return { label: 'Add Expense', icon: 'lucide:plus', onClick: openExpenseCreate };
   }
   if (floor.value === 'documents') {
     return documentsTab.value === 'contracts'
-      ? { label: 'New Contract', icon: 'lucide:plus', onClick: () => (showContractModal.value = true) }
-      : { label: 'New Proposal', icon: 'lucide:plus', onClick: () => (showProposalModal.value = true) };
+      ? { label: 'New Contract', icon: 'lucide:plus', onClick: () => openContractCreate() }
+      : { label: 'New Proposal', icon: 'lucide:plus', onClick: () => openProposalCreate() };
   }
   return null;
 });
@@ -1286,7 +1289,7 @@ const headerAction = computed(() => {
               {{ invoicesSearch ? 'Try adjusting your search.' : 'Create your first invoice to get started.' }}
             </p>
           </div>
-          <Button v-if="!invoicesSearch && isAdmin" size="sm" @click="showInvoiceModal = true">
+          <Button v-if="!invoicesSearch && isAdmin" size="sm" @click="openInvoiceCreate()">
             <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
             New Invoice
           </Button>
@@ -1390,10 +1393,6 @@ const headerAction = computed(() => {
           Showing {{ invoicesList.length }} of {{ invoicesTotal }}
         </p>
 
-        <InvoicesFormModal
-          v-model="showInvoiceModal"
-          @created="onInvoiceCreated"
-        />
       </template>
 
       <!-- ── Payments floor ───────────────────────────────────────────── -->
@@ -1792,14 +1791,6 @@ const headerAction = computed(() => {
 
       <!-- Documents create modals — owned at the page level so the header
            "+ New Proposal/Contract" CTA can trigger them. -->
-      <ProposalsFormModal
-        v-model="showProposalModal"
-        @created="onDocumentCreated"
-      />
-      <ContractsFormModal
-        v-model="showContractModal"
-        @created="onDocumentCreated"
-      />
       <DraftWithAiSheet
         v-model="showDraftAiModal"
         @created="onDocumentCreated"

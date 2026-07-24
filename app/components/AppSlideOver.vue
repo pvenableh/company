@@ -43,6 +43,13 @@ const props = withDefaults(
 		 * focusable — mirrors what AppBottomSheet did (z-70 + trap suspend).
 		 */
 		elevated?: boolean
+		/**
+		 * Render the body + footer INLINE (no Sheet, no header) so a slide-over
+		 * stack panel's own `AppSlideOverShell` can host this content as a real
+		 * stack entry instead of an overlay. The host owns the header/close; we
+		 * just render the default slot + optional `#footer` in a plain column.
+		 */
+		embedded?: boolean
 		class?: string
 		ui?: {
 			content?: string
@@ -107,7 +114,18 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
 </script>
 
 <template>
-	<Sheet v-model:open="isOpen">
+	<!-- Embedded — inline body + footer for hosting inside a stack panel shell. -->
+	<div v-if="embedded" class="flex flex-col gap-4">
+		<slot />
+		<div
+			v-if="$slots.footer"
+			:class="cn('flex items-center justify-between gap-2 pt-4 border-t border-border/40', props.ui?.footer)"
+		>
+			<slot name="footer" />
+		</div>
+	</div>
+
+	<Sheet v-else v-model:open="isOpen">
 		<SheetTrigger v-if="$slots.trigger" as-child>
 			<slot name="trigger" />
 		</SheetTrigger>

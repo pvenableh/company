@@ -21,6 +21,14 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
+// Create mode — host <TicketsCreate embedded>. `createContext` carries
+// { projectId, organizationId }; on `ticketCreated` we notify surfaces + pop.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<{ projectId?: string | null; organizationId?: string | null }, any>('ticket');
+function onTicketCreated() {
+	emitCreated(null);
+}
+
 const ticketItems = useDirectusItems('tickets');
 const toast = useToast();
 const { awardEvent } = useArcadeAwards();
@@ -49,7 +57,7 @@ const TICKET_FIELDS = [
 ];
 
 async function load(id: string) {
-	if (!id) return;
+	if (!id || isCreate.value) return;
 	loading.value = true;
 	error.value = null;
 	try {
@@ -144,11 +152,20 @@ onBeforeUnmount(() => {
 
 <template>
 	<AppSlideOverShell
-		:title="ticket?.title || 'Ticket'"
-		:subtitle="ticket?.organization?.name"
+		:title="isCreate ? 'New Ticket' : (ticket?.title || 'Ticket')"
+		:subtitle="isCreate ? null : ticket?.organization?.name"
 		@close="emit('close')"
 	>
-		<template v-if="ticket" #actions>
+		<TicketsCreate
+			v-if="isCreate"
+			embedded
+			:columns="TICKET_BOARD_COLUMNS"
+			:default-project="createContext?.projectId || null"
+			:default-organization="createContext?.organizationId || undefined"
+			@ticketCreated="onTicketCreated"
+		/>
+
+		<template v-if="!isCreate && ticket" #actions>
 			<NuxtLink
 				:to="`/tickets/${ticket.id}`"
 				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
@@ -269,7 +286,7 @@ onBeforeUnmount(() => {
 			</div>
 		</div>
 
-		<div v-else class="text-sm text-muted-foreground py-10 text-center">
+		<div v-else-if="!isCreate" class="text-sm text-muted-foreground py-10 text-center">
 			Could not load ticket.
 		</div>
 	</AppSlideOverShell>

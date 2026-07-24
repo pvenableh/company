@@ -78,7 +78,7 @@ const gaugeOffset = computed(() => CIRC * (1 - collectionRate.value / 100));
 </script>
 
 <template>
-	<div class="ios-card glass-edge rounded-2xl" :class="compact ? 'p-4' : 'p-5'">
+	<div class="ios-card rounded-2xl" :class="compact ? 'p-4' : 'p-5'">
 		<div class="flex items-start justify-between gap-4 mb-4">
 			<div>
 				<h3 class="text-sm font-semibold text-foreground/80">Money pipeline</h3>

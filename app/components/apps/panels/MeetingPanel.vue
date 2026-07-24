@@ -12,6 +12,23 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
+// Create mode — host <SchedulerUnifiedEventModal embedded>. Its form init is
+// gated on an isOpen false→true transition, so we mount closed and flip open
+// after mount. On success the form emits created + calls close() (isOpen→false);
+// we notify surfaces on created and pop the panel on the close.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<any, any>('work-meeting');
+const { pop } = useAppSlideOverStack();
+const meetingOpen = ref(false);
+onMounted(() => { if (isCreate.value) meetingOpen.value = true; });
+function onMeetingCreated(data: any) {
+  emitCreated(data, { pop: false });
+}
+function onMeetingOpenChange(v: boolean) {
+  meetingOpen.value = v;
+  if (!v) pop();
+}
+
 const meeting = ref<any | null>(null);
 const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
@@ -20,7 +37,7 @@ function onLoaded(m: any) {
   if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
 }
 
-const title = computed(() => meeting.value?.title || 'Meeting');
+const title = computed(() => (isCreate.value ? 'New Meeting' : meeting.value?.title || 'Meeting'));
 const subtitle = computed(() => {
   const m = meeting.value;
   if (!m) return null;
@@ -50,7 +67,7 @@ onBeforeUnmount(() => {
     :flip-from="flipFrom"
     @close="$emit('close')"
   >
-    <template #hero>
+    <template v-if="!isCreate" #hero>
       <div class="flex items-center justify-between gap-3 px-1 py-1.5">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-foreground truncate">
@@ -68,7 +85,7 @@ onBeforeUnmount(() => {
         </span>
       </div>
     </template>
-    <template #actions>
+    <template v-if="!isCreate" #actions>
       <NuxtLink
         :to="`/meetings/${id}`"
         class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
@@ -79,7 +96,25 @@ onBeforeUnmount(() => {
       </NuxtLink>
     </template>
 
+    <ClientOnly v-if="isCreate">
+      <SchedulerUnifiedEventModal
+        :model-value="meetingOpen"
+        embedded
+        :default-video="createContext?.defaultVideo ?? true"
+        :project-id="createContext?.projectId ?? null"
+        :project-data="createContext?.projectData ?? null"
+        :client-id="createContext?.clientId ?? null"
+        :client-data="createContext?.clientData ?? null"
+        :lead-id="createContext?.leadId ?? null"
+        :lead-data="createContext?.leadData ?? null"
+        @update:model-value="onMeetingOpenChange"
+        @created="onMeetingCreated"
+        @saved="onMeetingCreated"
+      />
+    </ClientOnly>
+
     <AppsWorkMeetingWorkspace
+      v-else
       :meeting-id="id"
       compact
       @loaded="onLoaded"

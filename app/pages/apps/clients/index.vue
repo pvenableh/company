@@ -429,7 +429,9 @@ const contactsFilterCategory = ref<Contact['category'] | ''>(initialContactCateg
 const contactsLimit = 50;
 const contactsPage = ref(1);
 const contactsHasMore = computed(() => contactsPage.value * contactsLimit < contactsTotal.value);
-const showCreateContactModal = ref(false);
+// New contact opens as a stacked slide-over (`contact` panel, create mode).
+const { openCreate: openContactCreate, onCreated: onContactCreatedPanel } = useCreatePanel('contact');
+onContactCreatedPanel(() => { contactsPage.value = 1; fetchContacts(); });
 
 // FK-backed Card Desk pill set — drives the orange "Card Desk" badge in
 // the ContactTable when a row was promoted from a deck card.
@@ -546,7 +548,7 @@ watch(view, (next) => {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Client
         </Button>
-        <Button v-else-if="view === 'contacts'" size="sm" @click="showCreateContactModal = true">
+        <Button v-else-if="view === 'contacts'" size="sm" @click="openContactCreate()">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Contact
         </Button>
@@ -990,9 +992,6 @@ watch(view, (next) => {
 
       <!-- Create Client modal -->
       <ClientsFormModal v-model="showCreateClientModal" @created="onClientCreated" />
-
-      <!-- Create Contact modal -->
-      <ContactsFormModal v-model="showCreateContactModal" @created="contactsPage = 1; fetchContacts()" />
 
       <!-- Delete client confirmation -->
       <Teleport to="body">

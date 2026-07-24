@@ -249,7 +249,8 @@ function onTaskCreated() {
 // exposed `open()` methods; the board/list render the modals with their own
 // triggers hidden. Columns are needed by <TicketsCreate>.
 const ticketColumns = TICKET_BOARD_COLUMNS;
-const ticketsCreateRef = ref<{ open: () => void } | null>(null);
+// New ticket opens as a stacked slide-over (`ticket` panel, create mode).
+const { openCreate: openTicketCreate, onCreated: onTicketCreatedPanel } = useCreatePanel('ticket');
 const taskCreateRef = ref<{ open: () => void } | null>(null);
 // Calendar + Time floors hoist their create CTAs into the AppHeader (universal
 // position). These refs let the header buttons drive the mounted surfaces.
@@ -262,6 +263,7 @@ const { triggerRefresh: triggerTicketsRefresh } = useTicketsStore();
 function onTicketCreated() {
   triggerTicketsRefresh();
 }
+onTicketCreatedPanel(() => onTicketCreated());
 
 // ── Meetings floor ──────────────────────────────────────────────────────────
 const videoMeetingsApi = useDirectusItems('video_meetings');
@@ -444,7 +446,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Project
         </Button>
-        <Button v-else-if="floor === 'tickets'" size="sm" @click="ticketsCreateRef?.open()">
+        <Button v-else-if="floor === 'tickets'" size="sm" @click="openTicketCreate({})">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Ticket
         </Button>
@@ -699,12 +701,6 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
          AppHeader (universal position); these render the (teleported) modals
          with their own buttons hidden and are opened via the exposed open(). -->
     <ClientOnly>
-      <TicketsCreate
-        ref="ticketsCreateRef"
-        hide-trigger
-        :columns="ticketColumns"
-        @ticket-created="onTicketCreated"
-      />
       <TicketsTaskCreate
         ref="taskCreateRef"
         hide-trigger

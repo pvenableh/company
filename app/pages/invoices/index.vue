@@ -21,7 +21,9 @@ const allInvoices = ref<Invoice[]>([]);
 const total = ref(0);
 const loading = ref(true);
 const search = ref('');
-const showCreateModal = ref(false);
+// New invoice opens as a stacked slide-over (`invoice` panel, create mode).
+const { openCreate: openInvoiceCreate, onCreated: onInvoiceCreatedPanel } = useCreatePanel('invoice');
+onInvoiceCreatedPanel(() => onInvoiceCreated());
 const statusFilter = ref('all');
 const showPaid = ref(false);
 const viewMode = ref<'cards' | 'table'>('table');
@@ -156,7 +158,7 @@ function getLineItemCount(inv: Invoice): number {
 onMounted(() => {
   fetchData();
   if (router.currentRoute.value.query.new === '1') {
-    showCreateModal.value = true;
+    openInvoiceCreate();
     router.replace({ query: {} });
   }
 });
@@ -175,7 +177,7 @@ watch(() => selectedClient.value, debouncedFetch);
         <button
           v-if="isAdmin"
           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-          @click="showCreateModal = true"
+          @click="openInvoiceCreate()"
         >
           <Icon name="lucide:plus" class="w-3.5 h-3.5" />
           New Invoice
@@ -246,7 +248,7 @@ watch(() => selectedClient.value, debouncedFetch);
           {{ search ? 'Try adjusting your search.' : 'Create your first invoice to get started.' }}
         </p>
       </div>
-      <Button v-if="!search && isAdmin" size="sm" @click="showCreateModal = true">
+      <Button v-if="!search && isAdmin" size="sm" @click="openInvoiceCreate()">
         <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
         New Invoice
       </Button>
@@ -467,11 +469,6 @@ watch(() => selectedClient.value, debouncedFetch);
       </div>
     </template>
 
-    <!-- Create Modal -->
-    <InvoicesFormModal
-      v-model="showCreateModal"
-      @created="onInvoiceCreated"
-    />
 
     <!-- Delete Confirmation Dialog -->
     <Teleport to="body">

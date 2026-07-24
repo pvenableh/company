@@ -40,7 +40,7 @@ const num = (n: number) =>
 </script>
 
 <template>
-	<div class="ios-card glass-edge rounded-2xl p-5">
+	<div class="ios-card rounded-2xl p-5">
 		<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 			<h3 class="text-sm font-semibold text-foreground/80">{{ title || 'Collected' }}</h3>
 			<MoneyPeriodSelect v-model="period" />

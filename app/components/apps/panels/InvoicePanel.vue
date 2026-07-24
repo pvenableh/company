@@ -13,6 +13,12 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string }>();
 defineEmits<{ (e: 'close'): void }>();
 
+// Create mode — host <InvoicesFormModal embedded>. `createContext` carries the
+// launch defaults ({ projects, client, bill_to }); `emitCreated` bumps the
+// shared signal + pops so the launching surface refetches.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<any, Invoice>('invoice');
+
 const invoice = ref<Invoice | null>(null);
 const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
@@ -29,8 +35,9 @@ onBeforeUnmount(() => {
   if (entityId.value === String(props.id)) resetEntityContext();
 });
 
-const title = computed(() => invoice.value?.invoice_code || 'Invoice');
+const title = computed(() => (isCreate.value ? 'New Invoice' : invoice.value?.invoice_code || 'Invoice'));
 const subtitle = computed(() => {
+  if (isCreate.value) return null;
   const c = invoice.value?.client;
   if (!c || typeof c === 'string') return null;
   return (c as any).name || null;
@@ -43,7 +50,7 @@ const subtitle = computed(() => {
     :subtitle="subtitle"
     @close="$emit('close')"
   >
-    <template v-if="invoice" #actions>
+    <template v-if="!isCreate && invoice" #actions>
       <NuxtLink
         :to="`/invoices/detail/${id}`"
         class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
@@ -54,7 +61,15 @@ const subtitle = computed(() => {
       </NuxtLink>
     </template>
 
+    <InvoicesFormModal
+      v-if="isCreate"
+      embedded
+      :defaults="createContext"
+      @created="emitCreated"
+    />
+
     <AppsMoneyInvoiceWorkspace
+      v-else
       :invoice-id="id"
       compact
       @loaded="onLoaded"

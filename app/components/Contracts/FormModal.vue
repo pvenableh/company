@@ -1,6 +1,7 @@
 <template>
 	<FormModal
 		v-model="isOpen"
+		:embedded="embedded"
 		:title="isEditing ? 'Edit Contract' : 'New Contract'"
 		:is-editing="isEditing"
 		:saving="saving"
@@ -15,7 +16,7 @@
 		@status-change="e => currentStatus = e.newStatus"
 	>
 		<ContractsContractForm
-			v-if="isOpen"
+			v-if="isOpen || embedded"
 			:key="contract?.id || 'new'"
 			ref="formRef"
 			:contract="contract"
@@ -34,6 +35,8 @@ const props = defineProps<{
 	contract?: any;
 	leadId?: number | string | null;
 	proposalId?: string | null;
+	// Render inside a stack panel's shell (no own AppSlideOver).
+	embedded?: boolean;
 }>();
 
 const emit = defineEmits<{

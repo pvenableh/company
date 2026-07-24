@@ -29,6 +29,8 @@ const props = defineProps<{
 	// whose client differs from the pinned one.
 	clientId?: string | null;
 	clientData?: { id?: string; name?: string } | null;
+	// Render inside a stack panel's shell (no own AppSlideOver overlay).
+	embedded?: boolean;
 }>();
 
 const emit = defineEmits(['update:modelValue', 'created', 'saved', 'deleted']);
@@ -960,6 +962,7 @@ const sendInviteMeeting = computed(() => {
 <template>
 	<AppSlideOver
 		v-model="isOpen"
+		:embedded="embedded"
 		:title="sheetTitle"
 		elevated
 		:ui="{ footer: '!flex-row !justify-between !items-center' }"

@@ -57,14 +57,15 @@ const viewTabs = computed(() => [
 ]);
 const docsProposalsRef = ref<any>(null);
 const docsContractsRef = ref<any>(null);
-const showCreateProposalModal = ref(false);
-const showCreateContractModal = ref(false);
+// New proposal/contract open as stacked slide-overs (create mode), lead-scoped.
+const { openCreate: openProposalCreate, onCreated: onProposalCreatedPanel } = useCreatePanel('proposal');
+const { openCreate: openContractCreate, onCreated: onContractCreatedPanel } = useCreatePanel('contract');
 function onDocCreated() {
-	showCreateProposalModal.value = false;
-	showCreateContractModal.value = false;
 	docsProposalsRef.value?.refresh?.();
 	docsContractsRef.value?.refresh?.();
 }
+onProposalCreatedPanel(() => onDocCreated());
+onContractCreatedPanel(() => onDocCreated());
 
 const { getLead, updateLeadStageWithAutomation, addLeadToList } = useLeads();
 // Lead pursuit history now lives in the unified `touchpoints` collection (via a
@@ -176,8 +177,8 @@ async function addReApproachTouch() {
 // single entry point.
 const leadDocActions = computed(() => [
 	{ label: 'AI-draft a proposal', icon: 'lucide:sparkles', click: () => { void generateDraft(); } },
-	{ label: 'New proposal', icon: 'lucide:file-plus', click: () => { showCreateProposalModal.value = true; } },
-	{ label: 'New contract', icon: 'lucide:file-signature', click: () => { showCreateContractModal.value = true; } },
+	{ label: 'New proposal', icon: 'lucide:file-plus', click: () => { openProposalCreate({ leadId: lead.value?.id }); } },
+	{ label: 'New contract', icon: 'lucide:file-signature', click: () => { openContractCreate({ leadId: lead.value?.id }); } },
 ]);
 
 // Activity form
@@ -400,7 +401,8 @@ async function handleRemoveFromList(listId: number) {
 }
 
 // ── Meeting integration ──
-const showMeetingModal = ref(false);
+// New meeting opens as a stacked slide-over (`work-meeting` panel, create mode).
+const { openCreate: openMeetingCreate, onCreated: onMeetingCreatedPanel } = useCreatePanel('work-meeting');
 const upcomingMeetings = ref<any[]>([]);
 const upcomingMeetingsLoading = ref(false);
 const videoMeetingItems = useDirectusItems('video_meetings');
@@ -424,10 +426,10 @@ async function fetchUpcomingMeetings() {
 }
 
 const handleMeetingCreated = () => {
-	showMeetingModal.value = false;
 	fetchUpcomingMeetings();
 	loadLeadActivities();
 };
+onMeetingCreatedPanel(() => handleMeetingCreated());
 
 onMounted(() => {
 	fetchUpcomingMeetings();
@@ -497,7 +499,7 @@ function openContactPivot() {
 							<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
 								Edit
 							</UiActionButton>
-							<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
+							<UiActionButton icon="lucide:video" variant="primary" @click="openMeetingCreate({ leadId: lead?.id, leadData: lead, defaultVideo: true })" hide-label="sm">
 								Meeting
 							</UiActionButton>
 							<Tooltip>
@@ -517,7 +519,7 @@ function openContactPivot() {
 									Generates a tailored proposal draft from this lead's context — contact, company, scope notes, past won-lead patterns. Drops the result straight into a new proposal you can edit.
 								</TooltipContent>
 							</Tooltip>
-							<UiActionButton icon="lucide:file-plus" @click="showCreateProposalModal = true">
+							<UiActionButton icon="lucide:file-plus" @click="openProposalCreate({ leadId: lead?.id })">
 								Proposal
 							</UiActionButton>
 						</div>
@@ -535,7 +537,7 @@ function openContactPivot() {
 						<UiActionButton icon="lucide:pencil" @click="showFormModal = true">
 							Edit
 						</UiActionButton>
-						<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true">
+						<UiActionButton icon="lucide:video" variant="primary" @click="openMeetingCreate({ leadId: lead?.id, leadData: lead, defaultVideo: true })">
 							Meeting
 						</UiActionButton>
 						<Tooltip>
@@ -554,7 +556,7 @@ function openContactPivot() {
 								Generates a tailored proposal draft from this lead's context.
 							</TooltipContent>
 						</Tooltip>
-						<UiActionButton icon="lucide:file-plus" @click="showCreateProposalModal = true">
+						<UiActionButton icon="lucide:file-plus" @click="openProposalCreate({ leadId: lead?.id })">
 							Proposal
 						</UiActionButton>
 					</div>
@@ -815,7 +817,7 @@ function openContactPivot() {
 							<div class="flex items-center justify-between mb-3">
 								<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Upcoming Meetings</p>
 								<button
-									@click="showMeetingModal = true"
+									@click="openMeetingCreate({ leadId: lead?.id, leadData: lead, defaultVideo: true })"
 									class="text-[10px] text-primary hover:underline"
 								>
 									+ Schedule
@@ -966,26 +968,7 @@ function openContactPivot() {
 				@lost="handleLost"
 			/>
 
-			<!-- Schedule Meeting Modal -->
-			<SchedulerUnifiedEventModal
-				v-model="showMeetingModal"
-				:lead-id="lead?.id"
-				:lead-data="lead"
-				:default-video="true"
-				@created="handleMeetingCreated"
-				@saved="handleMeetingCreated"
-			/>
 
-			<ProposalsFormModal
-				v-model="showCreateProposalModal"
-				:lead-id="lead?.id"
-				@created="onDocCreated"
-			/>
-			<ContractsFormModal
-				v-model="showCreateContractModal"
-				:lead-id="lead?.id"
-				@created="onDocCreated"
-			/>
 		</template>
 
 		<!-- AI sidebar overlay — page mode only (panel container is transformed) -->

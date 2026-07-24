@@ -13,6 +13,15 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
+// Create mode — host <ContractsFormModal embedded>. The form does its own
+// post-create edit-hop (pushes contract:id/edit, replacing this create panel),
+// so we notify surfaces WITHOUT popping.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<any, any>('contract');
+function onContractCreated(c: any) {
+  emitCreated(c, { pop: false });
+}
+
 const contract = ref<any | null>(null);
 const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
@@ -22,7 +31,7 @@ function onLoaded(c: any) {
   setEntity('contract', String(c.id), c.title || 'Contract');
 }
 
-const title = computed(() => contract.value?.title || 'Contract');
+const title = computed(() => (isCreate.value ? 'New Contract' : contract.value?.title || 'Contract'));
 const subtitle = computed(() => {
   const o = contract.value?.organization?.name;
   const c = contract.value?.contact;
@@ -52,7 +61,7 @@ onBeforeUnmount(() => {
     :flip-from="flipFrom"
     @close="$emit('close')"
   >
-    <template #actions>
+    <template v-if="!isCreate" #actions>
       <NuxtLink
         :to="fullPageHref"
         class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -63,7 +72,7 @@ onBeforeUnmount(() => {
       </NuxtLink>
     </template>
 
-    <template #hero>
+    <template v-if="!isCreate" #hero>
       <div class="flex items-center justify-between gap-3 px-1 py-1.5">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-foreground truncate">
@@ -82,7 +91,16 @@ onBeforeUnmount(() => {
       </div>
     </template>
 
+    <ContractsFormModal
+      v-if="isCreate"
+      embedded
+      :lead-id="createContext?.leadId ?? null"
+      :proposal-id="createContext?.proposalId ?? null"
+      @created="onContractCreated"
+    />
+
     <AppsDocumentsContractWorkspace
+      v-else
       :contract-id="id"
       compact
       @loaded="onLoaded"

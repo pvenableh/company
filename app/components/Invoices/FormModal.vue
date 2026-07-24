@@ -1,6 +1,7 @@
 <template>
 	<FormModal
 		v-model="isOpen"
+		:embedded="embedded"
 		:title="isEditing ? 'Edit Invoice' : 'New Invoice'"
 		:is-editing="isEditing"
 		:saving="saving"
@@ -15,7 +16,7 @@
 		@status-change="e => currentStatus = e.newStatus"
 	>
 		<InvoicesInvoiceForm
-			v-if="isOpen"
+			v-if="isOpen || embedded"
 			:key="invoice?.id || 'new'"
 			ref="formRef"
 			:invoice="invoice"
@@ -33,6 +34,9 @@ import type { Invoice } from '~~/shared/directus';
 const props = defineProps<{
 	invoice?: Invoice | null;
 	defaults?: { projects?: string[]; bill_to?: string | null; client?: string | null } | null;
+	// Render inside a stack panel's shell (no own AppSlideOver). Host owns
+	// open/close; this emits created/updated/deleted.
+	embedded?: boolean;
 }>();
 
 const emit = defineEmits<{

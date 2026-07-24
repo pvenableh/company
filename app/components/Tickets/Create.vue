@@ -4,12 +4,13 @@
 			 pills / Select triggers it sits beside in the board toolbar. Hidden
 			 when a host surface (page header) provides its own trigger and drives
 			 this via the exposed `open()` method. -->
-		<UiActionButton v-if="!hideTrigger" size="md" icon="lucide:plus" @click="openForm">
+		<UiActionButton v-if="!hideTrigger && !embedded" size="md" icon="lucide:plus" @click="openForm">
 			New Ticket
 		</UiActionButton>
 
-		<!-- Teleported Fullscreen Form -->
-		<Teleport to="body">
+		<!-- Fullscreen form — teleported to body when standalone; rendered
+		     in place (no overlay) when `embedded` inside a stack panel shell. -->
+		<Teleport to="body" :disabled="embedded">
 			<Transition
 				enter-active-class="transition duration-300 ease-out"
 				enter-from-class="opacity-0 scale-95 "
@@ -19,12 +20,12 @@
 				leave-to-class="opacity-0 scale-95"
 			>
 				<div
-					v-if="isExpanded"
-					class="fixed inset-0 z-[70] overflow-auto backdrop-blur-lg bg-white/75 dark:bg-gray-900/90"
+					v-if="isExpanded || embedded"
+					:class="embedded ? '' : 'fixed inset-0 z-[70] overflow-auto backdrop-blur-lg bg-white/75 dark:bg-gray-900/90'"
 				>
-					<div class="w-full max-w-xl mx-auto p-4 lg:p-8 py-8">
+					<div :class="embedded ? 'w-full' : 'w-full max-w-xl mx-auto p-4 lg:p-8 py-8'">
 						<!-- Header -->
-						<div class="flex items-center justify-between mb-6">
+						<div v-if="!embedded" class="flex items-center justify-between mb-6">
 							<div>
 								<h3 class="text-lg font-semibold text-foreground">New Ticket</h3>
 								<p class="text-xs text-muted-foreground mt-0.5">Create a new work item</p>
@@ -203,7 +204,7 @@
 							</div>
 
 							<div class="flex items-center justify-end gap-2 pt-2">
-								<EButton color="gray" variant="ghost" @click="closeForm">Cancel</EButton>
+								<EButton v-if="!embedded" color="gray" variant="ghost" @click="closeForm">Cancel</EButton>
 								<EButton type="submit" color="primary" :loading="isLoading">Create Ticket</EButton>
 							</div>
 						</form>
@@ -237,6 +238,14 @@ const props = defineProps({
 	 * `open()` method. The teleported modal still mounts.
 	 */
 	hideTrigger: {
+		type: Boolean,
+		default: false,
+	},
+	/**
+	 * Render inline inside a stack panel's shell (no teleport, no fullscreen
+	 * overlay, no own header/cancel — the panel owns those). Inits on mount.
+	 */
+	embedded: {
 		type: Boolean,
 		default: false,
 	},
@@ -534,7 +543,7 @@ const createTicket = async () => {
 // Open form and initialize data
 const openForm = async () => {
 	isExpanded.value = true;
-	document.body.style.overflow = 'hidden';
+	if (!props.embedded) document.body.style.overflow = 'hidden';
 
 	// Initialize form with current org and default values
 	const orgId = props.defaultOrganization || selectedOrg.value;
@@ -580,7 +589,7 @@ const openForm = async () => {
 // Close the form and reset values
 const closeForm = () => {
 	isExpanded.value = false;
-	document.body.style.overflow = '';
+	if (!props.embedded) document.body.style.overflow = '';
 	form.value = {
 		title: '',
 		description: '',
@@ -711,6 +720,10 @@ onMounted(async () => {
 				closeForm();
 			}
 		});
+
+		// Embedded (stack-panel) mode has no trigger button — initialize the
+		// form + fetch its option data immediately on mount.
+		if (props.embedded) await openForm();
 	} catch (error) {
 		console.error('Error in onMounted:', error);
 	}

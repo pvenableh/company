@@ -1,6 +1,7 @@
 <template>
 	<FormModal
 		v-model="isOpen"
+		:embedded="embedded"
 		:title="isEditing ? 'Edit Proposal' : 'New Proposal'"
 		:is-editing="isEditing"
 		:saving="saving"
@@ -15,7 +16,7 @@
 		@status-change="e => currentStatus = e.newStatus"
 	>
 		<ProposalsProposalForm
-			v-if="isOpen"
+			v-if="isOpen || embedded"
 			:key="proposal?.id || 'new'"
 			ref="formRef"
 			:proposal="proposal"
@@ -32,6 +33,8 @@ import { PROPOSAL_STATUS_LABELS } from '~~/shared/proposals-enhanced';
 const props = defineProps<{
 	proposal?: any;
 	leadId?: number | string | null;
+	// Render inside a stack panel's shell (no own AppSlideOver).
+	embedded?: boolean;
 }>();
 
 const emit = defineEmits<{

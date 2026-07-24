@@ -60,7 +60,7 @@ function ageLabel(od: number, due: string | null): { text: string; tone: string 
 </script>
 
 <template>
-	<div class="ios-card glass-edge rounded-2xl p-5">
+	<div class="ios-card rounded-2xl p-5">
 		<div class="flex items-center justify-between gap-3 mb-3">
 			<div class="flex items-center gap-2">
 				<Icon name="lucide:crosshair" class="w-4 h-4 text-warning" />

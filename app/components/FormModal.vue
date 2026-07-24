@@ -20,11 +20,61 @@
   forms scroll (e.g. ProjectsFormModal with timeline stages).
 -->
 <template>
+	<!-- Embedded — no own shell. Rendered inside an AppSlideOverShell body by a
+	     stack panel (create/edit as a real stack entry) so the form joins the
+	     slide-over stack instead of overlaying it. Same body + footer, footer
+	     inline at the end of the scrolling body. -->
+	<template v-if="embedded">
+		<FormStatusTimeline
+			v-if="isEditing && statuses.length"
+			:currentStatus="currentStatus"
+			:statuses="statuses"
+			:collection="collection"
+			:itemId="itemId"
+			class="mb-4"
+			@status-change="$emit('status-change', $event)"
+		/>
+
+		<form @submit.prevent="$emit('submit')" class="space-y-4">
+			<slot />
+		</form>
+
+		<div class="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-border/40">
+			<div class="flex items-center gap-2">
+				<ETooltip v-if="isEditing && canDelete" text="Delete">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						class="text-destructive hover:text-destructive hover:bg-destructive/10"
+						:disabled="saving"
+						@click="$emit('delete')"
+					>
+						<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
+					</Button>
+				</ETooltip>
+				<NuxtLink
+					v-if="isEditing && detailRoute"
+					:to="detailRoute"
+					class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+				>
+					Full Details
+					<Icon name="lucide:chevron-right" class="w-3 h-3" />
+				</NuxtLink>
+			</div>
+			<Button size="sm" :disabled="saving || submitDisabled" @click="$emit('submit')">
+				<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
+				<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
+				{{ submitLabel || (isEditing ? 'Save' : 'Create') }}
+			</Button>
+		</div>
+	</template>
+
 	<!-- Right-side slide-over (bottom sheet on mobile). `elevated` lifts it
 	     above the slide-over stack + suspends the stack's focus trap, since
 	     consumer forms (edit contact/project/ticket…) open from inside detail
 	     panels. Footer overridden to the delete-left / save-right layout. -->
 	<AppSlideOver
+		v-else
 		v-model="isOpen"
 		:title="title"
 		elevated
@@ -92,6 +142,9 @@ defineProps({
 	collection: { type: String, default: '' },
 	itemId: { type: [String, Number], default: null },
 	detailRoute: { type: [String, Object], default: null },
+	// When true, render the body + footer WITHOUT the AppSlideOver shell so a
+	// stack panel (AppSlideOverShell) can host the form as a real stack entry.
+	embedded: { type: Boolean, default: false },
 });
 
 defineEmits(['submit', 'delete', 'status-change']);

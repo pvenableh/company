@@ -10,9 +10,20 @@
 import { Icon } from '#components';
 import AppSlideOverShell from '../AppSlideOverShell.vue';
 
-const props = defineProps<{ id: string }>();
+const props = defineProps<{ id: string; mode?: string }>();
 
 const emit = defineEmits<{ (e: 'close'): void }>();
+
+// Create mode — the panel hosts <ContactsFormModal embedded> and, on success,
+// notifies every mounted surface (via the shared `created:contact` signal) so
+// each runs its own side effect (list refetch, project-junction attach), then
+// pops. Launch context (`{ clientId }`) is passed in via createContext.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<{ clientId?: string | null }, any>('contact');
+const createClientId = computed(() => createContext.value?.clientId ?? null);
+function onContactCreated(contact: any) {
+	emitCreated(contact);
+}
 
 const contactItemsApi = useDirectusItems('contacts');
 const { selectedOrg } = useOrganization();
@@ -45,6 +56,7 @@ const linkedClientId = computed(() => {
 });
 
 const title = computed(() => {
+	if (isCreate.value) return 'New Contact';
 	const c = contact.value;
 	if (!c) return 'Contact';
 	const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
@@ -77,7 +89,7 @@ function onContactDeleted() {
 watch(
 	() => props.id,
 	async (id) => {
-		if (!id) return;
+		if (!id || isCreate.value) return;
 		loading.value = true;
 		error.value = null;
 		contact.value = null;
@@ -119,7 +131,15 @@ onBeforeUnmount(() => {
 
 <template>
 	<AppSlideOverShell :title="title" @close="$emit('close')">
-		<template v-if="contact" #actions>
+		<!-- Create mode — host the shared contact form embedded in the shell. -->
+		<ContactsFormModal
+			v-if="isCreate"
+			embedded
+			:client-id="createClientId"
+			@created="onContactCreated"
+		/>
+
+		<template v-if="!isCreate && contact" #actions>
 			<button
 				type="button"
 				class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
@@ -130,7 +150,7 @@ onBeforeUnmount(() => {
 			</button>
 		</template>
 
-		<div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-3">
+		<div v-if="!isCreate && loading" class="flex flex-col items-center justify-center py-12 gap-3">
 			<span class="spinner-ios spinner-ios--lg" role="status" aria-label="Loading" />
 			<p class="text-xs text-muted-foreground">Loading contact…</p>
 		</div>
@@ -206,7 +226,7 @@ onBeforeUnmount(() => {
 			{{ error }}
 		</div>
 
-		<div v-else class="text-sm text-muted-foreground py-10 text-center">
+		<div v-else-if="!isCreate" class="text-sm text-muted-foreground py-10 text-center">
 			Could not load contact.
 		</div>
 

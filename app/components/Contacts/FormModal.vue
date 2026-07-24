@@ -1,6 +1,7 @@
 <template>
 	<FormModal
 		v-model="isOpen"
+		:embedded="embedded"
 		:title="isEditing ? 'Edit Contact' : 'New Contact'"
 		:is-editing="isEditing"
 		:saving="saving"
@@ -12,7 +13,7 @@
 		@delete="handleDelete"
 	>
 		<ContactsContactForm
-			v-if="isOpen"
+			v-if="isOpen || embedded"
 			:key="contact?.id || `new-${clientId || 'noclient'}`"
 			ref="formRef"
 			:contact="contact || (clientId ? ({ client: clientId } as any) : null)"
@@ -28,6 +29,9 @@ import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
 const props = defineProps<{
 	contact?: Contact | null;
 	clientId?: string | null;
+	// Render inside a stack panel's shell (no own AppSlideOver). The hosting
+	// panel owns open/close; this component just emits created/updated/deleted.
+	embedded?: boolean;
 }>();
 
 const emit = defineEmits<{

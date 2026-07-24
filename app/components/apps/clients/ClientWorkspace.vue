@@ -853,19 +853,28 @@ function onActivityLeafSelect(item: { _raw: ActivityRow }) {
 // ── Inline create modals ───────────────────────────────────────────────────
 // All of these are UModal-based and teleport to body, so they render
 // outside the slide-over's transformed container without breaking.
-const showCreateContactModal = ref(false);
+// New contact opens as a stacked slide-over (create mode), client-scoped.
+const { openCreate: openContactCreate, onCreated: onContactCreatedPanel } = useCreatePanel('contact');
+onContactCreatedPanel(() => onContactCreated());
 const showAttachContactModal = ref(false);
 const showCreateProjectModal = ref(false);
 const showAttachProjectModal = ref(false);
 const showCreateTicketModal = ref(false);
 const showAttachTicketModal = ref(false);
 const showAttachTaskModal = ref(false);
-const showCreateInvoiceModal = ref(false);
+// New invoice opens as a stacked slide-over (`invoice` panel, create mode).
+const { openCreate: openInvoiceCreate, onCreated: onInvoiceCreatedPanel } = useCreatePanel('invoice');
+onInvoiceCreatedPanel(() => onInvoiceCreated());
 const showAttachInvoiceModal = ref(false);
 const showAttachChannelModal = ref(false);
-const showCreateMeetingModal = ref(false);
-const showCreateProposalModal = ref(false);
-const showCreateContractModal = ref(false);
+// New meeting opens as a stacked slide-over (`work-meeting` panel, create mode).
+const { openCreate: openMeetingCreate, onCreated: onMeetingCreatedPanel } = useCreatePanel('work-meeting');
+onMeetingCreatedPanel(() => onMeetingCreated());
+// New proposal/contract open as stacked slide-overs (create mode).
+const { openCreate: openProposalCreate, onCreated: onProposalCreatedPanel } = useCreatePanel('proposal');
+const { openCreate: openContractCreate, onCreated: onContractCreatedPanel } = useCreatePanel('contract');
+onProposalCreatedPanel(() => onProposalCreated());
+onContractCreatedPanel(() => onContractCreated());
 const showAttachProposalModal = ref(false);
 const showAttachContractModal = ref(false);
 
@@ -904,7 +913,6 @@ function onContactAttached() {
 }
 
 function onContactCreated() {
-	showCreateContactModal.value = false;
 	loadClient(true);
 }
 
@@ -970,7 +978,6 @@ function onTaskAttached() {
 }
 
 function onInvoiceCreated() {
-	showCreateInvoiceModal.value = false;
 	if (invoicesLoaded.value) loadInvoices();
 	else invoiceItemsApi.count({ client: { _eq: props.clientId } }).then((n) => { invoiceCount.value = n; }).catch(() => {});
 }
@@ -988,17 +995,14 @@ function onChannelAttached() {
 }
 
 function onMeetingCreated() {
-	showCreateMeetingModal.value = false;
 	loadMeetings();
 }
 
 function onProposalCreated() {
-	showCreateProposalModal.value = false;
 	documentsRefreshTick.value++;
 }
 
 function onContractCreated() {
-	showCreateContractModal.value = false;
 	documentsRefreshTick.value++;
 }
 // Attaching an existing proposal/contract sets its `client` FK (handled by
@@ -1102,7 +1106,7 @@ watch(() => props.clientId, () => {
 				@prefetch="loadForTab"
 			/>
 
-			<div class="ios-card p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
+			<div class="p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
 				<!-- Overview — inline-editable "who they are": website, industry,
 				     location, brand direction, goals, target audience, notes.
 				     Autosaves each field; no need to leave the slide-over. -->
@@ -1318,7 +1322,7 @@ watch(() => props.clientId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateContactModal = true"
+							@click="openContactCreate({ clientId })"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Contact
@@ -1574,7 +1578,7 @@ watch(() => props.clientId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="showCreateProposalModal = true"
+									@click="openProposalCreate()"
 								>
 									<Icon name="lucide:plus" class="w-3 h-3" />
 									New Proposal
@@ -1609,7 +1613,7 @@ watch(() => props.clientId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="showCreateContractModal = true"
+									@click="openContractCreate()"
 								>
 									<Icon name="lucide:plus" class="w-3 h-3" />
 									New Contract
@@ -1907,7 +1911,7 @@ watch(() => props.clientId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateMeetingModal = true"
+							@click="openMeetingCreate({ clientId, clientData: { id: clientId, name: (client as any).name }, defaultVideo: true })"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Meeting
@@ -2011,7 +2015,7 @@ watch(() => props.clientId, () => {
 						<button
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateInvoiceModal = true"
+							@click="openInvoiceCreate({ client: clientId })"
 						>
 							<Icon name="lucide:plus" class="w-3 h-3" />
 							New Invoice
@@ -2190,12 +2194,6 @@ watch(() => props.clientId, () => {
 			:client-id="clientId"
 			@attached="onContactAttached"
 		/>
-		<ContactsFormModal
-			v-if="client"
-			v-model="showCreateContactModal"
-			:client-id="clientId"
-			@created="onContactCreated"
-		/>
 		<ProjectsFormModal
 			v-if="client"
 			v-model="showCreateProjectModal"
@@ -2207,12 +2205,6 @@ watch(() => props.clientId, () => {
 			v-model="showCreateTicketModal"
 			:client-id="clientId"
 			@created="onTicketCreated"
-		/>
-		<InvoicesFormModal
-			v-if="client"
-			v-model="showCreateInvoiceModal"
-			:defaults="{ client: clientId }"
-			@created="onInvoiceCreated"
 		/>
 
 		<!-- Attach Existing modals — one per entity. All hit the same
@@ -2337,33 +2329,12 @@ watch(() => props.clientId, () => {
 			@attached="onContractAttached"
 		/>
 
-		<ClientOnly>
-			<SchedulerUnifiedEventModal
-				v-if="client"
-				v-model="showCreateMeetingModal"
-				:default-video="true"
-				:client-id="clientId"
-				:client-data="{ id: clientId, name: (client as any).name }"
-				@created="onMeetingCreated"
-				@saved="onMeetingCreated"
-			/>
-		</ClientOnly>
 
 		<!-- Documents create modals open unscoped (the forms pick lead/
 		     contact, which imply the client via the unioned list filter). To
 		     put a specific existing doc under this client, use "Attach Existing"
 		     above — it sets the direct `client` FK (proposals.client +
 		     contracts.client both exist now). -->
-		<ProposalsFormModal
-			v-if="client"
-			v-model="showCreateProposalModal"
-			@created="onProposalCreated"
-		/>
-		<ContractsFormModal
-			v-if="client"
-			v-model="showCreateContractModal"
-			@created="onContractCreated"
-		/>
 	</div>
 </template>
 

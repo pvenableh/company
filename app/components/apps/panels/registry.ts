@@ -40,6 +40,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	task: () => import('./TaskPanel.vue'),
 	'project-event': () => import('./EventPanel.vue'),
 	channel: () => import('./ChannelPanel.vue'),
+	touchpoint: () => import('./TouchpointPanel.vue'),
 	'social-accounts': () => import('./SocialAccountsPanel.vue'),
 	lead: () => import('./LeadPanel.vue'),
 	'lead-automations': () => import('./LeadAutomationsPanel.vue'),

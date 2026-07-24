@@ -12,6 +12,15 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
+// Create mode — host <ProposalsFormModal embedded>. The form does its own
+// post-create edit-hop (pushes proposal:id/edit, which replaces this create
+// panel), so we notify surfaces WITHOUT popping.
+const isCreate = computed(() => props.mode === 'create');
+const { createContext, emitCreated } = useCreatePanel<any, any>('proposal');
+function onProposalCreated(p: any) {
+  emitCreated(p, { pop: false });
+}
+
 const proposal = ref<any | null>(null);
 const { setEntity, entityId, resetEntityContext } = useEntityPageContext();
 
@@ -22,7 +31,7 @@ function onLoaded(p: any) {
   setEntity('proposal', String(p.id), p.title || 'Proposal');
 }
 
-const title = computed(() => proposal.value?.title || 'Proposal');
+const title = computed(() => (isCreate.value ? 'New Proposal' : proposal.value?.title || 'Proposal'));
 const subtitle = computed(() => {
   const o = proposal.value?.organization?.name;
   const c = proposal.value?.contact;
@@ -60,7 +69,7 @@ onBeforeUnmount(() => {
     :flip-from="flipFrom"
     @close="$emit('close')"
   >
-    <template #actions>
+    <template v-if="!isCreate" #actions>
       <NuxtLink
         :to="fullPageHref"
         class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -71,7 +80,7 @@ onBeforeUnmount(() => {
       </NuxtLink>
     </template>
 
-    <template #hero>
+    <template v-if="!isCreate" #hero>
       <div class="flex items-center justify-between gap-3 px-1 py-1.5">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-foreground truncate">
@@ -90,7 +99,15 @@ onBeforeUnmount(() => {
       </div>
     </template>
 
+    <ProposalsFormModal
+      v-if="isCreate"
+      embedded
+      :lead-id="createContext?.leadId ?? null"
+      @created="onProposalCreated"
+    />
+
     <AppsDocumentsProposalWorkspace
+      v-else
       :proposal-id="id"
       compact
       @loaded="onLoaded"
