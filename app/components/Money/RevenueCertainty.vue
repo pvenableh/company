@@ -14,9 +14,13 @@
 import { proposalPursuitState } from '~~/shared/proposals';
 
 const props = defineProps<{
+	/** Banked = collected within the selected period (flow). */
 	paid: number;
 	outstanding: number;
 	overdue: number;
+	/** Compact period label (e.g. "YTD") — annotates the period-scoped Banked
+	 *  tier so it never reads as an as-of-now snapshot. Omit for lifetime. */
+	periodLabel?: string;
 }>();
 
 const { selectedOrg } = useOrganization();
@@ -66,6 +70,7 @@ const pct = (v: number) => `${total.value ? (v / total.value) * 100 : 0}%`;
 			<div>
 				<h3 class="text-sm font-semibold text-foreground/80">Revenue certainty</h3>
 				<p class="text-[11px] text-muted-foreground mt-0.5">Banked → owed → in play → cold · most certain to most speculative</p>
+				<p v-if="periodLabel" class="text-[10px] text-muted-foreground/80 mt-0.5">Banked = collected <span class="font-semibold text-foreground/70">{{ periodLabel }}</span> · owed &amp; pipeline are live</p>
 			</div>
 			<div class="text-right shrink-0">
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">In view</p>
@@ -99,7 +104,7 @@ const pct = (v: number) => `${total.value ? (v / total.value) * 100 : 0}%`;
 		<!-- Roll-up: certain vs pursuit -->
 		<div class="mt-4 pt-4 border-t border-border/50 grid grid-cols-3 gap-3 text-center">
 			<div>
-				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Banked</p>
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Banked<span v-if="periodLabel" class="text-muted-foreground/70"> · {{ periodLabel }}</span></p>
 				<p class="text-base font-bold tabular-nums text-success">{{ num(banked) }}</p>
 			</div>
 			<div>

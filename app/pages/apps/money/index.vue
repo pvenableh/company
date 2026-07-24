@@ -27,6 +27,7 @@
  *   - Detail pages are not rebuilt. Drilling reaches existing routes.
  */
 import type { Invoice } from '~~/shared/directus';
+import { moneyPeriodRange, moneyPeriodMeta, inMoneyPeriod, type MoneyPeriodKey } from '~~/shared/money-period';
 import { useDebounceFn } from '@vueuse/core';
 import { Button } from '~/components/ui/button';
 import { format, startOfWeek, parseISO, isToday as dateFnsIsToday } from 'date-fns';
@@ -134,9 +135,19 @@ const orgPaid = ref(0);
 const orgCurrentOutstanding = ref(0);
 const orgOverdue = ref(0);
 const orgHuntRows = ref<OrgHuntRow[]>([]);
+const orgPayments = ref<{ amount: number; date: string | null }[]>([]);
 const orgPipelineLoading = ref(false);
 const orgPipelineReady = ref(false);
 let orgPipelineLoaded = false;
+
+// Date-period lens — scopes ONLY the flow (collected/banked) number on the
+// Insights floor. Owed/overdue and open pipeline stay live "as of now".
+const moneyPeriod = ref<MoneyPeriodKey>('ytd');
+const collectedInPeriod = computed(() => {
+  const range = moneyPeriodRange(moneyPeriod.value);
+  if (!range.start) return orgPayments.value.reduce((s, p) => s + (Number(p.amount) || 0), 0); // lifetime
+  return orgPayments.value.reduce((s, p) => (inMoneyPeriod(p.date, range) ? s + (Number(p.amount) || 0) : s), 0);
+});
 
 async function fetchOrgPipeline() {
   const orgId = selectedOrg.value;
@@ -144,11 +155,12 @@ async function fetchOrgPipeline() {
   try {
     const invoiceItems = useDirectusItems('invoices');
     const projectItems = useDirectusItems('projects');
+    const paymentItems = useDirectusItems('payments_received');
     const invoiceFilter: any = orgId ? { bill_to: { _eq: orgId } } : {};
     const projectFilter: any = orgId
       ? { organization: { _eq: orgId }, status: { _neq: 'Archived' } }
       : { status: { _neq: 'Archived' } };
-    const [invoices, projects] = await Promise.all([
+    const [invoices, projects, payments] = await Promise.all([
       invoiceItems.list({
         fields: [
           'id', 'invoice_code', 'status', 'total_amount', 'due_date',
@@ -158,6 +170,13 @@ async function fetchOrgPipeline() {
       }).catch(() => []) as Promise<any[]>,
       projectItems.list({
         fields: ['contract_value', 'status'], filter: projectFilter, limit: -1,
+      }).catch(() => []) as Promise<any[]>,
+      // Dated payment ledger → drives the period-scoped "collected" reading.
+      // orgPaymentFilter already excludes test-mode rows; negative rows (refunds)
+      // net out correctly, so the sum is true net collected in the window.
+      paymentItems.list({
+        fields: ['amount', 'date_received', 'date_created'],
+        filter: orgPaymentFilter(orgId), limit: -1,
       }).catch(() => []) as Promise<any[]>,
     ]);
 
@@ -195,6 +214,10 @@ async function fetchOrgPipeline() {
     orgCurrentOutstanding.value = current;
     orgOverdue.value = overdue;
     orgHuntRows.value = hunt;
+    orgPayments.value = (payments || []).map((p: any) => ({
+      amount: Number(p?.amount) || 0,
+      date: p?.date_received || p?.date_created || null,
+    }));
     orgPipelineReady.value = true;
   } catch {
     orgPipelineReady.value = false;
@@ -1728,17 +1751,28 @@ const headerAction = computed(() => {
 
       <!-- ── Insights floor ────────────────────────────────────────────── -->
       <template v-else-if="floor === 'insights'">
-        <!-- Whole money picture in one bar: banked → owed → in play → cold. -->
+        <!-- Period lens — governs the flow (collected/banked) reading below.
+             Owed & pipeline tiers stay live "as of now". -->
+        <div v-if="orgPipelineReady" class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <p class="text-[11px] uppercase tracking-wider text-muted-foreground">Collected over</p>
+          <MoneyPeriodSelect v-model="moneyPeriod" />
+        </div>
+
+        <!-- Whole money picture in one bar: banked → owed → in play → cold.
+             Banked = collected in the selected period; the rest are live. -->
         <MoneyRevenueCertainty
           v-if="orgPipelineReady"
-          :paid="orgPaid"
+          :paid="collectedInPeriod"
           :outstanding="orgCurrentOutstanding"
           :overdue="orgOverdue"
+          :period-label="moneyPeriodMeta(moneyPeriod).short"
           class="mb-5"
         />
 
         <!-- Whole-studio money pipeline: value → paid → to-hunt across every
-             client, with the org-wide hunt list. Leads the Insights floor. -->
+             client, with the org-wide hunt list. Lifetime by nature (total
+             contract value vs collected to date), so it ignores the period. -->
+        <p v-if="orgPipelineReady" class="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Pipeline · lifetime</p>
         <div v-if="orgPipelineReady || orgPipelineLoading" class="grid gap-4 lg:grid-cols-2 mb-5">
           <MoneyPipeline
             :contract-value="orgContractValue"
