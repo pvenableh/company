@@ -28,6 +28,8 @@ export interface DetailFieldDef {
   rows?: number;
   /** Show an "Earnest Suggest" affordance that drafts this field's content. */
   suggest?: boolean;
+  /** In a multi-column layout, span the full row (e.g. a title or textarea). */
+  full?: boolean;
 }
 
 const props = withDefaults(defineProps<{
@@ -38,7 +40,17 @@ const props = withDefaults(defineProps<{
   canEdit?: boolean;
   /** Client id used to ground "Earnest Suggest" brand context (optional). */
   suggestClientId?: string | null;
-}>(), { canEdit: true });
+  /** Lay fields out in this many columns on larger screens (default 1). */
+  columns?: 1 | 2 | 3;
+}>(), { canEdit: true, columns: 1 });
+
+// Single column keeps the original vertical stack; 2/3 columns switch to a
+// responsive grid so short inputs (value, dates, status) sit side-by-side.
+const containerCls = computed(() => {
+  if (props.columns === 2) return 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+  if (props.columns === 3) return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4';
+  return 'space-y-4';
+});
 
 const emit = defineEmits<{ (e: 'updated', patch: Record<string, any>): void }>();
 
@@ -129,8 +141,8 @@ function openUrl(v: string) {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div v-for="f in fields" :key="f.key" class="space-y-1">
+  <div :class="containerCls">
+    <div v-for="f in fields" :key="f.key" class="space-y-1" :class="{ 'sm:col-span-full': f.full && columns !== 1 }">
       <div class="flex items-center gap-2">
         <label class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ f.label }}</label>
         <span v-if="savingKey === f.key" class="text-[10px] text-muted-foreground inline-flex items-center gap-1">

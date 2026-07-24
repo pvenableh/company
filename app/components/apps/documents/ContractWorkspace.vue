@@ -263,6 +263,54 @@ function onDetailsUpdated(patch: Record<string, any>) {
   emit('loaded', contract.value);
 }
 
+// ── External file attachment ──────────────────────────────────────
+// Contracts drafted/signed outside Earnest can be attached here — we upload
+// the file to Directus and set the contract's `file` relation.
+const { upload: uploadDirectusFile } = useDirectusFiles();
+const attachInput = ref<HTMLInputElement | null>(null);
+const attaching = ref(false);
+const attachmentUrl = computed(() =>
+  contract.value?.file?.id ? `${config.public.directusUrl}/assets/${contract.value.file.id}?download` : null,
+);
+
+function pickAttachment() {
+  attachInput.value?.click();
+}
+
+async function onAttachmentSelected(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !contract.value?.id) return;
+  attaching.value = true;
+  try {
+    const res: any = await uploadDirectusFile(file, { title: file.name });
+    const rec = res?.data || res;
+    const fileId = rec?.id;
+    if (!fileId) throw new Error('Upload returned no file id');
+    await contractItems.update(contract.value.id, { file: fileId });
+    contract.value = {
+      ...contract.value,
+      file: { id: fileId, title: rec.title || file.name, type: rec.type || file.type, filesize: rec.filesize },
+    };
+    toast.add({ title: 'File attached', color: 'green' });
+  } catch (err: any) {
+    toast.add({ title: 'Could not attach file', description: err?.data?.message || err?.message, color: 'red' });
+  } finally {
+    attaching.value = false;
+    if (input) input.value = '';
+  }
+}
+
+async function removeAttachment() {
+  if (!contract.value?.id) return;
+  try {
+    await contractItems.update(contract.value.id, { file: null });
+    contract.value = { ...contract.value, file: null };
+  } catch (err: any) {
+    toast.add({ title: 'Could not remove attachment', description: err?.data?.message || err?.message, color: 'red' });
+  }
+}
+
 // Mark-read only when this workspace owns the full page chrome — inside the
 // slide-over the panel owns the read-tracking decision (currently it doesn't
 // mark, matching the InvoiceWorkspace convention).
@@ -381,14 +429,16 @@ if (!props.compact) {
         </div>
       </div>
 
-      <!-- Inline-editable details -->
-      <div class="ios-card p-5 mb-4">
+      <!-- Inline-editable details (view/activity only — Edit mode renders its
+           own columnar details inside the editor pane below). -->
+      <div v-if="mode !== 'edit'" class="ios-card p-5 mb-4">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
         <AppsInlineDetailsEditor
           collection="contracts"
           :item-id="String(contract.id)"
           :model-value="detailValues"
           :fields="detailFields"
+          :columns="2"
           @updated="onDetailsUpdated"
         />
       </div>
@@ -518,62 +568,109 @@ if (!props.compact) {
         <DocumentActivityTimeline collection="contracts" :item-id="String(contract.id)" />
       </div>
 
-      <!-- EDIT mode -->
-      <div v-else class="grid grid-cols-1 gap-6" :class="{ 'lg:grid-cols-3': !compact }">
-        <div class="space-y-4" :class="{ 'lg:col-span-1': !compact }">
-          <div class="ios-card p-5 space-y-3">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Details</p>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Value</p>
-                <p class="font-medium text-foreground">{{ contract.total_value ? `$${Number(contract.total_value).toLocaleString()}` : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Effective</p>
-                <p class="font-medium text-foreground">{{ contract.effective_date ? new Date(contract.effective_date).toLocaleDateString() : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Sent</p>
-                <p class="font-medium text-foreground">{{ contract.date_sent ? new Date(contract.date_sent).toLocaleDateString() : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</p>
-                <p class="font-medium text-foreground">{{ contract.valid_until ? new Date(contract.valid_until).toLocaleDateString() : '—' }}</p>
-              </div>
+      <!-- EDIT mode: editor pane on the left, live document preview on the
+           right (large screens). The preview binds to the in-flight `blocks`
+           so it updates as you compose. -->
+      <div v-else class="grid grid-cols-1 gap-6" :class="{ 'xl:grid-cols-2': !compact }">
+        <!-- Editor pane -->
+        <div class="space-y-5 min-w-0">
+          <!-- Details — columnar inputs for quicker scanning/editing. -->
+          <div class="ios-card p-5">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
+            <AppsInlineDetailsEditor
+              collection="contracts"
+              :item-id="String(contract.id)"
+              :model-value="detailValues"
+              :fields="detailFields"
+              :columns="2"
+              @updated="onDetailsUpdated"
+            />
+          </div>
+
+          <!-- Contact + source proposal -->
+          <div
+            v-if="contract.contact || contract.proposal"
+            class="grid gap-4"
+            :class="{ 'sm:grid-cols-2': contract.contact && contract.proposal }"
+          >
+            <div v-if="contract.contact" class="ios-card p-5 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
+              <p class="text-sm font-medium text-foreground">{{ contract.contact.first_name }} {{ contract.contact.last_name }}</p>
+              <p v-if="contract.contact.email" class="text-xs text-muted-foreground">{{ contract.contact.email }}</p>
+            </div>
+            <div v-if="contract.proposal" class="ios-card p-5">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Source proposal</p>
+              <button type="button" class="text-sm text-primary hover:underline" @click="slideOverStack.push('proposal', String(contract.proposal.id))">
+                {{ contract.proposal.title || 'View proposal' }} &rarr;
+              </button>
             </div>
           </div>
 
-          <div v-if="contract.contact" class="ios-card p-5 space-y-2">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
-            <p class="text-sm font-medium text-foreground">{{ contract.contact.first_name }} {{ contract.contact.last_name }}</p>
-            <p v-if="contract.contact.email" class="text-xs text-muted-foreground">{{ contract.contact.email }}</p>
+          <!-- External file attachment -->
+          <div class="ios-card p-5 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Attachment</p>
+              <span class="text-[10px] text-muted-foreground">For contracts drafted outside Earnest</span>
+            </div>
+            <div v-if="contract.file" class="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+              <EIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-muted-foreground/50 shrink-0" />
+              <div class="min-w-0 flex-1">
+                <a v-if="attachmentUrl" :href="attachmentUrl" target="_blank" rel="noopener" class="block text-sm font-medium text-foreground truncate hover:text-primary">{{ contract.file.title || 'Attachment' }}</a>
+                <p v-else class="text-sm font-medium text-foreground truncate">{{ contract.file.title || 'Attachment' }}</p>
+                <p v-if="contract.file.type" class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ contract.file.type }}</p>
+              </div>
+              <button type="button" class="shrink-0 text-muted-foreground hover:text-destructive transition-colors" title="Remove attachment" @click="removeAttachment">
+                <EIcon name="i-heroicons-trash" class="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              class="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-dashed border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/40 transition-colors disabled:opacity-50"
+              :disabled="attaching"
+              @click="pickAttachment"
+            >
+              <EIcon :name="attaching ? 'lucide:loader-2' : 'lucide:upload'" class="w-3.5 h-3.5" :class="attaching ? 'animate-spin' : ''" />
+              {{ contract.file ? 'Replace file' : 'Attach a file' }}
+            </button>
+            <input ref="attachInput" type="file" class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,application/pdf" @change="onAttachmentSelected" />
           </div>
 
-          <div v-if="contract.proposal" class="ios-card p-5">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Source Proposal</p>
-            <button
-              v-if="compact"
-              type="button"
-              class="text-sm text-primary hover:underline"
-              @click="slideOverStack.push('proposal', String(contract.proposal.id))"
-            >
-              {{ contract.proposal.title || 'View proposal' }} &rarr;
-            </button>
-            <!-- allow-legacy-link — page-mode branch (`v-else` = !compact). Mirrors the compact push above; kept separate so the standalone deep-link route can still pivot to the proposal panel. -->
-            <button type="button" @click="slideOverStack.push('proposal', contract.proposal.id)" v-else class="text-sm text-primary hover:underline">
-              {{ contract.proposal.title || 'View proposal' }} &rarr;
-            </button>
+          <!-- Block composer -->
+          <div class="space-y-3">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contract body</p>
+            <DocumentsBlockComposer
+              :model-value="blocks"
+              applies-to="contracts"
+              :saving="savingBlocks"
+              @update:model-value="onBlocksChange"
+            />
           </div>
         </div>
 
-        <div class="space-y-4" :class="{ 'lg:col-span-2': !compact }">
-          <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contract Body</p>
-          <DocumentsBlockComposer
-            :model-value="blocks"
-            applies-to="contracts"
-            :saving="savingBlocks"
-            @update:model-value="onBlocksChange"
-          />
+        <!-- Live preview pane (large screens only) -->
+        <div v-if="!compact" class="hidden xl:block">
+          <div class="sticky top-4 space-y-2">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Live preview</p>
+            <div class="max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-border/60 bg-muted/10">
+              <DocumentsDocumentShell
+                :seller="contract.organization"
+                wrapper-class="px-6 pt-10 pb-12 w-full proposal contract-doc-preview"
+              >
+                <DocumentsDocumentHeader :seller="seller" :recipient="recipient" :doc="docMeta" />
+                <div v-if="contract.total_value != null" class="mt-6 mb-2 flex items-center justify-between pt-4" style="border-top: 1px solid var(--doc-rule);">
+                  <p class="text-[10px] uppercase tracking-wider opacity-60">Total value</p>
+                  <p class="text-xl font-bold">{{ formatTotal(contract.total_value) }}</p>
+                </div>
+                <div v-if="blocks && blocks.length" class="mt-8">
+                  <DocumentsBlockRenderer :blocks="blocks" :cover="coverContext" />
+                </div>
+                <div v-else class="mt-12 text-center opacity-50 text-sm">
+                  Add blocks to see the preview.
+                </div>
+                <DocumentsDocumentFooter :hidden="hideFooter" />
+              </DocumentsDocumentShell>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -226,6 +226,55 @@ function onDetailsUpdated(patch: Record<string, any>) {
   emit('loaded', proposal.value);
 }
 
+// ── External file attachment ──────────────────────────────────────
+// Proposals drafted outside Earnest can be attached here — we upload the
+// file to Directus and set the proposal's `file` relation. (Earnest-drafted
+// proposals use the block composer instead; this is the escape hatch.)
+const { upload: uploadDirectusFile } = useDirectusFiles();
+const attachInput = ref<HTMLInputElement | null>(null);
+const attaching = ref(false);
+const attachmentUrl = computed(() =>
+  proposal.value?.file?.id ? `${config.public.directusUrl}/assets/${proposal.value.file.id}?download` : null,
+);
+
+function pickAttachment() {
+  attachInput.value?.click();
+}
+
+async function onAttachmentSelected(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !proposal.value?.id) return;
+  attaching.value = true;
+  try {
+    const res: any = await uploadDirectusFile(file, { title: file.name });
+    const rec = res?.data || res;
+    const fileId = rec?.id;
+    if (!fileId) throw new Error('Upload returned no file id');
+    await proposalItems.update(proposal.value.id, { file: fileId });
+    proposal.value = {
+      ...proposal.value,
+      file: { id: fileId, title: rec.title || file.name, type: rec.type || file.type, filesize: rec.filesize },
+    };
+    toast.add({ title: 'File attached', color: 'green' });
+  } catch (err: any) {
+    toast.add({ title: 'Could not attach file', description: err?.data?.message || err?.message, color: 'red' });
+  } finally {
+    attaching.value = false;
+    if (input) input.value = '';
+  }
+}
+
+async function removeAttachment() {
+  if (!proposal.value?.id) return;
+  try {
+    await proposalItems.update(proposal.value.id, { file: null });
+    proposal.value = { ...proposal.value, file: null };
+  } catch (err: any) {
+    toast.add({ title: 'Could not remove attachment', description: err?.data?.message || err?.message, color: 'red' });
+  }
+}
+
 if (!props.compact) {
   useMarkItemRead('proposals', toRef(() => props.proposalId));
 }
@@ -342,14 +391,16 @@ if (!props.compact) {
         <AIProactiveNotices v-if="proposal?.id" entity-type="proposal" :entity-id="String(proposal.id)" />
       </ClientOnly>
 
-      <!-- Inline-editable details -->
-      <div class="ios-card p-5 mb-5">
+      <!-- Inline-editable details (view/activity only — Edit mode renders its
+           own columnar details inside the editor pane below). -->
+      <div v-if="mode !== 'edit'" class="ios-card p-5 mb-5">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
         <AppsInlineDetailsEditor
           collection="proposals"
           :item-id="String(proposal.id)"
           :model-value="detailValues"
           :fields="detailFields"
+          :columns="2"
           @updated="onDetailsUpdated"
         />
       </div>
@@ -414,83 +465,131 @@ if (!props.compact) {
         <DocumentActivityTimeline collection="proposals" :item-id="String(proposal.id)" />
       </div>
 
-      <!-- EDIT mode: composer + sidebar details -->
-      <div v-else class="grid grid-cols-1 gap-6" :class="{ 'lg:grid-cols-3': !compact }">
-        <div class="space-y-4" :class="{ 'lg:col-span-1': !compact }">
-          <div class="ios-card p-5 space-y-3">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Details</p>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Value</p>
-                <p class="font-medium text-foreground">{{ proposal.total_value ? `$${Number(proposal.total_value).toLocaleString()}` : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</p>
-                <p class="font-medium text-foreground">{{ proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString() : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Sent</p>
-                <p class="font-medium text-foreground">{{ proposal.date_sent ? new Date(proposal.date_sent).toLocaleDateString() : '—' }}</p>
-              </div>
-              <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Created</p>
-                <p class="font-medium text-foreground">{{ proposal.date_created ? new Date(proposal.date_created).toLocaleDateString() : '—' }}</p>
-              </div>
+      <!-- EDIT mode: editor pane on the left, live document preview on the
+           right (large screens). The preview binds to the in-flight `blocks`
+           so it updates as you compose. -->
+      <div v-else class="grid grid-cols-1 gap-6" :class="{ 'xl:grid-cols-2': !compact }">
+        <!-- Editor pane -->
+        <div class="space-y-5 min-w-0">
+          <!-- Details — columnar inputs for quicker scanning/editing. -->
+          <div class="ios-card p-5">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
+            <AppsInlineDetailsEditor
+              collection="proposals"
+              :item-id="String(proposal.id)"
+              :model-value="detailValues"
+              :fields="detailFields"
+              :columns="2"
+              @updated="onDetailsUpdated"
+            />
+          </div>
+
+          <!-- Contact + linked lead -->
+          <div
+            v-if="proposal.contact || proposal.lead"
+            class="grid gap-4"
+            :class="{ 'sm:grid-cols-2': proposal.contact && proposal.lead }"
+          >
+            <div v-if="proposal.contact" class="ios-card p-5 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
+              <p class="text-sm font-medium text-foreground">{{ proposal.contact.first_name }} {{ proposal.contact.last_name }}</p>
+              <p v-if="proposal.contact.email" class="text-xs text-muted-foreground">{{ proposal.contact.email }}</p>
+              <p v-if="proposal.contact.phone" class="text-xs text-muted-foreground">{{ proposal.contact.phone }}</p>
+            </div>
+            <div v-if="proposal.lead" class="ios-card p-5">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Linked lead</p>
+              <button type="button" @click="slideOverStack.push('lead', proposal.lead.id)" class="text-sm text-primary hover:underline">
+                View lead &rarr;
+              </button>
             </div>
           </div>
 
-          <div v-if="proposal.contact" class="ios-card p-5 space-y-2">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact</p>
-            <p class="text-sm font-medium text-foreground">{{ proposal.contact.first_name }} {{ proposal.contact.last_name }}</p>
-            <p v-if="proposal.contact.email" class="text-xs text-muted-foreground">{{ proposal.contact.email }}</p>
-            <p v-if="proposal.contact.phone" class="text-xs text-muted-foreground">{{ proposal.contact.phone }}</p>
-          </div>
-
-          <div v-if="proposal.lead" class="ios-card p-5">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Linked Lead</p>
-            <button type="button" @click="slideOverStack.push('lead', proposal.lead.id)" class="text-sm text-primary hover:underline">
-              View lead &rarr;
+          <!-- External file attachment -->
+          <div class="ios-card p-5 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Attachment</p>
+              <span class="text-[10px] text-muted-foreground">For proposals drafted outside Earnest</span>
+            </div>
+            <div v-if="proposal.file" class="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+              <EIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-muted-foreground/50 shrink-0" />
+              <div class="min-w-0 flex-1">
+                <a v-if="attachmentUrl" :href="attachmentUrl" target="_blank" rel="noopener" class="block text-sm font-medium text-foreground truncate hover:text-primary">{{ proposal.file.title || 'Attachment' }}</a>
+                <p v-else class="text-sm font-medium text-foreground truncate">{{ proposal.file.title || 'Attachment' }}</p>
+                <p v-if="proposal.file.type" class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ proposal.file.type }}</p>
+              </div>
+              <button type="button" class="shrink-0 text-muted-foreground hover:text-destructive transition-colors" title="Remove attachment" @click="removeAttachment">
+                <EIcon name="i-heroicons-trash" class="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              class="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-dashed border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/40 transition-colors disabled:opacity-50"
+              :disabled="attaching"
+              @click="pickAttachment"
+            >
+              <EIcon :name="attaching ? 'lucide:loader-2' : 'lucide:upload'" class="w-3.5 h-3.5" :class="attaching ? 'animate-spin' : ''" />
+              {{ proposal.file ? 'Replace file' : 'Attach a file' }}
             </button>
+            <input ref="attachInput" type="file" class="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,application/pdf" @change="onAttachmentSelected" />
           </div>
 
-          <div v-if="proposal.file" class="ios-card p-5 flex items-center gap-3">
-            <EIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-muted-foreground/40 shrink-0" />
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-foreground truncate">{{ proposal.file.title || 'Attachment' }}</p>
-              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ proposal.file.type }}</p>
+          <!-- Block composer -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Proposal content</p>
+              <button
+                class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+                @click="showEarnestDraft = true"
+              >
+                <Icon name="lucide:sparkles" class="w-3 h-3" />
+                Draft with Earnest
+                <AiSpendMark muted />
+              </button>
+            </div>
+            <DocumentsBlockComposer
+              :model-value="blocks"
+              applies-to="proposals"
+              :saving="savingBlocks"
+              @update:model-value="onBlocksChange"
+            />
+
+            <div
+              v-if="proposal.notes && (!blocks || blocks.length === 0)"
+              class="ios-card p-5 mt-2"
+            >
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Notes (legacy)</p>
+              <div class="prose prose-sm dark:prose-invert max-w-none" v-html="proposal.notes" />
+              <p class="text-xs text-muted-foreground mt-3">
+                This proposal was created before the blocks composer. Add blocks above to migrate to the new format —
+                your notes stay until you remove them.
+              </p>
             </div>
           </div>
         </div>
 
-        <div class="space-y-4" :class="{ 'lg:col-span-2': !compact }">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Proposal Content</p>
-            <button
-              class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
-              @click="showEarnestDraft = true"
-            >
-              <Icon name="lucide:sparkles" class="w-3 h-3" />
-              Draft with Earnest
-              <AiSpendMark muted />
-            </button>
-          </div>
-          <DocumentsBlockComposer
-            :model-value="blocks"
-            applies-to="proposals"
-            :saving="savingBlocks"
-            @update:model-value="onBlocksChange"
-          />
-
-          <div
-            v-if="proposal.notes && (!blocks || blocks.length === 0)"
-            class="ios-card p-5 mt-2"
-          >
-            <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Notes (legacy)</p>
-            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="proposal.notes" />
-            <p class="text-xs text-muted-foreground mt-3">
-              This proposal was created before the blocks composer. Add blocks above to migrate to the new format —
-              your notes stay until you remove them.
-            </p>
+        <!-- Live preview pane (large screens only) -->
+        <div v-if="!compact" class="hidden xl:block">
+          <div class="sticky top-4 space-y-2">
+            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Live preview</p>
+            <div class="max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-border/60 bg-muted/10">
+              <DocumentsDocumentShell
+                :seller="proposal.organization"
+                wrapper-class="px-6 pt-10 pb-12 w-full proposal proposal-doc-preview"
+              >
+                <DocumentsDocumentHeader :seller="seller" :recipient="recipient" :doc="docMeta" />
+                <div v-if="proposal.total_value != null" class="mt-6 mb-2 flex items-center justify-between pt-4" style="border-top: 1px solid var(--doc-rule);">
+                  <p class="text-[10px] uppercase tracking-wider opacity-60">Total investment</p>
+                  <p class="text-xl font-bold">{{ formatTotal(proposal.total_value) }}</p>
+                </div>
+                <div v-if="blocks && blocks.length" class="mt-8">
+                  <DocumentsBlockRenderer :blocks="blocks" :cover="coverContext" />
+                </div>
+                <div v-else class="mt-12 text-center opacity-50 text-sm">
+                  Add blocks to see the preview.
+                </div>
+                <DocumentsDocumentFooter :hidden="hideFooter" />
+              </DocumentsDocumentShell>
+            </div>
           </div>
         </div>
       </div>

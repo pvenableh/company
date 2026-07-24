@@ -48,6 +48,7 @@ export function useContracts() {
         'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.phone', 'contact.company',
         'lead.id', 'lead.status',
         'proposal.id', 'proposal.title',
+        'file.id', 'file.title', 'file.type', 'file.filesize',
       ],
     });
   };
