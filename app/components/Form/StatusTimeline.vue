@@ -1,197 +1,117 @@
+<!--
+  StatusTimeline — the app's status control. Renders the shared gradient
+  segmented PILL (same treatment as the ticket status / priority bars): a
+  rounded-full track with a palette-driven lifecycle gradient revealed by a
+  progress mask, one clickable segment per status.
+
+  Props + events are unchanged from the legacy dotted-line version, so every
+  call site (leads / invoices / project events / edit forms) gets the new look
+  without changes. Emits only — the parent persists via @status-change.
+-->
 <template>
-	<div class="w-full flex items-center justify-center px-8 md:px-20">
-		<div class="relative flex w-full items-center justify-between max-w-[600px]">
-			<!-- Background track -->
-			<div class="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 transform -translate-y-1/2"></div>
-
-			<!-- Colored progress bar -->
+	<div class="w-full">
+		<div class="relative">
 			<div
-				class="absolute top-1/2 left-0 h-1 transform -translate-y-1/2"
-				:style="{
-					width: `${(statusIndex / (statuses.length - 1)) * 100}%`,
-					backgroundImage: progressGradient,
-				}"
-			></div>
-
-			<!-- Status points -->
-			<div
-				v-for="(status, index) in statuses"
-				:key="status.id || status"
-				class="relative flex-shrink-0 w-4 h-4 border-4 rounded-full flex items-center justify-center transition-all duration-300 bg-gray-100"
-				:class="[
-					statusIndex >= index
-						? 'shadow cursor-pointer hover:scale-110'
-						: 'border-gray-200 cursor-pointer hover:border-gray-400 hover:scale-110',
-					currentStatus === (status.id || status) ? 'scale-125' : '',
-				]"
-				:style="getBorderColorStyle(index, statusIndex >= index)"
-				:title="status.name || status"
-				@click="handleStatusClick(status.id || status, index)"
-				:data-status="status.id || status"
+				class="segmented-track relative flex items-center rounded-full overflow-hidden h-6"
+				:class="{ 'opacity-60 pointer-events-none': loading }"
 			>
-				<!-- Animate current status point -->
+				<!-- Full-width gradient background -->
+				<div class="absolute inset-0 w-full h-full" :style="{ background: effectiveGradient }"></div>
+
+				<!-- Mask that hides the not-yet-reached portion. -->
 				<div
-					class="absolute w-5 h-5 border-4 rounded-full flex items-center justify-center animate-ping"
-					:style="getBorderColorStyle(index, statusIndex >= index)"
-					v-if="currentStatus === (status.id || status)"
+					class="absolute inset-0 bg-muted dark:bg-gray-700 h-full transition-all duration-300 origin-right"
+					:style="{ width: `${100 - progressWidth}%`, right: 0, left: 'auto' }"
 				></div>
 
-				<!-- Status label -->
-				<span
-					class="absolute text-[10px] top-full uppercase mt-2 w-[60px] text-center whitespace-normal"
-					:style="{ left: '-22px' }"
-				>
-					{{ status.name || status }}
-				</span>
+				<!-- Segments -->
+				<div class="relative flex w-full h-full z-10">
+					<button
+						v-for="(status, index) in normalizedStatuses"
+						:key="status.id"
+						type="button"
+						class="segmented-step flex-1 min-w-0 h-full flex items-center justify-center cursor-pointer uppercase !text-[9px] px-1 transition-colors"
+						:class="statusIndex >= index ? 'text-white font-medium' : 'text-gray-600 dark:text-gray-400'"
+						:title="status.name"
+						:disabled="loading"
+						@click="handleStatusClick(status.id, index)"
+					>
+						<span class="truncate">{{ status.name }}</span>
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
-	/**
-	 * Array of status objects or strings
-	 * If objects, each should have at least id and name properties
-	 * If strings, they will be used as both id and display name
-	 */
 	statuses: {
 		type: Array,
 		default: () => ['Pending', 'Scheduled', 'In Progress', 'Completed'],
 		required: true,
 	},
-	/**
-	 * Current status value (string id or status object)
-	 */
-	currentStatus: {
-		type: String,
-		default: 'Pending',
-	},
-	/**
-	 * Background gradient for the progress bar
-	 */
-	gradient: {
-		type: String,
-		default: 'linear-gradient(to right, var(--cyan), var(--green))',
-	},
-	/**
-	 * Optional collection/table name for the item being updated
-	 */
-	collection: {
-		type: String,
-		default: null,
-	},
-	/**
-	 * Optional item ID being updated
-	 */
-	itemId: {
-		type: String,
-		default: null,
-	},
-	/**
-	 * Whether the timeline is in loading state
-	 */
-	loading: {
-		type: Boolean,
-		default: false,
-	},
+	currentStatus: { type: String, default: 'Pending' },
+	/** Optional gradient override. Empty → the shared palette lifecycle gradient. */
+	gradient: { type: String, default: '' },
+	collection: { type: String, default: null },
+	itemId: { type: String, default: null },
+	loading: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:currentStatus', 'status-change', 'click']);
 
-// Local state
 const isUpdating = ref(false);
-const { getStatusAccent } = useStatusStyle();
+const { statusGradient } = useStatusStyle();
 
-// Computed values for handling both string and object status arrays
-const normalizedStatuses = computed(() => {
-	return props.statuses.map((status) => {
-		if (typeof status === 'string') {
-			return { id: status, name: status };
-		}
-		return status;
-	});
-});
+const normalizedStatuses = computed(() =>
+	props.statuses.map((s) => (typeof s === 'string' ? { id: s, name: s } : s)),
+);
 
-// Get the index of current status
 const statusIndex = computed(() => {
-	const index = normalizedStatuses.value.findIndex((s) => s.id === props.currentStatus);
-	return index === -1 ? 0 : index;
+	const i = normalizedStatuses.value.findIndex((s) => s.id === props.currentStatus);
+	return i === -1 ? 0 : i;
 });
 
-// Build gradient from status accent colors
-const progressGradient = computed(() => {
-	const colors = normalizedStatuses.value.map((s) => getStatusAccent(s.id));
-	return `linear-gradient(to right, ${colors.join(', ')})`;
+// Fill up to and including the current segment.
+const progressWidth = computed(() => {
+	const n = normalizedStatuses.value.length;
+	if (!n) return 0;
+	return ((statusIndex.value + 1) / n) * 100;
 });
 
-const getBorderColorClass = (index, isActive) => {
-	if (!isActive) return 'border-gray-200';
-	// Return empty — we use inline style for border color instead
-	return '';
-};
+const effectiveGradient = computed(() => props.gradient || statusGradient);
 
-const getBorderColorStyle = (index, isActive) => {
-	if (!isActive) return {};
-	const status = normalizedStatuses.value[index];
-	if (!status) return {};
-	return { borderColor: getStatusAccent(status.id) };
-};
-
-// Handle status click
-const handleStatusClick = async (statusId, index) => {
-	if (props.loading || isUpdating.value) return;
-
-	// Don't do anything if clicking current status
-	if (statusId === props.currentStatus) return;
-
+async function handleStatusClick(statusId, index) {
+	if (props.loading || isUpdating.value || statusId === props.currentStatus) return;
 	isUpdating.value = true;
-
 	try {
-		// Emit both the update event for v-model and a more detailed event
 		emit('update:currentStatus', statusId);
-		emit('status-change', {
-			oldStatus: props.currentStatus,
-			newStatus: statusId,
-			collection: props.collection,
-			itemId: props.itemId,
-		});
-
-		// Also emit a generic click event with status info
-		emit('click', {
-			status: statusId,
-			index,
-			collection: props.collection,
-			itemId: props.itemId,
-		});
-	} catch (error) {
-		console.error('Error updating status:', error);
+		emit('status-change', { oldStatus: props.currentStatus, newStatus: statusId, collection: props.collection, itemId: props.itemId });
+		emit('click', { status: statusId, index, collection: props.collection, itemId: props.itemId });
 	} finally {
 		isUpdating.value = false;
 	}
-};
+}
 </script>
 
 <style scoped>
-/* Optional animation for status changes */
-@keyframes pulse {
-	0% {
-		transform: scale(1);
-		opacity: 1;
-	}
-	50% {
-		transform: scale(1.1);
-		opacity: 0.8;
-	}
-	100% {
-		transform: scale(1);
-		opacity: 1;
-	}
+.segmented-track {
+	background-color: rgba(229, 231, 235, 0.5);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
-
-.animate-pulse {
-	animation: pulse 1.5s infinite;
+.segmented-step::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	top: 25%;
+	height: 50%;
+	width: 1px;
+	background-color: rgba(209, 213, 219, 0.5);
+	z-index: 10;
 }
+.segmented-step:last-child::after { display: none; }
+.segmented-step:hover { background-color: rgba(0, 0, 0, 0.05); }
 </style>

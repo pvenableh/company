@@ -562,8 +562,8 @@ function openContactPivot() {
 				</ClientOnly>
 
 				<!-- Pipeline Stage Timeline -->
-				<div class="ios-card p-4 pb-10" :class="!compact && 'mb-6'">
-					<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-4">Pipeline Stage</p>
+				<div class="ios-card p-4" :class="!compact && 'mb-6'">
+					<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-3">Pipeline Stage</p>
 					<FormStatusTimeline
 						:currentStatus="lead.stage"
 						:statuses="stageStatuses"
