@@ -15,7 +15,7 @@
 						: 'border-border hover:border-primary'"
 					:title="isCompleted ? 'Mark incomplete' : 'Mark complete'"
 				>
-					<UIcon v-if="isCompleted" name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+					<EIcon v-if="isCompleted" name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 				</div>
 			</button>
 
@@ -41,12 +41,12 @@
 						class="text-[10px] flex items-center gap-0.5"
 						:class="dueDateTextClass"
 					>
-						<UIcon
+						<EIcon
 							v-if="dueDateUrgency === 'past' || dueDateUrgency === 'urgent'"
 							name="i-heroicons-exclamation-triangle"
 							class="w-2.5 h-2.5"
 						/>
-						<UIcon v-else name="i-heroicons-calendar" class="w-2.5 h-2.5" />
+						<EIcon v-else name="i-heroicons-calendar" class="w-2.5 h-2.5" />
 						{{ formatDueDate(task.due_date) }}
 					</span>
 				</div>
@@ -54,8 +54,8 @@
 
 			<!-- Assignee avatar -->
 			<div v-if="assignee" class="shrink-0">
-				<UTooltip :text="assigneeName">
-					<UAvatar
+				<ETooltip :text="assigneeName">
+					<EAvatar
 						v-if="assigneeAvatar"
 						:src="assigneeAvatar"
 						:alt="assigneeName"
@@ -67,7 +67,7 @@
 					>
 						{{ assigneeInitial }}
 					</div>
-				</UTooltip>
+				</ETooltip>
 			</div>
 		</div>
 	</div>

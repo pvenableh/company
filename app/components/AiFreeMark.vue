@@ -32,7 +32,7 @@ const explain = 'No AI tokens — computed from your own data, not a language mo
     :aria-label="explain"
     role="img"
   >
-    <UIcon name="i-lucide-database" class="w-3 h-3" />
+    <EIcon name="i-lucide-database" class="w-3 h-3" />
     <span v-if="label" class="text-[10px] font-medium uppercase tracking-wider">{{ label }}</span>
   </span>
 </template>

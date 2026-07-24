@@ -82,14 +82,14 @@ const composerHint = computed(() => {
           </div>
         </div>
         <div class="flex items-center gap-1">
-          <UButton
+          <EButton
             variant="ghost"
             size="sm"
             :icon="thread.archived ? 'i-lucide-archive-restore' : 'i-lucide-archive'"
             @click="emit('archive', !thread.archived)"
           >
             {{ thread.archived ? 'Restore' : 'Archive' }}
-          </UButton>
+          </EButton>
         </div>
       </div>
 

@@ -465,7 +465,7 @@ onMounted(async () => {
 				<div class="bg-card rounded-xl border border-border overflow-hidden">
 					<!-- Tabs + Search -->
 					<div class="p-4 border-b border-border">
-						<UTabs
+						<ETabs
 							v-model="activeTab"
 							:items="tabItems"
 							class="mb-3 w-fit"
@@ -484,7 +484,7 @@ onMounted(async () => {
 					</div>
 
 					<div v-else-if="contacts.length === 0" class="p-8 text-center text-muted-foreground">
-						<UIcon name="i-heroicons-identification" class="w-10 h-10 mx-auto mb-2" />
+						<EIcon name="i-heroicons-identification" class="w-10 h-10 mx-auto mb-2" />
 						<p class="text-sm">No contacts found</p>
 					</div>
 
@@ -592,31 +592,31 @@ onMounted(async () => {
 									Card Desk
 								</a>
 								<button @click="closeDetail" class="text-muted-foreground hover:text-foreground">
-									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+									<EIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 								</button>
 							</div>
 						</div>
 
 						<div class="space-y-1.5 text-xs text-muted-foreground">
 							<div v-if="selectedContact.company" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.company }}</span>
 							</div>
 							<div v-if="selectedContact.title" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-briefcase" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-briefcase" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.title }}</span>
 							</div>
 							<div v-if="selectedContact.email" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-envelope" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-envelope" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.email }}</span>
 							</div>
 							<div v-if="selectedContact.phone" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-phone" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-phone" class="w-3.5 h-3.5" />
 								<span>{{ selectedContact.phone }}</span>
 							</div>
 							<!-- Industry — editable inline from the header (free-text varchar). -->
 							<div class="flex items-center gap-2">
-								<UIcon name="i-heroicons-tag" class="w-3.5 h-3.5 shrink-0" />
+								<EIcon name="i-heroicons-tag" class="w-3.5 h-3.5 shrink-0" />
 								<select
 									:value="selectedContact.industry || ''"
 									:disabled="savingPatch"
@@ -628,7 +628,7 @@ onMounted(async () => {
 								</select>
 							</div>
 							<div v-if="selectedContact.met_at" class="flex items-center gap-2">
-								<UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5" />
 								<span>Met at: {{ selectedContact.met_at }}</span>
 							</div>
 						</div>
@@ -737,7 +737,7 @@ onMounted(async () => {
 										: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
 									@click="toggleClient"
 								>
-									<UIcon name="i-heroicons-trophy" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+									<EIcon name="i-heroicons-trophy" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
 									{{ selectedContact.is_client ? 'Client ✓' : 'Mark as client' }}
 								</button>
 								<button
@@ -749,7 +749,7 @@ onMounted(async () => {
 										: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
 									@click="toggleHibernated"
 								>
-									<UIcon name="i-heroicons-moon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+									<EIcon name="i-heroicons-moon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
 									{{ selectedContact.hibernated ? 'Hibernated' : 'Hibernate' }}
 								</button>
 							</div>
@@ -764,7 +764,7 @@ onMounted(async () => {
 					<div v-if="plansLoading || taskGroups.length" class="p-4 border-b border-border">
 						<div class="flex items-center justify-between mb-3">
 							<h4 class="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider flex items-center gap-1.5">
-								<UIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
 								Plans &amp; Tasks
 							</h4>
 							<span
@@ -787,7 +787,7 @@ onMounted(async () => {
 										class="flex items-start gap-2 text-xs rounded-lg border border-border/60 bg-card px-2.5 py-2"
 										:class="{ 'opacity-55': t.status !== 'pending' }"
 									>
-										<UIcon
+										<EIcon
 											:name="t.status === 'done' ? 'i-heroicons-check-circle' : t.status === 'skipped' ? 'i-heroicons-no-symbol' : (taskChannelIcons[t.channel || 'other'] || taskChannelIcons.other)"
 											class="w-3.5 h-3.5 shrink-0 mt-0.5"
 											:class="t.status === 'done' ? 'text-success' : 'text-muted-foreground'"
@@ -919,7 +919,7 @@ onMounted(async () => {
 					<!-- Needs Follow-up — the "who to reconnect with" list leads the panel. -->
 					<div v-if="stats.needsFollowUp.length > 0" class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-							<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
+							<EIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
 							Needs Follow-up
 						</h3>
 						<div class="space-y-2">
@@ -944,7 +944,7 @@ onMounted(async () => {
 					<!-- Conversion Stats -->
 					<div class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-							<UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-success" />
+							<EIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-success" />
 							Conversion Tracking
 						</h3>
 						<div class="space-y-3">
@@ -974,7 +974,7 @@ onMounted(async () => {
 					<!-- Recent Activity -->
 					<div v-if="stats.recentActivity.length > 0" class="bg-card rounded-xl p-4 border border-border">
 						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-							<UIcon name="i-heroicons-clock" class="w-4 h-4 text-blue-500" />
+							<EIcon name="i-heroicons-clock" class="w-4 h-4 text-blue-500" />
 							Recent Activity
 						</h3>
 						<div class="space-y-2">

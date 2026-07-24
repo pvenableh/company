@@ -510,18 +510,18 @@ onMounted(() => {
 						</p>
 					</div>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<UFormGroup label="Default Duration">
-							<USelect v-model="form.default_duration" :options="durationOptions" />
-						</UFormGroup>
-						<UFormGroup label="Buffer Before (min)">
-							<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
-						</UFormGroup>
-						<UFormGroup label="Buffer After (min)">
-							<UInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
-						</UFormGroup>
-						<UFormGroup label="Timezone">
-							<USelect v-model="form.timezone" :options="timezoneOptions" />
-						</UFormGroup>
+						<EFormGroup label="Default Duration">
+							<ESelect v-model="form.default_duration" :options="durationOptions" />
+						</EFormGroup>
+						<EFormGroup label="Buffer Before (min)">
+							<EInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
+						</EFormGroup>
+						<EFormGroup label="Buffer After (min)">
+							<EInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
+						</EFormGroup>
+						<EFormGroup label="Timezone">
+							<ESelect v-model="form.timezone" :options="timezoneOptions" />
+						</EFormGroup>
 					</div>
 					<div class="flex justify-end pt-3 border-t border-border/30">
 						<Button size="sm" :disabled="saving" @click="saveSettings">
@@ -620,14 +620,14 @@ onMounted(() => {
 							class="flex items-center gap-3 py-2.5 border-b border-border/30 last:border-b-0 flex-wrap"
 						>
 							<div class="w-28 shrink-0">
-								<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
+								<ECheckbox v-model="availability[day.value].enabled" :label="day.label" />
 							</div>
 							<template v-if="availability[day.value].enabled">
-								<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
+								<EInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
 								<span class="text-muted-foreground text-xs">to</span>
-								<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
+								<EInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
 								<span class="text-muted-foreground text-xs ml-2">Break:</span>
-								<UInput
+								<EInput
 									v-model="availability[day.value].breakStart"
 									type="time"
 									class="w-24"
@@ -635,7 +635,7 @@ onMounted(() => {
 									placeholder="Start"
 								/>
 								<span class="text-muted-foreground text-xs">–</span>
-								<UInput
+								<EInput
 									v-model="availability[day.value].breakEnd"
 									type="time"
 									class="w-24"
@@ -665,27 +665,27 @@ onMounted(() => {
 								Your public scheduling page that clients can use to book meetings.
 							</p>
 						</div>
-						<UFormGroup label="Enable">
-							<UToggle v-model="form.public_booking_enabled" />
-						</UFormGroup>
+						<EFormGroup label="Enable">
+							<EToggle v-model="form.public_booking_enabled" />
+						</EFormGroup>
 					</div>
 
-					<UFormGroup label="Booking page URL" :hint="bookingUrlReady ? null : 'Pick an active organization to generate a URL'">
+					<EFormGroup label="Booking page URL" :hint="bookingUrlReady ? null : 'Pick an active organization to generate a URL'">
 						<div class="flex gap-2">
-							<UInput :model-value="bookingUrl" readonly class="flex-1 font-mono text-xs" />
-							<UButton color="gray" icon="i-heroicons-clipboard" :disabled="!bookingUrlReady" @click="copyBookingLink" />
-							<UButton color="gray" icon="i-heroicons-arrow-top-right-on-square" :disabled="!bookingUrlReady" :to="bookingUrlReady ? bookingUrl : undefined" target="_blank" />
+							<EInput :model-value="bookingUrl" readonly class="flex-1 font-mono text-xs" />
+							<EButton color="gray" icon="i-heroicons-clipboard" :disabled="!bookingUrlReady" @click="copyBookingLink" />
+							<EButton color="gray" icon="i-heroicons-arrow-top-right-on-square" :disabled="!bookingUrlReady" :to="bookingUrlReady ? bookingUrl : undefined" target="_blank" />
 						</div>
-					</UFormGroup>
-					<UFormGroup label="Custom URL slug" hint="The user portion of the URL. Leave empty to use your user ID. Org slug is set in Organization settings.">
-						<UInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
-					</UFormGroup>
-					<UFormGroup label="Page title">
-						<UInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
-					</UFormGroup>
-					<UFormGroup label="Page description">
-						<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
-					</UFormGroup>
+					</EFormGroup>
+					<EFormGroup label="Custom URL slug" hint="The user portion of the URL. Leave empty to use your user ID. Org slug is set in Organization settings.">
+						<EInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
+					</EFormGroup>
+					<EFormGroup label="Page title">
+						<EInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
+					</EFormGroup>
+					<EFormGroup label="Page description">
+						<ETextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
+					</EFormGroup>
 					<div class="flex justify-end pt-3 border-t border-border/30">
 						<Button size="sm" :disabled="saving" @click="saveSettings">
 							<Icon v-if="saving" name="lucide:loader-2" class="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -703,27 +703,27 @@ onMounted(() => {
 						</p>
 					</div>
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-						<UFormGroup label="Event type">
+						<EFormGroup label="Event type">
 							<select v-model="embedEventTypeSlug" class="glass-field w-full rounded-full px-3 py-2 text-sm">
 								<option value="">Default (host's pick)</option>
 								<option v-for="et in eventTypes" :key="et.id" :value="et.slug">{{ et.title }}</option>
 							</select>
-						</UFormGroup>
-						<UFormGroup label="Button label">
-							<UInput v-model="embedLabel" placeholder="Book a call" />
-						</UFormGroup>
-						<UFormGroup label="Accent color">
-							<UInput v-model="embedColor" type="color" />
-						</UFormGroup>
+						</EFormGroup>
+						<EFormGroup label="Button label">
+							<EInput v-model="embedLabel" placeholder="Book a call" />
+						</EFormGroup>
+						<EFormGroup label="Accent color">
+							<EInput v-model="embedColor" type="color" />
+						</EFormGroup>
 					</div>
 					<div class="flex gap-2">
-						<UTextarea
+						<ETextarea
 							:model-value="embedSnippet"
 							readonly
 							:rows="3"
 							class="flex-1 font-mono text-xs"
 						/>
-						<UButton color="gray" icon="i-heroicons-clipboard" @click="copyEmbedSnippet" />
+						<EButton color="gray" icon="i-heroicons-clipboard" @click="copyEmbedSnippet" />
 					</div>
 					<details class="text-xs text-muted-foreground">
 						<summary class="cursor-pointer select-none">Advanced: imperative API</summary>
@@ -744,8 +744,8 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 						</p>
 					</div>
 					<div class="flex gap-2">
-						<UTextarea :model-value="cardEmbedSnippet" readonly :rows="2" class="flex-1 font-mono text-xs" />
-						<UButton color="gray" icon="i-heroicons-clipboard" @click="copyCardEmbed" />
+						<ETextarea :model-value="cardEmbedSnippet" readonly :rows="2" class="flex-1 font-mono text-xs" />
+						<EButton color="gray" icon="i-heroicons-clipboard" @click="copyCardEmbed" />
 					</div>
 					<p class="text-xs text-muted-foreground">
 						Want a button instead? Add <code>data-mode="popup" data-label="Book a Call"</code> to the div to open the card in a modal.
@@ -761,8 +761,8 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 						<div class="flex items-center justify-between mb-1">
 							<h2 class="text-base font-semibold">Connected calendars</h2>
 							<div class="flex gap-2">
-								<UButton color="gray" size="xs" icon="i-simple-icons-google" @click="connectGoogle">Add Google</UButton>
-								<UButton color="gray" size="xs" icon="i-simple-icons-microsoftoutlook" @click="connectOutlook">Add Outlook</UButton>
+								<EButton color="gray" size="xs" icon="i-simple-icons-google" @click="connectGoogle">Add Google</EButton>
+								<EButton color="gray" size="xs" icon="i-simple-icons-microsoftoutlook" @click="connectOutlook">Add Outlook</EButton>
 							</div>
 						</div>
 						<p class="text-xs text-muted-foreground mb-3">
@@ -781,7 +781,7 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 							>
 								<div class="flex items-center gap-3">
 									<span class="w-3 h-3 rounded-full shrink-0" :style="{ background: conn.color || '#888' }" />
-									<UIcon
+									<EIcon
 										:name="conn.provider === 'google' ? 'i-simple-icons-google' : 'i-simple-icons-microsoftoutlook'"
 										class="w-4 h-4 shrink-0 text-muted-foreground"
 									/>
@@ -789,19 +789,19 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 										<div class="text-sm font-medium truncate">{{ conn.display_name || conn.account_email || 'Calendar' }}</div>
 										<div v-if="conn.account_email && conn.account_email !== conn.display_name" class="text-[11px] text-muted-foreground truncate">{{ conn.account_email }}</div>
 									</div>
-									<UButton color="red" variant="soft" size="xs" @click="removeConnection(conn)">Disconnect</UButton>
+									<EButton color="red" variant="soft" size="xs" @click="removeConnection(conn)">Disconnect</EButton>
 								</div>
 								<div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pl-6">
 									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
-										<UToggle :model-value="conn.blocks_availability" size="2xs" @update:model-value="(v) => updateConnection(conn, { blocks_availability: v })" />
+										<EToggle :model-value="conn.blocks_availability" size="2xs" @update:model-value="(v) => updateConnection(conn, { blocks_availability: v })" />
 										Blocks availability
 									</label>
 									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
-										<UToggle :model-value="conn.show_on_calendar" size="2xs" @update:model-value="(v) => updateConnection(conn, { show_on_calendar: v })" />
+										<EToggle :model-value="conn.show_on_calendar" size="2xs" @update:model-value="(v) => updateConnection(conn, { show_on_calendar: v })" />
 										Show on calendar
 									</label>
 									<label class="flex items-center gap-1.5 text-xs cursor-pointer">
-										<UToggle :model-value="conn.is_write_target" size="2xs" @update:model-value="(v) => updateConnection(conn, { is_write_target: v })" />
+										<EToggle :model-value="conn.is_write_target" size="2xs" @update:model-value="(v) => updateConnection(conn, { is_write_target: v })" />
 										Add bookings here
 									</label>
 									<div class="flex items-center gap-1">
@@ -824,7 +824,7 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-3">
 								<div class="w-10 h-10 bg-tag-7/10 rounded-lg flex items-center justify-center">
-									<UIcon name="i-heroicons-rss" class="w-5 h-5 text-tag-7" />
+									<EIcon name="i-heroicons-rss" class="w-5 h-5 text-tag-7" />
 								</div>
 								<div>
 									<div class="font-medium text-sm">iCal feed</div>
@@ -836,12 +836,12 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 							Use this URL to subscribe to your Earnest calendar from Apple Calendar, Google Calendar, or any other app that supports iCal feeds.
 						</p>
 						<div class="flex gap-2 mb-2">
-							<UInput :model-value="icalFeedUrl" readonly size="sm" class="flex-1 text-xs font-mono" />
-							<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyICalUrl">Copy</UButton>
+							<EInput :model-value="icalFeedUrl" readonly size="sm" class="flex-1 text-xs font-mono" />
+							<EButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyICalUrl">Copy</EButton>
 						</div>
-						<UButton size="xs" color="gray" variant="soft" @click="regenerateICalToken">
+						<EButton size="xs" color="gray" variant="soft" @click="regenerateICalToken">
 							Regenerate token
-						</UButton>
+						</EButton>
 						<p class="text-[10px] text-muted-foreground mt-2">
 							Regenerating the token will invalidate the previous URL. Anyone subscribed with the old URL will need the new one.
 						</p>
@@ -858,15 +858,15 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 							Pick which transactional emails Earnest sends on your behalf.
 						</p>
 					</div>
-					<UFormGroup label="Send confirmation emails" hint="Send email when a meeting is booked">
-						<UToggle v-model="form.send_confirmations" />
-					</UFormGroup>
-					<UFormGroup label="Send reminder emails" hint="Send reminder before meetings">
-						<UToggle v-model="form.send_reminders" />
-					</UFormGroup>
-					<UFormGroup v-if="form.send_reminders" label="Reminder time">
-						<USelect v-model="form.reminder_time" :options="reminderOptions" />
-					</UFormGroup>
+					<EFormGroup label="Send confirmation emails" hint="Send email when a meeting is booked">
+						<EToggle v-model="form.send_confirmations" />
+					</EFormGroup>
+					<EFormGroup label="Send reminder emails" hint="Send reminder before meetings">
+						<EToggle v-model="form.send_reminders" />
+					</EFormGroup>
+					<EFormGroup v-if="form.send_reminders" label="Reminder time">
+						<ESelect v-model="form.reminder_time" :options="reminderOptions" />
+					</EFormGroup>
 					<div class="flex justify-end pt-3 border-t border-border/30">
 						<Button size="sm" :disabled="saving" @click="saveSettings">
 							<Icon v-if="saving" name="lucide:loader-2" class="w-3.5 h-3.5 mr-1 animate-spin" />

@@ -11,11 +11,11 @@
 
 		<transition name="fade">
 			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 comments-system__connection">
-				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+				<EAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
-						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
+						<EButton size="sm" color="yellow" @click="refreshData">Retry Connection</EButton>
 					</template>
-				</UAlert>
+				</EAlert>
 			</div>
 		</transition>
 

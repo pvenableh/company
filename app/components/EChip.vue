@@ -5,9 +5,9 @@
  * Renders a small badge/count indicator relative to its slot content.
  *
  * Usage:
- *   <UChip :text="5" size="sm">
- *     <UIcon name="i-heroicons-bell" />
- *   </UChip>
+ *   <EChip :text="5" size="sm">
+ *     <EIcon name="i-heroicons-bell" />
+ *   </EChip>
  */
 
 import { cn } from "@/lib/utils";

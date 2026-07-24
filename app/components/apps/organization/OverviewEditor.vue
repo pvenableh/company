@@ -385,9 +385,9 @@ async function saveContact() {
 							:organization-id="org.id || ''"
 						/>
 
-						<UFormGroup label="Location">
-							<UInput v-model="brandForm.location" placeholder="City, region, or Remote / Global" />
-						</UFormGroup>
+						<EFormGroup label="Location">
+							<EInput v-model="brandForm.location" placeholder="City, region, or Remote / Global" />
+						</EFormGroup>
 
 						<div class="flex justify-end">
 							<Button size="sm" :disabled="savingBrand" @click="saveBrand">
@@ -411,14 +411,14 @@ async function saveContact() {
 					</h3>
 
 					<div class="space-y-3">
-						<UFormGroup label="Name" required>
-							<UInput v-model="infoForm.name" placeholder="Organization name" />
-						</UFormGroup>
-						<UFormGroup
+						<EFormGroup label="Name" required>
+							<EInput v-model="infoForm.name" placeholder="Organization name" />
+						</EFormGroup>
+						<EFormGroup
 							label="Booking URL slug"
 							:error="infoForm.slug && !slugValid ? 'Use 2–40 lowercase letters, numbers, or hyphens.' : undefined"
 						>
-							<UInput v-model="infoForm.slug" placeholder="your-org" class="font-mono" />
+							<EInput v-model="infoForm.slug" placeholder="your-org" class="font-mono" />
 							<template #hint>
 								<span class="text-[10px] text-muted-foreground">The org portion of your public booking link.</span>
 							</template>
@@ -428,8 +428,8 @@ async function saveContact() {
 							<p v-if="slugChanged && org?.slug" class="mt-1 text-[11px] text-amber-600 dark:text-amber-500">
 								Changing this breaks any booking links that use the old slug ({{ org.slug }}).
 							</p>
-						</UFormGroup>
-						<UFormGroup label="Industry">
+						</EFormGroup>
+						<EFormGroup label="Industry">
 							<select
 								v-model="infoForm.industry"
 								class="w-full rounded-full border bg-background px-3 py-2 text-sm"
@@ -437,36 +437,36 @@ async function saveContact() {
 								<option value="">Select industry…</option>
 								<option v-for="ind in industries" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
 							</select>
-						</UFormGroup>
-						<UFormGroup label="Website">
-							<UInput v-model="infoForm.website" placeholder="https://example.com" />
-						</UFormGroup>
-						<UFormGroup label="Notes">
-							<UTextarea
+						</EFormGroup>
+						<EFormGroup label="Website">
+							<EInput v-model="infoForm.website" placeholder="https://example.com" />
+						</EFormGroup>
+						<EFormGroup label="Notes">
+							<ETextarea
 								v-model="infoForm.notes"
 								placeholder="Organization description or notes"
 								:rows="2"
 								autoresize
 							/>
-						</UFormGroup>
-						<UFormGroup label="Brand Color">
+						</EFormGroup>
+						<EFormGroup label="Brand Color">
 							<div class="flex items-center gap-3">
 								<input
 									v-model="infoForm.brand_color"
 									type="color"
 									class="w-8 h-8 rounded cursor-pointer border border-gray-200"
 								/>
-								<UInput v-model="infoForm.brand_color" placeholder="#000000" class="flex-1" />
+								<EInput v-model="infoForm.brand_color" placeholder="#000000" class="flex-1" />
 							</div>
-						</UFormGroup>
-						<UFormGroup label="Active">
+						</EFormGroup>
+						<EFormGroup label="Active">
 							<div class="flex items-center gap-3">
-								<UToggle v-model="infoForm.active" />
+								<EToggle v-model="infoForm.active" />
 								<span class="text-xs text-muted-foreground">
 									{{ infoForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
 								</span>
 							</div>
-						</UFormGroup>
+						</EFormGroup>
 
 						<!-- Feature toggles (Goals / Weather / Teams) moved to the
 						     Settings floor → "Features" so they're discoverable
@@ -491,29 +491,29 @@ async function saveContact() {
 					</h3>
 
 					<div class="space-y-3">
-						<UFormGroup label="Email">
-							<UInput
+						<EFormGroup label="Email">
+							<EInput
 								v-model="contactForm.email"
 								type="email"
 								placeholder="billing@example.com"
 							/>
-						</UFormGroup>
-						<UFormGroup label="Phone">
-							<UInput v-model="contactForm.phone" placeholder="+1 (555) 000-0000" />
-						</UFormGroup>
-						<UFormGroup label="Address">
-							<UTextarea
+						</EFormGroup>
+						<EFormGroup label="Phone">
+							<EInput v-model="contactForm.phone" placeholder="+1 (555) 000-0000" />
+						</EFormGroup>
+						<EFormGroup label="Address">
+							<ETextarea
 								v-model="contactForm.address"
 								placeholder="Street address, city, state, ZIP"
 								:rows="3"
 								autoresize
 							/>
-						</UFormGroup>
-						<UFormGroup
+						</EFormGroup>
+						<EFormGroup
 							label="Default Hourly Rate"
 							help="Auto-populated in time tracking when billable is enabled"
 						>
-							<UInput
+							<EInput
 								v-model="contactForm.default_hourly_rate"
 								type="number"
 								placeholder="0.00"
@@ -521,7 +521,7 @@ async function saveContact() {
 								min="0"
 								icon="i-heroicons-currency-dollar"
 							/>
-						</UFormGroup>
+						</EFormGroup>
 
 						<div class="flex justify-end pt-1">
 							<Button size="sm" :disabled="savingContact" @click="saveContact">

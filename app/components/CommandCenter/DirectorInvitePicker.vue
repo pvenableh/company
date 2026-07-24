@@ -87,7 +87,7 @@ async function send() {
         <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <UIcon :name="icon" class="w-4.5 h-4.5" />
+              <EIcon :name="icon" class="w-4.5 h-4.5" />
             </span>
             <div class="min-w-0">
               <h3 class="text-sm font-semibold leading-tight">{{ title }}</h3>
@@ -95,13 +95,13 @@ async function send() {
             </div>
           </div>
           <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="emit('close')">
-            <UIcon name="i-lucide-x" class="w-5 h-5" />
+            <EIcon name="i-lucide-x" class="w-5 h-5" />
           </button>
         </header>
 
         <div class="px-5 pt-3">
           <div class="relative">
-            <UIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <EIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <input
               v-model="search"
               type="text"
@@ -113,7 +113,7 @@ async function send() {
 
         <div class="px-3 py-3 max-h-[46vh] overflow-y-auto">
           <div v-if="loading" class="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
-            <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading team…
+            <EIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading team…
           </div>
           <div v-else-if="!filtered.length" class="text-center text-sm text-muted-foreground py-8">
             No teammates found.
@@ -138,7 +138,7 @@ async function send() {
                   class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
                   :class="selected.has(m.userId) ? 'bg-primary border-primary text-primary-foreground' : 'border-border'"
                 >
-                  <UIcon v-if="selected.has(m.userId)" name="i-lucide-check" class="w-3 h-3" />
+                  <EIcon v-if="selected.has(m.userId)" name="i-lucide-check" class="w-3 h-3" />
                 </span>
               </button>
             </li>
@@ -153,8 +153,8 @@ async function send() {
             :disabled="!selected.size || sending"
             @click="send"
           >
-            <UIcon v-if="sending" name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
-            <UIcon v-else name="i-lucide-send" class="w-4 h-4" />
+            <EIcon v-if="sending" name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
+            <EIcon v-else name="i-lucide-send" class="w-4 h-4" />
             {{ cta }}{{ selected.size === 1 ? '' : 's' }}
           </button>
         </footer>

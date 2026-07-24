@@ -171,7 +171,7 @@ onMounted(restoreFromQuery);
 				<!-- Slim host header (BookingPageShell is full-screen chrome; the
 				     portal already owns the outer frame, so we render our own). -->
 				<div class="ios-card p-4 mb-5 flex items-center gap-3">
-					<UAvatar :src="userAvatar(selectedHost)" :alt="hostName(selectedHost)" size="md" class="shrink-0" />
+					<EAvatar :src="userAvatar(selectedHost)" :alt="hostName(selectedHost)" size="md" class="shrink-0" />
 					<div class="min-w-0">
 						<p class="text-sm font-semibold truncate">{{ hostName(selectedHost) }}</p>
 						<p v-if="selectedHost.booking_page_title" class="text-xs text-muted-foreground truncate">{{ selectedHost.booking_page_title }}</p>
@@ -239,7 +239,7 @@ onMounted(restoreFromQuery);
 						class="ios-card p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors ios-press"
 						@click="openHost(h)"
 					>
-						<UAvatar :src="userAvatar(h)" :alt="hostName(h)" size="md" class="shrink-0" />
+						<EAvatar :src="userAvatar(h)" :alt="hostName(h)" size="md" class="shrink-0" />
 						<div class="min-w-0 flex-1">
 							<p class="text-sm font-semibold truncate">{{ hostName(h) }}</p>
 							<p v-if="h.booking_page_title" class="text-xs text-muted-foreground truncate">{{ h.booking_page_title }}</p>

@@ -4,7 +4,7 @@
 		<div v-if="isDirectusAdmin" class="ios-card p-4 border border-warning/30 bg-warning/5">
 			<div class="flex items-center justify-between mb-3">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-warning" />
+					<EIcon name="i-heroicons-bolt" class="w-4 h-4 text-warning" />
 					Grant Comp Tokens
 					<span class="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">Admin</span>
 				</h4>
@@ -13,20 +13,20 @@
 				Bypass Stripe and add tokens directly to this org's prepaid balance — at Anthropic cost. Visible in the meter the moment you grant; consumed once the monthly limit is exhausted.
 			</p>
 			<div class="flex items-center gap-2">
-				<UInput
+				<EInput
 					v-model="grantTokensInput"
 					type="number"
 					placeholder="e.g. 500000"
 					class="flex-1 max-w-xs"
 					size="sm"
 				/>
-				<UInput
+				<EInput
 					v-model="grantNoteInput"
 					placeholder="Note (optional, e.g. team comp)"
 					class="flex-1"
 					size="sm"
 				/>
-				<UButton
+				<EButton
 					color="primary"
 					size="sm"
 					:loading="grantLoading"
@@ -35,7 +35,7 @@
 					@click="grantTokens"
 				>
 					Grant
-				</UButton>
+				</EButton>
 			</div>
 			<p v-if="lastGrantInfo" class="mt-2 text-[11px] text-muted-foreground">
 				Last grant: <span class="font-mono text-success">+{{ formatTokens(lastGrantInfo.granted) }}</span>
@@ -47,7 +47,7 @@
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-shopping-cart" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-shopping-cart" class="w-4 h-4 text-primary" />
 					Purchase AI Tokens
 				</h4>
 			</div>
@@ -70,7 +70,7 @@
 				</div>
 			</div>
 			<div class="mt-4 flex justify-end">
-				<UButton
+				<EButton
 					color="primary"
 					:loading="purchaseLoading"
 					:disabled="!selectedPackage"
@@ -78,7 +78,7 @@
 					@click="purchaseTokens"
 				>
 					Purchase Tokens
-				</UButton>
+				</EButton>
 			</div>
 		</div>
 
@@ -86,7 +86,7 @@
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-clock" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-clock" class="w-4 h-4 text-primary" />
 					Purchase History
 				</h4>
 			</div>
@@ -98,7 +98,7 @@
 				<div v-for="p in purchases" :key="p.id" class="flex items-center justify-between py-2.5 gap-3">
 					<div class="flex items-center gap-3 min-w-0">
 						<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-							<UIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
+							<EIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
 						</div>
 						<div class="min-w-0">
 							<p class="text-sm font-medium text-foreground truncate">{{ p.buyer?.name || 'Unknown' }}</p>
@@ -122,7 +122,7 @@
 								{{ p.status }}
 							</p>
 						</div>
-						<UButton
+						<EButton
 							v-if="isOrgAdminOrAbove && p.status !== 'refunded'"
 							size="xs"
 							color="red"
@@ -131,17 +131,17 @@
 							@click="refundTarget = p"
 						>
 							Refund
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<!-- Refund confirmation -->
-		<UModal v-model="showRefundConfirm">
+		<EModal v-model="showRefundConfirm">
 			<div class="flex items-start gap-4">
 				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center shrink-0">
-					<UIcon name="i-heroicons-arrow-uturn-left" class="w-5 h-5 text-destructive" />
+					<EIcon name="i-heroicons-arrow-uturn-left" class="w-5 h-5 text-destructive" />
 				</div>
 				<div class="flex-1">
 					<h3 class="text-lg font-semibold text-foreground">Refund this token purchase?</h3>
@@ -154,22 +154,22 @@
 						</template>
 					</p>
 					<div class="flex items-center gap-2 mt-6">
-						<UButton color="red" :loading="refundLoading" @click="handleRefund">
+						<EButton color="red" :loading="refundLoading" @click="handleRefund">
 							Refund {{ refundTarget ? `$${(refundTarget.amountCents / 100).toFixed(2)}` : '' }}
-						</UButton>
-						<UButton variant="ghost" :disabled="refundLoading" @click="refundTarget = null">
+						</EButton>
+						<EButton variant="ghost" :disabled="refundLoading" @click="refundTarget = null">
 							Cancel
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
-		</UModal>
+		</EModal>
 
 		<!-- Org Monthly Limit -->
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-adjustments-horizontal" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-adjustments-horizontal" class="w-4 h-4 text-primary" />
 					Organization Token Limit
 				</h4>
 			</div>
@@ -177,7 +177,7 @@
 				Set a monthly cap on total AI tokens your organization can use. Leave blank for no limit.
 			</p>
 			<div class="flex items-center gap-3">
-				<UInput
+				<EInput
 					v-model="orgLimitInput"
 					type="number"
 					placeholder="e.g. 5000000"
@@ -185,7 +185,7 @@
 					size="sm"
 				/>
 				<span class="text-xs text-muted-foreground">tokens/month</span>
-				<UButton
+				<EButton
 					color="primary"
 					variant="soft"
 					size="sm"
@@ -193,7 +193,7 @@
 					@click="saveOrgLimit"
 				>
 					Save
-				</UButton>
+				</EButton>
 			</div>
 		</div>
 
@@ -201,10 +201,10 @@
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-4">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-users" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-users" class="w-4 h-4 text-primary" />
 					Member AI Access & Budgets
 				</h4>
-				<UButton
+				<EButton
 					color="gray"
 					variant="ghost"
 					size="xs"
@@ -213,7 +213,7 @@
 					@click="loadMembers"
 				>
 					Refresh
-				</UButton>
+				</EButton>
 			</div>
 
 			<div v-if="membersLoading" class="space-y-3">
@@ -264,10 +264,10 @@
 					<!-- Controls -->
 					<div class="flex items-center gap-2 flex-shrink-0">
 						<!-- Budget input. Controlled open state: an uncontrolled
-						     <UPopover> (reka-ui) doesn't open in this app, and a
-						     <UButton> trigger breaks as-child event forwarding — so we
+						     <EPopover> (reka-ui) doesn't open in this app, and a
+						     <EButton> trigger breaks as-child event forwarding — so we
 						     drive open ourselves and use a native <button> trigger. -->
-						<UPopover
+						<EPopover
 							:open="openBudgetFor === member.id"
 							@update:open="(v: boolean) => openBudgetFor = v ? member.id : null"
 						>
@@ -276,27 +276,27 @@
 								class="inline-flex items-center justify-center h-7 w-7 rounded-full text-muted-foreground hover:bg-muted/60 transition-colors"
 								aria-label="Set token budget"
 							>
-								<UIcon name="i-heroicons-calculator" class="w-4 h-4" />
+								<EIcon name="i-heroicons-calculator" class="w-4 h-4" />
 							</button>
 							<template #panel>
 								<div class="p-3 space-y-2 w-56">
 									<p class="text-xs font-semibold text-foreground">Monthly Token Budget</p>
-									<UInput
+									<EInput
 										v-model="editBudgets[member.id]"
 										type="number"
 										placeholder="No limit"
 										size="sm"
 									/>
 									<div class="flex items-center gap-1.5">
-										<UButton
+										<EButton
 											size="xs"
 											color="primary"
 											:loading="savingBudget === member.id"
 											@click="saveMemberBudget(member.id)"
 										>
 											Save
-										</UButton>
-										<UButton
+										</EButton>
+										<EButton
 											v-if="member.tokenBudget"
 											size="xs"
 											color="gray"
@@ -304,14 +304,14 @@
 											@click="clearMemberBudget(member.id)"
 										>
 											Remove Limit
-										</UButton>
+										</EButton>
 									</div>
 								</div>
 							</template>
-						</UPopover>
+						</EPopover>
 
 						<!-- AI Toggle -->
-						<UToggle
+						<EToggle
 							:model-value="member.aiEnabled"
 							size="sm"
 							@update:model-value="(val) => toggleMemberAI(member.id, val)"
@@ -321,7 +321,7 @@
 			</div>
 
 			<div v-else class="text-center py-8">
-				<UIcon name="i-heroicons-users" class="w-10 h-10 text-gray-300 mx-auto mb-3" />
+				<EIcon name="i-heroicons-users" class="w-10 h-10 text-gray-300 mx-auto mb-3" />
 				<p class="text-sm text-muted-foreground">No members found</p>
 			</div>
 		</div>
@@ -329,7 +329,7 @@
 		<!-- Plan Info -->
 		<div v-if="planInfo" class="ios-card p-4">
 			<h4 class="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-				<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
+				<EIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
 				Plan Token Allocations
 			</h4>
 			<div class="space-y-2">

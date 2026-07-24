@@ -556,7 +556,7 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
       </div>
 
       <div class="river-header__actions">
-        <USelectMenu
+        <ESelectMenu
           v-model="selectedPlatform"
           :options="[
             { label: 'All channels', value: null },
@@ -571,7 +571,7 @@ const platformIcon = (p: string) => getSocialPlatformIcon(p);
           class="w-36"
           size="xs"
         />
-        <USelectMenu
+        <ESelectMenu
           v-model="selectedStatus"
           :options="[
             { label: 'Any status', value: null },

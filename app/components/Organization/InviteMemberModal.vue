@@ -5,17 +5,17 @@
 				Invite a new team member to join this organization. They will receive an email with instructions to accept.
 			</p>
 
-			<UFormGroup label="Email Address" required>
-				<UInput
+			<EFormGroup label="Email Address" required>
+				<EInput
 					v-model="form.email"
 					type="email"
 					placeholder="user@example.com"
 					icon="i-heroicons-envelope"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 
-			<UFormGroup label="Role" required>
-				<USelect
+			<EFormGroup label="Role" required>
+				<ESelect
 					v-model="form.roleId"
 					:options="availableRoles"
 					option-attribute="label"
@@ -25,7 +25,7 @@
 				<p v-if="selectedRoleDescription" class="text-xs text-muted-foreground mt-1">
 					{{ selectedRoleDescription }}
 				</p>
-			</UFormGroup>
+			</EFormGroup>
 		</form>
 
 		<template #footer>

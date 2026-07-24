@@ -135,7 +135,7 @@ if (import.meta.client) {
         :class="triggerClass"
       >
         <span v-if="item.dotColor" class="inline-block w-1.5 h-1.5 rounded-full" :class="item.dotColor" />
-        <UIcon v-if="item.icon" :name="item.icon" class="h-3.5 w-3.5" />
+        <EIcon v-if="item.icon" :name="item.icon" class="h-3.5 w-3.5" />
         {{ item.label }}
         <span
           v-if="item.count != null && item.count !== '' && item.count !== 0"

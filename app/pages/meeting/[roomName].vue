@@ -6,7 +6,7 @@
 		<div v-if="loading" class="flex items-center justify-center min-h-screen">
 			<div class="text-center">
 				<div class="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-success animate-pulse" />
+					<EIcon name="i-heroicons-video-camera" class="w-7 h-7 text-success animate-pulse" />
 				</div>
 				<p class="text-[13px] text-muted-foreground">Loading meeting...</p>
 			</div>
@@ -16,7 +16,7 @@
 		<div v-else-if="!meeting" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
 				<div class="w-14 h-14 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-muted-foreground" />
+					<EIcon name="i-heroicons-video-camera" class="w-7 h-7 text-muted-foreground" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Meeting Not Found</h1>
 				<p class="text-sm text-muted-foreground mt-2">This meeting doesn't exist or has ended.</p>
@@ -33,7 +33,7 @@
 		<div v-else-if="meetingEnded" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
 				<div class="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-check-circle" class="w-7 h-7 text-success" />
+					<EIcon name="i-heroicons-check-circle" class="w-7 h-7 text-success" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Meeting Ended</h1>
 				<p class="text-sm text-muted-foreground mt-2">Thanks for joining!</p>
@@ -43,7 +43,7 @@
 						:to="`/meetings/${meeting.id}`"
 						class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-success hover:bg-success text-white text-sm font-medium transition-colors ios-press"
 					>
-						<UIcon name="i-heroicons-document-text" class="w-4 h-4" />
+						<EIcon name="i-heroicons-document-text" class="w-4 h-4" />
 						View Recap
 					</NuxtLink>
 					<NuxtLink
@@ -62,7 +62,7 @@
 				<!-- Meeting info header -->
 				<div class="text-center mb-6 pb-5 border-b border-border/30">
 					<div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
-						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success" />
+						<EIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success" />
 					</div>
 					<h1 class="text-lg font-semibold text-foreground">{{ meeting.title }}</h1>
 					<p class="text-[13px] text-muted-foreground mt-1">
@@ -74,21 +74,21 @@
 				</div>
 
 				<form @submit.prevent="joinMeeting" class="space-y-4">
-					<UFormGroup label="Your Name" required>
-						<UInput v-model="guestName" placeholder="Enter your name" :disabled="joining" />
-					</UFormGroup>
+					<EFormGroup label="Your Name" required>
+						<EInput v-model="guestName" placeholder="Enter your name" :disabled="joining" />
+					</EFormGroup>
 
-					<UFormGroup label="Email" required>
-						<UInput v-model="guestEmail" type="email" placeholder="your@email.com" :disabled="joining" required />
-					</UFormGroup>
+					<EFormGroup label="Email" required>
+						<EInput v-model="guestEmail" type="email" placeholder="your@email.com" :disabled="joining" required />
+					</EFormGroup>
 
 					<button
 						type="submit"
 						:disabled="joining"
 						class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-success hover:bg-success text-white font-medium text-sm transition-colors ios-press disabled:opacity-50"
 					>
-						<UIcon v-if="!joining" name="i-heroicons-video-camera" class="w-4 h-4" />
-						<UIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+						<EIcon v-if="!joining" name="i-heroicons-video-camera" class="w-4 h-4" />
+						<EIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 						{{ meeting.waiting_room_enabled ? 'Ask to Join' : 'Join Meeting' }}
 					</button>
 				</form>
@@ -99,7 +99,7 @@
 		<div v-else-if="inWaitingRoom && !isHost" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
 				<div class="w-14 h-14 rounded-2xl bg-warning/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-clock" class="w-7 h-7 text-warning animate-pulse" />
+					<EIcon name="i-heroicons-clock" class="w-7 h-7 text-warning animate-pulse" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Waiting to be admitted</h1>
 				<p class="text-sm text-muted-foreground mt-2">The host will let you in soon...</p>
@@ -117,7 +117,7 @@
 		<div v-else-if="wasRejected" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
 				<div class="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-x-circle" class="w-7 h-7 text-destructive" />
+					<EIcon name="i-heroicons-x-circle" class="w-7 h-7 text-destructive" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Unable to Join</h1>
 				<p class="text-sm text-muted-foreground mt-2">The host did not admit you to this meeting.</p>
@@ -135,7 +135,7 @@
 			<div v-if="loadingToken" class="flex items-center justify-center h-full">
 				<div class="text-center">
 					<div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-3">
-						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success animate-pulse" />
+						<EIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success animate-pulse" />
 					</div>
 					<p class="text-[13px] text-muted-foreground">Connecting to meeting...</p>
 				</div>
@@ -173,11 +173,11 @@
 				class="fixed top-16 left-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg pointer-events-auto"
 				title="Open milestone in a new tab"
 			>
-				<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
+				<EIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
 				<span class="opacity-70">{{ linkedEvent.projectTitle }}</span>
 				<span class="opacity-40">/</span>
 				<span>{{ linkedEvent.title }}</span>
-				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
+				<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
 			<!-- Top-right floating controls. Record + Transcribe are also owned
@@ -199,7 +199,7 @@
 					:title="transcribing ? 'Stop live transcription' : 'Start live transcription (saves a transcript for the recap)'"
 					@click="toggleTranscription"
 				>
-					<UIcon
+					<EIcon
 						:name="transcriptionBusy ? 'i-heroicons-arrow-path' : (transcribing ? 'i-heroicons-microphone' : 'i-heroicons-microphone-solid')"
 						:class="['w-3.5 h-3.5', transcriptionBusy ? 'animate-spin' : '']"
 					/>
@@ -215,7 +215,7 @@
 					:title="recording ? 'Stop recording' : 'Start cloud recording'"
 					@click="toggleRecording"
 				>
-					<UIcon
+					<EIcon
 						:name="recordingBusy ? 'i-heroicons-arrow-path' : (recording ? 'i-heroicons-stop' : 'i-heroicons-record')"
 						:class="['w-3.5 h-3.5', recordingBusy ? 'animate-spin' : '']"
 					/>
@@ -228,7 +228,7 @@
 					title="Capture the screen share + annotations as a snapshot on this meeting"
 					@click="captureSnapshot"
 				>
-					<UIcon
+					<EIcon
 						:name="snapshotBusy ? 'i-heroicons-arrow-path' : 'i-heroicons-camera'"
 						:class="['w-3.5 h-3.5', snapshotBusy ? 'animate-spin' : '']"
 					/>
@@ -252,7 +252,7 @@
 					title="End the meeting for everyone, clear annotations, and generate the recap"
 					@click="endMeeting"
 				>
-					<UIcon
+					<EIcon
 						:name="endingMeeting ? 'i-heroicons-arrow-path' : 'i-heroicons-phone-x-mark'"
 						:class="['w-3.5 h-3.5', endingMeeting ? 'animate-spin' : '']"
 					/>

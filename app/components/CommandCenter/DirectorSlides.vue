@@ -277,7 +277,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           title="Create a task or ticket and assign it"
           @click="openCapture"
         >
-          <UIcon name="i-lucide-plus" class="w-3.5 h-3.5" />
+          <EIcon name="i-lucide-plus" class="w-3.5 h-3.5" />
           <span class="hidden sm:inline">Assign action item</span>
         </button>
         {{ index + 1 }} / {{ slides.length }}
@@ -287,7 +287,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           :aria-label="isFullscreen ? 'Exit full screen' : 'Present full screen'"
           @click="toggleFullscreen"
         >
-          <UIcon :name="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'" class="w-3.5 h-3.5" />
+          <EIcon :name="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'" class="w-3.5 h-3.5" />
         </button>
       </span>
     </div>
@@ -410,7 +410,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           <div>
             <!-- Action type as an uppercase subtitle, the task/description below in normal case -->
             <p class="inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.16em] font-semibold text-indigo-300">
-              <UIcon :name="iconForType(current.step.action_type)" class="w-3.5 h-3.5" />
+              <EIcon :name="iconForType(current.step.action_type)" class="w-3.5 h-3.5" />
               {{ labelForType(current.step.action_type) }}
             </p>
             <!-- inline text-transform beats the global `[data-style] h3 { uppercase }` heading rule -->
@@ -426,7 +426,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           <div v-if="current.step.action_type === 'create_tasks' && current.step.status === 'pending'" class="rounded-xl bg-white/5 ring-1 ring-white/10 p-3 space-y-2">
             <div class="flex items-center justify-between gap-2">
               <p class="text-[11px] uppercase tracking-wider text-white/45 inline-flex items-center gap-1.5">
-                <UIcon name="i-lucide-user-check" class="w-3.5 h-3.5" />
+                <EIcon name="i-lucide-user-check" class="w-3.5 h-3.5" />
                 {{ current.step.preview?.assignees?.length ? `Assigned to ${current.step.preview.assignees.join(', ')}` : 'Unassigned' }}
               </p>
               <button
@@ -451,12 +451,12 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
           </div>
 
           <!-- Decided states -->
-          <p v-if="current.step.status === 'executed'" class="inline-flex items-center gap-1.5 text-sm text-emerald-300"><UIcon name="i-lucide-check-circle" class="w-4 h-4" /> Approved · done</p>
-          <p v-else-if="current.step.status === 'rejected'" class="inline-flex items-center gap-1.5 text-sm text-white/40"><UIcon name="i-lucide-slash" class="w-4 h-4" /> Skipped</p>
-          <p v-else-if="current.step.status === 'failed'" class="inline-flex items-center gap-1.5 text-sm text-rose-300"><UIcon name="i-lucide-alert-triangle" class="w-4 h-4" /> Failed — try it manually</p>
+          <p v-if="current.step.status === 'executed'" class="inline-flex items-center gap-1.5 text-sm text-emerald-300"><EIcon name="i-lucide-check-circle" class="w-4 h-4" /> Approved · done</p>
+          <p v-else-if="current.step.status === 'rejected'" class="inline-flex items-center gap-1.5 text-sm text-white/40"><EIcon name="i-lucide-slash" class="w-4 h-4" /> Skipped</p>
+          <p v-else-if="current.step.status === 'failed'" class="inline-flex items-center gap-1.5 text-sm text-rose-300"><EIcon name="i-lucide-alert-triangle" class="w-4 h-4" /> Failed — try it manually</p>
 
           <!-- View-only observers can't decide -->
-          <p v-else-if="canDecide === false" class="inline-flex items-center gap-1.5 text-sm text-white/40"><UIcon name="i-lucide-eye" class="w-4 h-4" /> Awaiting the presenter's decision</p>
+          <p v-else-if="canDecide === false" class="inline-flex items-center gap-1.5 text-sm text-white/40"><EIcon name="i-lucide-eye" class="w-4 h-4" /> Awaiting the presenter's decision</p>
 
           <!-- Decision -->
           <div v-else class="flex items-center gap-2.5 pt-1">
@@ -466,8 +466,8 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
               :disabled="current.step.status === 'executing'"
               @click="emit('approve', current.step)"
             >
-              <UIcon v-if="current.step.status === 'executing'" name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
-              <UIcon v-else name="i-lucide-check" class="w-4 h-4" />
+              <EIcon v-if="current.step.status === 'executing'" name="i-lucide-loader-2" class="w-4 h-4 animate-spin" />
+              <EIcon v-else name="i-lucide-check" class="w-4 h-4" />
               Approve
             </button>
             <button
@@ -505,7 +505,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         :disabled="atStart"
         @click="prev"
       >
-        <UIcon name="i-lucide-chevron-left" class="w-4 h-4" /> Prev
+        <EIcon name="i-lucide-chevron-left" class="w-4 h-4" /> Prev
       </button>
 
       <div class="flex items-center gap-1.5">
@@ -526,7 +526,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         :disabled="atEnd"
         @click="next"
       >
-        Next <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
+        Next <EIcon name="i-lucide-chevron-right" class="w-4 h-4" />
       </button>
     </div>
 
@@ -540,10 +540,10 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
         <div class="w-full max-w-md rounded-2xl bg-[#141a33] ring-1 ring-white/15 shadow-2xl p-5 space-y-4">
           <div class="flex items-center justify-between">
             <p class="text-sm font-semibold text-white inline-flex items-center gap-1.5">
-              <UIcon name="i-lucide-clipboard-check" class="w-4 h-4 text-indigo-300" /> Assign an action item
+              <EIcon name="i-lucide-clipboard-check" class="w-4 h-4 text-indigo-300" /> Assign an action item
             </p>
             <button type="button" class="text-white/45 hover:text-white" aria-label="Close" @click="showCapture = false">
-              <UIcon name="i-lucide-x" class="w-4 h-4" />
+              <EIcon name="i-lucide-x" class="w-4 h-4" />
             </button>
           </div>
 
@@ -600,7 +600,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFsChang
               :disabled="!capTitle.trim()"
               @click="submitCapture"
             >
-              <UIcon name="i-lucide-check" class="w-4 h-4" /> Create &amp; assign
+              <EIcon name="i-lucide-check" class="w-4 h-4" /> Create &amp; assign
             </button>
           </div>
         </div>

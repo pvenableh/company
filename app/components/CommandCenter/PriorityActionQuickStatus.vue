@@ -15,14 +15,14 @@
 				:title="`Change ${label} status`"
 				@click.stop
 			>
-				<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+				<EIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
 				<span
 					v-else
 					class="inline-block h-2 w-2 rounded-full"
 					:style="{ background: statusAccent(entity.status) }"
 				/>
 				<span class="whitespace-nowrap">{{ currentLabel }}</span>
-				<UIcon name="i-heroicons-chevron-up-down" class="w-3 h-3 text-muted-foreground/60" />
+				<EIcon name="i-heroicons-chevron-up-down" class="w-3 h-3 text-muted-foreground/60" />
 			</button>
 		</DropdownMenuTrigger>
 		<DropdownMenuContent align="end" class="w-40" @click.stop>
@@ -42,7 +42,7 @@
 					:style="{ background: statusAccent(opt.value) }"
 				/>
 				{{ opt.label }}
-				<UIcon
+				<EIcon
 					v-if="isCurrent(opt.value)"
 					name="i-heroicons-check"
 					class="ml-auto w-3.5 h-3.5"

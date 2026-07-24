@@ -4,7 +4,7 @@
 		<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider mb-4">Activity</h4>
 
 		<div v-if="loading" class="flex justify-center py-4">
-			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+			<EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 		</div>
 
 		<div v-else-if="!activityItems.length" class="text-center py-6 bg-muted rounded-lg">
@@ -23,7 +23,7 @@
 					<div
 						class="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10"
 					>
-						<UIcon :name="getActionIcon(item)" class="text-primary h-4 w-4" />
+						<EIcon :name="getActionIcon(item)" class="text-primary h-4 w-4" />
 					</div>
 
 					<!-- Content container (with left margin for icon) -->
@@ -31,19 +31,19 @@
 						<!-- Activity header with user info -->
 						<div class="flex items-center gap-2 mb-2">
 							<span class="font-medium text-sm">{{ getActionText(item) }}</span>
-							<UBadge
+							<EBadge
 								v-if="item.type === 'revision' && item.action === 'update' && item.updatedFields?.length"
 								color="blue"
 								variant="soft"
 								class="text-[9px]"
 							>
 								{{ item.updatedFields.length }} change{{ item.updatedFields.length > 1 ? 's' : '' }}
-							</UBadge>
+							</EBadge>
 						</div>
 
 						<!-- User and timestamp info -->
 						<div class="flex items-center text-xs text-muted-foreground mb-3">
-							<UAvatar :src="getUserAvatar(item.user)" :alt="getUserName(item.user)" size="2xs" class="mr-2" />
+							<EAvatar :src="getUserAvatar(item.user)" :alt="getUserName(item.user)" size="2xs" class="mr-2" />
 							<span>{{ getUserName(item.user) }}</span>
 							<span class="mx-2">•</span>
 							<span>{{ formatDate(item.timestamp) }}</span>
@@ -61,7 +61,7 @@
 						<!-- Task activity content -->
 						<div v-if="item.type === 'task'" class="mt-2">
 							<div class="mt-2 text-sm bg-muted p-2 rounded flex items-start gap-2">
-								<UCheckbox :model-value="item.task.status === 'completed'" disabled class="mt-0.5" />
+								<ECheckbox :model-value="item.task.status === 'completed'" disabled class="mt-0.5" />
 								<div v-html="item.task.description"></div>
 							</div>
 						</div>
@@ -94,7 +94,7 @@
 										<!-- Team changes -->
 										<div v-if="field.name === 'team'" class="text-sm">
 											<div class="text-success dark:text-success flex items-center">
-												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<EIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ getTeamName(field.newValue) }}</span>
 											</div>
 										</div>
@@ -102,7 +102,7 @@
 										<!-- Status changes -->
 										<div v-else-if="field.name === 'status'" class="text-sm">
 											<div class="text-success dark:text-success flex items-center">
-												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<EIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ field.newValue || 'None' }}</span>
 											</div>
 										</div>
@@ -110,7 +110,7 @@
 										<!-- Due date changes -->
 										<div v-else-if="field.name === 'due_date'" class="text-sm">
 											<div class="text-success dark:text-success flex items-center">
-												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<EIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ formatDate(field.newValue, true) }}</span>
 											</div>
 										</div>
@@ -118,7 +118,7 @@
 										<!-- Description changes -->
 										<div v-else-if="field.name === 'description'" class="text-sm">
 											<div class="text-success dark:text-success flex items-start">
-												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1 mt-1 flex-shrink-0" />
+												<EIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1 mt-1 flex-shrink-0" />
 												<div class="description-preview" v-html="sanitizeHtml(field.newValue)"></div>
 											</div>
 										</div>
@@ -126,7 +126,7 @@
 										<!-- Regular field changes -->
 										<div v-else class="text-sm">
 											<div class="text-success dark:text-success flex items-center">
-												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<EIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ formatFieldValue(field.newValue) }}</span>
 											</div>
 										</div>
@@ -151,7 +151,7 @@
 										{{ formatFieldName(field.name) }}
 									</div>
 									<div class="text-success dark:text-success text-xs flex items-center">
-										<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
+										<EIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
 										<!-- Special handling for description -->
 										<div v-if="field.name === 'description'" v-html="sanitizeHtml(field.value)"></div>
 										<span v-else>{{ formatFieldValue(field.value) }}</span>
@@ -170,9 +170,9 @@
 			>
 				<h5 class="text-destructive dark:text-destructive font-bold mb-2">Debug Mode Enabled</h5>
 				<p class="text-xs mb-2">Debug information is being logged to the browser console.</p>
-				<UButton size="xs" color="red" @click="toggleDebugInfo">
+				<EButton size="xs" color="red" @click="toggleDebugInfo">
 					{{ showDebugInfo ? 'Hide Debug Info' : 'Show Debug Info' }}
-				</UButton>
+				</EButton>
 
 				<pre v-if="showDebugInfo" class="mt-4 text-xs bg-black text-success p-4 rounded overflow-auto max-h-96">{{
 					debugInfo

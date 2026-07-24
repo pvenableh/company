@@ -2,7 +2,7 @@
 	<div class="ios-card p-4 cursor-pointer hover:shadow-md transition-all" @click="$emit('click', lead, $event)">
 		<div class="flex items-start justify-between mb-2">
 			<div class="flex items-center gap-2">
-				<UAvatar
+				<EAvatar
 					v-if="lead.assigned_to?.avatar"
 					:src="`${useRuntimeConfig().public.directusUrl}/assets/${lead.assigned_to.avatar}`"
 					size="xs"

@@ -1,14 +1,14 @@
 <template>
 	<div class="flex items-center gap-4 mb-6">
-		<UPopover>
-			<UButton variant="outline" size="sm" class="flex items-center gap-2">
+		<EPopover>
+			<EButton variant="outline" size="sm" class="flex items-center gap-2">
 				{{ selectedOrg?.name || 'All Organizations' }}
-				<UIcon name="i-heroicons-chevron-down" class="h-4 w-4" />
-			</UButton>
+				<EIcon name="i-heroicons-chevron-down" class="h-4 w-4" />
+			</EButton>
 
 			<template #content>
 				<div class="p-2 w-56">
-					<USelect
+					<ESelect
 						v-model="selectedOrg"
 						:options="organizations"
 						placeholder="Select Organization"
@@ -16,18 +16,18 @@
 					/>
 				</div>
 			</template>
-		</UPopover>
+		</EPopover>
 
-		<UButton
+		<EButton
 			:color="showMyTickets ? 'primary' : 'gray'"
 			variant="soft"
 			size="sm"
 			class="flex items-center gap-2"
 			@click="toggleMyTickets"
 		>
-			<UIcon name="i-heroicons-user" class="h-4 w-4" />
+			<EIcon name="i-heroicons-user" class="h-4 w-4" />
 			My Tickets
-		</UButton>
+		</EButton>
 	</div>
 </template>
 

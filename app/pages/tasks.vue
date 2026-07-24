@@ -17,10 +17,10 @@
 			</div>
 
 			<div class="ml-auto">
-				<UButton @click="refreshData" size="sm" color="gray" variant="soft">
-					<UIcon name="i-heroicons-arrow-path" class="mr-1" />
+				<EButton @click="refreshData" size="sm" color="gray" variant="soft">
+					<EIcon name="i-heroicons-arrow-path" class="mr-1" />
 					Refresh
-				</UButton>
+				</EButton>
 			</div>
 		</div>
 
@@ -32,9 +32,9 @@
 					class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm hover:border-primary/30 transition-colors"
 					@click="showUserPicker = !showUserPicker"
 				>
-					<UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-muted-foreground" />
+					<EIcon name="i-heroicons-user-circle" class="w-4 h-4 text-muted-foreground" />
 					<span>{{ filterUserLabel }}</span>
-					<UIcon name="i-heroicons-chevron-down" class="w-3 h-3 text-muted-foreground" />
+					<EIcon name="i-heroicons-chevron-down" class="w-3 h-3 text-muted-foreground" />
 				</button>
 				<div v-if="showUserPicker" class="absolute top-full left-0 mt-1 z-50 w-64 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
 					<input
@@ -50,7 +50,7 @@
 							:class="{ 'text-primary font-medium': !filterUserId }"
 							@click="filterUserId = null; showUserPicker = false"
 						>
-							<UIcon name="i-heroicons-users" class="w-4 h-4" />
+							<EIcon name="i-heroicons-users" class="w-4 h-4" />
 							Everyone
 						</button>
 						<button
@@ -58,7 +58,7 @@
 							:class="{ 'text-primary font-medium': filterUserId === user?.id }"
 							@click="filterUserId = user?.id; showUserPicker = false"
 						>
-							<UIcon name="i-heroicons-user-circle" class="w-4 h-4" />
+							<EIcon name="i-heroicons-user-circle" class="w-4 h-4" />
 							Just Me
 						</button>
 						<div v-if="userPickerLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading...</div>
@@ -98,7 +98,7 @@
 
 			<!-- Project Tasks + Stats (right columns) -->
 			<div class="lg:col-span-2 space-y-8">
-				<UTabs v-model="activeTab" :items="tabs" class="mb-2" />
+				<ETabs v-model="activeTab" :items="tabs" class="mb-2" />
 
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
 					<div class="ios-card p-5">
@@ -118,7 +118,7 @@
 
 							<template #fallback>
 								<div class="p-4 flex justify-center">
-									<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
+									<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
 								</div>
 							</template>
 						</ClientOnly>

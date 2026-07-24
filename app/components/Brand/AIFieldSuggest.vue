@@ -56,7 +56,7 @@ const dismissOptions = () => {
 				:disabled="isGenerating"
 				@click="handleGenerate"
 			>
-				<UIcon v-if="isGenerating" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+				<EIcon v-if="isGenerating" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 				<EarnestIcon v-else class="w-3.5 h-3.5" />
 				{{ isGenerating ? 'Generating...' : 'Earnest Suggest' }}
 			</button>

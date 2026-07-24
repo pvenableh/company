@@ -193,7 +193,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 
 <template>
 	<!-- not a sheet because: multi-step weekly check-in (seed rows → batched submit → reflection), see [[feedback_ios_native_strategy]] -->
-	<UModal v-model="isOpen" class="sm:max-w-2xl">
+	<EModal v-model="isOpen" class="sm:max-w-2xl">
 		<template #header>
 			<div class="w-full">
 				<h3 class="text-sm font-bold uppercase tracking-wide pr-8">Weekly check-in</h3>
@@ -212,7 +212,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 		<!-- Body -->
 		<div class="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
 			<div v-if="rows.length === 0" class="py-8 text-center">
-				<UIcon name="i-heroicons-flag" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+				<EIcon name="i-heroicons-flag" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
 				<p class="text-sm text-muted-foreground">No personal goals to check in on.</p>
 				<UiViewLink to="/goals?scope=user" size="sm" class="mt-2">Set one</UiViewLink>
 			</div>
@@ -227,7 +227,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 				}"
 			>
 				<div class="flex items-start gap-2">
-					<UIcon :name="iconFor(goalById.get(row.goalId)).icon" :class="iconFor(goalById.get(row.goalId)).color" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+					<EIcon :name="iconFor(goalById.get(row.goalId)).icon" :class="iconFor(goalById.get(row.goalId)).color" class="w-4 h-4 mt-0.5 flex-shrink-0" />
 					<div class="flex-1 min-w-0">
 						<p class="text-sm font-medium text-foreground truncate">{{ goalById.get(row.goalId)?.title || 'Goal' }}</p>
 						<p class="text-[11px] text-muted-foreground">
@@ -255,7 +255,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 				</div>
 
 				<div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-					<UInput
+					<EInput
 						v-model.number="row.value"
 						type="number"
 						:placeholder="String(row.startValue)"
@@ -267,7 +267,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 					</span>
 				</div>
 
-				<UTextarea
+				<ETextarea
 					v-model="row.notes"
 					:rows="2"
 					placeholder="What changed this week? (optional — adds context to the AI reflection)"
@@ -315,5 +315,5 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 				</div>
 			</div>
 		</template>
-	</UModal>
+	</EModal>
 </template>

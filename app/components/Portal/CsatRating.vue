@@ -100,7 +100,7 @@ async function submit() {
 		<div v-if="hasRated && !editing" class="csat__done">
 			<div class="csat__done-head">
 				<div class="csat__stars csat__stars--sm" aria-hidden="true">
-					<UIcon
+					<EIcon
 						v-for="n in 5"
 						:key="n"
 						:name="n <= (savedRating || 0) ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
@@ -132,7 +132,7 @@ async function submit() {
 					@mouseenter="hoverRating = n"
 					@mouseleave="hoverRating = 0"
 				>
-					<UIcon
+					<EIcon
 						:name="n <= displayStars ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
 						class="csat__star"
 						:class="n <= displayStars ? 'text-amber-500' : 'text-muted-foreground/40'"
@@ -153,7 +153,7 @@ async function submit() {
 					:disabled="!draftRating || busy"
 					@click="submit"
 				>
-					<UIcon v-if="busy" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+					<EIcon v-if="busy" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 					<span>{{ busy ? 'Sending…' : 'Submit rating' }}</span>
 				</button>
 				<button v-if="hasRated" type="button" class="csat__cancel" @click="editing = false">

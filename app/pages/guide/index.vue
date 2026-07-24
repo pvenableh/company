@@ -41,7 +41,7 @@ const goPrev = () => {
 					<p class="text-[15px] text-muted-foreground mt-0.5">Everything you need to get your organization running</p>
 				</div>
 				<NuxtLink to="/" class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm text-[13px] font-medium ios-press">
-					<UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
+					<EIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
 					<span class="hidden sm:inline">Back to Dashboard</span>
 				</NuxtLink>
 			</div>
@@ -59,7 +59,7 @@ const goPrev = () => {
 								? 'bg-primary/10 text-primary font-semibold'
 								: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'"
 						>
-							<UIcon :name="section.icon" class="w-4.5 h-4.5 shrink-0" />
+							<EIcon :name="section.icon" class="w-4.5 h-4.5 shrink-0" />
 							{{ section.label }}
 						</button>
 					</nav>
@@ -88,17 +88,17 @@ const goPrev = () => {
 
 						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 							<div class="border border-border rounded-xl p-4 text-center">
-								<UIcon name="i-heroicons-building-office" class="w-8 h-8 text-primary mx-auto mb-2" />
+								<EIcon name="i-heroicons-building-office" class="w-8 h-8 text-primary mx-auto mb-2" />
 								<p class="text-sm font-semibold text-foreground">Organization</p>
 								<p class="text-xs text-muted-foreground mt-1">Your company is the top-level container. All data is scoped here.</p>
 							</div>
 							<div class="border border-border rounded-xl p-4 text-center">
-								<UIcon name="i-heroicons-user-group" class="w-8 h-8 text-violet-500 mx-auto mb-2" />
+								<EIcon name="i-heroicons-user-group" class="w-8 h-8 text-violet-500 mx-auto mb-2" />
 								<p class="text-sm font-semibold text-foreground">Teams & Members</p>
 								<p class="text-xs text-muted-foreground mt-1">Organize people into teams with roles that control access.</p>
 							</div>
 							<div class="border border-border rounded-xl p-4 text-center">
-								<UIcon name="i-heroicons-building-office-2" class="w-8 h-8 text-success mx-auto mb-2" />
+								<EIcon name="i-heroicons-building-office-2" class="w-8 h-8 text-success mx-auto mb-2" />
 								<p class="text-sm font-semibold text-foreground">Clients & Contacts</p>
 								<p class="text-xs text-muted-foreground mt-1">Track the companies you serve and the people within them.</p>
 							</div>
@@ -135,7 +135,7 @@ const goPrev = () => {
 
 						<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+								<EIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
 								<div class="text-sm text-blue-800 dark:text-blue-200">
 									<p class="font-medium">Organization Settings</p>
 									<p class="mt-1 text-blue-700 dark:text-blue-300">After creating your org, visit <strong>Organization Settings</strong> to add your logo, brand color, and a 3-letter code used in invoice numbering.</p>
@@ -145,7 +145,7 @@ const goPrev = () => {
 
 						<div class="bg-warning/10 dark:bg-warning/20 border border-warning/30 dark:border-warning rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
+								<EIcon name="i-heroicons-information-circle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
 								<p class="text-sm text-warning">You can belong to <strong>multiple organizations</strong> and switch between them at any time. Your selection is remembered across sessions.</p>
 							</div>
 						</div>
@@ -159,7 +159,7 @@ const goPrev = () => {
 						<div class="space-y-3">
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-warning/30 dark:border-warning bg-warning/10 dark:bg-warning/10">
 								<div class="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-crown" class="w-4 h-4 text-warning" />
+									<EIcon name="i-heroicons-crown" class="w-4 h-4 text-warning" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Owner</p>
@@ -168,7 +168,7 @@ const goPrev = () => {
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
 								<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-shield-check" class="w-4 h-4 text-primary" />
+									<EIcon name="i-heroicons-shield-check" class="w-4 h-4 text-primary" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Admin</p>
@@ -177,7 +177,7 @@ const goPrev = () => {
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
 								<div class="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-briefcase" class="w-4 h-4 text-violet-500" />
+									<EIcon name="i-heroicons-briefcase" class="w-4 h-4 text-violet-500" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Manager</p>
@@ -186,7 +186,7 @@ const goPrev = () => {
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
 								<div class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-user" class="w-4 h-4 text-success" />
+									<EIcon name="i-heroicons-user" class="w-4 h-4 text-success" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Member</p>
@@ -195,7 +195,7 @@ const goPrev = () => {
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
 								<div class="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info" />
+									<EIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Client</p>
@@ -279,7 +279,7 @@ const goPrev = () => {
 
 						<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+								<EIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
 								<div class="text-sm text-blue-800 dark:text-blue-200">
 									<p class="font-medium">Team Visibility</p>
 									<p class="mt-1 text-blue-700 dark:text-blue-300"><strong>Admins and Managers</strong> can see all teams. <strong>Members</strong> only see teams they belong to. Use the team filter in the sidebar to scope your view.</p>
@@ -319,7 +319,7 @@ const goPrev = () => {
 
 						<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+								<EIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
 								<p class="text-sm text-blue-800 dark:text-blue-200">Use the <strong>client filter</strong> in the sidebar to scope your entire view to a single client. Select "Organization" to see only internal work.</p>
 							</div>
 						</div>
@@ -334,11 +334,11 @@ const goPrev = () => {
 							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">How Contacts Relate to Clients</h3>
 							<div class="bg-muted/30 rounded-xl p-5 space-y-2 text-sm text-foreground/80">
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-success" />
+									<EIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-success" />
 									<span><strong>Client</strong> = a company (e.g., "Acme Corp")</span>
 								</div>
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-user" class="w-5 h-5 text-blue-500" />
+									<EIcon name="i-heroicons-user" class="w-5 h-5 text-blue-500" />
 									<span><strong>Contact</strong> = a person (e.g., "Jane Smith, VP of Marketing")</span>
 								</div>
 								<div class="ml-7 text-xs text-muted-foreground space-y-1">
@@ -360,7 +360,7 @@ const goPrev = () => {
 
 						<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+								<EIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
 								<p class="text-sm text-blue-800 dark:text-blue-200">Need to add many contacts at once? Use <NuxtLink to="/contacts/import" class="underline font-medium">CSV Import</NuxtLink> to upload and map your contact data in bulk.</p>
 							</div>
 						</div>
@@ -397,23 +397,23 @@ const goPrev = () => {
 							</div>
 							<div class="p-4 space-y-2 text-sm">
 								<div class="flex items-center gap-2 text-success dark:text-success">
-									<UIcon name="i-heroicons-check" class="w-4 h-4" />
+									<EIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>View projects and appointments for their client</span>
 								</div>
 								<div class="flex items-center gap-2 text-success dark:text-success">
-									<UIcon name="i-heroicons-check" class="w-4 h-4" />
+									<EIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>Create tickets to report issues or make requests</span>
 								</div>
 								<div class="flex items-center gap-2 text-success dark:text-success">
-									<UIcon name="i-heroicons-check" class="w-4 h-4" />
+									<EIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>Send messages and comments</span>
 								</div>
 								<div class="flex items-center gap-2 text-destructive">
-									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+									<EIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 									<span>Cannot see other clients' data or internal projects</span>
 								</div>
 								<div class="flex items-center gap-2 text-destructive">
-									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+									<EIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 									<span>Cannot access organization settings</span>
 								</div>
 							</div>
@@ -451,14 +451,14 @@ const goPrev = () => {
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
 							<div class="border border-border rounded-xl p-4">
 								<div class="flex items-center gap-2 mb-2">
-									<UIcon name="i-heroicons-funnel" class="w-5 h-5 text-primary" />
+									<EIcon name="i-heroicons-funnel" class="w-5 h-5 text-primary" />
 									<p class="text-sm font-semibold text-foreground">Client Filter</p>
 								</div>
 								<p class="text-xs text-muted-foreground">Use the client filter in the sidebar to scope your view: <strong>All</strong>, <strong>Organization</strong> (internal only), or a <strong>specific client</strong>.</p>
 							</div>
 							<div class="border border-border rounded-xl p-4">
 								<div class="flex items-center gap-2 mb-2">
-									<UIcon name="i-heroicons-users" class="w-5 h-5 text-violet-500" />
+									<EIcon name="i-heroicons-users" class="w-5 h-5 text-violet-500" />
 									<p class="text-sm font-semibold text-foreground">Team Filter</p>
 								</div>
 								<p class="text-xs text-muted-foreground">Filter by team to see only their projects and work. Great for standups, workload reviews, and assignment.</p>
@@ -473,7 +473,7 @@ const goPrev = () => {
 							:disabled="!canGoPrev"
 							class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground"
 						>
-							<UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
+							<EIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
 							Previous
 						</button>
 						<span class="text-xs text-muted-foreground">{{ currentIndex + 1 }} / {{ sections.length }}</span>
@@ -483,7 +483,7 @@ const goPrev = () => {
 							class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-primary text-primary-foreground hover:bg-primary/90"
 						>
 							Next
-							<UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
+							<EIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
 						</button>
 					</div>
 				</div>

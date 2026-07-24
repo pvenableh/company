@@ -10,8 +10,8 @@
 				</template>
 			</p>
 
-			<UFormGroup v-if="!props.clientId" label="Client Company" required>
-				<USelectMenu
+			<EFormGroup v-if="!props.clientId" label="Client Company" required>
+				<ESelectMenu
 					v-model="form.clientId"
 					:options="clientOptions"
 					value-attribute="id"
@@ -19,7 +19,7 @@
 					placeholder="Select a client…"
 					:loading="clientsLoading"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 
 			<!-- Tab strip -->
 			<div class="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit">
@@ -45,7 +45,7 @@
 
 			<!-- Contact picker -->
 			<div v-if="tab === 'contact'" class="space-y-3">
-				<UInput
+				<EInput
 					v-model="contactQuery"
 					placeholder="Search contacts by name or email…"
 					icon="i-heroicons-magnifying-glass"
@@ -125,14 +125,14 @@
 
 			<!-- Email entry -->
 			<div v-else class="space-y-3">
-				<UFormGroup label="Email Address" required>
-					<UInput
+				<EFormGroup label="Email Address" required>
+					<EInput
 						v-model="form.email"
 						type="email"
 						placeholder="client@company.com"
 						icon="i-heroicons-envelope"
 					/>
-				</UFormGroup>
+				</EFormGroup>
 
 				<div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
 					<Icon name="heroicons:information-circle" class="inline w-4 h-4 mr-1" />

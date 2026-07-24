@@ -7,35 +7,35 @@
 
 		<!-- Error State -->
 		<div v-else-if="error" class="w-full max-w-md">
-			<UAlert type="error" :title="error.title" :description="error.message" class="mb-4">
+			<EAlert type="error" :title="error.title" :description="error.message" class="mb-4">
 				<template #icon>
 					<Icon name="heroicons:exclamation-circle" />
 				</template>
 				<template #footer>
-					<UButton v-if="error.recoverable" size="sm" @click="retryConfirmation">Retry</UButton>
+					<EButton v-if="error.recoverable" size="sm" @click="retryConfirmation">Retry</EButton>
 				</template>
-			</UAlert>
+			</EAlert>
 			<div class="text-center">
-				<UButton to="/support" variant="link" class="text-sm">Need help? Contact support</UButton>
+				<EButton to="/support" variant="link" class="text-sm">Need help? Contact support</EButton>
 			</div>
 		</div>
 
 		<!-- Success State -->
 		<div v-else class="w-full max-w-md">
 			<div class="text-center mb-8">
-				<UIcon name="heroicons:check-circle" class="h-12 w-12 text-success mx-auto mb-4" />
+				<EIcon name="heroicons:check-circle" class="h-12 w-12 text-success mx-auto mb-4" />
 				<h1 class="text-2xl font-bold uppercase tracking-wider mb-2">Thank you for your payment</h1>
 				<p class="text-gray-600 dark:text-gray-400">Your transaction has been completed</p>
 			</div>
 
 			<!-- Payment Details Card -->
-			<UCard class="mb-6">
+			<ECard class="mb-6">
 				<template #header>
 					<div class="flex justify-between items-center">
 						<h3 class="text-sm font-medium uppercase">Payment Details</h3>
-						<UBadge :color="paymentStatusColor" :variant="paymentStatusVariant">
+						<EBadge :color="paymentStatusColor" :variant="paymentStatusVariant">
 							{{ formatPaymentStatus }}
-						</UBadge>
+						</EBadge>
 					</div>
 				</template>
 
@@ -49,10 +49,10 @@
 				<template #footer>
 					<p class="text-xs text-gray-500">Payment ID: {{ paymentIntent?.id }}</p>
 				</template>
-			</UCard>
+			</ECard>
 
 			<!-- Receipt Card -->
-			<UCard v-if="receiptUrl" class="mb-6">
+			<ECard v-if="receiptUrl" class="mb-6">
 				<template #header>
 					<div class="flex justify-between items-center">
 						<h3 class="text-sm font-medium uppercase">Receipt</h3>
@@ -64,25 +64,25 @@
 					View or download your payment receipt for your records.
 				</p>
 
-				<UButton :to="receiptUrl" target="_blank" icon="i-heroicons-document-text" class="text-center" block>
+				<EButton :to="receiptUrl" target="_blank" icon="i-heroicons-document-text" class="text-center" block>
 					View Receipt
-				</UButton>
-			</UCard>
+				</EButton>
+			</ECard>
 
 			<!-- Action Buttons -->
 			<div class="flex flex-col gap-4">
-				<UButton v-if="invoiceID" :to="`/invoices/${invoiceID}`" block>
+				<EButton v-if="invoiceID" :to="`/invoices/${invoiceID}`" block>
 					<template #leading>
 						<Icon name="heroicons:document-text" />
 					</template>
 					View Invoice
-				</UButton>
-				<UButton :to="returnPath" variant="outline" block>
+				</EButton>
+				<EButton :to="returnPath" variant="outline" block>
 					<template #leading>
 						<Icon name="heroicons:home" />
 					</template>
 					{{ returnButtonText }}
-				</UButton>
+				</EButton>
 			</div>
 		</div>
 	</div>

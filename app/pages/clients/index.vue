@@ -254,7 +254,7 @@ onMounted(() => {
     </LayoutPageHeader>
 
     <!-- Status Tabs -->
-    <UTabs
+    <ETabs
       v-model="activeTab"
       :items="tabItems"
       class="mb-6 w-fit"

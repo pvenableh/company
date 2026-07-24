@@ -50,8 +50,8 @@ async function markPaid() {
 		:disabled="saving"
 		@click.stop="markPaid"
 	>
-		<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
-		<UIcon v-else name="i-lucide-check-circle-2" class="w-3 h-3 text-emerald-600" />
+		<EIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+		<EIcon v-else name="i-lucide-check-circle-2" class="w-3 h-3 text-emerald-600" />
 		<span class="whitespace-nowrap">Mark paid</span>
 	</button>
 </template>

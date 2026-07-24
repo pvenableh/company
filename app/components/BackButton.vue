@@ -20,7 +20,7 @@ const handleClick = () => {
 		class="back-btn"
 		@click="handleClick"
 	>
-		<UIcon name="i-heroicons-chevron-left" class="back-btn-icon" />
+		<EIcon name="i-heroicons-chevron-left" class="back-btn-icon" />
 		<span v-if="label" class="back-btn-label">{{ label }}</span>
 	</button>
 </template>

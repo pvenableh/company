@@ -133,15 +133,15 @@ const handlePickerSelect = async (reaction) => {
 		/>
 
 		<!-- Add reaction button with emoji picker -->
-		<UPopover v-model:open="pickerOpen">
+		<EPopover v-model:open="pickerOpen">
 			<button
 				class="h-6 w-6 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
 			>
-				<UIcon name="i-heroicons-face-smile" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm" />
+				<EIcon name="i-heroicons-face-smile" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm" />
 			</button>
 			<template #panel>
 				<ReactionsPicker @select="handlePickerSelect" />
 			</template>
-		</UPopover>
+		</EPopover>
 	</div>
 </template>

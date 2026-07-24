@@ -74,12 +74,12 @@ const tip = computed(() => {
     </span>
   </div>
 
-  <UTooltip v-else-if="resolved" :text="tip">
+  <ETooltip v-else-if="resolved" :text="tip">
     <span class="inline-flex items-center gap-1 align-middle">
       <span :class="[ratingClass(resolved.rating), sizeCls]" class="rounded-full flex items-center justify-center font-bold shrink-0">
         {{ resolved.rating }}
       </span>
       <span v-if="label" class="text-[10px] uppercase tracking-wider text-muted-foreground">rating</span>
     </span>
-  </UTooltip>
+  </ETooltip>
 </template>

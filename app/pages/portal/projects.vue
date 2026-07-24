@@ -317,7 +317,7 @@ watch(() => selectedOrg.value, async () => {
 							     review the design before approving. -->
 							<div v-if="pendingEvents.length > 0">
 								<p class="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-									<UIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-warning" />
+									<EIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-warning" />
 									Pending Your Approval ({{ pendingEvents.length }})
 								</p>
 								<div class="space-y-3">
@@ -335,7 +335,7 @@ watch(() => selectedOrg.value, async () => {
 												</p>
 												<p v-if="evt.description" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ evt.description }}</p>
 											</div>
-											<UButton
+											<EButton
 												size="xs"
 												color="green"
 												variant="soft"
@@ -344,13 +344,13 @@ watch(() => selectedOrg.value, async () => {
 												@click="approveEventFromPortal(evt.id)"
 											>
 												Approve
-											</UButton>
+											</EButton>
 										</div>
 
 										<!-- Figma / prototype embed for design review -->
 										<div v-if="evt.prototype_link" class="rounded-lg border border-border/40 overflow-hidden">
 											<div class="flex items-center gap-2 px-3 py-1.5 bg-muted/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-												<UIcon name="i-heroicons-link" class="w-3 h-3" />
+												<EIcon name="i-heroicons-link" class="w-3 h-3" />
 												Design preview
 												<a :href="evt.prototype_link" target="_blank" class="ml-auto text-primary hover:underline normal-case tracking-normal font-normal">
 													Open in new tab

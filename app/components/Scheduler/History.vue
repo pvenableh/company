@@ -150,57 +150,57 @@ onMounted(() => fetchHistory());
 	<div class="space-y-6">
 		<!-- Stats -->
 		<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-			<UCard :ui="{ body: 'p-4' }">
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ stats.total }}</div>
 					<div class="text-xs text-muted-foreground">Total Meetings</div>
 				</div>
-			</UCard>
-			<UCard :ui="{ body: 'p-4' }">
+			</ECard>
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-success">{{ stats.completed }}</div>
 					<div class="text-xs text-muted-foreground">Completed</div>
 				</div>
-			</UCard>
-			<UCard :ui="{ body: 'p-4' }">
+			</ECard>
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-destructive">{{ stats.cancelled }}</div>
 					<div class="text-xs text-muted-foreground">Cancelled</div>
 				</div>
-			</UCard>
-			<UCard :ui="{ body: 'p-4' }">
+			</ECard>
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-warning">{{ stats.noShow }}</div>
 					<div class="text-xs text-muted-foreground">No Show</div>
 				</div>
-			</UCard>
-			<UCard :ui="{ body: 'p-4' }">
+			</ECard>
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ stats.avgDuration }}m</div>
 					<div class="text-xs text-muted-foreground">Avg Duration</div>
 				</div>
-			</UCard>
-			<UCard :ui="{ body: 'p-4' }">
+			</ECard>
+			<ECard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ formatDuration(stats.totalDuration) }}</div>
 					<div class="text-xs text-muted-foreground">Total Time</div>
 				</div>
-			</UCard>
+			</ECard>
 		</div>
 
 		<!-- Filters -->
 		<div class="flex flex-wrap items-center justify-between gap-4">
 			<div class="flex items-center gap-4">
-				<USelect v-model="dateRange" :options="dateRangeOptions" size="sm" class="w-40" />
-				<USelect v-model="statusFilter" :options="statusFilterOptions" size="sm" class="w-32" />
+				<ESelect v-model="dateRange" :options="dateRangeOptions" size="sm" class="w-40" />
+				<ESelect v-model="statusFilter" :options="statusFilterOptions" size="sm" class="w-32" />
 			</div>
-			<UButton color="gray" variant="soft" icon="i-heroicons-arrow-down-tray" size="sm" @click="exportCsv">
+			<EButton color="gray" variant="soft" icon="i-heroicons-arrow-down-tray" size="sm" @click="exportCsv">
 				Export CSV
-			</UButton>
+			</EButton>
 		</div>
 
 		<!-- Chart -->
-		<UCard v-if="chartData.length > 0 && chartData.length <= 31">
+		<ECard v-if="chartData.length > 0 && chartData.length <= 31">
 			<template #header>
 				<span class="font-semibold">Meeting Activity</span>
 			</template>
@@ -217,30 +217,30 @@ onMounted(() => fetchHistory());
 				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-success rounded" /><span>Completed</span></div>
 				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-destructive rounded" /><span>Cancelled</span></div>
 			</div>
-		</UCard>
+		</ECard>
 
 		<!-- List -->
-		<UCard>
+		<ECard>
 			<template #header>
 				<div class="flex items-center justify-between">
 					<span class="font-semibold">Meeting History</span>
-					<UBadge color="gray" variant="soft">{{ filteredMeetings.length }} meetings</UBadge>
+					<EBadge color="gray" variant="soft">{{ filteredMeetings.length }} meetings</EBadge>
 				</div>
 			</template>
 
 			<div v-if="loading" class="text-center py-8">
-				<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+				<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
 			</div>
 
 			<div v-else-if="filteredMeetings.length === 0" class="text-center py-8 text-muted-foreground">
-				<UIcon name="i-heroicons-calendar" class="w-8 h-8 mx-auto mb-2 opacity-50" />
+				<EIcon name="i-heroicons-calendar" class="w-8 h-8 mx-auto mb-2 opacity-50" />
 				<p>No meetings found</p>
 			</div>
 
 			<div v-else class="divide-y divide-border">
 				<div v-for="meeting in filteredMeetings" :key="meeting.id" class="py-3 flex items-center justify-between gap-4">
 					<div class="flex items-center gap-3 min-w-0">
-						<UIcon :name="meeting.room_name ? 'i-heroicons-video-camera' : 'i-heroicons-calendar'" :class="meeting.room_name ? 'text-success' : 'text-blue-500'" class="w-5 h-5 flex-shrink-0" />
+						<EIcon :name="meeting.room_name ? 'i-heroicons-video-camera' : 'i-heroicons-calendar'" :class="meeting.room_name ? 'text-success' : 'text-blue-500'" class="w-5 h-5 flex-shrink-0" />
 						<div class="min-w-0">
 							<div class="font-medium truncate">{{ meeting.title }}</div>
 							<div class="text-sm text-muted-foreground">
@@ -251,10 +251,10 @@ onMounted(() => fetchHistory());
 					</div>
 					<div class="flex items-center gap-3 flex-shrink-0">
 						<span class="text-sm text-muted-foreground">{{ formatDuration(meeting.actual_duration_minutes || meeting.duration_minutes) }}</span>
-						<UBadge :color="getStatusColor(meeting.status)" variant="soft" size="xs">{{ meeting.status }}</UBadge>
+						<EBadge :color="getStatusColor(meeting.status)" variant="soft" size="xs">{{ meeting.status }}</EBadge>
 					</div>
 				</div>
 			</div>
-		</UCard>
+		</ECard>
 	</div>
 </template>

@@ -1,9 +1,9 @@
 <template>
-	<UModal v-model="isOpen">
+	<EModal v-model="isOpen">
 		<transition name="fade">
 			<img v-if="currentImage" :src="currentImage" alt="Expanded view" class="w-full h-auto rounded-lg" />
 		</transition>
-	</UModal>
+	</EModal>
 </template>
 
 <script setup>

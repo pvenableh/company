@@ -217,7 +217,7 @@ function typeLabel(type: string): string {
 							@click="moveUp(idx)"
 							:title="`Move up`"
 						>
-							<UIcon name="lucide:chevron-up" class="w-3.5 h-3.5" />
+							<EIcon name="lucide:chevron-up" class="w-3.5 h-3.5" />
 						</button>
 						<button
 							class="px-1.5 py-0.5 rounded hover:bg-muted disabled:opacity-30"
@@ -225,7 +225,7 @@ function typeLabel(type: string): string {
 							@click="moveDown(idx)"
 							:title="`Move down`"
 						>
-							<UIcon name="lucide:chevron-down" class="w-3.5 h-3.5" />
+							<EIcon name="lucide:chevron-down" class="w-3.5 h-3.5" />
 						</button>
 						<span v-if="entry.library_ref" class="ml-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] uppercase tracking-wider">
 							Library
@@ -247,7 +247,7 @@ function typeLabel(type: string): string {
 							@click="togglePageBreak(idx)"
 							:title="entry.page_break_after ? 'Page break after this block' : 'Add page break after'"
 						>
-							<UIcon name="lucide:scissors" class="w-3.5 h-3.5 inline -mt-0.5" />
+							<EIcon name="lucide:scissors" class="w-3.5 h-3.5 inline -mt-0.5" />
 							{{ entry.page_break_after ? 'Page break' : 'Break' }}
 						</button>
 						<button
@@ -286,7 +286,7 @@ function typeLabel(type: string): string {
 					Unsupported block type "{{ entry.type }}" — no editor registered.
 				</div>
 				<div v-else class="py-2 text-xs text-muted-foreground">
-					<UIcon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin inline -mt-0.5" />
+					<EIcon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin inline -mt-0.5" />
 					Loading editor…
 				</div>
 
@@ -298,7 +298,7 @@ function typeLabel(type: string): string {
 
 		<!-- Empty state -->
 		<div v-if="entries.length === 0" class="ios-card p-8 text-center">
-			<UIcon name="lucide:layout-list" class="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+			<EIcon name="lucide:layout-list" class="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
 			<p class="text-sm text-muted-foreground mb-3">No blocks yet. Start with a library block or write inline.</p>
 		</div>
 
@@ -308,7 +308,7 @@ function typeLabel(type: string): string {
 				class="w-full ios-card p-3 hover:border-primary/40 border-dashed border-2 border-border bg-transparent text-sm flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
 				@click="pickerOpen = !pickerOpen"
 			>
-				<UIcon name="lucide:plus" class="w-4 h-4" />
+				<EIcon name="lucide:plus" class="w-4 h-4" />
 				Add block
 			</button>
 
@@ -325,14 +325,14 @@ function typeLabel(type: string): string {
 						class="w-full text-left p-2 rounded hover:bg-muted text-sm flex items-center gap-2"
 						@click="addInline(t.type)"
 					>
-						<UIcon :name="t.icon" class="w-4 h-4 text-muted-foreground" />
+						<EIcon :name="t.icon" class="w-4 h-4 text-muted-foreground" />
 						<span>{{ t.name }}</span>
 						<span v-if="t.description" class="ml-auto text-[10px] text-muted-foreground line-clamp-1">{{ t.description }}</span>
 					</button>
 				</div>
 
 				<div v-if="!libraryLoaded" class="py-4 text-center">
-					<UIcon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+					<EIcon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
 				</div>
 				<div v-else-if="library.length === 0" class="py-3 px-2 text-xs text-muted-foreground border-t border-border mt-2 pt-3">
 					No library blocks yet.
@@ -355,7 +355,7 @@ function typeLabel(type: string): string {
 							class="w-full text-left p-2 rounded hover:bg-muted text-sm flex items-start gap-2"
 							@click="addFromLibrary(b)"
 						>
-							<UIcon name="lucide:rectangle-horizontal" class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+							<EIcon name="lucide:rectangle-horizontal" class="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
 							<div class="flex-1 min-w-0">
 								<p class="font-medium truncate">{{ b.name }}</p>
 								<p v-if="b.description" class="text-xs text-muted-foreground line-clamp-1">{{ b.description }}</p>

@@ -5,7 +5,7 @@
 			<div class="ios-card p-4 flex flex-col gap-2">
 				<div class="flex items-center justify-between">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Active Goals</p>
-					<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-flag" class="w-3.5 h-3.5 text-muted-foreground" />
 				</div>
 				<div class="flex items-baseline gap-2">
 					<p class="text-2xl font-bold">{{ activeGoals.length }}</p>
@@ -17,7 +17,7 @@
 			<div class="ios-card p-4 flex flex-col gap-2">
 				<div class="flex items-center justify-between">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Progress</p>
-					<UIcon name="i-heroicons-chart-bar" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-chart-bar" class="w-3.5 h-3.5 text-muted-foreground" />
 				</div>
 				<div class="flex items-baseline gap-1">
 					<p class="text-2xl font-bold">{{ avgProgress }}<span class="text-lg">%</span></p>
@@ -34,7 +34,7 @@
 			<div class="ios-card p-4 flex flex-col gap-2">
 				<div class="flex items-center justify-between">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">On Track</p>
-					<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-muted-foreground" />
 				</div>
 				<div class="flex items-baseline gap-2">
 					<p class="text-2xl font-bold">{{ onTrackCount }}</p>
@@ -48,7 +48,7 @@
 			<div class="ios-card p-4 flex flex-col gap-2">
 				<div class="flex items-center justify-between">
 					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Check-in Cadence</p>
-					<UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-muted-foreground" />
 				</div>
 				<div class="flex items-baseline gap-1">
 					<p class="text-2xl font-bold">{{ snapshotsLast30 }}</p>

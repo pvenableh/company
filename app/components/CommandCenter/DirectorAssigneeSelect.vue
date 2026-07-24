@@ -40,7 +40,7 @@ function isOn(id: string) { return props.modelValue.includes(id); }
         {{ (u.label || '?').slice(0, 1) }}
       </span>
       {{ u.label }}
-      <UIcon v-if="isOn(u.id)" name="i-lucide-check" class="w-3 h-3 text-indigo-200" />
+      <EIcon v-if="isOn(u.id)" name="i-lucide-check" class="w-3 h-3 text-indigo-200" />
     </button>
   </div>
 </template>

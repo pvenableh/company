@@ -82,7 +82,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 		<!-- Upcoming Follow-ups -->
 		<div class="ios-card p-4">
 			<div class="flex items-center gap-2 mb-3">
-				<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-warning" />
+				<EIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-warning" />
 				<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Follow-ups</h3>
 				<span v-if="upcomingFollowUps.length" class="text-[10px] font-medium text-warning bg-warning/10 px-1.5 py-0.5 rounded-full">
 					{{ upcomingFollowUps.length }}
@@ -119,7 +119,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
 				<div class="flex items-center gap-2">
-					<UIcon name="i-heroicons-funnel" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-funnel" class="w-4 h-4 text-primary" />
 					<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Pipeline</h3>
 				</div>
 				<UiViewLink to="/apps/clients?view=leads">View</UiViewLink>
@@ -148,20 +148,20 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 		>
 			<div class="flex items-center gap-3">
 				<div class="p-2 bg-warning/10 rounded-xl">
-					<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-warning" />
+					<EIcon name="i-heroicons-inbox" class="w-4 h-4 text-warning" />
 				</div>
 				<div class="flex-1">
 					<p class="text-[12px] font-semibold text-foreground">{{ pendingRequests }} Pending Request{{ pendingRequests > 1 ? 's' : '' }}</p>
 					<p class="text-[10px] text-muted-foreground">Tap to review</p>
 				</div>
-				<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground" />
+				<EIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground" />
 			</div>
 		</div>
 
 		<!-- Booking Link -->
 		<div v-if="settings?.public_booking_enabled" class="ios-card p-4">
 			<div class="flex items-center gap-2 mb-2">
-				<UIcon name="i-heroicons-link" class="w-4 h-4 text-primary" />
+				<EIcon name="i-heroicons-link" class="w-4 h-4 text-primary" />
 				<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Booking Link</h3>
 			</div>
 			<div class="flex gap-1.5">
@@ -175,7 +175,7 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 					:disabled="!bookingUrlReady"
 					class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors ios-press disabled:opacity-40 disabled:cursor-not-allowed"
 				>
-					<UIcon name="i-heroicons-clipboard" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-clipboard" class="w-3.5 h-3.5 text-muted-foreground" />
 				</button>
 			</div>
 			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-warning mt-1.5">Pick an active organization to generate the URL.</p>

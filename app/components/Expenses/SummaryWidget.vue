@@ -52,7 +52,7 @@ const topCategories = computed(() => {
 	<div class="ios-card p-5">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-receipt-percent" class="w-5 h-5 text-destructive" />
+				<EIcon name="i-heroicons-receipt-percent" class="w-5 h-5 text-destructive" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Expenses</h3>
 			</div>
 			<button
@@ -71,7 +71,7 @@ const topCategories = computed(() => {
 
 		<!-- Empty -->
 		<div v-else-if="!expenses.length" class="text-center py-6">
-			<UIcon name="i-heroicons-receipt-percent" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+			<EIcon name="i-heroicons-receipt-percent" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-xs text-muted-foreground">No expenses recorded</p>
 			<button
 				@click="router.push('/expenses')"
@@ -105,7 +105,7 @@ const topCategories = computed(() => {
 					:key="cat.key"
 					class="flex items-center gap-2.5"
 				>
-					<UIcon
+					<EIcon
 						:name="cat.config.icon"
 						class="w-3.5 h-3.5 flex-shrink-0"
 						:class="cat.config.color"

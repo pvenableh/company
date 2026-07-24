@@ -6,9 +6,9 @@
 			@click="open = !open"
 			:title="`${activeHat.name} mode`"
 		>
-			<UIcon :name="activeHat.icon" class="w-5 h-5 flex-shrink-0" />
+			<EIcon :name="activeHat.icon" class="w-5 h-5 flex-shrink-0" />
 			<span v-if="!collapsed" class="hat-label">{{ activeHat.name }}</span>
-			<UIcon v-if="!collapsed" name="i-heroicons-chevron-up-down" class="w-3 h-3 text-muted-foreground/50" />
+			<EIcon v-if="!collapsed" name="i-heroicons-chevron-up-down" class="w-3 h-3 text-muted-foreground/50" />
 		</button>
 
 		<!-- Popover -->
@@ -25,12 +25,12 @@
 						:class="{ 'hat-option--active': hat.id === activeHat.id }"
 						@click="selectHat(hat.id)"
 					>
-						<UIcon :name="hat.icon" class="w-5 h-5 flex-shrink-0" />
+						<EIcon :name="hat.icon" class="w-5 h-5 flex-shrink-0" />
 						<div class="flex-1 min-w-0">
 							<div class="text-[13px] font-medium">{{ hat.name }}</div>
 							<div class="text-[11px] text-muted-foreground truncate">{{ hat.description }}</div>
 						</div>
-						<UIcon
+						<EIcon
 							v-if="hat.id === activeHat.id"
 							name="i-heroicons-check"
 							class="w-4 h-4 text-primary flex-shrink-0"

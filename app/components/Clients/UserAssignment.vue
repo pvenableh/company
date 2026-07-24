@@ -36,7 +36,7 @@
 					class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-0.5"
 					@click="removeAssignment(u.id)"
 				>
-					<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+					<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 				</button>
 			</div>
 		</div>
@@ -59,7 +59,7 @@
 					class="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-lg hover:bg-muted/30 transition-colors text-sm"
 					@click="addAssignment(u.id)"
 				>
-					<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 flex-shrink-0" />
+					<EIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 flex-shrink-0" />
 					<span>{{ u.first_name }} {{ u.last_name }}</span>
 				</button>
 				<div v-if="!availableUsers.length" class="text-xs text-muted-foreground text-center py-2">

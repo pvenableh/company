@@ -7,14 +7,14 @@
 			<TicketsDetailsPriority v-model="form.priority" animationDuration="0.2" />
 		</div>
 		<div class="w-full pb-1">
-			<UFormGroup label="Title" required>
-				<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
-			</UFormGroup>
+			<EFormGroup label="Title" required>
+				<EInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
+			</EFormGroup>
 		</div>
 		<!-- Fields Grid -->
 		<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-			<UFormGroup v-if="clientOptions.length > 0" label="Client">
-				<USelectMenu
+			<EFormGroup v-if="clientOptions.length > 0" label="Client">
+				<ESelectMenu
 					searchable
 					v-model="form.client"
 					:options="clientOptions"
@@ -27,11 +27,11 @@
 					<template #option="{ option }">
 						{{ option.label }}
 					</template>
-				</USelectMenu>
-			</UFormGroup>
+				</ESelectMenu>
+			</EFormGroup>
 			<!-- Only show project dropdown if we have projects -->
-			<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project (optional)">
-				<USelectMenu
+			<EFormGroup v-if="form.organization && projectOptions.length > 1" label="Project (optional)">
+				<ESelectMenu
 					searchable
 					v-model="form.project"
 					:options="projectOptions"
@@ -41,7 +41,7 @@
 					:loading="loadingProjects"
 					class="relative"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 			<!-- Due Date & Time -->
 			<div class="min-w-0">
 				<TicketsDetailsDateTime v-model="form.due_date" />
@@ -49,11 +49,11 @@
 		</div>
 		<!-- Team row -->
 		<div v-if="teamsEnabled && ((localTeamOptions.length > 0 && !isAdminOrManager) || (localTeamOptions.length > 1 && isAdminOrManager))" class="max-w-xs">
-			<UFormGroup
+			<EFormGroup
 				:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
 				:required="!isAdminOrManager"
 			>
-				<USelect
+				<ESelect
 					v-model="localTeamId"
 					:options="localTeamOptions"
 					option-attribute="name"
@@ -62,7 +62,7 @@
 					:loading="teamsLoading"
 					:disabled="localTeamOptions.length <= 1 || isLoading"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 		</div>
 
 		<!-- User Assignment -->

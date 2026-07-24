@@ -68,7 +68,7 @@ function dismiss() {
 				class="w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors flex-shrink-0"
 				@click="dismiss"
 			>
-				<UIcon name="i-heroicons-x-mark-20-solid" class="w-4 h-4" />
+				<EIcon name="i-heroicons-x-mark-20-solid" class="w-4 h-4" />
 			</button>
 		</div>
 	</Transition>

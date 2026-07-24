@@ -31,10 +31,10 @@
 		<template #footer>
 			<span />
 			<div class="flex items-center gap-2">
-				<UButton variant="soft" color="gray" @click="$emit('close')">Cancel</UButton>
-				<UButton color="primary" :disabled="!selectedListId || adding" :loading="adding" @click="handleAdd">
+				<EButton variant="soft" color="gray" @click="$emit('close')">Cancel</EButton>
+				<EButton color="primary" :disabled="!selectedListId || adding" :loading="adding" @click="handleAdd">
 					Add to List
-				</UButton>
+				</EButton>
 			</div>
 		</template>
 	</AppsAppBottomSheet>

@@ -1,6 +1,6 @@
 <template>
   <span class="flex items-center" :class="colorClass">
-    <UIcon :name="iconName" class="w-3 h-3 mr-1" />
+    <EIcon :name="iconName" class="w-3 h-3 mr-1" />
     <span class="text-xs font-medium">{{ formattedValue }}</span>
   </span>
 </template>

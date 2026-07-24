@@ -15,7 +15,7 @@
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Organization</label>
-        <UInput
+        <EInput
           :model-value="currentOrg?.name || orgs.find(o => o.id === formData.bill_to)?.name || '—'"
           disabled
         />
@@ -26,7 +26,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Invoice Code</label>
-        <UInput v-model="formData.invoice_code" disabled placeholder="Auto-generated" />
+        <EInput v-model="formData.invoice_code" disabled placeholder="Auto-generated" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Projects</label>
@@ -63,11 +63,11 @@
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Invoice Date *</label>
-        <UInput v-model="formData.invoice_date" type="date" required />
+        <EInput v-model="formData.invoice_date" type="date" required />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Due Date *</label>
-        <UInput v-model="formData.due_date" type="date" required />
+        <EInput v-model="formData.due_date" type="date" required />
       </div>
     </div>
 
@@ -75,7 +75,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div v-if="!isEditing" class="space-y-1">
         <label class="t-label text-muted-foreground">Status</label>
-        <USelectMenu
+        <ESelectMenu
           v-model="statusModel"
           :options="statusOptions"
           option-attribute="label"
@@ -84,7 +84,7 @@
       </div>
       <div class="space-y-1" :class="{ 'col-span-2': isEditing }">
         <label class="t-label text-muted-foreground">Melio Link</label>
-        <UInput v-model="formData.melio" placeholder="https://app.meliopayments.com/..." />
+        <EInput v-model="formData.melio" placeholder="https://app.meliopayments.com/..." />
       </div>
     </div>
 
@@ -92,7 +92,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Date Mailed</label>
-        <UInput v-model="formData.date_mailed" type="date" />
+        <EInput v-model="formData.date_mailed" type="date" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Check Image</label>
@@ -129,7 +129,7 @@
     <!-- Memo -->
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Internal Memo</label>
-      <UTextarea
+      <ETextarea
         v-model="formData.memo"
         :rows="2"
         placeholder="Internal memo (not shown to client)..."
@@ -175,16 +175,16 @@
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-1">
           <label class="t-label text-muted-foreground">Billing Name</label>
-          <UInput v-model="formData.billing_name" placeholder="Contact name" />
+          <EInput v-model="formData.billing_name" placeholder="Contact name" />
         </div>
         <div class="space-y-1">
           <label class="t-label text-muted-foreground">Billing Email</label>
-          <UInput v-model="formData.billing_email" type="email" placeholder="billing@example.com" />
+          <EInput v-model="formData.billing_email" type="email" placeholder="billing@example.com" />
         </div>
       </div>
       <div class="mt-3 space-y-1">
         <label class="t-label text-muted-foreground">Billing Address</label>
-        <UInput v-model="formData.billing_address" placeholder="Billing address" />
+        <EInput v-model="formData.billing_address" placeholder="Billing address" />
       </div>
     </div>
 

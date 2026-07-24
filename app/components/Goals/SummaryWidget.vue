@@ -55,7 +55,7 @@ const progressColor = (pct) => {
 	<div class="ios-card p-5">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-flag" class="w-5 h-5 text-warning" />
+				<EIcon name="i-heroicons-flag" class="w-5 h-5 text-warning" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Goals</h3>
 			</div>
 			<button
@@ -74,7 +74,7 @@ const progressColor = (pct) => {
 
 		<!-- Empty -->
 		<div v-else-if="!activeGoals.length" class="text-center py-6">
-			<UIcon name="i-heroicons-flag" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+			<EIcon name="i-heroicons-flag" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-xs text-muted-foreground">No active goals</p>
 			<button
 				@click="router.push('/goals')"
@@ -99,7 +99,7 @@ const progressColor = (pct) => {
 				class="flex items-center gap-3 p-2.5 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
 				@click="router.push('/goals')"
 			>
-				<UIcon
+				<EIcon
 					:name="configFor(goal).icon"
 					class="w-4 h-4 flex-shrink-0"
 					:class="configFor(goal).color"
@@ -121,7 +121,7 @@ const progressColor = (pct) => {
 
 			<!-- Overdue warning -->
 			<div v-if="overdueGoals.length" class="flex items-center gap-1.5 text-xs text-destructive mt-1">
-				<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
+				<EIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
 				<span>{{ overdueGoals.length }} overdue goal{{ overdueGoals.length > 1 ? 's' : '' }}</span>
 			</div>
 		</div>

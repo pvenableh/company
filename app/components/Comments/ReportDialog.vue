@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="open">
+	<EModal v-model="open">
 		<template #header>
 			<div class="flex items-center gap-2">
 				<Icon name="i-heroicons-flag" class="text-destructive" />
@@ -10,7 +10,7 @@
 		<div class="p-4 space-y-4">
 			<div>
 				<label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
-				<USelectMenu
+				<ESelectMenu
 					v-model="reason"
 					:options="reasonOptions"
 					value-attribute="value"
@@ -23,19 +23,19 @@
 				<label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
 					Details <span class="text-gray-400">(optional)</span>
 				</label>
-				<UTextarea v-model="details" placeholder="Add more context..." :rows="3" />
+				<ETextarea v-model="details" placeholder="Add more context..." :rows="3" />
 			</div>
 		</div>
 
 		<template #footer>
 			<div class="flex justify-end gap-2">
-				<UButton variant="ghost" size="sm" @click="open = false">Cancel</UButton>
-				<UButton color="red" size="sm" :disabled="!reason" :loading="loading" @click="handleSubmit">
+				<EButton variant="ghost" size="sm" @click="open = false">Cancel</EButton>
+				<EButton color="red" size="sm" :disabled="!reason" :loading="loading" @click="handleSubmit">
 					Report
-				</UButton>
+				</EButton>
 			</div>
 		</template>
-	</UModal>
+	</EModal>
 </template>
 
 <script setup lang="ts">

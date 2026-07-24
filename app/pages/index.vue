@@ -546,7 +546,7 @@ const goTo = (route: string) => {
 				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
 					<!-- Badges -->
-					<UTooltip
+					<ETooltip
 						v-for="badge in earnestState.badges"
 						:key="badge.id"
 						:text="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
@@ -557,10 +557,10 @@ const goTo = (route: string) => {
 								? badgeColor(badge.id)
 								: 'bg-muted/30 text-muted-foreground/40'"
 						>
-							<UIcon :name="badge.icon" class="w-3.5 h-3.5" />
+							<EIcon :name="badge.icon" class="w-3.5 h-3.5" />
 							<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
 						</div>
-					</UTooltip>
+					</ETooltip>
 				</div>
 
 				<!-- Three-band layout. CSS `order` is reactive to the lens toggle —
@@ -586,7 +586,7 @@ const goTo = (route: string) => {
 						<!-- Priority Actions -->
 						<div class="space-y-4">
 							<div class="flex items-center gap-2">
-								<UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
+								<EIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
 								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
 									Priority Actions
 								</h3>
@@ -596,7 +596,7 @@ const goTo = (route: string) => {
 									aria-label="Refresh priority actions"
 									class="flex items-center justify-center size-6 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/60 transition-colors disabled:opacity-50"
 								>
-									<UIcon
+									<EIcon
 										name="i-heroicons-arrow-path"
 										class="w-3.5 h-3.5"
 										:class="{ 'animate-spin': isAnalyzing }"
@@ -665,7 +665,7 @@ const goTo = (route: string) => {
 
 							<!-- Empty State -->
 							<div v-else-if="topActions.length === 0 && !isAnalyzing" class="ios-card p-8 text-center">
-								<UIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-success" />
+								<EIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-success" />
 								<p class="text-sm font-medium text-foreground">You're all caught up!</p>
 								<p class="text-xs text-muted-foreground mt-1">No urgent or high-priority items need your attention right now.</p>
 							</div>
@@ -683,7 +683,7 @@ const goTo = (route: string) => {
 											class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
 											:class="priorityChipClasses(action.priority)"
 										>
-											<UIcon
+											<EIcon
 												:name="action.icon"
 												class="w-4 h-4"
 												:class="priorityIconColor(action.priority)"
@@ -726,7 +726,7 @@ const goTo = (route: string) => {
 											<!-- Persistent disclosure chevron. Replaces the old "Complete now →"
 											     reveal, which reserved layout width even at opacity-0 and so
 											     permanently pushed the priority tag off the right edge. -->
-											<UIcon
+											<EIcon
 												name="i-heroicons-chevron-right"
 												class="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200"
 											/>
@@ -809,7 +809,7 @@ const goTo = (route: string) => {
 						<div v-if="goalsEnabled" class="ios-card p-5">
 							<div class="flex items-center justify-between mb-3">
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
+									<EIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
 									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
 								</div>
 								<UiViewLink to="/goals?scope=user" size="sm">
@@ -904,7 +904,7 @@ const goTo = (route: string) => {
 						</div>
 						<div v-else-if="crmSnapshotLoading" class="w-12 h-12 shrink-0 rounded-full bg-muted/40 animate-pulse"></div>
 						<div v-else class="w-12 h-12 shrink-0 rounded-full bg-muted/30 flex items-center justify-center">
-							<UIcon name="i-heroicons-user-group" class="w-5 h-5 text-muted-foreground/60" />
+							<EIcon name="i-heroicons-user-group" class="w-5 h-5 text-muted-foreground/60" />
 						</div>
 
 						<!-- Headline + first alert -->
@@ -931,7 +931,7 @@ const goTo = (route: string) => {
 						     is already a NuxtLink). -->
 						<span class="hidden sm:inline-flex items-center gap-0.5 text-[11px] font-medium uppercase tracking-wide text-primary opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
 							Open insights
-							<UIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5" />
+							<EIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5" />
 						</span>
 					</NuxtLink>
 					</div>
@@ -965,7 +965,7 @@ const goTo = (route: string) => {
 				>
 					<details class="group">
 						<summary class="flex items-center gap-2 cursor-pointer list-none py-1 select-none">
-							<UIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5 text-muted-foreground transition-transform group-open:rotate-90" />
+							<EIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5 text-muted-foreground transition-transform group-open:rotate-90" />
 							<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Less-used</h2>
 							<div class="flex-1 h-px bg-border/40"></div>
 						</summary>

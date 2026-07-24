@@ -336,7 +336,7 @@ function openProject() {
 						:class="compact ? '' : 'p-4'"
 					>
 						<div class="flex items-center gap-2 mb-2">
-							<UIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground" />
 							<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Figma / Prototype</span>
 							<a :href="event.prototype_link" target="_blank" class="text-[10px] text-primary hover:underline ml-auto">
 								Open in new tab
@@ -352,7 +352,7 @@ function openProject() {
 
 					<div v-if="eventImages.length" :class="compact ? '' : 'p-4'">
 						<div class="flex items-center gap-2 mb-3">
-							<UIcon name="i-heroicons-photo" class="w-3.5 h-3.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-photo" class="w-3.5 h-3.5 text-muted-foreground" />
 							<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Images</span>
 							<span class="text-[10px] text-muted-foreground/60">{{ eventImages.length }}</span>
 						</div>
@@ -370,7 +370,7 @@ function openProject() {
 									loading="lazy"
 								/>
 								<div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-									<UIcon name="i-heroicons-magnifying-glass-plus" class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+									<EIcon name="i-heroicons-magnifying-glass-plus" class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
 								</div>
 							</button>
 						</div>
@@ -378,7 +378,7 @@ function openProject() {
 
 					<div v-if="eventFiles.length" :class="compact ? '' : 'p-4 pt-0'">
 						<div class="flex items-center gap-2 mb-2">
-							<UIcon name="i-heroicons-paper-clip" class="w-3.5 h-3.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-paper-clip" class="w-3.5 h-3.5 text-muted-foreground" />
 							<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Files</span>
 						</div>
 						<div class="space-y-1">
@@ -389,7 +389,7 @@ function openProject() {
 								target="_blank"
 								class="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-sm text-foreground"
 							>
-								<UIcon name="i-heroicons-document-arrow-down" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+								<EIcon name="i-heroicons-document-arrow-down" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 								<span class="truncate">{{ file.title || file.filename_download }}</span>
 							</a>
 						</div>
@@ -428,7 +428,7 @@ function openProject() {
 									:disabled="creatingMeeting"
 									@click="startMeetingForEvent"
 								>
-									<UIcon
+									<EIcon
 										:name="creatingMeeting ? 'i-heroicons-arrow-path' : 'i-heroicons-video-camera'"
 										:class="['w-3 h-3', creatingMeeting && 'animate-spin']"
 									/>
@@ -446,7 +446,7 @@ function openProject() {
 									:key="m.id"
 									class="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
 								>
-									<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+									<EIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
 									<div class="flex-1 min-w-0">
 										<div class="flex items-center gap-1.5">
 											<span class="text-[12px] font-medium text-foreground truncate">{{ m.title }}</span>
@@ -494,21 +494,21 @@ function openProject() {
 					@click.self="lightboxOpen = false"
 				>
 					<button class="absolute top-4 right-4 text-white/70 hover:text-white" @click="lightboxOpen = false">
-						<UIcon name="i-heroicons-x-mark" class="w-8 h-8" />
+						<EIcon name="i-heroicons-x-mark" class="w-8 h-8" />
 					</button>
 					<button
 						v-if="eventImages.length > 1 && lightboxIndex > 0"
 						class="absolute left-4 text-white/70 hover:text-white"
 						@click="lightboxIndex--"
 					>
-						<UIcon name="i-heroicons-chevron-left" class="w-8 h-8" />
+						<EIcon name="i-heroicons-chevron-left" class="w-8 h-8" />
 					</button>
 					<button
 						v-if="eventImages.length > 1 && lightboxIndex < eventImages.length - 1"
 						class="absolute right-16 text-white/70 hover:text-white"
 						@click="lightboxIndex++"
 					>
-						<UIcon name="i-heroicons-chevron-right" class="w-8 h-8" />
+						<EIcon name="i-heroicons-chevron-right" class="w-8 h-8" />
 					</button>
 					<img
 						:src="getUrl(eventImages[lightboxIndex]?.id, { width: 1600, quality: 90 })"

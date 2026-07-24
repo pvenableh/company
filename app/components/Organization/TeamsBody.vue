@@ -9,7 +9,7 @@
 -->
 <template>
 	<div>
-		<UAlert
+		<EAlert
 			v-if="!selectedOrg"
 			class="mb-6"
 			title="No organization selected"
@@ -18,7 +18,7 @@
 		/>
 
 		<div v-else-if="loading" class="flex justify-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+			<EIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 		</div>
 
 		<TeamsManageTeams

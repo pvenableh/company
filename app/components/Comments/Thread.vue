@@ -1,7 +1,7 @@
 <template>
 	<div class="comment-thread" :class="{ 'opacity-40': isHidden }">
 		<div class="flex gap-3">
-			<UAvatar
+			<EAvatar
 				:src="comment.user?.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${comment.user.avatar}` : null"
 				:alt="comment.user?.first_name"
 				size="sm"
@@ -10,11 +10,11 @@
 			<div class="w-auto">
 				<div class="flex flex-row ml-2 items-center gap-1">
 					<span class="text-[9px] uppercase font-bold">
-						<UTooltip :text="new Date(comment.date_created).toLocaleString()">
+						<ETooltip :text="new Date(comment.date_created).toLocaleString()">
 							<span class="lowercase">
 								{{ getFriendlyDate(comment.date_created) }}
 							</span>
-						</UTooltip>
+						</ETooltip>
 					</span>
 					<span v-if="isHidden" class="text-[9px] text-destructive font-medium flex items-center gap-0.5">
 						<Icon name="i-heroicons-eye-slash" class="w-3 h-3" /> Hidden
@@ -27,7 +27,7 @@
 						</span>
 						<div class="absolute -right-2 flex items-center gap-0.5">
 							<!-- Delete (own comment) -->
-							<UButton
+							<EButton
 								v-if="isOwnComment && !confirmingDelete"
 								size="xs"
 								color="primary"
@@ -38,8 +38,8 @@
 							<!-- Delete confirmation -->
 							<template v-if="confirmingDelete">
 								<span class="text-[9px] text-destructive mr-1">Delete?</span>
-								<UButton size="xs" color="red" variant="ghost" icon="i-heroicons-check" :loading="deleteLoading" @click="handleDelete" />
-								<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="confirmingDelete = false" />
+								<EButton size="xs" color="red" variant="ghost" icon="i-heroicons-check" :loading="deleteLoading" @click="handleDelete" />
+								<EButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="confirmingDelete = false" />
 							</template>
 						</div>
 					</div>
@@ -52,7 +52,7 @@
 						<ReactionsBar :item-id="String(comment.id)" collection="comments" />
 						<div class="flex items-center gap-1">
 							<!-- Report -->
-							<UButton
+							<EButton
 								v-if="!isOwnComment"
 								variant="ghost"
 								size="xs"
@@ -62,7 +62,7 @@
 								@click="showReportDialog = true"
 							/>
 							<!-- Admin: hide/unhide -->
-							<UButton
+							<EButton
 								v-if="isAdmin"
 								variant="ghost"
 								size="xs"
@@ -73,9 +73,9 @@
 								@click="handleToggleHide"
 							/>
 							<!-- Reply -->
-							<UButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
+							<EButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
 								Reply
-							</UButton>
+							</EButton>
 						</div>
 					</div>
 				</div>

@@ -3,7 +3,7 @@
     <div class="relative">
       <!-- Empty state -->
       <div v-if="!activities.length && !isLoading" class="text-center py-10">
-        <UIcon name="i-heroicons-clock" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <EIcon name="i-heroicons-clock" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">No activity yet</h3>
         <p class="text-sm text-muted-foreground mt-2">
           Activity will be recorded when changes are made to this ticket
@@ -12,7 +12,7 @@
       
       <!-- Loading state -->
       <div v-if="isLoading" class="text-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-muted-foreground animate-spin" />
+        <EIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-muted-foreground animate-spin" />
         <p class="text-sm text-muted-foreground mt-2">Loading activity history...</p>
       </div>
       
@@ -26,7 +26,7 @@
           <div v-for="(activity, index) in activities" :key="index" class="relative pl-12">
             <!-- Activity icon -->
             <div class="absolute left-4 bg-card rounded-full p-1 border-2 border-border">
-              <UIcon :name="getActivityIcon(activity)" class="w-6 h-6" :class="getActivityIconColor(activity)" />
+              <EIcon :name="getActivityIcon(activity)" class="w-6 h-6" :class="getActivityIconColor(activity)" />
             </div>
             
             <!-- Activity content -->
@@ -46,7 +46,7 @@
               <div v-if="activity.type === 'update' && activity.oldValue && activity.newValue" class="mt-2 text-sm">
                 <div class="flex gap-2 text-muted-foreground">
                   <div class="line-through">{{ activity.oldValue }}</div>
-                  <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
+                  <EIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
                   <div class="font-medium text-gray-700 dark:text-gray-300">{{ activity.newValue }}</div>
                 </div>
               </div>

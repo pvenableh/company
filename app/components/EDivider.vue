@@ -21,7 +21,7 @@ const props = withDefaults(
 <template>
   <div v-if="label || icon" :class="['flex items-center gap-2', props.class]">
     <Separator class="flex-1" :orientation="orientation" />
-    <UIcon v-if="icon" :name="icon" class="h-4 w-4 text-muted-foreground" />
+    <EIcon v-if="icon" :name="icon" class="h-4 w-4 text-muted-foreground" />
     <span v-if="label" class="text-xs text-muted-foreground">{{ label }}</span>
     <Separator class="flex-1" :orientation="orientation" />
   </div>

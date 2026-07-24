@@ -61,7 +61,7 @@ watch(() => props.paymentIntentId, fetchEvents, { immediate: true });
 			</div>
 		</div>
 
-		<UAlert v-else-if="error" :title="error" color="red" variant="soft" icon="i-heroicons-exclamation-triangle" />
+		<EAlert v-else-if="error" :title="error" color="red" variant="soft" icon="i-heroicons-exclamation-triangle" />
 
 		<div v-else-if="events.length" class="space-y-3">
 			<div

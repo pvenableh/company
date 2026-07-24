@@ -78,7 +78,7 @@ function isCarousel(post: GridPost): boolean {
         <div class="ig-wall__avatar-ring">
           <div class="ig-wall__avatar-inner">
             <img v-if="displayAvatar" :src="displayAvatar" :alt="displayHandle" />
-            <UIcon v-else name="i-lucide-user" class="w-6 h-6 text-gray-400" />
+            <EIcon v-else name="i-lucide-user" class="w-6 h-6 text-gray-400" />
           </div>
         </div>
       </div>
@@ -96,13 +96,13 @@ function isCarousel(post: GridPost): boolean {
     <!-- Tab strip (decorative) -->
     <div class="ig-wall__tabs">
       <div class="ig-wall__tab ig-wall__tab--active">
-        <UIcon name="i-lucide-grid-3x3" class="w-3.5 h-3.5" />
+        <EIcon name="i-lucide-grid-3x3" class="w-3.5 h-3.5" />
       </div>
       <div class="ig-wall__tab">
-        <UIcon name="i-lucide-play-square" class="w-3.5 h-3.5" />
+        <EIcon name="i-lucide-play-square" class="w-3.5 h-3.5" />
       </div>
       <div class="ig-wall__tab">
-        <UIcon name="i-lucide-user-square" class="w-3.5 h-3.5" />
+        <EIcon name="i-lucide-user-square" class="w-3.5 h-3.5" />
       </div>
     </div>
 
@@ -119,13 +119,13 @@ function isCarousel(post: GridPost): boolean {
       >
         <img v-if="thumbFor(post)" :src="thumbFor(post)!" :alt="post.caption?.slice(0, 60) || ''" loading="lazy" />
         <div v-else class="ig-wall__tile-empty">
-          <UIcon name="i-lucide-image" class="w-6 h-6 text-gray-300" />
+          <EIcon name="i-lucide-image" class="w-6 h-6 text-gray-300" />
         </div>
         <span v-if="isReel(post)" class="ig-wall__tile-badge ig-wall__tile-badge--reel">
-          <UIcon name="i-lucide-play" class="w-3 h-3" />
+          <EIcon name="i-lucide-play" class="w-3 h-3" />
         </span>
         <span v-else-if="isCarousel(post)" class="ig-wall__tile-badge">
-          <UIcon name="i-lucide-copy" class="w-3 h-3" />
+          <EIcon name="i-lucide-copy" class="w-3 h-3" />
         </span>
       </button>
     </div>

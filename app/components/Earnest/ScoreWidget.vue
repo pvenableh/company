@@ -25,7 +25,7 @@
 				<!-- Stage 2.5: weekly check-in streak (separate signal from daily
 				     activity streak; only shows once user has at least 1 check-in). -->
 				<div v-if="weeklyCheckinStreak > 0" class="flex items-center gap-1">
-					<UIcon name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3 text-success" />
+					<EIcon name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3 text-success" />
 					<span class="text-[10px] font-medium text-muted-foreground tabular-nums">
 						{{ weeklyCheckinStreak }}-wk check-in
 					</span>

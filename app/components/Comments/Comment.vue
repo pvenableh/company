@@ -4,7 +4,7 @@
 		<div v-if="replyingTo" class="flex items-center gap-2 text-[10px] p-1 bg-gray-50 dark:bg-gray-900 rounded-lg">
 			<span class="text-gray-500">Replying to {{ userName(replyingTo.user) }}'s comment:</span>
 			<p class="font-medium truncate flex-1 italic">"{{ sanitizedComment }}"</p>
-			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
+			<EButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>
 		<!-- Comment Input -->
 		<div class="flex gap-2 relative">
@@ -19,7 +19,7 @@
 					:organization-id="organizationId"
 					:client-id="clientId"
 				/>
-				<UButton
+				<EButton
 					v-if="comment?.user?.id === user?.id && !replyingTo"
 					size="xs"
 					color="red"
@@ -33,7 +33,7 @@
 			</div>
 
 			<!-- Submit Button -->
-			<UButton
+			<EButton
 				v-if="depth < 4"
 				variant="outline"
 				size="xs"
@@ -43,7 +43,7 @@
 				:disabled="!editorContent.trim()"
 			>
 				{{ replyingTo ? 'Reply' : 'Post' }}
-			</UButton>
+			</EButton>
 		</div>
 
 		<p class="text-[10px] text-gray-500 mt-1">Press @ to mention someone • Ctrl/Cmd + Enter to submit</p>

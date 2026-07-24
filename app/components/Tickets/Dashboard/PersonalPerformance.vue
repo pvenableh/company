@@ -1,5 +1,5 @@
 <template>
-	<UCard>
+	<ECard>
 		<template #header>
 			<h2 class="text-base font-bold">Your Performance Summary</h2>
 		</template>
@@ -7,8 +7,8 @@
 			<div class="border-r border-border pr-4">
 				<div class="flex items-center">
 					<h3 class="text-xs uppercase font-bold text-muted-foreground">Average Resolution Time</h3>
-					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
-						<UIcon
+					<EPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
+						<EIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
@@ -21,7 +21,7 @@
 								</p>
 							</div>
 						</template>
-					</UPopover>
+					</EPopover>
 				</div>
 				<p class="text-xl font-bold">{{ formatDuration(performance.avgResolutionTime) }}</p>
 				<div class="mt-1">
@@ -36,8 +36,8 @@
 				<div class="flex items-center">
 					<h3 class="text-xs uppercase font-bold text-muted-foreground">Completion Rate</h3>
 
-					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
-						<UIcon
+					<EPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
+						<EIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
@@ -50,7 +50,7 @@
 								</p>
 							</div>
 						</template>
-					</UPopover>
+					</EPopover>
 				</div>
 				<p class="text-xl font-bold">{{ performance.completionRate }}%</p>
 				<div class="mt-1">
@@ -61,8 +61,8 @@
 				<div class="flex items-center">
 					<h3 class="text-xs uppercase font-bold text-muted-foreground">Activity Level</h3>
 
-					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
-						<UIcon
+					<EPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
+						<EIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
@@ -76,7 +76,7 @@
 								</p>
 							</div>
 						</template>
-					</UPopover>
+					</EPopover>
 				</div>
 				<p class="text-xl font-bold">{{ performance.activityLevel }} actions/ticket</p>
 				<div class="mt-1">
@@ -84,7 +84,7 @@
 				</div>
 			</div>
 		</div>
-	</UCard>
+	</ECard>
 </template>
 
 <script setup>

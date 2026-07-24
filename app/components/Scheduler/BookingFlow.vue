@@ -439,13 +439,13 @@ onMounted(() => {
 	<div>
 		<!-- Stage 5: confirming a Stripe Checkout return. -->
 		<div v-if="finalizingPayment" class="ios-card p-8 text-center mb-6">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
+			<EIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
 			<h2 class="text-base font-semibold mb-1">Confirming your payment…</h2>
 			<p class="text-xs text-muted-foreground">Don't close this page.</p>
 		</div>
 		<div v-if="paymentError && !finalizingPayment" class="ios-card p-5 mb-6 border-l-4 border-l-destructive">
 			<div class="flex items-start gap-3">
-				<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+				<EIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
 				<div class="min-w-0 flex-1">
 					<h2 class="text-sm font-semibold mb-1">Couldn't confirm your booking</h2>
 					<p class="text-xs text-muted-foreground">{{ paymentError }}</p>
@@ -459,7 +459,7 @@ onMounted(() => {
 		<!-- Picker view: no event type selected, or explicit ?picker=1 -->
 		<div v-if="!hasEventType">
 			<div v-if="eventTypes.length === 0" class="ios-card p-8 text-center">
-				<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+				<EIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground mx-auto mb-3" />
 				<h2 class="text-base font-semibold mb-1">No bookable event types</h2>
 				<p class="text-sm text-muted-foreground">This host hasn't published any event types yet.</p>
 			</div>
@@ -538,8 +538,8 @@ onMounted(() => {
 						{{ field.label }}
 						<span v-if="field.required" class="text-destructive">*</span>
 					</label>
-					<UInput v-if="field.type === 'text'" v-model="intakeAnswers[field.name]" />
-					<UTextarea v-else-if="field.type === 'textarea'" v-model="intakeAnswers[field.name]" :rows="3" />
+					<EInput v-if="field.type === 'text'" v-model="intakeAnswers[field.name]" />
+					<ETextarea v-else-if="field.type === 'textarea'" v-model="intakeAnswers[field.name]" :rows="3" />
 					<select
 						v-else-if="field.type === 'select'"
 						v-model="intakeAnswers[field.name]"
@@ -554,9 +554,9 @@ onMounted(() => {
 					</label>
 				</div>
 				<div class="flex justify-end pt-2">
-					<UButton color="primary" size="lg" :disabled="!intakeValid" @click="submitIntake">
+					<EButton color="primary" size="lg" :disabled="!intakeValid" @click="submitIntake">
 						Continue
-					</UButton>
+					</EButton>
 				</div>
 			</div>
 
@@ -567,7 +567,7 @@ onMounted(() => {
 					class="flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3"
 					@click="goBack"
 				>
-					<UIcon name="i-heroicons-arrow-left" class="w-4 h-4" /> Back
+					<EIcon name="i-heroicons-arrow-left" class="w-4 h-4" /> Back
 				</button>
 
 				<div class="mb-6">
@@ -578,7 +578,7 @@ onMounted(() => {
 						</span>
 					</div>
 					<div v-if="slotsLoading" class="flex items-center gap-2 text-sm text-muted-foreground py-2">
-						<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" /> Loading availability…
+						<EIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" /> Loading availability…
 					</div>
 					<p v-else-if="slotsError" class="text-sm text-destructive py-2">{{ slotsError }}</p>
 					<template v-else>
@@ -615,12 +615,12 @@ onMounted(() => {
 			<!-- Details step -->
 			<div v-else-if="currentStage === 'details'">
 				<button class="flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3" @click="goBack">
-					<UIcon name="i-heroicons-arrow-left" class="w-4 h-4" /> Back
+					<EIcon name="i-heroicons-arrow-left" class="w-4 h-4" /> Back
 				</button>
 
 				<div class="ios-card p-4 mb-6">
 					<div class="flex items-center gap-3">
-						<UIcon name="i-heroicons-calendar" class="w-5 h-5 text-primary" />
+						<EIcon name="i-heroicons-calendar" class="w-5 h-5 text-primary" />
 						<div>
 							<div class="font-medium text-sm">{{ selectedDate?.formatted }}</div>
 							<div class="text-xs text-muted-foreground">{{ selectedTime?.formatted }} · {{ duration }} minutes</div>
@@ -629,21 +629,21 @@ onMounted(() => {
 				</div>
 
 				<form class="space-y-4" @submit.prevent="submitBooking">
-					<UFormGroup label="Name" required>
-						<UInput v-model="bookingForm.name" placeholder="Your full name" size="lg" />
-					</UFormGroup>
-					<UFormGroup label="Email" required>
-						<UInput v-model="bookingForm.email" type="email" placeholder="your@email.com" size="lg" />
-					</UFormGroup>
-					<UFormGroup label="Phone (optional)">
-						<UInput v-model="bookingForm.phone" type="tel" placeholder="+1 (555) 000-0000" size="lg" />
-					</UFormGroup>
-					<UFormGroup label="Notes (optional)">
-						<UTextarea v-model="bookingForm.notes" placeholder="Anything you'd like us to know?" :rows="3" />
-					</UFormGroup>
-					<UButton type="submit" color="primary" size="lg" block :loading="submitting">
+					<EFormGroup label="Name" required>
+						<EInput v-model="bookingForm.name" placeholder="Your full name" size="lg" />
+					</EFormGroup>
+					<EFormGroup label="Email" required>
+						<EInput v-model="bookingForm.email" type="email" placeholder="your@email.com" size="lg" />
+					</EFormGroup>
+					<EFormGroup label="Phone (optional)">
+						<EInput v-model="bookingForm.phone" type="tel" placeholder="+1 (555) 000-0000" size="lg" />
+					</EFormGroup>
+					<EFormGroup label="Notes (optional)">
+						<ETextarea v-model="bookingForm.notes" placeholder="Anything you'd like us to know?" :rows="3" />
+					</EFormGroup>
+					<EButton type="submit" color="primary" size="lg" block :loading="submitting">
 						{{ isPaid ? `Continue to payment · ${priceLabel}` : 'Confirm Booking' }}
-					</UButton>
+					</EButton>
 					<p v-if="isPaid" class="text-[11px] text-muted-foreground text-center">
 						You'll be redirected to Stripe to complete payment. Your meeting is confirmed once payment succeeds.
 					</p>
@@ -653,7 +653,7 @@ onMounted(() => {
 			<!-- Confirmation -->
 			<div v-else-if="currentStage === 'done'" class="text-center py-8">
 				<div class="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
-					<UIcon name="i-heroicons-check" class="w-8 h-8 text-success" />
+					<EIcon name="i-heroicons-check" class="w-8 h-8 text-success" />
 				</div>
 				<h2 class="text-2xl font-semibold mb-2">Meeting Confirmed!</h2>
 				<p class="text-muted-foreground mb-6">You'll receive a confirmation email with the meeting details.</p>

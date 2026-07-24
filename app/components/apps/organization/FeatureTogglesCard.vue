@@ -68,7 +68,7 @@ async function persist(field: FeatureField, value: boolean) {
 						{{ goalsEnabled ? 'Goals enabled for everyone in this org' : 'Goals hidden across this org' }}
 					</p>
 				</div>
-				<UToggle
+				<EToggle
 					:model-value="goalsEnabled"
 					:disabled="!canManage || saving === 'goals_enabled'"
 					@update:model-value="(v: boolean) => { goalsEnabled = v; persist('goals_enabled', v); }"
@@ -83,7 +83,7 @@ async function persist(field: FeatureField, value: boolean) {
 						{{ weatherEnabled ? 'Local weather shows in the app header' : 'Weather widget hidden' }}
 					</p>
 				</div>
-				<UToggle
+				<EToggle
 					:model-value="weatherEnabled"
 					:disabled="!canManage || saving === 'weather_enabled'"
 					@update:model-value="(v: boolean) => { weatherEnabled = v; persist('weather_enabled', v); }"
@@ -98,7 +98,7 @@ async function persist(field: FeatureField, value: boolean) {
 						{{ teamsEnabled ? 'Teams shown across this org (selectors, forms, Teams floor)' : 'Teams hidden — good for solo / small orgs' }}
 					</p>
 				</div>
-				<UToggle
+				<EToggle
 					:model-value="teamsEnabled"
 					:disabled="!canManage || saving === 'teams_enabled'"
 					@update:model-value="(v: boolean) => { teamsEnabled = v; persist('teams_enabled', v); }"

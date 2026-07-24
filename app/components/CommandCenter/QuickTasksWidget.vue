@@ -3,7 +3,7 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-clipboard-document-check" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-clipboard-document-check" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Quick Tasks</h3>
 			</div>
 			<div class="flex items-center gap-3">
@@ -85,7 +85,7 @@
 				class="flex-1 h-9 rounded-full glass-field px-4 text-xs placeholder:text-muted-foreground focus:outline-none transition-colors"
 				@keydown.enter="handleAddTask"
 			/>
-			<USelectMenu
+			<ESelectMenu
 				v-model="newTaskSchedule"
 				:options="scheduleOptions"
 				option-attribute="label"
@@ -105,7 +105,7 @@
 		<!-- Empty State -->
 		<div v-if="tasks.length === 0" class="space-y-4">
 			<div class="text-center py-6">
-				<UIcon name="i-heroicons-clipboard-document-check" class="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+				<EIcon name="i-heroicons-clipboard-document-check" class="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
 				<p class="text-sm text-muted-foreground">No tasks yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Add tasks above or let AI suggest some</p>
 			</div>
@@ -116,7 +116,7 @@
 				:disabled="aiLoading"
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
-				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+				<EIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 				<EarnestIcon v-else class="w-3.5 h-3.5" />
 				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Generate tasks with Earnest' }}
 			</button>
@@ -130,7 +130,7 @@
 						class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
 						@click="addAiSuggestion(suggestion)"
 					>
-						<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
+						<EIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
 						<span class="flex-1 text-foreground/80 line-clamp-2">{{ suggestion }}</span>
 					</button>
 				</div>
@@ -157,12 +157,12 @@
 							class="qt-drag-handle flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
 							aria-label="Drag to reorder"
 						>
-							<UIcon name="i-heroicons-bars-2" class="w-3.5 h-3.5 text-muted-foreground/60" />
+							<EIcon name="i-heroicons-bars-2" class="w-3.5 h-3.5 text-muted-foreground/60" />
 						</button>
 						<span v-else class="w-3.5 flex-shrink-0" />
 						<button class="flex-shrink-0" @click="handleToggle(task.id)">
 							<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
-								<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+								<EIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 							</div>
 							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
 						</button>
@@ -178,7 +178,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+							<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</template>
@@ -208,7 +208,7 @@
 			<!-- Today -->
 			<div v-if="todayTasks.length > 0 || todayCompleted.length > 0">
 				<div class="flex items-center gap-2 mb-2">
-					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
+					<EIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
 					<span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Today</span>
 					<span class="text-[10px] text-muted-foreground">({{ todayCompleted.length }}/{{ todayTasks.length + todayCompleted.length }})</span>
 				</div>
@@ -220,7 +220,7 @@
 					>
 						<button class="flex-shrink-0" @click="handleToggle(task.id)">
 							<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
-								<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+								<EIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 							</div>
 							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
 						</button>
@@ -233,7 +233,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+							<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -242,7 +242,7 @@
 			<!-- This Week -->
 			<div v-if="thisWeekTasks.length > 0 || weekCompleted.length > 0">
 				<div class="flex items-center gap-2 mb-2">
-					<UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-blue-500" />
+					<EIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-blue-500" />
 					<span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">This Week</span>
 					<span class="text-[10px] text-muted-foreground">({{ weekCompleted.length }}/{{ thisWeekTasks.length + weekCompleted.length }})</span>
 				</div>
@@ -254,7 +254,7 @@
 					>
 						<button class="flex-shrink-0" @click="handleToggle(task.id)">
 							<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
-								<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+								<EIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 							</div>
 							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
 						</button>
@@ -267,7 +267,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+							<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -276,7 +276,7 @@
 			<!-- Later / Unscheduled -->
 			<div v-if="laterTasks.length > 0 || unscheduledTasks.length > 0">
 				<div class="flex items-center gap-2 mb-2">
-					<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-muted-foreground" />
+					<EIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-muted-foreground" />
 					<span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Later</span>
 					<span class="text-[10px] text-muted-foreground">({{ laterTasks.length + unscheduledTasks.length }})</span>
 				</div>
@@ -288,7 +288,7 @@
 					>
 						<button class="flex-shrink-0" @click="handleToggle(task.id)">
 							<div v-if="task.completed" class="w-4 h-4 rounded-[5px] bg-primary flex items-center justify-center">
-								<UIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
+								<EIcon name="i-heroicons-check" class="w-2.5 h-2.5 text-white" />
 							</div>
 							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
 						</button>
@@ -297,7 +297,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+							<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -305,7 +305,7 @@
 
 			<!-- Empty grouped state -->
 			<div v-if="activeTasks.length === 0 && completedTasks.length > 0" class="text-center py-4">
-				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto mb-1 text-success" />
+				<EIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto mb-1 text-success" />
 				<p class="text-xs font-medium text-foreground">All tasks completed!</p>
 				<button class="text-[10px] text-primary hover:underline mt-1" @click="clearCompleted">
 					Clear {{ completedTasks.length }} completed
@@ -320,7 +320,7 @@
 				:disabled="aiLoading"
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
-				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+				<EIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 				<EarnestIcon v-else class="w-3.5 h-3.5" />
 				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Suggest tasks with Earnest' }}
 			</button>
@@ -334,7 +334,7 @@
 						class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
 						@click="addAiSuggestion(suggestion)"
 					>
-						<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
+						<EIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
 						<span class="flex-1 text-foreground/80 line-clamp-2">{{ suggestion }}</span>
 					</button>
 				</div>

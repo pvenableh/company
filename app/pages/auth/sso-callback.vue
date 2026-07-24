@@ -93,7 +93,7 @@ function extractTokens(): Record<string, string> {
         <!-- Success -->
         <template v-else-if="status === 'success'">
           <div class="h-8 w-8 rounded-full bg-success/20 dark:bg-success/15 flex items-center justify-center">
-            <UIcon name="i-heroicons-check" class="h-5 w-5 text-success dark:text-success" />
+            <EIcon name="i-heroicons-check" class="h-5 w-5 text-success dark:text-success" />
           </div>
           <p class="text-sm text-muted-foreground">Signed in successfully. Redirecting...</p>
         </template>
@@ -101,7 +101,7 @@ function extractTokens(): Record<string, string> {
         <!-- Error -->
         <template v-else>
           <div class="h-8 w-8 rounded-full bg-destructive/20 flex items-center justify-center">
-            <UIcon name="i-heroicons-x-mark" class="h-5 w-5 text-destructive" />
+            <EIcon name="i-heroicons-x-mark" class="h-5 w-5 text-destructive" />
           </div>
           <p class="text-sm text-destructive text-center">{{ errorMessage }}</p>
           <button

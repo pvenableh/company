@@ -105,7 +105,7 @@ onClickOutside(containerRef, () => { isOpen.value = false; });
           @click.stop="removeTag(tag.id as string)"
           class="ml-0.5 hover:opacity-70"
         >
-          <UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+          <EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
         </button>
       </span>
 
@@ -180,7 +180,7 @@ onClickOutside(containerRef, () => { isOpen.value = false; });
             @click="createAndAdd"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left text-primary"
           >
-            <UIcon name="i-heroicons-plus-circle" class="w-4 h-4" />
+            <EIcon name="i-heroicons-plus-circle" class="w-4 h-4" />
             Create "{{ searchInput.trim() }}"
           </button>
         </div>

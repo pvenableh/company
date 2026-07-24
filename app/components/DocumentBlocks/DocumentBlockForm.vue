@@ -2,7 +2,7 @@
 	<form @submit.prevent="handleSubmit" class="space-y-4">
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Name *</label>
-			<UInput v-model="form.name" placeholder='e.g. "Studio bio", "Standard NDA terms"' required />
+			<EInput v-model="form.name" placeholder='e.g. "Studio bio", "Standard NDA terms"' required />
 		</div>
 
 		<div class="grid grid-cols-2 gap-4">
@@ -61,12 +61,12 @@
 
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">One-line description</label>
-			<UInput v-model="form.description" placeholder="Shown in the picker" />
+			<EInput v-model="form.description" placeholder="Shown in the picker" />
 		</div>
 
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Content *</label>
-			<UTextarea
+			<ETextarea
 				v-model="form.content"
 				:rows="10"
 				placeholder="The block content. Markdown supported. The user can override per-document without changing this."

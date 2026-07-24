@@ -60,7 +60,7 @@
 			<!-- Description -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Description</label>
-				<UInput v-model="form.description" placeholder="e.g. Lost → add to nurture" />
+				<EInput v-model="form.description" placeholder="e.g. Lost → add to nurture" />
 			</div>
 
 			<!-- Enabled -->
@@ -69,7 +69,7 @@
 					<p class="text-sm font-medium">Enabled</p>
 					<p class="text-[11px] text-muted-foreground">Turn off to pause this rule without deleting it.</p>
 				</div>
-				<UToggle v-model="form.enabled" />
+				<EToggle v-model="form.enabled" />
 			</div>
 
 			<!-- Validation hint -->
@@ -77,7 +77,7 @@
 		</form>
 
 		<template #footer>
-			<UTooltip v-if="isEditing" text="Delete">
+			<ETooltip v-if="isEditing" text="Delete">
 				<Button
 					variant="ghost"
 					size="icon-sm"
@@ -87,7 +87,7 @@
 				>
 					<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 				</Button>
-			</UTooltip>
+			</ETooltip>
 			<span v-else />
 			<Button
 				type="submit"

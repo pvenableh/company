@@ -1,7 +1,7 @@
 <template>
 	<div class="ios-card p-5">
 		<div class="flex items-center gap-2 mb-4">
-			<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
+			<EIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
 			<h3 class="text-sm font-semibold text-foreground">7-Day Score Trend</h3>
 		</div>
 
@@ -27,7 +27,7 @@
 
 			<div v-else class="h-40 flex items-center justify-center">
 				<div class="text-center">
-					<UIcon name="i-heroicons-chart-bar" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+					<EIcon name="i-heroicons-chart-bar" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
 					<p class="text-xs text-muted-foreground">Not enough data yet</p>
 					<p class="text-[10px] text-muted-foreground/60 mt-0.5">Check back after a few days</p>
 				</div>

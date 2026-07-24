@@ -1,5 +1,5 @@
 <template>
-	<UButton
+	<EButton
 		:loading="isLoading"
 		variant="outline"
 		:color="status === 'Approved' ? 'primary' : 'gray'"
@@ -7,7 +7,7 @@
 		@click="handleToggle"
 	>
 		{{ status }}
-	</UButton>
+	</EButton>
 </template>
 
 <script setup>

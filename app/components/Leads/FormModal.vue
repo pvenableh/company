@@ -32,7 +32,7 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Estimated Value</label>
-				<UInput v-model="form.estimated_value" type="number" placeholder="$0" />
+				<EInput v-model="form.estimated_value" type="number" placeholder="$0" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Source</label>
@@ -66,7 +66,7 @@
 						<Icon name="lucide:x" class="h-3 w-3" />
 					</button>
 				</span>
-				<UInput
+				<EInput
 					v-model="tagInput"
 					size="xs"
 					class="w-28"
@@ -81,13 +81,13 @@
 		<!-- Notes -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Notes</label>
-			<UTextarea v-model="form.notes" :rows="3" placeholder="Add notes about this lead..." />
+			<ETextarea v-model="form.notes" :rows="3" placeholder="Add notes about this lead..." />
 		</div>
 
 		<!-- Next Follow-up -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Next Follow-up</label>
-			<UInput v-model="form.next_follow_up" type="datetime-local" />
+			<EInput v-model="form.next_follow_up" type="datetime-local" />
 		</div>
 
 		<!-- Assigned To -->

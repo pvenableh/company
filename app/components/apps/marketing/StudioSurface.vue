@@ -842,7 +842,7 @@ onMounted(() => {
                via attr-fall-through onto UiActionButton's root <button>;
                no explicit @click needed (the earlier workaround was
                causing a double-toggle that net-zero'd the popover open). -->
-          <UPopover v-model:open="lensChooserOpen" :popper="{ placement: 'bottom-end' }">
+          <EPopover v-model:open="lensChooserOpen" :popper="{ placement: 'bottom-end' }">
             <UiActionButton :icon="currentLens.icon">
               <span>Lens: {{ currentLens.label }}</span>
               <Icon name="lucide:chevron-down" class="w-3 h-3 ml-0.5 -mr-0.5 opacity-70" />
@@ -870,14 +870,14 @@ onMounted(() => {
                 </button>
               </div>
             </template>
-          </UPopover>
+          </EPopover>
           <!-- Compose entry — kind-chooser popover (social vs email).
                Reka-UI's PopoverTrigger toggles the popover via attr-fall-
                through onto UiActionButton's root <button>; the earlier
                explicit @click handler caused a double-toggle that net-
                zero'd the open state. Drop it; v-model:open is the single
                source of truth. -->
-          <UPopover v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
+          <EPopover v-model:open="composeChooserOpen" :popper="{ placement: 'bottom-end' }">
             <UiActionButton icon="lucide:pen-line" variant="primary">
               Compose
             </UiActionButton>
@@ -912,7 +912,7 @@ onMounted(() => {
                 </button>
               </div>
             </template>
-          </UPopover>
+          </EPopover>
           <UiActionButton icon="lucide:calendar-plus" @click="showNewPlan = true">
             New Plan
           </UiActionButton>
@@ -1135,12 +1135,12 @@ onMounted(() => {
     >
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3 min-w-0">
-          <UFormGroup
+          <EFormGroup
             label="Project"
             description="Optional — anchors hour-pool reporting when this plan is part of a retainer."
             class="min-w-0"
           >
-            <USelect
+            <ESelect
               v-model="planForm.project"
               :options="planProjectOptions"
               option-attribute="label"
@@ -1148,9 +1148,9 @@ onMounted(() => {
               placeholder="Pick a retainer project"
               class="w-full"
             />
-          </UFormGroup>
-          <UFormGroup label="Target Client" class="min-w-0">
-            <USelect
+          </EFormGroup>
+          <EFormGroup label="Target Client" class="min-w-0">
+            <ESelect
               v-model="planForm.target_client"
               :options="clientOptions"
               option-attribute="label"
@@ -1158,12 +1158,12 @@ onMounted(() => {
               placeholder="Pick a client"
               class="w-full"
             />
-          </UFormGroup>
+          </EFormGroup>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <UFormGroup label="Plan Type">
-            <USelect
+          <EFormGroup label="Plan Type">
+            <ESelect
               v-model="planForm.plan_type"
               :options="[
                 { label: 'Monthly Cadence', value: 'monthly_cadence' },
@@ -1174,24 +1174,24 @@ onMounted(() => {
               option-attribute="label"
               value-attribute="value"
             />
-          </UFormGroup>
-          <UFormGroup
+          </EFormGroup>
+          <EFormGroup
             v-if="planForm.plan_type === 'monthly_cadence'"
             label="Target Month"
           >
-            <UInput v-model="planForm.target_month" type="date" />
-          </UFormGroup>
+            <EInput v-model="planForm.target_month" type="date" />
+          </EFormGroup>
         </div>
 
-        <UFormGroup
+        <EFormGroup
           label="Objective (optional)"
           description="One-line goal — you can fill this in later."
         >
-          <UInput
+          <EInput
             v-model="planForm.objective"
             placeholder="e.g. Drive RSVPs to launch event."
           />
-        </UFormGroup>
+        </EFormGroup>
 
         <div class="flex justify-end gap-2 pt-2">
           <UiActionButton @click="showNewPlan = false">Cancel</UiActionButton>
@@ -1289,7 +1289,7 @@ onMounted(() => {
               </span>
             </div>
             <div class="flex flex-wrap items-end gap-2">
-              <UInput
+              <EInput
                 v-model="scheduleAt"
                 type="datetime-local"
                 class="flex-1 min-w-[180px]"
@@ -1345,13 +1345,13 @@ onMounted(() => {
 
         <!-- Edit body (mirrors create form) -->
         <template v-else>
-          <UFormGroup label="Caption" required>
-            <UTextarea v-model="editForm.caption" :rows="4" />
-          </UFormGroup>
+          <EFormGroup label="Caption" required>
+            <ETextarea v-model="editForm.caption" :rows="4" />
+          </EFormGroup>
 
           <div class="grid grid-cols-2 gap-3 min-w-0">
-            <UFormGroup label="Project" class="min-w-0">
-              <USelect
+            <EFormGroup label="Project" class="min-w-0">
+              <ESelect
                 v-model="editForm.project"
                 :options="editProjectOptions"
                 option-attribute="label"
@@ -1359,9 +1359,9 @@ onMounted(() => {
                 placeholder="Pick a project"
                 class="w-full"
               />
-            </UFormGroup>
-            <UFormGroup label="Target Client" class="min-w-0">
-              <USelect
+            </EFormGroup>
+            <EFormGroup label="Target Client" class="min-w-0">
+              <ESelect
                 v-model="editForm.target_client"
                 :options="clientOptions"
                 option-attribute="label"
@@ -1369,12 +1369,12 @@ onMounted(() => {
                 placeholder="Pick a client"
                 class="w-full"
               />
-            </UFormGroup>
+            </EFormGroup>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <UFormGroup label="Type">
-              <USelect
+            <EFormGroup label="Type">
+              <ESelect
                 v-model="editForm.post_type"
                 :options="[
                   { label: 'Image', value: 'image' },
@@ -1386,13 +1386,13 @@ onMounted(() => {
                 option-attribute="label"
                 value-attribute="value"
               />
-            </UFormGroup>
-            <UFormGroup label="Target Month">
-              <UInput v-model="editForm.target_month" type="date" />
-            </UFormGroup>
+            </EFormGroup>
+            <EFormGroup label="Target Month">
+              <EInput v-model="editForm.target_month" type="date" />
+            </EFormGroup>
           </div>
 
-          <UFormGroup
+          <EFormGroup
             label="Cover Image"
             description="The hero image clients see in their review surface — upload a mockup or pick from your media library."
           >
@@ -1426,14 +1426,14 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-          </UFormGroup>
+          </EFormGroup>
 
-          <UFormGroup
+          <EFormGroup
             label="Figma Frame URL"
             description="Link back to the source design frame so reviewers can see context."
           >
-            <UInput v-model="editForm.figma_frame_url" placeholder="https://figma.com/file/…" />
-          </UFormGroup>
+            <EInput v-model="editForm.figma_frame_url" placeholder="https://figma.com/file/…" />
+          </EFormGroup>
 
           <div class="flex justify-end gap-2 pt-3 border-t border-border">
             <UiActionButton @click="cancelEditing">Cancel</UiActionButton>

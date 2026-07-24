@@ -83,7 +83,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-md' }">
+  <EModal v-model="isOpen" :ui="{ width: 'sm:max-w-md' }">
     <div class="intro-shell">
       <div class="intro-icon">
         <Icon :name="slides[slide]!.icon" class="w-7 h-7 text-white" />
@@ -115,7 +115,7 @@ onMounted(() => {
         </UiActionButton>
       </div>
     </div>
-  </UModal>
+  </EModal>
 </template>
 
 <style scoped>

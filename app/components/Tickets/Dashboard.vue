@@ -2,7 +2,7 @@
 	<div class="w-full flex items-center justify-start flex-col relative mx-auto min-h-[80vh]">
 		<!-- Connection error - only show if not loading or filtering -->
 		<!-- <Transition name="fade">
-			<UAlert
+			<EAlert
 				v-if="!isConnected && !isLoading && !isFilterLoading && !isFetching"
 				title="Connection Lost"
 				description="Attempting to reconnect..."
@@ -10,9 +10,9 @@
 				class="mb-6 absolute right-10 top-[80px] z-10"
 			>
 				<template #footer>
-					<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
+					<EButton size="sm" color="yellow" @click="refreshData">Retry Connection</EButton>
 				</template>
-			</UAlert>
+			</EAlert>
 		</Transition> -->
 		<!-- Loading state - Initial load -->
 

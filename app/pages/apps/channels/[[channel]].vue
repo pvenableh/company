@@ -1060,7 +1060,7 @@ const fmtModDate = (d) => {
 
 		<!-- Create channel -->
 		<ClientOnly>
-			<UModal v-model="showCreate">
+			<EModal v-model="showCreate">
 				<div class="p-6 space-y-4">
 					<h3 class="text-lg font-semibold text-foreground">Create channel</h3>
 					<div class="space-y-1.5">
@@ -1181,12 +1181,12 @@ const fmtModDate = (d) => {
 						</Button>
 					</div>
 				</div>
-			</UModal>
+			</EModal>
 		</ClientOnly>
 
 		<!-- Move to folder -->
 		<ClientOnly>
-			<UModal :model-value="!!moveTarget" @update:model-value="(v) => { if (!v) moveTarget = null; }">
+			<EModal :model-value="!!moveTarget" @update:model-value="(v) => { if (!v) moveTarget = null; }">
 				<div v-if="moveTarget" class="p-6 space-y-4">
 					<h3 class="text-lg font-semibold text-foreground">Move #{{ cleanName(moveTarget.name) }}</h3>
 					<div class="space-y-1.5">
@@ -1219,12 +1219,12 @@ const fmtModDate = (d) => {
 						</Button>
 					</div>
 				</div>
-			</UModal>
+			</EModal>
 		</ClientOnly>
 
 		<!-- Manage members (restricted channels) -->
 		<ClientOnly>
-			<UModal v-model="showManage">
+			<EModal v-model="showManage">
 				<div class="p-6 space-y-4">
 					<div>
 						<h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -1379,7 +1379,7 @@ const fmtModDate = (d) => {
 						<Button variant="outline" size="sm" @click="showManage = false">Done</Button>
 					</div>
 				</div>
-			</UModal>
+			</EModal>
 		</ClientOnly>
 	</div>
 </template>

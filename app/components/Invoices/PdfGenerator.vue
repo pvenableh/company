@@ -125,7 +125,7 @@ const generatePDF = async () => {
 
 <template>
 	<div class="relative inline-block">
-		<UButton
+		<EButton
 			size="sm"
 			variant="outline"
 			:ui="{ rounded: 'rounded-full' }"

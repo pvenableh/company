@@ -89,18 +89,18 @@ const openDigest = async (d: DigestRow) => {
 	<div class="ios-card p-5">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-newspaper" class="w-5 h-5 text-violet-500" />
+				<EIcon name="i-heroicons-newspaper" class="w-5 h-5 text-violet-500" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Today's Briefs</h3>
-				<UTooltip
+				<ETooltip
 					text="Auto-generated daily summaries of activity on projects you manage — tasks, events, comments, and meeting notes from the last day. Refreshed every morning at 12:00 UTC for active projects updated in the last 14 days."
 					:popper="{ placement: 'bottom' }"
 					class="max-w-xs"
 				>
-					<UIcon
+					<EIcon
 						name="i-heroicons-information-circle"
 						class="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help"
 					/>
-				</UTooltip>
+				</ETooltip>
 			</div>
 			<button
 				v-if="digests.length"
@@ -108,7 +108,7 @@ const openDigest = async (d: DigestRow) => {
 				class="text-xs text-muted-foreground hover:text-foreground"
 				title="Refresh"
 			>
-				<UIcon name="i-heroicons-arrow-path" class="w-3 h-3" />
+				<EIcon name="i-heroicons-arrow-path" class="w-3 h-3" />
 			</button>
 		</div>
 
@@ -119,7 +119,7 @@ const openDigest = async (d: DigestRow) => {
 
 		<!-- Empty -->
 		<div v-else-if="!digests.length" class="text-center py-6">
-			<UIcon name="i-heroicons-newspaper" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+			<EIcon name="i-heroicons-newspaper" class="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-xs text-muted-foreground">No briefs yet</p>
 			<p class="text-[10px] text-muted-foreground/70 mt-1">
 				Daily summaries arrive each morning for projects you manage.
@@ -148,12 +148,12 @@ const openDigest = async (d: DigestRow) => {
 						{{ formatRelative(d.date_created) }}
 					</p>
 				</div>
-				<UIcon name="i-heroicons-chevron-right" class="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
+				<EIcon name="i-heroicons-chevron-right" class="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
 			</button>
 		</div>
 
 		<!-- Detail modal -->
-		<UModal v-model="selected" :ui="{ width: 'sm:max-w-2xl' }">
+		<EModal v-model="selected" :ui="{ width: 'sm:max-w-2xl' }">
 			<template v-if="selected" #default>
 				<div class="p-6">
 					<div class="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border">
@@ -182,6 +182,6 @@ const openDigest = async (d: DigestRow) => {
 					</p>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 	</div>
 </template>

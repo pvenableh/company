@@ -99,7 +99,7 @@ async function generatePDF() {
 
 <template>
 	<div class="relative inline-block doc-pdf-btn">
-		<UButton
+		<EButton
 			size="sm"
 			variant="outline"
 			:ui="{ rounded: 'rounded-full' }"
@@ -109,12 +109,12 @@ async function generatePDF() {
 			@click="generatePDF"
 		>
 			<span class="hidden sm:inline ml-1">PDF</span>
-		</UButton>
+		</EButton>
 		<div
 			v-if="isGenerating"
 			class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-full"
 		>
-			<UIcon name="lucide:loader-2" class="w-4 h-4 animate-spin text-gray-500" />
+			<EIcon name="lucide:loader-2" class="w-4 h-4 animate-spin text-gray-500" />
 		</div>
 	</div>
 </template>

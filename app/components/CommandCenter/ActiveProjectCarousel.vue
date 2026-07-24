@@ -97,7 +97,7 @@ function fmtDue(d: string | null | undefined) {
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-folder-open" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-folder-open" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Projects</h3>
 			</div>
 			<UiViewLink to="/apps/work" size="sm">All projects</UiViewLink>
@@ -111,7 +111,7 @@ function fmtDue(d: string | null | undefined) {
 		<!-- Empty -->
 		<div v-else-if="!projects.length" class="flex items-center gap-3 py-1">
 			<div class="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
-				<UIcon name="i-heroicons-folder-open" class="w-4 h-4 text-muted-foreground/60" />
+				<EIcon name="i-heroicons-folder-open" class="w-4 h-4 text-muted-foreground/60" />
 			</div>
 			<div>
 				<p class="text-sm text-foreground/80 font-medium">No active projects</p>

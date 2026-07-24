@@ -86,15 +86,15 @@ const getNoteTags = (note: any) => {
 
       <!-- Search -->
       <div class="mb-4">
-        <UInput
+        <EInput
           v-model="searchQuery"
           placeholder="Search notes..."
           size="sm"
         >
           <template #leading>
-            <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-muted-foreground" />
+            <EIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-muted-foreground" />
           </template>
-        </UInput>
+        </EInput>
       </div>
 
       <!-- Category tags -->
@@ -167,12 +167,12 @@ const getNoteTags = (note: any) => {
 
       <!-- Loading -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+        <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
 
       <!-- Empty state -->
       <div v-else-if="notes.length === 0" class="flex flex-col items-center justify-center py-16">
-        <UIcon name="i-heroicons-bookmark" class="w-12 h-12 text-muted-foreground/30 mb-3" />
+        <EIcon name="i-heroicons-bookmark" class="w-12 h-12 text-muted-foreground/30 mb-3" />
         <h3 class="text-sm font-medium text-foreground mb-1">No notes yet</h3>
         <p class="text-xs text-muted-foreground max-w-xs text-center">
           Save insights from AI conversations by hovering over a response and clicking "Save".
@@ -188,7 +188,7 @@ const getNoteTags = (note: any) => {
           class="ios-card p-4 cursor-pointer hover:shadow-md transition-shadow group relative"
         >
           <!-- Pin indicator -->
-          <UIcon
+          <EIcon
             v-if="note.is_pinned"
             name="i-heroicons-star-solid"
             class="absolute top-3 right-3 w-3.5 h-3.5 text-warning"
@@ -233,7 +233,7 @@ const getNoteTags = (note: any) => {
                 class="p-1 rounded hover:bg-muted transition-colors"
                 :title="note.is_pinned ? 'Unpin' : 'Pin'"
               >
-                <UIcon
+                <EIcon
                   :name="note.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
                   class="w-3.5 h-3.5"
                   :class="note.is_pinned ? 'text-warning' : 'text-muted-foreground'"
@@ -244,14 +244,14 @@ const getNoteTags = (note: any) => {
                 class="p-1 rounded hover:bg-muted transition-colors"
                 title="Archive"
               >
-                <UIcon name="i-heroicons-archive-box" class="w-3.5 h-3.5 text-muted-foreground" />
+                <EIcon name="i-heroicons-archive-box" class="w-3.5 h-3.5 text-muted-foreground" />
               </button>
               <button
                 @click.stop="handleDelete((note as any).id)"
                 class="p-1 rounded hover:bg-destructive/10 transition-colors"
                 title="Delete"
               >
-                <UIcon name="i-heroicons-trash" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                <EIcon name="i-heroicons-trash" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
               </button>
             </div>
           </div>

@@ -123,7 +123,7 @@ const externalTitleAttr = computed(() => {
 			:title="externalTitleAttr"
 		/>
 		<div class="flex items-center gap-1.5 min-w-0">
-			<UIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />
+			<EIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />
 
 			<!-- Lead stage dot -->
 			<span

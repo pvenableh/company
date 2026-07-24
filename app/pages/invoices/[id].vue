@@ -88,7 +88,7 @@ const handleAnonymousSubmit = async (formData) => {
 	<div class="w-full flex flex-col items-center justify-center">
 		<div v-if="user" class="w-full max-w-screen-xl mx-auto z-10">
 			<nuxt-link to="/invoices" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
-				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
+				<EIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 				Back to Invoices
 			</nuxt-link>
 		</div>
@@ -107,7 +107,7 @@ const handleAnonymousSubmit = async (formData) => {
 			</div>
 
 			<div v-else-if="showAnonymousForm && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
-				<UButton
+				<EButton
 					v-if="invoice.melio"
 					:to="invoice.melio"
 					target="_blank"
@@ -117,12 +117,12 @@ const handleAnonymousSubmit = async (formData) => {
 					size="sm"
 				>
 					Pay with Melio
-				</UButton>
+				</EButton>
 				<PaymentAnonymous :default-email="defaultEmail" @submit="handleAnonymousSubmit" />
 			</div>
 
 			<div v-else-if="invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
-				<UButton
+				<EButton
 					v-if="invoice.melio"
 					:to="invoice.melio"
 					target="_blank"
@@ -132,7 +132,7 @@ const handleAnonymousSubmit = async (formData) => {
 					size="sm"
 				>
 					Pay with Melio
-				</UButton>
+				</EButton>
 				<PaymentMethods
 					:amount="invoice.total_amount"
 					:email="user ? user.email : anonymousUser.email"
@@ -150,7 +150,7 @@ const handleAnonymousSubmit = async (formData) => {
 				<div v-for="payment in invoice.payments" :key="payment.id">
 					<!-- <h5>{{ payment.payment_method }}</h5>
 					<h5>{{ payment.stripe_status }}</h5>
-					<UButton
+					<EButton
 						:href="payment.receipt_url"
 						target="_blank"
 						size="xs"

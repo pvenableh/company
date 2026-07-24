@@ -153,13 +153,13 @@ const getNoteUserName = (note: any) => {
     <ClientOnly>
       <template #fallback>
         <div class="flex items-center justify-center h-full">
-          <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+          <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       </template>
 
     <!-- Access denied for non-admins -->
     <div v-if="!isOrgAdminOrAbove" class="flex flex-col items-center justify-center h-full px-4">
-      <UIcon name="i-heroicons-lock-closed" class="w-12 h-12 text-muted-foreground/30 mb-3" />
+      <EIcon name="i-heroicons-lock-closed" class="w-12 h-12 text-muted-foreground/30 mb-3" />
       <h2 class="text-sm font-semibold text-foreground mb-1">Admin Access Required</h2>
       <p class="text-xs text-muted-foreground text-center max-w-xs">
         Only organization owners and admins can view team AI activity.
@@ -201,7 +201,7 @@ const getNoteUserName = (note: any) => {
               ? 'text-primary border-b-2 border-primary'
               : 'text-muted-foreground hover:text-foreground'"
           >
-            <UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
+            <EIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
             Sessions
             <span class="text-[10px] text-muted-foreground ml-1">({{ sessionsMeta.total }})</span>
           </button>
@@ -212,7 +212,7 @@ const getNoteUserName = (note: any) => {
               ? 'text-primary border-b-2 border-primary'
               : 'text-muted-foreground hover:text-foreground'"
           >
-            <UIcon name="i-heroicons-bookmark" class="w-3.5 h-3.5" />
+            <EIcon name="i-heroicons-bookmark" class="w-3.5 h-3.5" />
             Notes
             <span class="text-[10px] text-muted-foreground ml-1">({{ notesMeta.total }})</span>
           </button>
@@ -224,11 +224,11 @@ const getNoteUserName = (note: any) => {
         <!-- ═══ Sessions Tab ═══ -->
         <template v-if="activeTab === 'sessions'">
           <div v-if="sessionsLoading" class="flex items-center justify-center py-12">
-            <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+            <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
 
           <div v-else-if="sessions.length === 0" class="flex flex-col items-center justify-center py-16">
-            <UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <EIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-muted-foreground/30 mb-3" />
             <p class="text-sm text-muted-foreground">No conversations found.</p>
           </div>
 
@@ -250,7 +250,7 @@ const getNoteUserName = (note: any) => {
                 v-else
                 class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0"
               >
-                <UIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
+                <EIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
               </div>
 
               <!-- Info -->
@@ -270,7 +270,7 @@ const getNoteUserName = (note: any) => {
               </span>
 
               <!-- View icon -->
-              <UIcon
+              <EIcon
                 name="i-heroicons-chevron-right"
                 class="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors flex-shrink-0"
               />
@@ -295,24 +295,24 @@ const getNoteUserName = (note: any) => {
         <template v-else-if="activeTab === 'notes'">
           <!-- Search -->
           <div class="mb-4">
-            <UInput
+            <EInput
               v-model="notesSearch"
               placeholder="Search team notes..."
               size="sm"
               class="max-w-xs"
             >
               <template #leading>
-                <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-muted-foreground" />
+                <EIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-muted-foreground" />
               </template>
-            </UInput>
+            </EInput>
           </div>
 
           <div v-if="notesLoading" class="flex items-center justify-center py-12">
-            <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+            <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
 
           <div v-else-if="teamNotes.length === 0" class="flex flex-col items-center justify-center py-16">
-            <UIcon name="i-heroicons-bookmark" class="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <EIcon name="i-heroicons-bookmark" class="w-12 h-12 text-muted-foreground/30 mb-3" />
             <p class="text-sm text-muted-foreground">No saved notes found.</p>
           </div>
 
@@ -335,10 +335,10 @@ const getNoteUserName = (note: any) => {
                   v-else
                   class="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center"
                 >
-                  <UIcon name="i-heroicons-user" class="w-3 h-3 text-primary" />
+                  <EIcon name="i-heroicons-user" class="w-3 h-3 text-primary" />
                 </div>
                 <span class="text-[10px] text-muted-foreground">{{ getNoteUserName(note) }}</span>
-                <UIcon
+                <EIcon
                   v-if="note.is_pinned"
                   name="i-heroicons-star-solid"
                   class="w-3 h-3 text-warning ml-auto"

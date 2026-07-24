@@ -6,7 +6,7 @@
 			class="absolute inset-0 bg-primary/5 border-2 border-dashed border-primary/30 rounded z-10 flex items-center justify-center pointer-events-none"
 		>
 			<div class="text-center">
-				<UIcon name="i-heroicons-arrow-down-tray" class="w-12 h-12 text-primary/60 mb-2" />
+				<EIcon name="i-heroicons-arrow-down-tray" class="w-12 h-12 text-primary/60 mb-2" />
 				<p class="text-primary font-medium">Drop files to upload</p>
 			</div>
 		</div>
@@ -31,7 +31,7 @@
 			class="w-full flex flex-row justify-between border-border border-r border-l border-b toolbar rounded-b"
 		>
 			<div class="flex items-center flex-row">
-				<UButton
+				<EButton
 					@click="$refs.fileInput.click()"
 					size="xs"
 					variant="ghost"
@@ -39,7 +39,7 @@
 					class="ml-2 px-1 transform scale-[0.85]"
 				/>
 				<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
-				<UButton
+				<EButton
 					v-for="(button, index) in toolbarButtons"
 					:key="index"
 					size="xs"
@@ -55,7 +55,7 @@
 					:class="{ 'is-active': editor.isActive('link') }"
 					@click="linkPopoverOpen = !linkPopoverOpen; initLinkUrl()"
 				>
-					<UIcon name="i-heroicons-link" class="w-4 h-4" />
+					<EIcon name="i-heroicons-link" class="w-4 h-4" />
 				</button>
 			</div>
 			<div v-if="showCharCount" class="flex items-center pr-2 ml-auto">
@@ -73,7 +73,7 @@
 
 		<!-- Inline link panel -->
 		<div v-if="linkPopoverOpen" class="flex items-center gap-2 px-3 py-2 border-t border-border/30 bg-muted/10">
-			<UIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+			<EIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 			<input
 				v-model="linkUrl"
 				type="url"
@@ -99,7 +99,7 @@
 				class="text-muted-foreground hover:text-foreground shrink-0"
 				@click="linkPopoverOpen = false"
 			>
-				<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+				<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 			</button>
 		</div>
 
@@ -108,12 +108,12 @@
 
 		<!-- Upload Progress Bar -->
 		<div v-if="isUploading" class="mt-2">
-			<UProgress :value="uploadProgress" color="primary" size="xs" />
+			<EProgress :value="uploadProgress" color="primary" size="xs" />
 			<p class="text-xs text-gray-500 text-center mt-1">Uploading {{ currentFile }}</p>
 		</div>
 
 		<div ref="mentionsPortal" class="mentions-portal" />
-		<UModal v-model="isModalOpen" fullscreen>
+		<EModal v-model="isModalOpen" fullscreen>
 			<transition name="fade">
 				<img
 					v-if="currentImageSrc"
@@ -122,7 +122,7 @@
 					class="w-full h-auto max-h-screenrounded-none object-contain"
 				/>
 			</transition>
-		</UModal>
+		</EModal>
 	</div>
 </template>
 

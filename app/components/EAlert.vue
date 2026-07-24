@@ -56,7 +56,7 @@ const colorClasses = computed(() => {
 
 <template>
   <Alert :class="cn(colorClasses, props.ui?.base, props.class)">
-    <UIcon v-if="icon" :name="icon" class="h-4 w-4" />
+    <EIcon v-if="icon" :name="icon" class="h-4 w-4" />
     <AlertTitle v-if="title">{{ title }}</AlertTitle>
     <AlertDescription v-if="description || $slots.description">
       <slot name="description">{{ description }}</slot>

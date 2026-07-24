@@ -53,14 +53,14 @@ const subheading = computed(() => {
 			aria-label="Dismiss getting started"
 			@click="dismiss"
 		>
-			<UIcon name="lucide:x" class="w-4 h-4" />
+			<EIcon name="lucide:x" class="w-4 h-4" />
 		</button>
 
 		<div class="relative">
 			<!-- Header -->
 			<div class="flex items-start gap-3 pr-8">
 				<div class="flex items-center justify-center size-9 rounded-xl bg-primary/12 text-primary shrink-0">
-					<UIcon name="lucide:rocket" class="w-5 h-5" />
+					<EIcon name="lucide:rocket" class="w-5 h-5" />
 				</div>
 				<div class="min-w-0">
 					<h3 class="text-base font-semibold text-foreground leading-tight">{{ heading }}</h3>
@@ -94,7 +94,7 @@ const subheading = computed(() => {
 						class="flex items-center justify-center size-8 rounded-lg shrink-0"
 						:class="step.done ? 'bg-success/12 text-success' : 'bg-muted/60 text-muted-foreground'"
 					>
-						<UIcon :name="step.done ? 'lucide:check' : step.icon" class="w-4 h-4" />
+						<EIcon :name="step.done ? 'lucide:check' : step.icon" class="w-4 h-4" />
 					</div>
 
 					<!-- Copy -->
@@ -116,7 +116,7 @@ const subheading = computed(() => {
 						class="inline-flex items-center gap-1 h-8 px-3 rounded-full text-[12px] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0 ios-press"
 					>
 						{{ step.cta }}
-						<UIcon name="lucide:arrow-right" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:arrow-right" class="w-3.5 h-3.5" />
 					</NuxtLink>
 				</li>
 			</ul>

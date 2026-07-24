@@ -72,7 +72,7 @@ const handleRegisterOrg = () => {
 </script>
 
 <template>
-	<UModal v-model="isOpen" :ui="{ width: 'max-w-md' }">
+	<EModal v-model="isOpen" :ui="{ width: 'max-w-md' }">
 		<div class="p-6">
 			<div class="flex items-center gap-3 mb-6">
 				<div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -198,5 +198,5 @@ const handleRegisterOrg = () => {
 				</button>
 			</div>
 		</div>
-	</UModal>
+	</EModal>
 </template>

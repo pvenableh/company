@@ -86,7 +86,7 @@ function getUserAvatar(u: any): string | undefined {
     <div>
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
-          <UIcon name="lucide:history" class="w-4 h-4 text-muted-foreground" />
+          <EIcon name="lucide:history" class="w-4 h-4 text-muted-foreground" />
           <h3 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Change history</h3>
         </div>
         <button
@@ -111,7 +111,7 @@ function getUserAvatar(u: any): string | undefined {
 
       <!-- Empty -->
       <div v-else-if="!activities.length" class="text-center py-8">
-        <UIcon name="lucide:history" class="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
+        <EIcon name="lucide:history" class="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
         <p class="text-sm text-muted-foreground">No change history yet</p>
       </div>
 
@@ -120,7 +120,7 @@ function getUserAvatar(u: any): string | undefined {
         <div class="absolute left-3.5 top-0 bottom-0 w-px bg-border" />
         <div v-for="item in activities" :key="item.id" class="relative flex items-start gap-3 pb-5">
           <div class="relative z-10 shrink-0">
-            <UAvatar
+            <EAvatar
               v-if="item.user"
               :src="getUserAvatar(item.user)"
               :alt="getUserName(item.user)"
@@ -128,7 +128,7 @@ function getUserAvatar(u: any): string | undefined {
               class="ring-2 ring-background"
             />
             <div v-else class="w-7 h-7 rounded-full bg-muted flex items-center justify-center ring-2 ring-background">
-              <UIcon name="lucide:file-text" class="w-3.5 h-3.5 text-muted-foreground" />
+              <EIcon name="lucide:file-text" class="w-3.5 h-3.5 text-muted-foreground" />
             </div>
           </div>
           <div class="flex-1 min-w-0 pt-0.5">

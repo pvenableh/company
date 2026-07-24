@@ -1,8 +1,8 @@
 <template>
 	<div :class="props.class">
-		<UPopover :open="isOpen" @close="isOpen = false">
+		<EPopover :open="isOpen" @close="isOpen = false">
 			<!-- Main Share Button -->
-			<UButton
+			<EButton
 				:icon="props.icon || 'i-heroicons-share'"
 				:color="props.color || 'gray'"
 				:variant="props.variant || 'ghost'"
@@ -14,7 +14,7 @@
 			<!-- Share Options Popover -->
 			<template #panel>
 				<div class="flex flex-col p-2 gap-1 min-w-[200px]">
-					<UButton
+					<EButton
 						v-for="option in shareOptions"
 						:key="option.name"
 						:icon="option.icon"
@@ -23,10 +23,10 @@
 						@click="() => handleOptionClick(option)"
 					>
 						{{ option.name === 'Copy Link' && copied ? 'Copied!' : option.name }}
-					</UButton>
+					</EButton>
 				</div>
 			</template>
-		</UPopover>
+		</EPopover>
 	</div>
 </template>
 

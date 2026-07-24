@@ -270,15 +270,15 @@ async function handleCancelAddon() {
 			<!-- Past Due Alert -->
 			<div v-if="isPastDue" class="rounded-xl border-2 border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-4 mb-6">
 				<div class="flex items-start gap-3">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive mt-0.5" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive mt-0.5" />
 					<div class="flex-1">
 						<h3 class="font-semibold text-destructive dark:text-destructive">Payment Past Due</h3>
 						<p class="text-sm text-destructive dark:text-destructive mt-1">
 							Your last payment failed. Please update your payment method to keep your subscription active.
 						</p>
-						<UButton size="sm" color="red" class="mt-3" @click="handleManageBilling">
+						<EButton size="sm" color="red" class="mt-3" @click="handleManageBilling">
 							Update Payment Method
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
@@ -286,7 +286,7 @@ async function handleCancelAddon() {
 			<!-- Canceling Notice -->
 			<div v-if="isCanceling" class="rounded-xl border-2 border-warning/30 bg-warning/10 dark:bg-warning/20 p-4 mb-6">
 				<div class="flex items-start gap-3">
-					<UIcon name="i-heroicons-clock" class="w-5 h-5 text-warning mt-0.5" />
+					<EIcon name="i-heroicons-clock" class="w-5 h-5 text-warning mt-0.5" />
 					<div class="flex-1">
 						<h3 class="font-semibold text-warning dark:text-warning">Subscription Canceling</h3>
 						<p class="text-sm text-warning dark:text-warning mt-1">
@@ -294,9 +294,9 @@ async function handleCancelAddon() {
 							<strong>{{ periodEnd ? format(periodEnd, 'MMMM d, yyyy') : '—' }}</strong>.
 							You'll retain access until then.
 						</p>
-						<UButton size="sm" color="amber" variant="soft" class="mt-3" :loading="loading" @click="handleResume">
+						<EButton size="sm" color="amber" variant="soft" class="mt-3" :loading="loading" @click="handleResume">
 							Resume Subscription
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
@@ -316,7 +316,7 @@ async function handleCancelAddon() {
 							</p>
 						</div>
 					</div>
-					<UBadge :color="statusBadge.color" variant="soft">{{ statusBadge.label }}</UBadge>
+					<EBadge :color="statusBadge.color" variant="soft">{{ statusBadge.label }}</EBadge>
 				</div>
 
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -342,10 +342,10 @@ async function handleCancelAddon() {
 
 				<!-- Plan Actions -->
 				<div v-if="isActive || isPastDue" class="flex items-center gap-2 mt-6 pt-4 border-t">
-					<UButton size="sm" variant="soft" :loading="loading" @click="handleManageBilling">
+					<EButton size="sm" variant="soft" :loading="loading" @click="handleManageBilling">
 						Manage Billing
-					</UButton>
-					<UButton
+					</EButton>
+					<EButton
 						v-if="!isCanceling"
 						size="sm"
 						variant="ghost"
@@ -353,7 +353,7 @@ async function handleCancelAddon() {
 						@click="showCancelConfirm = true"
 					>
 						Cancel Plan
-					</UButton>
+					</EButton>
 				</div>
 			</div>
 
@@ -361,10 +361,10 @@ async function handleCancelAddon() {
 			<div class="rounded-xl border bg-card p-6 mb-6">
 				<div class="flex items-center justify-between mb-1">
 					<h3 class="font-semibold text-foreground flex items-center gap-2">
-						<UIcon name="i-heroicons-squares-plus" class="w-5 h-5" />
+						<EIcon name="i-heroicons-squares-plus" class="w-5 h-5" />
 						Add-ons
 					</h3>
-					<UBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Enterprise</UBadge>
+					<EBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Enterprise</EBadge>
 				</div>
 				<p class="text-xs text-muted-foreground mb-4">
 					<template v-if="isEnterprise">Every add-on is included with your plan.</template>
@@ -376,7 +376,7 @@ async function handleCancelAddon() {
 					v-if="!isEnterprise && !canSubscribeAddons"
 					class="rounded-lg border border-warning/40 bg-warning/10 dark:bg-warning/20 p-3 mb-4 flex items-start gap-2"
 				>
-					<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-warning mt-0.5 shrink-0" />
+					<EIcon name="i-heroicons-information-circle" class="w-4 h-4 text-warning mt-0.5 shrink-0" />
 					<p class="text-xs text-warning">
 						Add-ons attach to an active plan. Start a plan first, then add these here.
 					</p>
@@ -392,8 +392,8 @@ async function handleCancelAddon() {
 						<div class="flex-1 min-w-0">
 							<div class="flex items-center gap-2 flex-wrap">
 								<span class="text-sm font-semibold text-foreground">{{ addon.name }}</span>
-								<UBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Included</UBadge>
-								<UBadge v-else-if="isAddonActive(addon.id)" color="green" variant="soft" size="xs">Active</UBadge>
+								<EBadge v-if="isEnterprise" color="blue" variant="soft" size="xs">Included</EBadge>
+								<EBadge v-else-if="isAddonActive(addon.id)" color="green" variant="soft" size="xs">Active</EBadge>
 							</div>
 							<p class="text-[10px] text-muted-foreground mt-0.5">{{ addon.blurb }}</p>
 						</div>
@@ -405,7 +405,7 @@ async function handleCancelAddon() {
 
 						<!-- Actions: owner/admin only. Enterprise = included, no controls. -->
 						<div v-if="isOrgAdminOrAbove && !isEnterprise" class="shrink-0 w-24 flex justify-end">
-							<UButton
+							<EButton
 								v-if="isAddonActive(addon.id)"
 								size="xs"
 								variant="ghost"
@@ -414,8 +414,8 @@ async function handleCancelAddon() {
 								@click="addonToCancel = addon.id"
 							>
 								Cancel
-							</UButton>
-							<UButton
+							</EButton>
+							<EButton
 								v-else
 								size="xs"
 								:loading="addonPending[addon.id]"
@@ -423,7 +423,7 @@ async function handleCancelAddon() {
 								@click="handleSubscribeAddon(addon.id)"
 							>
 								Subscribe
-							</UButton>
+							</EButton>
 						</div>
 					</div>
 				</div>
@@ -432,15 +432,15 @@ async function handleCancelAddon() {
 			<!-- Payment Methods -->
 			<div class="rounded-xl border bg-card p-6 mb-6">
 				<h3 class="font-semibold text-foreground mb-4 flex items-center gap-2">
-					<UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
+					<EIcon name="i-heroicons-credit-card" class="w-5 h-5" />
 					Payment Methods
 				</h3>
 
 				<div v-if="paymentMethods.length === 0" class="flex items-center justify-between">
 					<p class="text-sm text-muted-foreground">No payment method on file</p>
-					<UButton size="sm" variant="soft" :loading="loading" @click="handleManageBilling">
+					<EButton size="sm" variant="soft" :loading="loading" @click="handleManageBilling">
 						Add Payment Method
-					</UButton>
+					</EButton>
 				</div>
 
 				<div v-else class="space-y-3">
@@ -450,7 +450,7 @@ async function handleCancelAddon() {
 						class="flex items-center justify-between py-2"
 					>
 						<div class="flex items-center gap-3">
-							<UIcon name="i-lucide-credit-card" class="w-5 h-5 text-muted-foreground" />
+							<EIcon name="i-lucide-credit-card" class="w-5 h-5 text-muted-foreground" />
 							<div>
 								<p class="text-sm font-medium text-foreground capitalize">
 									{{ pm.brand }} &bull;&bull;&bull;&bull; {{ pm.last4 }}
@@ -463,9 +463,9 @@ async function handleCancelAddon() {
 					</div>
 
 					<div class="pt-2">
-						<UButton size="sm" variant="ghost" :loading="loading" @click="handleManageBilling">
+						<EButton size="sm" variant="ghost" :loading="loading" @click="handleManageBilling">
 							Manage Payment Methods
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
@@ -473,12 +473,12 @@ async function handleCancelAddon() {
 			<!-- Billing History -->
 			<div class="rounded-xl border bg-card p-6">
 				<h3 class="font-semibold text-foreground mb-4 flex items-center gap-2">
-					<UIcon name="i-heroicons-document-text" class="w-5 h-5" />
+					<EIcon name="i-heroicons-document-text" class="w-5 h-5" />
 					Billing History
 				</h3>
 
 				<div v-if="invoices.length === 0" class="text-center py-8">
-					<UIcon name="i-heroicons-document-text" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
+					<EIcon name="i-heroicons-document-text" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
 					<p class="text-sm text-muted-foreground">No billing history yet</p>
 				</div>
 
@@ -489,7 +489,7 @@ async function handleCancelAddon() {
 						class="flex items-center justify-between py-3"
 					>
 						<div class="flex items-center gap-3">
-							<UIcon name="i-heroicons-document-text" class="w-4 h-4 text-muted-foreground" />
+							<EIcon name="i-heroicons-document-text" class="w-4 h-4 text-muted-foreground" />
 							<div>
 								<p class="text-sm font-medium text-foreground">
 									{{ inv.number || 'Invoice' }}
@@ -501,14 +501,14 @@ async function handleCancelAddon() {
 						</div>
 						<div class="flex items-center gap-3">
 							<span class="text-sm font-medium">{{ formatCurrency(inv.amount_paid || inv.amount_due) }}</span>
-							<UBadge
+							<EBadge
 								:color="inv.status === 'paid' ? 'green' : inv.status === 'open' ? 'yellow' : 'gray'"
 								variant="soft"
 								size="xs"
 							>
 								{{ inv.status }}
-							</UBadge>
-							<UButton
+							</EBadge>
+							<EButton
 								v-if="inv.hosted_invoice_url"
 								:to="inv.hosted_invoice_url"
 								target="_blank"
@@ -523,10 +523,10 @@ async function handleCancelAddon() {
 		</template>
 
 		<!-- Cancel Confirmation Modal -->
-		<UModal v-model="showCancelConfirm">
+		<EModal v-model="showCancelConfirm">
 			<div class="flex items-start gap-4">
 				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
 				</div>
 				<div class="flex-1">
 					<h3 class="text-lg font-semibold text-foreground">Cancel Subscription?</h3>
@@ -536,22 +536,22 @@ async function handleCancelAddon() {
 						After that, you'll lose access to your plan's features.
 					</p>
 					<div class="flex items-center gap-2 mt-6">
-						<UButton color="red" :loading="loading" @click="handleCancel">
+						<EButton color="red" :loading="loading" @click="handleCancel">
 							Cancel Subscription
-						</UButton>
-						<UButton variant="ghost" @click="showCancelConfirm = false">
+						</EButton>
+						<EButton variant="ghost" @click="showCancelConfirm = false">
 							Keep Subscription
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
-		</UModal>
+		</EModal>
 
 		<!-- Add-on Cancel Confirmation Modal -->
-		<UModal v-model="showAddonCancel">
+		<EModal v-model="showAddonCancel">
 			<div class="flex items-start gap-4">
 				<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
 				</div>
 				<div class="flex-1">
 					<h3 class="text-lg font-semibold text-foreground">Remove this add-on?</h3>
@@ -560,15 +560,15 @@ async function handleCancelAddon() {
 						You can re-add it anytime.
 					</p>
 					<div class="flex items-center gap-2 mt-6">
-						<UButton color="red" @click="handleCancelAddon">
+						<EButton color="red" @click="handleCancelAddon">
 							Remove Add-on
-						</UButton>
-						<UButton variant="ghost" @click="addonToCancel = null">
+						</EButton>
+						<EButton variant="ghost" @click="addonToCancel = null">
 							Keep It
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</div>
-		</UModal>
+		</EModal>
 	</div>
 </template>

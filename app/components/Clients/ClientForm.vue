@@ -2,13 +2,13 @@
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Name *</label>
-      <UInput v-model="formData.name" required placeholder="Client name" />
+      <EInput v-model="formData.name" required placeholder="Client name" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Slug</label>
-        <UInput v-model="formData.slug" readonly placeholder="auto-generated from name" />
+        <EInput v-model="formData.slug" readonly placeholder="auto-generated from name" />
       </div>
       <div v-if="!isEditing" class="space-y-1">
         <label class="t-label text-muted-foreground">Account State</label>
@@ -24,7 +24,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Website</label>
-        <UInput v-model="formData.website" placeholder="https://" />
+        <EInput v-model="formData.website" placeholder="https://" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Industry</label>
@@ -63,7 +63,7 @@
             <Icon name="lucide:x" class="h-3 w-3" />
           </button>
         </span>
-        <UInput
+        <EInput
           v-model="newTag"
           size="xs"
           class="w-28"
@@ -85,8 +85,8 @@
           :key="i"
           class="flex gap-2 items-center"
         >
-          <UInput v-model="contact.name" class="flex-1" placeholder="Name" />
-          <UInput v-model="contact.email" type="email" class="flex-1" placeholder="email@example.com" />
+          <EInput v-model="contact.name" class="flex-1" placeholder="Name" />
+          <EInput v-model="contact.email" type="email" class="flex-1" placeholder="email@example.com" />
           <button
             type="button"
             class="p-1.5 text-muted-foreground/40 hover:text-destructive transition-colors"
@@ -160,12 +160,12 @@
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Address</label>
-      <UTextarea v-model="formData.billing_address" :rows="2" placeholder="Street address, city, state, zip..." />
+      <ETextarea v-model="formData.billing_address" :rows="2" placeholder="Street address, city, state, zip..." />
     </div>
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Notes</label>
-      <UTextarea v-model="formData.notes" :rows="3" placeholder="Internal notes about this client..." />
+      <ETextarea v-model="formData.notes" :rows="3" placeholder="Internal notes about this client..." />
     </div>
 
     <!-- Brand & Strategy (edit-only — BrandAIFieldSuggest needs an entity id) -->
@@ -208,7 +208,7 @@
 
         <div class="space-y-1">
           <label class="t-label text-muted-foreground">Location</label>
-          <UInput v-model="formData.location" placeholder="City, region, or Remote/Global" />
+          <EInput v-model="formData.location" placeholder="City, region, or Remote/Global" />
         </div>
       </div>
     </div>

@@ -138,7 +138,7 @@ async function deleteMeeting() {
 </script>
 
 <template>
-	<UPopover v-model:open="open" :popper="{ placement: 'bottom-start', offsetDistance: 6 }">
+	<EPopover v-model:open="open" :popper="{ placement: 'bottom-start', offsetDistance: 6 }">
 		<slot />
 
 		<template #content>
@@ -160,7 +160,7 @@ async function deleteMeeting() {
 						class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-foreground hover:bg-muted/40 transition-colors"
 						@click="open = false"
 					>
-						<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3.5 h-3.5 text-muted-foreground" />
+						<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-3.5 h-3.5 text-muted-foreground" />
 						<span>Open in calendar</span>
 					</a>
 					<p v-else class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
@@ -206,7 +206,7 @@ async function deleteMeeting() {
 						class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-foreground hover:bg-muted/40 transition-colors"
 						@click="open = false"
 					>
-						<UIcon name="i-heroicons-document-text" class="w-3.5 h-3.5 text-muted-foreground" />
+						<EIcon name="i-heroicons-document-text" class="w-3.5 h-3.5 text-muted-foreground" />
 						<span>Meeting details</span>
 					</NuxtLink>
 					<button
@@ -220,7 +220,7 @@ async function deleteMeeting() {
 								: 'text-foreground hover:bg-muted/40',
 						]"
 					>
-						<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" :class="isInActiveWindow ? 'text-success' : 'text-muted-foreground'" />
+						<EIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" :class="isInActiveWindow ? 'text-success' : 'text-muted-foreground'" />
 						<span>Enter meeting</span>
 						<span v-if="isInActiveWindow" class="ml-auto inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-success">
 							<span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
@@ -237,15 +237,15 @@ async function deleteMeeting() {
 				<!-- Secondary icon-row actions: copy / invite / edit / delete. Hidden for
 				     external overlay events, which are read-only. -->
 				<div v-if="!isExternal" class="flex items-center justify-between gap-1 px-2 py-1.5">
-					<UTooltip v-if="isVideo && meetingUrl" text="Copy link">
+					<ETooltip v-if="isVideo && meetingUrl" text="Copy link">
 						<button
 							type="button"
 							@click="copyLink"
 							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-info/10 text-info hover:bg-info/20 transition-colors"
 						>
-							<UIcon name="i-heroicons-link" class="w-4 h-4" />
+							<EIcon name="i-heroicons-link" class="w-4 h-4" />
 						</button>
-					</UTooltip>
+					</ETooltip>
 
 					<!-- Send invite. UPopover's slot child becomes the trigger via
 					     Headless UI's PopoverButton (which renders its own
@@ -258,40 +258,40 @@ async function deleteMeeting() {
 						v-if="isVideo && meetingForInvite"
 						:meeting="meetingForInvite"
 					>
-						<UTooltip text="Send invite">
+						<ETooltip text="Send invite">
 							<span
 								class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors cursor-pointer"
 							>
-								<UIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
+								<EIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
 							</span>
-						</UTooltip>
+						</ETooltip>
 					</SchedulerSendInvitePopover>
 
-					<UTooltip text="Edit">
+					<ETooltip text="Edit">
 						<button
 							type="button"
 							@click="openEdit"
 							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-muted/50 text-foreground hover:bg-muted transition-colors"
 						>
-							<UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
+							<EIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
 						</button>
-					</UTooltip>
+					</ETooltip>
 
-					<UTooltip v-if="event.video_meeting_id" text="Delete">
+					<ETooltip v-if="event.video_meeting_id" text="Delete">
 						<button
 							type="button"
 							:disabled="deleting"
 							@click="deleteMeeting"
 							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
 						>
-							<UIcon
+							<EIcon
 								:name="deleting ? 'i-heroicons-arrow-path' : 'i-heroicons-trash'"
 								:class="['w-4 h-4', deleting && 'animate-spin']"
 							/>
 						</button>
-					</UTooltip>
+					</ETooltip>
 				</div>
 			</div>
 		</template>
-	</UPopover>
+	</EPopover>
 </template>

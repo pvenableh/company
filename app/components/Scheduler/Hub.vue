@@ -30,7 +30,7 @@
 				aria-label="Book with a teammate"
 				@click="showTeammateBooking = true"
 			>
-				<UIcon name="i-heroicons-user-plus" class="w-4.5 h-4.5 text-muted-foreground" />
+				<EIcon name="i-heroicons-user-plus" class="w-4.5 h-4.5 text-muted-foreground" />
 			</button>
 			<button
 				type="button"
@@ -39,7 +39,7 @@
 				aria-label="Meeting history"
 				@click="showHistory = true"
 			>
-				<UIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
+				<EIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
 			</button>
 			<button
 				type="button"
@@ -48,7 +48,7 @@
 				aria-label="Open scheduler settings"
 				@click="showSettings = true"
 			>
-				<UIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
+				<EIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
 			</button>
 		</div>
 
@@ -83,7 +83,7 @@
 				:title="mineOnly ? 'Showing only your events — click to include teammates' : 'Showing all org events — click to filter to your own'"
 				@click="mineOnly = !mineOnly"
 			>
-				<UIcon :name="mineOnly ? 'i-heroicons-user' : 'i-heroicons-user-group'" class="w-3 h-3" />
+				<EIcon :name="mineOnly ? 'i-heroicons-user' : 'i-heroicons-user-group'" class="w-3 h-3" />
 				{{ mineOnly ? 'Mine only' : 'Team' }}
 			</button>
 		</div>
@@ -135,17 +135,17 @@
 		/>
 
 		<!-- Requests Modal -->
-		<UModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
+		<EModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
 			<div class="ios-card overflow-hidden !rounded-2xl">
 				<div class="px-5 py-4 border-b border-border/30 flex items-center justify-between">
 					<h3 class="text-sm font-semibold text-foreground">Meeting Requests</h3>
 					<button class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors" @click="showRequestsModal = false">
-						<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
+						<EIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
 					</button>
 				</div>
 				<SchedulerMeetingRequests />
 			</div>
-		</UModal>
+		</EModal>
 
 		<!-- Scheduler settings slide-over — one-deep edit per nav strategy. -->
 		<AppSlideOver v-model="showSettings" title="Scheduler Settings" :ui="{ body: 'p-0' }">

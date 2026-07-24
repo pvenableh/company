@@ -33,7 +33,7 @@
 					@click="applyTemplate(tpl)"
 				>
 					<div class="flex items-center gap-2 mb-1">
-						<UIcon :name="tpl.icon" class="w-3.5 h-3.5" :style="{ color: tpl.accent }" />
+						<EIcon :name="tpl.icon" class="w-3.5 h-3.5" :style="{ color: tpl.accent }" />
 						<span class="text-xs font-semibold">{{ tpl.name }}</span>
 					</div>
 					<p class="text-[10px] text-muted-foreground leading-tight">{{ tpl.tagline }}</p>
@@ -56,7 +56,7 @@
 		<!-- Title -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Title</label>
-			<UInput v-model="form.title" placeholder="e.g., Reach $50K monthly revenue" />
+			<EInput v-model="form.title" placeholder="e.g., Reach $50K monthly revenue" />
 		</div>
 
 		<!-- Scope (pill group) -->
@@ -71,7 +71,7 @@
 					:class="form.scope === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'"
 					@click="form.scope = opt.value"
 				>
-					<UIcon :name="opt.icon" class="w-3.5 h-3.5" />
+					<EIcon :name="opt.icon" class="w-3.5 h-3.5" />
 					{{ opt.label }}
 				</button>
 			</div>
@@ -89,7 +89,7 @@
 					:class="form.category === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'"
 					@click="form.category = opt.value"
 				>
-					<UIcon :name="opt.icon" class="w-3.5 h-3.5" />
+					<EIcon :name="opt.icon" class="w-3.5 h-3.5" />
 					{{ opt.label }}
 				</button>
 			</div>
@@ -98,14 +98,14 @@
 		<!-- Description -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Description</label>
-			<UTextarea v-model="form.description" :rows="2" placeholder="What does success look like?" />
+			<ETextarea v-model="form.description" :rows="2" placeholder="What does success look like?" />
 		</div>
 
 		<!-- Target + Unit -->
 		<div class="grid grid-cols-2 gap-3">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Target</label>
-				<UInput v-model.number="form.target_value" type="number" placeholder="50000" />
+				<EInput v-model.number="form.target_value" type="number" placeholder="50000" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Unit</label>
@@ -121,7 +121,7 @@
 		<!-- Current Value (edit-only) -->
 		<div v-if="isEditing" class="space-y-1">
 			<label class="t-label text-muted-foreground">Current Value</label>
-			<UInput v-model.number="form.current_value" type="number" />
+			<EInput v-model.number="form.current_value" type="number" />
 		</div>
 
 		<!-- Timeframe + Priority -->
@@ -156,11 +156,11 @@
 		<div class="grid grid-cols-2 gap-3">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Start Date</label>
-				<UInput v-model="form.start_date" type="date" />
+				<EInput v-model="form.start_date" type="date" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">End Date</label>
-				<UInput v-model="form.end_date" type="date" />
+				<EInput v-model="form.end_date" type="date" />
 			</div>
 		</div>
 	</FormModal>

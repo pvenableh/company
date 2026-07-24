@@ -1,27 +1,27 @@
 <template>
 	<form id="payment-form" @submit.prevent="handleSubmit">
 		<div v-if="error" class="mb-4">
-			<UAlert type="error" :title="error.title" :description="error.message">
+			<EAlert type="error" :title="error.title" :description="error.message">
 				<template #icon>
 					<Icon name="heroicons:exclamation-circle" />
 				</template>
-			</UAlert>
+			</EAlert>
 		</div>
 
 		<div v-if="isElementLoading" class="w-full flex justify-center items-center py-12">
-			<UButton loading>Loading payment form...</UButton>
+			<EButton loading>Loading payment form...</EButton>
 		</div>
 
 		<div v-show="!isElementLoading">
 			<div id="payment-element" />
 
 			<div class="mt-6 space-y-4">
-				<UButton type="submit" block :loading="isSubmitting" :disabled="!isElementReady || isSubmitting">
+				<EButton type="submit" block :loading="isSubmitting" :disabled="!isElementReady || isSubmitting">
 					<template #leading>
 						<Icon name="heroicons:lock-closed" />
 					</template>
 					{{ submitButtonText }}
-				</UButton>
+				</EButton>
 
 				<p v-if="isElementReady" class="text-xs text-gray-500 text-center">
 					<Icon name="heroicons:shield-check" class="inline-block w-4 h-4 mr-1" />

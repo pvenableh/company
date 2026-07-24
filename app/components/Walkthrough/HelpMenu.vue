@@ -76,12 +76,12 @@ function handleReset() {
 </script>
 
 <template>
-  <UPopover v-model:open="isOpen" mode="click" :popper="{ placement: 'bottom-end', offsetDistance: 8 }">
+  <EPopover v-model:open="isOpen" mode="click" :popper="{ placement: 'bottom-end', offsetDistance: 8 }">
     <button
       class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
       :class="{ 'text-primary': isOpen }"
     >
-      <UIcon name="i-heroicons-question-mark-circle" class="w-5 h-5" />
+      <EIcon name="i-heroicons-question-mark-circle" class="w-5 h-5" />
     </button>
 
     <template #panel>
@@ -103,12 +103,12 @@ function handleReset() {
           <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             :class="isTourCompleted(tour.id) ? 'bg-success/10' : 'bg-primary/10'"
           >
-            <UIcon
+            <EIcon
               v-if="isTourCompleted(tour.id)"
               name="i-heroicons-check"
               class="w-3.5 h-3.5 text-success"
             />
-            <UIcon
+            <EIcon
               v-else
               :name="tour.icon || 'i-heroicons-book-open'"
               class="w-3.5 h-3.5 text-primary"
@@ -125,7 +125,7 @@ function handleReset() {
             class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left"
             @click="handleReset"
           >
-            <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 text-muted-foreground" />
+            <EIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 text-muted-foreground" />
             <span class="text-[10px] text-muted-foreground">Reset all guides</span>
           </button>
         </div>
@@ -142,7 +142,7 @@ function handleReset() {
             @click="handleFeedback(action.id)"
           >
             <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
-              <UIcon :name="action.icon" class="w-3.5 h-3.5 text-primary" />
+              <EIcon :name="action.icon" class="w-3.5 h-3.5 text-primary" />
             </div>
             <div class="min-w-0">
               <p class="text-xs font-medium text-foreground">{{ action.label }}</p>
@@ -152,5 +152,5 @@ function handleReset() {
         </div>
       </div>
     </template>
-  </UPopover>
+  </EPopover>
 </template>

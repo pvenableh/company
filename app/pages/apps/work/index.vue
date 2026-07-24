@@ -424,7 +424,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
         <!-- Team filter — only shows when the active org has at least one team
              and the floor it can affect is open. Picker writes to the shared
              `selectedTeam` state, which TicketsBoard already reads. -->
-        <UDropdown
+        <EDropdown
           v-if="teamsEnabled && visibleTeams.length > 0 && (floor === 'projects' || floor === 'tickets')"
           :items="[
             [{ label: 'All teams', icon: 'i-heroicons-user-group', click: () => handleSelectTeam(null) }],
@@ -437,7 +437,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
             <span class="sm:hidden">Team</span>
             <Icon name="lucide:chevron-down" class="w-3 h-3 ml-1 text-muted-foreground" />
           </Button>
-        </UDropdown>
+        </EDropdown>
         <!-- Primary create CTA — Tier 1, universal position (page header),
              floor-aware. Mirrors the Money app's per-floor headerAction. -->
         <Button v-if="floor === 'projects'" size="sm" @click="showNewProject = true">
@@ -490,7 +490,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
                UTabs is the app-wide universal segmented pill control (same
                component the Tasks tabs + CardDesk tabs use) so every in-page
                tab strip reads identically. -->
-          <UTabs
+          <ETabs
             :model-value="projectsView"
             :items="[
               { key: 'timeline', label: 'Timeline', icon: 'lucide:bar-chart-horizontal' },
@@ -514,7 +514,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
               class="flex-1 min-w-48 rounded-full glass-field px-3.5 py-2 text-sm"
               @input="debouncedFetchProjects"
             />
-            <UTabs
+            <ETabs
               v-model="projectStatusFilter"
               :items="projectStatusItems"
               class="w-fit"
@@ -552,7 +552,7 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
              affordance reads as part of the Tasks controls (mirrors how the
              Tickets floor pairs New Ticket with its board filters). -->
         <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
-          <UTabs
+          <ETabs
             v-model="tasksTab"
             :items="taskTabs.map((t) => ({ key: t.key, label: t.label }))"
             class="w-fit"

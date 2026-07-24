@@ -33,15 +33,15 @@
 								class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted/50 transition-colors"
 								@click="closeForm"
 							>
-								<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
+								<EIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
 							</button>
 						</div>
 
 						<!-- Form -->
 						<form @submit.prevent="createTicket" class="space-y-4">
 							<div class="ios-card p-4 space-y-4">
-								<UFormGroup label="Title" required>
-									<UInput
+								<EFormGroup label="Title" required>
+									<EInput
 										v-model="form.title"
 										placeholder="What needs to be done?"
 										required
@@ -49,22 +49,22 @@
 										:ui="{ error: showTitleError }"
 									/>
 									<template v-if="showTitleError" #error>Title is required</template>
-								</UFormGroup>
+								</EFormGroup>
 
 								<div class="grid grid-cols-2 gap-3">
-									<UFormGroup label="Status">
-										<USelect v-model="form.status" :options="columns" option-attribute="name" value-attribute="id" />
-									</UFormGroup>
-									<UFormGroup label="Priority">
-										<USelect v-model="form.priority" :options="priorities" />
-									</UFormGroup>
+									<EFormGroup label="Status">
+										<ESelect v-model="form.status" :options="columns" option-attribute="name" value-attribute="id" />
+									</EFormGroup>
+									<EFormGroup label="Priority">
+										<ESelect v-model="form.priority" :options="priorities" />
+									</EFormGroup>
 								</div>
 							</div>
 
 							<div class="ios-card p-4 space-y-4">
 								<div class="grid grid-cols-2 gap-3">
-									<UFormGroup v-if="clientOptions.length > 0" label="Client">
-										<USelectMenu
+									<EFormGroup v-if="clientOptions.length > 0" label="Client">
+										<ESelectMenu
 											searchable
 											v-model="form.client"
 											:options="clientOptions"
@@ -74,10 +74,10 @@
 											:loading="loadingClients"
 											class="relative"
 										/>
-									</UFormGroup>
+									</EFormGroup>
 
-									<UFormGroup v-if="form.organization" label="Project">
-										<USelectMenu
+									<EFormGroup v-if="form.organization" label="Project">
+										<ESelectMenu
 											searchable
 											v-model="form.project"
 											:options="projectOptions"
@@ -87,12 +87,12 @@
 											:loading="loadingProjects"
 											class="relative"
 										/>
-									</UFormGroup>
+									</EFormGroup>
 								</div>
 
 								<div class="grid grid-cols-2 gap-3">
-									<UFormGroup v-if="hasMultipleOrgs" label="Organization">
-										<USelectMenu
+									<EFormGroup v-if="hasMultipleOrgs" label="Organization">
+										<ESelectMenu
 											searchable
 											v-model="form.organization"
 											:options="organizationOptions"
@@ -102,9 +102,9 @@
 											class="relative"
 											@update:modelValue="handleOrgChange"
 										/>
-									</UFormGroup>
-									<UFormGroup v-if="teamsEnabled" label="Team">
-										<USelect
+									</EFormGroup>
+									<EFormGroup v-if="teamsEnabled" label="Team">
+										<ESelect
 											v-model="form.team"
 											:options="teamsList"
 											option-attribute="name"
@@ -114,16 +114,16 @@
 											@update:modelValue="handleTeamChange"
 											:nullable="true"
 										/>
-									</UFormGroup>
+									</EFormGroup>
 								</div>
 							</div>
 
 							<div class="ios-card p-4 space-y-4">
 								<div class="grid grid-cols-2 gap-3">
-									<UFormGroup label="Due Date">
-										<UPopover v-model:open="calendarOpen" class="w-full" :ui="{ content: 'z-[80]' }">
+									<EFormGroup label="Due Date">
+										<EPopover v-model:open="calendarOpen" class="w-full" :ui="{ content: 'z-[80]' }">
 											<button type="button" class="w-full flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
-												<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+												<EIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 												<span :class="form.due_date ? 'text-foreground' : 'text-muted-foreground'">
 													{{ formatDisplayDate(form.due_date) || formatDisplayDate(new Date()) }}
 												</span>
@@ -134,20 +134,20 @@
 													@update:model-value="(val) => { handleCalendarSelect(val); calendarOpen = false; }"
 												/>
 											</template>
-										</UPopover>
-									</UFormGroup>
-									<UFormGroup label="Time">
-										<USelect
+										</EPopover>
+									</EFormGroup>
+									<EFormGroup label="Time">
+										<ESelect
 											v-model="selectedTime"
 											:options="timeOptions"
 											placeholder="Select time"
 											@update:model-value="updateDateTime"
 										/>
-									</UFormGroup>
+									</EFormGroup>
 								</div>
 
-								<UFormGroup label="Assign To">
-									<USelectMenu
+								<EFormGroup label="Assign To">
+									<ESelectMenu
 										v-model="selectedUser"
 										:options="availableUsers"
 										placeholder="Add team members..."
@@ -158,21 +158,21 @@
 									>
 										<template #label>
 											<div class="flex items-center gap-2">
-												<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
+												<EIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
 												<span class="text-muted-foreground">{{ selectedUser ? selectedUser.label : 'Add member...' }}</span>
 											</div>
 										</template>
 										<template #option="{ option: user }">
 											<div class="flex items-center gap-2 py-1">
-												<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="xs" />
+												<EAvatar :src="getAvatarUrl(user)" :alt="user.label" size="xs" />
 												<div>
 													<span class="text-sm font-medium">{{ user.label }}</span>
 													<span class="text-[10px] text-muted-foreground ml-1">{{ user.email }}</span>
 												</div>
 											</div>
 										</template>
-									</USelectMenu>
-								</UFormGroup>
+									</ESelectMenu>
+								</EFormGroup>
 								<div v-if="form.assigned_to.length" class="flex flex-wrap gap-1.5">
 									<span
 										v-for="userId in form.assigned_to"
@@ -180,17 +180,17 @@
 										class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg"
 										:class="isCurrentUserBadge(userId) ? 'bg-primary/10 text-primary' : 'bg-muted/60 text-foreground'"
 									>
-										<UAvatar :src="getAvatarUrl(getUserById(userId))" :alt="getUserFullName(getUserById(userId))" size="2xs" />
+										<EAvatar :src="getAvatarUrl(getUserById(userId))" :alt="getUserFullName(getUserById(userId))" size="2xs" />
 										{{ getUserFullName(getUserById(userId)) }}
 										<button type="button" class="hover:text-destructive transition-colors" @click="removeUser(userId)">
-											<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+											<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 										</button>
 									</span>
 								</div>
 							</div>
 
 							<div class="ios-card p-4">
-								<UFormGroup label="Description">
+								<EFormGroup label="Description">
 									<LazyFormTiptap
 										v-model="form.description"
 										placeholder="Describe the work..."
@@ -199,12 +199,12 @@
 										:organization-id="form.organization"
 										:client-id="form.client"
 									/>
-								</UFormGroup>
+								</EFormGroup>
 							</div>
 
 							<div class="flex items-center justify-end gap-2 pt-2">
-								<UButton color="gray" variant="ghost" @click="closeForm">Cancel</UButton>
-								<UButton type="submit" color="primary" :loading="isLoading">Create Ticket</UButton>
+								<EButton color="gray" variant="ghost" @click="closeForm">Cancel</EButton>
+								<EButton type="submit" color="primary" :loading="isLoading">Create Ticket</EButton>
 							</div>
 						</form>
 					</div>

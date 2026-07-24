@@ -166,7 +166,7 @@ const userList = computed(() => {
 				isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50 rounded transition-colors',
 			]"
 		>
-			<UIcon :name="reactionIconName" />
+			<EIcon :name="reactionIconName" />
 			<span ref="countRef" class="inline-block">{{ localCount }}</span>
 		</div>
 

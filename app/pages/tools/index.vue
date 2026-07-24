@@ -6,7 +6,7 @@
 			<p class="text-gray-500">No tools available.</p>
 		</div>
 		<div v-else>
-			<UAlert title="Access Denied" description="You don't have permission to access this page." color="red" />
+			<EAlert title="Access Denied" description="You don't have permission to access this page." color="red" />
 		</div>
 	</LayoutPageContainer>
 </template>

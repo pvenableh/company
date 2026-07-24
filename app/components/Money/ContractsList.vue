@@ -185,14 +185,14 @@ function openPanel(id: string | number, ev?: MouseEvent) {
 <template>
 	<div class="space-y-3">
 		<div v-if="showFilters" class="flex flex-wrap items-center gap-2">
-			<UInput
+			<EInput
 				v-model="search"
 				icon="i-heroicons-magnifying-glass"
 				placeholder="Search contracts..."
 				size="sm"
 				class="w-48"
 			/>
-			<USelectMenu
+			<ESelectMenu
 				v-model="statusFilter"
 				:options="statusOptions"
 				value-attribute="value"

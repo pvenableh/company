@@ -34,12 +34,12 @@
 							class="text-[10px] flex items-center gap-0.5"
 							:class="dueDateTextClass"
 						>
-							<UIcon
+							<EIcon
 								v-if="dueDateUrgency === 'past' || dueDateUrgency === 'urgent'"
 								name="i-heroicons-exclamation-triangle"
 								class="w-2.5 h-2.5"
 							/>
-							<UIcon v-else name="i-heroicons-calendar" class="w-2.5 h-2.5" />
+							<EIcon v-else name="i-heroicons-calendar" class="w-2.5 h-2.5" />
 							{{ formatDueDate(element.due_date) }}
 						</span>
 						<span
@@ -58,7 +58,7 @@
 							v-if="teamsEnabled && element?.team?.name"
 							class="text-[10px] text-muted-foreground flex items-center gap-0.5"
 						>
-							<UIcon name="i-heroicons-user-group" class="w-2.5 h-2.5" />
+							<EIcon name="i-heroicons-user-group" class="w-2.5 h-2.5" />
 							{{ element.team.name }}
 						</span>
 					</div>
@@ -69,19 +69,19 @@
 				     the avatars. Transform keeps both fully visible with no
 				     layout reflow. -->
 				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1 transition-transform duration-200 group-hover:-translate-x-6">
-					<UTooltip
+					<ETooltip
 						v-for="(u, i) in displayUsers"
 						:key="i"
 						:text="getUserFullName(u)"
 					>
-						<UAvatar
+						<EAvatar
 							:src="getAvatarUrl(u)"
 							:alt="getUserFullName(u)"
 							size="2xs"
 							:class="{ 'ring-1 ring-primary/40': isCurrentUser(u) }"
 						/>
-					</UTooltip>
-					<UTooltip
+					</ETooltip>
+					<ETooltip
 						v-if="additionalUsersCount > 0"
 						:text="getAdditionalUsersTooltip"
 					>
@@ -90,7 +90,7 @@
 						>
 							+{{ additionalUsersCount }}
 						</div>
-					</UTooltip>
+					</ETooltip>
 				</div>
 			</div>
 
@@ -107,21 +107,21 @@
 			<div v-if="hasFooter" class="flex items-center justify-between mt-3">
 				<ReactionsBar :item-id="element.id" collection="tickets" />
 				<div class="flex items-center gap-2.5 text-[10px] text-muted-foreground">
-					<UTooltip
+					<ETooltip
 						v-if="commentsCount > 0"
 						:text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')"
 					>
 						<span class="flex items-center gap-0.5">
-							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
+							<EIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
 							{{ commentsCount }}
 						</span>
-					</UTooltip>
-					<UTooltip v-if="tasksCount > 0" :text="tasksCount + ' tasks'">
+					</ETooltip>
+					<ETooltip v-if="tasksCount > 0" :text="tasksCount + ' tasks'">
 						<span class="flex items-center gap-0.5">
-							<UIcon name="i-heroicons-check-circle" class="w-2.5 h-2.5" />
+							<EIcon name="i-heroicons-check-circle" class="w-2.5 h-2.5" />
 							{{ tasksCount }}
 						</span>
-					</UTooltip>
+					</ETooltip>
 				</div>
 			</div>
 
@@ -131,7 +131,7 @@
 				:title="'Archive'"
 				@click.stop="$emit('archive', element?.id)"
 			>
-				<UIcon name="i-heroicons-archive-box-arrow-down" class="w-3 h-3 text-muted-foreground" />
+				<EIcon name="i-heroicons-archive-box-arrow-down" class="w-3 h-3 text-muted-foreground" />
 			</button>
 		</div>
 	</div>

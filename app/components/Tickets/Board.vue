@@ -7,11 +7,11 @@
 		<!-- Connection Status -->
 		<transition name="fade">
 			<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
-				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+				<EAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
-						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
+						<EButton size="sm" color="yellow" @click="refreshData">Retry Connection</EButton>
 					</template>
-				</UAlert>
+				</EAlert>
 			</div>
 		</transition>
 
@@ -27,7 +27,7 @@
 				 — scope pill-tabs on the left, pill filters pushed to the right. -->
 			<div v-else class="relative flex items-center justify-between gap-3 mb-5 flex-wrap">
 				<!-- Scope — 3-way segmented pill control (was two toggle switches). -->
-				<UTabs
+				<ETabs
 					:model-value="ticketScope"
 					:items="ticketScopeItems"
 					class="w-fit"
@@ -37,11 +37,11 @@
 				<!-- Right cluster: pill filters, pushed right. -->
 				<div class="flex items-center gap-2 flex-wrap ml-auto">
 					<transition name="fade">
-						<UIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
+						<EIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
 					</transition>
 
 					<transition name="fade">
-						<UButton
+						<EButton
 							v-if="hasActiveFilters"
 							icon="i-heroicons-x-mark"
 							size="xs"
@@ -51,7 +51,7 @@
 							@click="clearFilters"
 						>
 							Clear
-						</UButton>
+						</EButton>
 					</transition>
 
 					<!-- Due Date — leading icon turns amber when a date filter is active. -->
@@ -122,7 +122,7 @@
 			<div class="bg-card border border-border rounded-2xl p-6">
 				<div class="flex items-center justify-between mb-6">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
-						<UIcon name="i-heroicons-archive-box" class="w-4 h-4" />
+						<EIcon name="i-heroicons-archive-box" class="w-4 h-4" />
 						Archived Tickets
 						<span v-if="archivedTickets.length" class="text-xs font-normal text-muted-foreground">({{ archivedTickets.length }})</span>
 					</h3>
@@ -133,7 +133,7 @@
 				</div>
 
 				<div v-else-if="!archivedTickets.length" class="text-center py-12 text-muted-foreground">
-					<UIcon name="i-heroicons-archive-box" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+					<EIcon name="i-heroicons-archive-box" class="w-8 h-8 mx-auto mb-2 opacity-40" />
 					<p class="text-sm">No archived tickets</p>
 				</div>
 
@@ -153,11 +153,11 @@
 							</button>
 							<div class="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground uppercase">
 								<span v-if="ticket.organization?.name" class="flex items-center gap-1">
-									<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
+									<EIcon name="i-heroicons-building-office" class="w-3 h-3" />
 									{{ ticket.organization.name }}
 								</span>
 								<span v-if="ticket.date_updated" class="flex items-center gap-1">
-									<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+									<EIcon name="i-heroicons-clock" class="w-3 h-3" />
 									Archived {{ getFriendlyDate(ticket.date_updated) }}
 								</span>
 								<span v-if="ticket.priority" class="flex items-center gap-1">
@@ -165,8 +165,8 @@
 								</span>
 							</div>
 						</div>
-						<UTooltip text="Restore to Pending" :popper="{ arrow: true }">
-							<UButton
+						<ETooltip text="Restore to Pending" :popper="{ arrow: true }">
+							<EButton
 								icon="i-heroicons-arrow-uturn-left"
 								size="xs"
 								color="gray"
@@ -174,7 +174,7 @@
 								@click="restoreTicket(ticket.id)"
 								class="ml-3"
 							/>
-						</UTooltip>
+						</ETooltip>
 					</div>
 				</div>
 			</div>
@@ -186,11 +186,11 @@
 			v-if="isMobile"
 			class="flex items-center justify-between mb-4 mx-4 rounded-xl bg-card border border-border px-4 gap-4 py-3 text-foreground shadow-sm"
 		>
-			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
+			<EIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
 			<h3 class="text-sm font-medium uppercase tracking-wide">
 				{{ columns.find((col) => col.id === activeColumn)?.name }}
 			</h3>
-			<UIcon name="i-heroicons-chevron-right" class="w-5 h-5" @click="nextColumn" />
+			<EIcon name="i-heroicons-chevron-right" class="w-5 h-5" @click="nextColumn" />
 		</div>
 
 		<!-- Main Board -->
@@ -254,7 +254,7 @@
 									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
 								>
 									<LayoutLoader />
-									<!-- <UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" /> -->
+									<!-- <EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" /> -->
 								</div>
 								<TicketsExpandableCard
 									:element="element"
@@ -273,7 +273,7 @@
 		<!-- Empty state: no tickets for current filters -->
 		<div v-if="!isLoading && hasNoTickets" class="flex items-center justify-center min-h-[60vh]">
 			<div class="text-center max-w-sm">
-				<UIcon name="i-heroicons-ticket" class="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
+				<EIcon name="i-heroicons-ticket" class="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
 				<p class="text-base font-medium text-foreground">No tickets found</p>
 				<p class="text-sm text-muted-foreground mt-1.5">
 					{{ selectedClient ? 'No tickets for this client yet.' : 'Create your first ticket to get started.' }}

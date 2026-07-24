@@ -5,7 +5,7 @@
 			<h4 class="text-md font-medium mb-3">Current Team Members</h4>
 
 			<div v-if="loading" class="flex justify-center py-4">
-				<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+				<EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 			</div>
 
 			<div v-else-if="teamMembers.length === 0" class="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -15,7 +15,7 @@
 			<ul v-else class="divide-y dark:divide-gray-700">
 				<li v-for="member in teamMembers" :key="member.id" class="py-3 flex items-center justify-between">
 					<div class="flex items-center">
-						<UAvatar
+						<EAvatar
 							:src="getAvatarUrl(member.directus_users_id)"
 							:alt="getUserFullName(member.directus_users_id)"
 							size="sm"
@@ -27,8 +27,8 @@
 					</div>
 
 					<div class="flex items-center gap-2">
-						<UBadge v-if="member.is_manager" color="green" class="text-[9px]">Manager</UBadge>
-						<UButton
+						<EBadge v-if="member.is_manager" color="green" class="text-[9px]">Manager</EBadge>
+						<EButton
 							v-if="canRemoveMember(member)"
 							color="red"
 							variant="ghost"
@@ -36,7 +36,7 @@
 							icon="i-heroicons-user-minus"
 							@click="confirmRemoveMember(member)"
 						/>
-						<UButton
+						<EButton
 							v-if="canToggleManager(member)"
 							color="blue"
 							variant="ghost"
@@ -49,14 +49,14 @@
 			</ul>
 		</div>
 
-		<UDivider />
+		<EDivider />
 
 		<!-- Add New Members -->
 		<div>
 			<h4 class="text-md font-medium mb-3">Add Team Members</h4>
 
 			<div v-if="loadingAvailableUsers" class="flex justify-center py-4">
-				<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+				<EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 			</div>
 
 			<div v-else-if="availableUsers.length === 0" class="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -64,7 +64,7 @@
 			</div>
 
 			<div v-else>
-				<USelectMenu
+				<ESelectMenu
 					v-model="selectedUser"
 					:options="availableUsers"
 					searchable
@@ -73,26 +73,26 @@
 				>
 					<template #option="{ option: user }">
 						<div class="flex items-center gap-2 py-1">
-							<UAvatar :src="user.avatar" :alt="user.label" size="sm" />
+							<EAvatar :src="user.avatar" :alt="user.label" size="sm" />
 							<div class="flex flex-col">
 								<span class="font-medium">{{ user.label }}</span>
 								<span class="text-xs text-gray-500">{{ user.email }}</span>
 							</div>
 						</div>
 					</template>
-				</USelectMenu>
+				</ESelectMenu>
 
 				<div class="mt-2 flex items-center gap-3">
-					<UCheckbox v-model="addAsManager" label="Add as team manager" />
-					<UButton size="sm" color="primary" :disabled="!selectedUser" :loading="addingMember" @click="addMember">
+					<ECheckbox v-model="addAsManager" label="Add as team manager" />
+					<EButton size="sm" color="primary" :disabled="!selectedUser" :loading="addingMember" @click="addMember">
 						Add to Team
-					</UButton>
+					</EButton>
 				</div>
 			</div>
 		</div>
 
 		<!-- Confirmation Modal -->
-		<UModal v-model="showConfirmModal">
+		<EModal v-model="showConfirmModal">
 			<template #header>
 				<h3 class="text-lg font-semibold">Confirm Action</h3>
 			</template>
@@ -101,17 +101,17 @@
 
 			<template #footer>
 				<div class="flex justify-end gap-2">
-					<UButton color="gray" variant="ghost" @click="showConfirmModal = false">Cancel</UButton>
-					<UButton
+					<EButton color="gray" variant="ghost" @click="showConfirmModal = false">Cancel</EButton>
+					<EButton
 						:color="confirmAction === 'remove' ? 'red' : 'blue'"
 						:loading="confirmLoading"
 						@click="handleConfirm"
 					>
 						{{ confirmAction === 'remove' ? 'Remove' : 'Update' }}
-					</UButton>
+					</EButton>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 	</div>
 </template>
 

@@ -201,7 +201,7 @@ onMounted(() => {
 				<DropdownMenuSeparator />
 
 				<div v-if="loading" class="flex items-center justify-center py-4">
-					<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-gray-400" />
+					<EIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-gray-400" />
 				</div>
 
 				<div v-else class="max-h-[26rem] overflow-y-auto">

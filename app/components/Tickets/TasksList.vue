@@ -14,11 +14,11 @@
 		<ClientOnly>
 			<transition name="fade">
 				<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute right-0 top-0 connection-alert">
-					<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<EAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 						<template #footer>
-							<UButton size="sm" color="yellow" @click="refreshTasks">Retry Connection</UButton>
+							<EButton size="sm" color="yellow" @click="refreshTasks">Retry Connection</EButton>
 						</template>
-					</UAlert>
+					</EAlert>
 				</div>
 			</transition>
 		</ClientOnly>
@@ -27,7 +27,7 @@
 			<!-- Toolbar: view switch (River / Board / List) + task filter.
 			     All three views share the same realtime `filteredTasks`. -->
 			<div class="flex justify-between items-center mb-3 gap-3 flex-wrap">
-				<UTabs
+				<ETabs
 					v-model="viewMode"
 					:items="viewTabs"
 					class="w-fit"
@@ -36,7 +36,7 @@
 					<h3 class="text-xs font-bold uppercase tracking-wide whitespace-nowrap">
 						{{ filteredTasks.length }}{{ totalTaskCount > limit ? '+' : '' }} tasks
 					</h3>
-					<USelectMenu
+					<ESelectMenu
 						v-model="activeFilter"
 						:options="[
 							{ label: 'All Tasks', value: 'all' },
@@ -102,7 +102,7 @@
 
 			<!-- Empty state (board / list only — river shows its own) -->
 			<div v-else-if="filteredTasks.length === 0" class="p-8 text-center text-muted-foreground">
-				<UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+				<EIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
 				<p class="text-sm">No tasks found</p>
 				<p class="text-xs text-muted-foreground mt-2">Try changing your filters or create new tasks in your tickets</p>
 			</div>
@@ -126,10 +126,10 @@
 							v-if="updatingTasks.has(task.id)"
 							class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
 						>
-							<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+							<EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 						</div>
 
-						<UCheckbox :model-value="task.status === 'completed'" @update:model-value="toggleTaskStatus(task.id)" />
+						<ECheckbox :model-value="task.status === 'completed'" @update:model-value="toggleTaskStatus(task.id)" />
 
 						<div class="flex-1">
 							<div
@@ -140,8 +140,8 @@
 
 							<div class="text-[10px] text-muted-foreground uppercase mt-1 flex items-center flex-wrap">
 								<span class="mr-2 inline-flex items-center">
-									<UIcon name="i-heroicons-document-text" class="w-3 h-3 mr-1" />
-									<UButton
+									<EIcon name="i-heroicons-document-text" class="w-3 h-3 mr-1" />
+									<EButton
 										size="xs"
 										variant="link"
 										color="gray"
@@ -149,19 +149,19 @@
 										@click="navigateToTicket(task.ticketContext.id)"
 									>
 										{{ task.ticketContext.title || 'Untitled Ticket' }}
-									</UButton>
+									</EButton>
 								</span>
 
 								<span v-if="task.ticketContext.due_date" class="mr-2 inline-flex items-center">
-									<UIcon name="i-heroicons-calendar" class="w-3 h-3 mr-1" />
+									<EIcon name="i-heroicons-calendar" class="w-3 h-3 mr-1" />
 									<span :class="{ 'text-destructive': isTaskOverdue(task) }">
 										{{ getFriendlyDateTwo(task.ticketContext.due_date) }}
 									</span>
 								</span>
 
-								<UBadge size="xs" :color="getStatusColor(task.ticketContext.status)" class="uppercase !text-[9px]">
+								<EBadge size="xs" :color="getStatusColor(task.ticketContext.status)" class="uppercase !text-[9px]">
 									{{ task.ticketContext.status }}
-								</UBadge>
+								</EBadge>
 							</div>
 
 							<div
@@ -176,9 +176,9 @@
 				</div>
 
 				<div v-if="totalTaskCount > limit && filteredTasks.length < totalTaskCount" class="text-center mt-4">
-					<UButton size="sm" color="gray" variant="soft" @click="loadMore">
+					<EButton size="sm" color="gray" variant="soft" @click="loadMore">
 						Load More Tasks ({{ filteredTasks.length }} of {{ totalTaskCount }})
-					</UButton>
+					</EButton>
 				</div>
 			</div>
 		</div>

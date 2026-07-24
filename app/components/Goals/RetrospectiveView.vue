@@ -142,7 +142,7 @@ function progressColor(p: number): string {
 		<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
 			<p class="text-sm text-muted-foreground">A deeper, AI-grounded look across your goals.</p>
 			<div class="flex items-center gap-2">
-				<UTabs
+				<ETabs
 					:model-value="timeframe"
 					:items="[
 						{ key: 'month', label: 'This month' },
@@ -156,7 +156,7 @@ function progressColor(p: number): string {
 					:disabled="retroLoading || !inWindowGoals.length"
 					@click="generateRetrospective"
 				>
-					<UIcon v-if="retroLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 mr-1 animate-spin" />
+					<EIcon v-if="retroLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 mr-1 animate-spin" />
 					<EarnestIcon v-else class="w-3.5 h-3.5 mr-1" />
 					{{ retroLoading ? 'Reflecting…' : 'Generate retrospective' }}
 				</Button>
@@ -228,7 +228,7 @@ function progressColor(p: number): string {
 		</div>
 
 		<div v-else class="ios-card p-8 text-center mb-4">
-			<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+			<EIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
 			<p class="text-sm font-medium text-muted-foreground">No goals in this window</p>
 			<p class="text-xs text-muted-foreground/70 mt-1">Pick a different timeframe or create a goal.</p>
 		</div>
@@ -240,7 +240,7 @@ function progressColor(p: number): string {
 
 		<!-- Loading -->
 		<div v-if="retroLoading && !retro" class="ios-card p-6 text-center mb-4">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
+			<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
 			<p class="text-sm text-muted-foreground">Reading the last {{ timeframe }} across your goals…</p>
 		</div>
 
@@ -269,7 +269,7 @@ function progressColor(p: number): string {
 					<h4 class="text-[10px] uppercase tracking-wider text-success font-semibold mb-2">Wins</h4>
 					<ul class="space-y-1.5">
 						<li v-for="(w, i) in retro.wins" :key="i" class="text-sm flex gap-2">
-							<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 mt-0.5 text-success shrink-0" />
+							<EIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 mt-0.5 text-success shrink-0" />
 							<span>{{ w }}</span>
 						</li>
 					</ul>
@@ -279,7 +279,7 @@ function progressColor(p: number): string {
 					<h4 class="text-[10px] uppercase tracking-wider text-warning font-semibold mb-2">Blockers</h4>
 					<ul class="space-y-1.5">
 						<li v-for="(b, i) in retro.blockers" :key="i" class="text-sm flex gap-2">
-							<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mt-0.5 text-warning shrink-0" />
+							<EIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mt-0.5 text-warning shrink-0" />
 							<span>{{ b }}</span>
 						</li>
 					</ul>
@@ -289,7 +289,7 @@ function progressColor(p: number): string {
 					<h4 class="text-[10px] uppercase tracking-wider text-primary font-semibold mb-2">Suggested focus</h4>
 					<ul class="space-y-1.5">
 						<li v-for="(s, i) in retro.suggested_focus" :key="i" class="text-sm flex gap-2">
-							<UIcon name="i-heroicons-arrow-right-circle" class="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
+							<EIcon name="i-heroicons-arrow-right-circle" class="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
 							<span>{{ s }}</span>
 						</li>
 					</ul>

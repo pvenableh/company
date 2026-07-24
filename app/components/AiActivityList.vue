@@ -447,7 +447,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
         class="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
         @click="toggleSelectAllPending"
       >
-        <UIcon :name="allPendingSelected ? 'lucide:square-check' : 'lucide:square'" class="w-3.5 h-3.5" />
+        <EIcon :name="allPendingSelected ? 'lucide:square-check' : 'lucide:square'" class="w-3.5 h-3.5" />
         {{ allPendingSelected ? 'Clear' : `Select all pending (${pendingRows.length})` }}
       </button>
     </div>
@@ -470,7 +470,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
 
     <!-- Empty -->
     <div v-else-if="!actions.length" class="text-center py-10">
-      <UIcon name="lucide:sparkles" class="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
+      <EIcon name="lucide:sparkles" class="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
       <p class="text-sm text-muted-foreground">No AI activity yet</p>
       <p class="text-[11px] text-muted-foreground/70 mt-0.5">Actions Earnest takes will show up here.</p>
     </div>
@@ -495,7 +495,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
             :aria-label="isSelected(a.id) ? 'Deselect' : 'Select'"
             @click="toggleSelect(a.id)"
           >
-            <UIcon v-if="isSelected(a.id)" name="lucide:check" class="w-3 h-3" />
+            <EIcon v-if="isSelected(a.id)" name="lucide:check" class="w-3 h-3" />
           </button>
           <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
             <EarnestIcon class="w-3.5 h-3.5 text-primary" />
@@ -514,7 +514,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide bg-primary/10 text-primary"
                 title="Earnest proposed this proactively"
               >
-                <UIcon name="lucide:sparkles" class="w-2.5 h-2.5" />
+                <EIcon name="lucide:sparkles" class="w-2.5 h-2.5" />
                 Proactive
               </span>
               <span
@@ -522,7 +522,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide bg-muted text-muted-foreground"
                 title="This change was reverted"
               >
-                <UIcon name="lucide:undo-2" class="w-2.5 h-2.5" />
+                <EIcon name="lucide:undo-2" class="w-2.5 h-2.5" />
                 Undone
               </span>
               <span class="text-[10px] text-muted-foreground">{{ formatTime(a.date_created) }}</span>
@@ -538,7 +538,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 class="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
                 @click="link.open"
               >
-                <UIcon name="lucide:external-link" class="w-3 h-3" />
+                <EIcon name="lucide:external-link" class="w-3 h-3" />
                 {{ link.label }}
               </button>
             </div>
@@ -559,7 +559,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
                 @click="toggleExpanded(a.id)"
               >
-                <UIcon :name="expandedIds.has(a.id) ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
+                <EIcon :name="expandedIds.has(a.id) ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-3 h-3" />
                 {{ expandedIds.has(a.id) ? 'Hide email' : 'Show email' }}
               </button>
               <p
@@ -575,7 +575,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 :key="i"
                 class="flex items-baseline gap-1.5 text-[11px]"
               >
-                <UIcon name="lucide:flag" class="w-3 h-3 text-muted-foreground shrink-0 translate-y-0.5" />
+                <EIcon name="lucide:flag" class="w-3 h-3 text-muted-foreground shrink-0 translate-y-0.5" />
                 <span class="font-medium text-foreground break-words">{{ ev.title }}</span>
                 <span v-if="ev.event_date" class="text-muted-foreground shrink-0">{{ ev.event_date }}</span>
                 <span v-if="ev.taskCount" class="text-muted-foreground shrink-0">· {{ ev.taskCount }} task{{ ev.taskCount === 1 ? '' : 's' }}</span>
@@ -612,7 +612,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
             <div v-if="ticketPreview(a)" class="mt-2 rounded-xl bg-muted/40 border border-border/40 p-2.5 space-y-1">
               <div v-if="ticketPreview(a)!.priority" class="text-[11px] text-muted-foreground capitalize">Priority: {{ ticketPreview(a)!.priority }}</div>
               <div v-for="(t, i) in ticketPreview(a)!.tasks" :key="i" class="flex items-baseline gap-1.5 text-[11px]">
-                <UIcon name="lucide:check-square" class="w-3 h-3 text-muted-foreground shrink-0 translate-y-0.5" />
+                <EIcon name="lucide:check-square" class="w-3 h-3 text-muted-foreground shrink-0 translate-y-0.5" />
                 <span class="text-foreground break-words">{{ t }}</span>
               </div>
               <div v-if="!ticketPreview(a)!.tasks.length && !ticketPreview(a)!.priority" class="text-[11px] text-muted-foreground">Ticket only — no tasks.</div>
@@ -679,8 +679,8 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                   :disabled="isBusy(a.id)"
                   @click="resolveAction(a, 'approve')"
                 >
-                  <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-                  <UIcon v-else name="lucide:check" class="w-3 h-3" />
+                  <EIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                  <EIcon v-else name="lucide:check" class="w-3 h-3" />
                   Approve
                 </Button>
                 <Button
@@ -690,7 +690,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                   :disabled="isBusy(a.id)"
                   @click="resolveAction(a, 'reject')"
                 >
-                  <UIcon name="lucide:x" class="w-3 h-3" />
+                  <EIcon name="lucide:x" class="w-3 h-3" />
                   Reject
                 </Button>
                 <button
@@ -700,7 +700,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                   :disabled="isBusy(a.id)"
                   @click="editingId = a.id"
                 >
-                  <UIcon name="lucide:pencil" class="w-3 h-3" />
+                  <EIcon name="lucide:pencil" class="w-3 h-3" />
                   Edit
                 </button>
               </div>
@@ -716,8 +716,8 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
                 :disabled="isBusy(a.id)"
                 @click="undoAction(a)"
               >
-                <UIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-                <UIcon v-else name="lucide:undo-2" class="w-3 h-3" />
+                <EIcon v-if="isBusy(a.id)" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                <EIcon v-else name="lucide:undo-2" class="w-3 h-3" />
                 Undo
               </Button>
             </div>
@@ -739,8 +739,8 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
           :disabled="bulkBusy"
           @click="bulkResolve('approve')"
         >
-          <UIcon v-if="bulkBusy" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-          <UIcon v-else name="lucide:check" class="w-3 h-3" />
+          <EIcon v-if="bulkBusy" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+          <EIcon v-else name="lucide:check" class="w-3 h-3" />
           Approve {{ selectedCount }}
         </Button>
         <Button
@@ -750,7 +750,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
           :disabled="bulkBusy"
           @click="bulkResolve('reject')"
         >
-          <UIcon name="lucide:x" class="w-3 h-3" />
+          <EIcon name="lucide:x" class="w-3 h-3" />
           Reject {{ selectedCount }}
         </Button>
       </div>

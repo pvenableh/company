@@ -15,13 +15,13 @@
 					The reusable pieces that compose into proposals and contracts — content blocks (bio, references, terms) and service offerings (scope + pricing presets).
 				</p>
 			</div>
-			<UButton color="primary" @click="openNew">
-				<UIcon name="i-heroicons-plus" class="h-4 w-4" />
+			<EButton color="primary" @click="openNew">
+				<EIcon name="i-heroicons-plus" class="h-4 w-4" />
 				{{ activeTab === 'blocks' ? 'New block' : 'New offering' }}
-			</UButton>
+			</EButton>
 		</div>
 
-		<UAlert
+		<EAlert
 			v-if="!selectedOrg"
 			class="mb-6"
 			title="No organization selected"
@@ -46,10 +46,10 @@
 						<span class="text-xs text-muted-foreground/40 ml-1">({{ t.count }})</span>
 					</button>
 				</div>
-				<UButton v-if="compact" size="xs" color="primary" @click="openNew">
-					<UIcon name="i-heroicons-plus" class="h-3.5 w-3.5" />
+				<EButton v-if="compact" size="xs" color="primary" @click="openNew">
+					<EIcon name="i-heroicons-plus" class="h-3.5 w-3.5" />
 					{{ activeTab === 'blocks' ? 'New block' : 'New offering' }}
-				</UButton>
+				</EButton>
 			</div>
 
 			<!-- ─── Blocks tab ─────────────────────────────────────────────── -->
@@ -69,21 +69,21 @@
 				</div>
 
 				<div v-if="loadingBlocks" class="flex justify-center py-12">
-					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+					<EIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 				</div>
 
-				<UCard v-else-if="!filteredBlocks.length && !blocks.length" class="text-center py-10">
-					<UIcon name="i-heroicons-rectangle-group" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
+				<ECard v-else-if="!filteredBlocks.length && !blocks.length" class="text-center py-10">
+					<EIcon name="i-heroicons-rectangle-group" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
 					<h3 class="text-base font-medium mb-1">No blocks yet</h3>
 					<p class="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
 						Save the boilerplate sections you reuse — studio bio, standard terms, references, case studies. Drag them into any proposal or contract.
 					</p>
-					<UButton color="primary" @click="openNew">Add your first block</UButton>
-				</UCard>
+					<EButton color="primary" @click="openNew">Add your first block</EButton>
+				</ECard>
 
-				<UCard v-else-if="!filteredBlocks.length" class="text-center py-8">
+				<ECard v-else-if="!filteredBlocks.length" class="text-center py-8">
 					<p class="text-muted-foreground text-sm">No blocks in this category.</p>
-				</UCard>
+				</ECard>
 
 				<div v-else :class="cardGridClass">
 					<button
@@ -118,17 +118,17 @@
 			<!-- ─── Service offerings tab ──────────────────────────────────── -->
 			<section v-show="activeTab === 'offerings'">
 				<div v-if="loadingOfferings" class="flex justify-center py-12">
-					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+					<EIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 				</div>
 
-				<UCard v-else-if="!offerings.length" class="text-center py-10">
-					<UIcon name="i-heroicons-rectangle-stack" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
+				<ECard v-else-if="!offerings.length" class="text-center py-10">
+					<EIcon name="i-heroicons-rectangle-stack" class="mx-auto h-10 w-10 text-gray-300 mb-3" />
 					<h3 class="text-base font-medium mb-1">No offerings yet</h3>
 					<p class="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
 						Add the services you offer most often. Each captures a scope template (phased deliverables) + default pricing — the AI uses them as the spine when drafting proposals, and the in-app scope tree editor can drop them in directly.
 					</p>
-					<UButton color="primary" @click="openNew">Add your first offering</UButton>
-				</UCard>
+					<EButton color="primary" @click="openNew">Add your first offering</EButton>
+				</ECard>
 
 				<div v-else :class="cardGridClass">
 					<button

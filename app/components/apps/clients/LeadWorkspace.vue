@@ -50,7 +50,7 @@ watch(view, (next) => {
 
 const docsProposalCount = ref(0);
 const docsContractCount = ref(0);
-// Tab strip items for the universal <UTabs> control (matches Client/Project).
+// Tab strip items for the universal <ETabs> control (matches Client/Project).
 const viewTabs = computed(() => [
 	{ key: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
 	{ key: 'documents', label: 'Documents', icon: 'lucide:files', count: docsProposalCount.value + docsContractCount.value || null },
@@ -460,7 +460,7 @@ function openContactPivot() {
 	<div :class="compact ? '' : 'max-w-[2600px] mx-auto'">
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
+			<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
 		</div>
 
 		<template v-else-if="lead">
@@ -579,8 +579,8 @@ function openContactPivot() {
 					/>
 				</div>
 
-				<!-- View tab strip — the app-wide universal <UTabs> (matches Client/Project). -->
-				<UTabs v-model="view" :items="viewTabs" :class="!compact && 'mb-5'" />
+				<!-- View tab strip — the app-wide universal <ETabs> (matches Client/Project). -->
+				<ETabs v-model="view" :items="viewTabs" :class="!compact && 'mb-5'" />
 
 				<!-- Documents tab body -->
 				<div v-if="view === 'documents'" class="ios-card p-4 sm:p-6 space-y-6">
@@ -591,7 +591,7 @@ function openContactPivot() {
 						<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 							Documents
 						</h4>
-						<UDropdown :items="leadDocActions">
+						<EDropdown :items="leadDocActions">
 							<button
 								type="button"
 								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -601,7 +601,7 @@ function openContactPivot() {
 								New
 								<Icon name="lucide:chevron-down" class="w-3 h-3 opacity-70" />
 							</button>
-						</UDropdown>
+						</EDropdown>
 					</div>
 					<section>
 						<div class="flex items-center justify-between mb-3">
@@ -717,7 +717,7 @@ function openContactPivot() {
 						<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
 							<p class="text-[10px] uppercase font-semibold text-muted-foreground/40 tracking-wider">Email Engagement</p>
 							<div v-if="lead.related_contact.email_bounced" class="flex items-center gap-1.5 text-[11px] text-destructive dark:text-destructive">
-								<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
 								Bounced{{ lead.related_contact.email_bounce_type ? ` (${lead.related_contact.email_bounce_type})` : '' }}
 							</div>
 							<div v-if="lead.related_contact.email_subscribed === false" class="text-[11px] text-warning dark:text-warning">
@@ -833,7 +833,7 @@ function openContactPivot() {
 									:key="meeting.id"
 									class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-success/10 dark:bg-success/10 border-l-[3px] border-l-emerald-500"
 								>
-									<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-success flex-shrink-0" />
+									<EIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-success flex-shrink-0" />
 									<div class="flex-1 min-w-0">
 										<p class="text-[12px] font-medium text-foreground truncate">{{ meeting.title }}</p>
 										<p class="text-[10px] text-muted-foreground">
@@ -848,7 +848,7 @@ function openContactPivot() {
 										target="_blank"
 										class="p-1 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors"
 									>
-										<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+										<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
 									</NuxtLink>
 								</div>
 							</div>
@@ -860,12 +860,12 @@ function openContactPivot() {
 						<div class="flex items-center justify-between mb-4 gap-2">
 							<h2 class="text-sm font-semibold text-foreground">Pursuit Timeline</h2>
 							<div class="flex items-center gap-1.5">
-								<UButton size="xs" variant="ghost" :icon="reApproaching ? 'i-lucide-loader-2' : 'i-lucide-sparkles'" :class="{ 'animate-pulse': reApproaching }" :disabled="reApproaching" @click="draftReApproach">
+								<EButton size="xs" variant="ghost" :icon="reApproaching ? 'i-lucide-loader-2' : 'i-lucide-sparkles'" :class="{ 'animate-pulse': reApproaching }" :disabled="reApproaching" @click="draftReApproach">
 									{{ reApproaching ? 'Thinking…' : 'Re-approach' }}
-								</UButton>
-								<UButton size="xs" variant="outline" icon="i-heroicons-plus" @click="showActivityForm = !showActivityForm">
+								</EButton>
+								<EButton size="xs" variant="outline" icon="i-heroicons-plus" @click="showActivityForm = !showActivityForm">
 									Log
-								</UButton>
+								</EButton>
 							</div>
 						</div>
 
@@ -889,14 +889,14 @@ function openContactPivot() {
 								<span class="text-[10px] uppercase tracking-wide text-muted-foreground">Proposal angle · </span>{{ reApproach.proposal_angle }}
 							</p>
 							<div class="flex items-center gap-2">
-								<UButton size="xs" :loading="addingReApproach" icon="i-lucide-check" @click="addReApproachTouch">Add as touchpoint</UButton>
-								<UButton size="xs" variant="ghost" @click="reApproach = null">Dismiss</UButton>
+								<EButton size="xs" :loading="addingReApproach" icon="i-lucide-check" @click="addReApproachTouch">Add as touchpoint</EButton>
+								<EButton size="xs" variant="ghost" @click="reApproach = null">Dismiss</EButton>
 							</div>
 						</div>
 
 						<div v-if="showActivityForm" class="ios-card p-4 mb-4 space-y-3">
 							<div class="grid grid-cols-2 gap-3">
-								<USelectMenu
+								<ESelectMenu
 									v-model="newActivity.activity_type"
 									:options="[
 										{ value: 'call', label: 'Call' },
@@ -911,7 +911,7 @@ function openContactPivot() {
 									option-attribute="label"
 									size="sm"
 								/>
-								<USelectMenu
+								<ESelectMenu
 									v-model="newActivity.outcome"
 									:options="[
 										{ value: '', label: 'No outcome' },
@@ -925,14 +925,14 @@ function openContactPivot() {
 									size="sm"
 								/>
 							</div>
-							<UInput v-model="newActivity.subject" placeholder="Subject *" size="sm" />
-							<UTextarea v-model="newActivity.description" placeholder="Details..." :rows="2" size="sm" />
-							<UInput v-model="newActivity.next_action" placeholder="Next action..." size="sm" />
+							<EInput v-model="newActivity.subject" placeholder="Subject *" size="sm" />
+							<ETextarea v-model="newActivity.description" placeholder="Details..." :rows="2" size="sm" />
+							<EInput v-model="newActivity.next_action" placeholder="Next action..." size="sm" />
 							<div class="flex justify-end gap-2">
-								<UButton variant="ghost" size="xs" @click="showActivityForm = false">Cancel</UButton>
-								<UButton size="xs" :loading="activitySaving" :disabled="!newActivity.subject.trim()" @click="handleAddActivity">
+								<EButton variant="ghost" size="xs" @click="showActivityForm = false">Cancel</EButton>
+								<EButton size="xs" :loading="activitySaving" :disabled="!newActivity.subject.trim()" @click="handleAddActivity">
 									Save
-								</UButton>
+								</EButton>
 							</div>
 						</div>
 

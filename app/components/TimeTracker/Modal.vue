@@ -32,7 +32,7 @@
 
 					<div class="flex flex-wrap items-center gap-1.5">
 						<span v-if="clientName" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground">
-							<UIcon name="i-heroicons-building-office-2" class="w-3 h-3" />
+							<EIcon name="i-heroicons-building-office-2" class="w-3 h-3" />
 							{{ clientName }}
 						</span>
 						<span v-if="activeTimer.source_social_post" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs text-primary">
@@ -40,7 +40,7 @@
 							Post
 						</span>
 						<span v-if="activeTimer.billable" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-xs text-success dark:text-success">
-							<UIcon name="i-heroicons-currency-dollar" class="w-3 h-3" />
+							<EIcon name="i-heroicons-currency-dollar" class="w-3 h-3" />
 							Billable
 						</span>
 					</div>
@@ -51,14 +51,14 @@
 						class="flex-1 h-9 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
 						@click="handleStop"
 					>
-						<UIcon name="i-heroicons-stop" class="w-4 h-4" />
+						<EIcon name="i-heroicons-stop" class="w-4 h-4" />
 						Stop Timer
 					</button>
 					<button
 						class="h-9 px-3 rounded-lg border border-border text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors flex items-center gap-2"
 						@click="handleDiscard"
 					>
-						<UIcon name="i-heroicons-trash" class="w-4 h-4" />
+						<EIcon name="i-heroicons-trash" class="w-4 h-4" />
 						Discard
 					</button>
 				</div>

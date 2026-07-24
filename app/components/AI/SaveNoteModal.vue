@@ -80,41 +80,41 @@ const contentPreview = computed(() => {
   >
     <div class="space-y-4">
       <!-- Title -->
-      <UFormGroup label="Title">
-        <UInput v-model="title" placeholder="Note title..." />
-      </UFormGroup>
+      <EFormGroup label="Title">
+        <EInput v-model="title" placeholder="Note title..." />
+      </EFormGroup>
 
       <!-- Content preview -->
-      <UFormGroup label="Content">
+      <EFormGroup label="Content">
         <div
           class="max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border border-border/30 text-sm prose prose-sm dark:prose-invert max-w-none"
           v-html="contentPreview"
         />
-      </UFormGroup>
+      </EFormGroup>
 
       <!-- Tags -->
-      <UFormGroup label="Tags">
+      <EFormGroup label="Tags">
         <AITagSelector v-model="selectedTagIds" />
-      </UFormGroup>
+      </EFormGroup>
     </div>
 
     <template #footer>
       <span />
       <div class="flex items-center gap-2">
-        <UButton
+        <EButton
           variant="ghost"
           @click="emit('update:modelValue', false)"
         >
           Cancel
-        </UButton>
-        <UButton
+        </EButton>
+        <EButton
           @click="save"
           :loading="saving"
           :disabled="!messageContent.trim()"
         >
-          <UIcon name="i-heroicons-bookmark" class="w-4 h-4 mr-1" />
+          <EIcon name="i-heroicons-bookmark" class="w-4 h-4 mr-1" />
           Save Note
-        </UButton>
+        </EButton>
       </div>
     </template>
   </AppsAppBottomSheet>

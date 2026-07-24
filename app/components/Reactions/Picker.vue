@@ -23,7 +23,7 @@ function handleSelect(reaction) {
 
 <template>
 	<div class="w-64 max-h-64 overflow-y-auto p-2">
-		<UInput v-model="searchQuery" placeholder="Search emoji..." size="xs" class="mb-2" icon="i-heroicons-magnifying-glass" />
+		<EInput v-model="searchQuery" placeholder="Search emoji..." size="xs" class="mb-2" icon="i-heroicons-magnifying-glass" />
 		<div v-for="(emojis, category) in filteredCategories" :key="category">
 			<p class="text-[9px] uppercase tracking-wider text-gray-400 font-bold mb-1 mt-2">{{ category }}</p>
 			<div class="grid grid-cols-8 gap-1">
@@ -33,7 +33,7 @@ function handleSelect(reaction) {
 					class="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
 					@click="handleSelect(emoji)"
 				>
-					<UIcon
+					<EIcon
 						:name="isLegacyReaction(emoji) ? getReactionIcon(emoji, false) : `fluent-emoji-flat:${emoji}`"
 						class="text-base"
 					/>

@@ -374,11 +374,11 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
     </div>
 
     <div class="space-y-8">
-      <UCard v-for="platform in platformOrder" :key="platform" :data-platform="platform">
+      <ECard v-for="platform in platformOrder" :key="platform" :data-platform="platform">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <UIcon :name="platformConfig[platform].icon" class="w-9 h-9 shrink-0" />
+              <EIcon :name="platformConfig[platform].icon" class="w-9 h-9 shrink-0" />
               <div>
                 <h2 class="font-semibold text-foreground">{{ platformConfig[platform].label }}</h2>
                 <p class="text-sm text-muted-foreground">
@@ -386,30 +386,30 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                 </p>
               </div>
             </div>
-            <UButton :to="platformConfig[platform].connectPath" external icon="i-lucide-plus" size="sm">
+            <EButton :to="platformConfig[platform].connectPath" external icon="i-lucide-plus" size="sm">
               Connect
-            </UButton>
+            </EButton>
           </div>
         </template>
 
         <div v-if="accountsForPlatform(platform).length === 0" class="text-center py-8">
-          <UIcon :name="platformConfig[platform].icon" class="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <EIcon :name="platformConfig[platform].icon" class="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p class="text-muted-foreground mb-4">No {{ platformConfig[platform].label }} accounts connected</p>
-          <UButton :to="platformConfig[platform].connectPath" external variant="soft">
+          <EButton :to="platformConfig[platform].connectPath" external variant="soft">
             {{ platformConfig[platform].connectLabel }}
-          </UButton>
+          </EButton>
         </div>
 
         <div v-else class="divide-y divide-border">
           <div v-for="account in accountsForPlatform(platform)" :key="account.id" class="flex items-center gap-4 py-4">
             <div class="relative shrink-0">
-              <UAvatar
+              <EAvatar
                 :src="account.profile_picture_url || undefined"
                 :alt="account.account_name"
                 :icon="account.profile_picture_url ? undefined : platformConfig[platform].icon"
                 size="lg"
               />
-              <UIcon
+              <EIcon
                 v-if="account.profile_picture_url"
                 :name="platformConfig[platform].icon"
                 class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-md bg-card ring-2 ring-card"
@@ -419,7 +419,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
               <p class="font-medium text-foreground">{{ account.account_name }}</p>
               <p class="text-sm text-muted-foreground">@{{ account.account_handle }}</p>
             </div>
-            <USelectMenu
+            <ESelectMenu
               :model-value="account.client ?? 'house'"
               :options="[
                 { label: 'House (agency-owned)', value: 'house' },
@@ -431,10 +431,10 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
               class="w-48"
               @update:model-value="(v: string) => reassignAccountClient(account, v === 'house' ? null : v)"
             />
-            <UBadge :color="getTokenStatus(account).color" variant="subtle" size="sm">
+            <EBadge :color="getTokenStatus(account).color" variant="subtle" size="sm">
               {{ getTokenStatus(account).label }}
-            </UBadge>
-            <UDropdown
+            </EBadge>
+            <EDropdown
               :items="[
                 [
                   { label: 'Reconnect', icon: 'i-lucide-refresh-cw', to: platformConfig[platform].connectPath, external: true },
@@ -455,27 +455,27 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                 class="shrink-0 p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"
                 aria-label="Account options"
               >
-                <UIcon
+                <EIcon
                   :name="isBackfilling === account.id ? 'i-lucide-loader-circle' : 'i-lucide-more-vertical'"
                   :class="['w-5 h-5', isBackfilling === account.id && 'animate-spin']"
                 />
               </button>
-            </UDropdown>
+            </EDropdown>
           </div>
         </div>
 
         <template v-if="platformConfig[platform].footerNote" #footer>
           <div class="flex items-start gap-2 text-sm text-muted-foreground">
-            <UIcon name="i-lucide-info" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <EIcon name="i-lucide-info" class="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p>{{ platformConfig[platform].footerNote }}</p>
           </div>
         </template>
-      </UCard>
+      </ECard>
     </div>
 
     <section id="setup-guide" class="mt-12 scroll-mt-24">
       <div class="flex items-center gap-2 mb-4">
-        <UIcon name="i-lucide-book-open" class="w-5 h-5 text-muted-foreground" />
+        <EIcon name="i-lucide-book-open" class="w-5 h-5 text-muted-foreground" />
         <h2 class="text-lg font-semibold text-foreground">Setup Guide</h2>
       </div>
       <p class="text-sm text-muted-foreground mb-6">
@@ -492,12 +492,12 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-muted/30 rounded-xl"
           >
             <div class="flex items-center gap-3">
-              <UIcon :name="platformConfig[platform].icon" class="w-6 h-6 shrink-0" />
+              <EIcon :name="platformConfig[platform].icon" class="w-6 h-6 shrink-0" />
               <span class="font-medium text-foreground">
                 {{ platformConfig[platform].label }} setup
               </span>
             </div>
-            <UIcon
+            <EIcon
               name="i-lucide-chevron-down"
               class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180"
             />
@@ -513,7 +513,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                 class="inline-flex items-center gap-1.5 text-primary hover:underline"
               >
                 {{ setupGuides[platform].consoleLabel }}
-                <UIcon name="i-lucide-external-link" class="w-3 h-3" />
+                <EIcon name="i-lucide-external-link" class="w-3 h-3" />
               </a>
             </div>
 
@@ -587,19 +587,19 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             Days to fetch
           </label>
           <div class="flex gap-2">
-            <UButton
+            <EButton
               v-for="opt in [7, 14, 28, 60, 90]"
               :key="opt"
               size="xs"
               :variant="backfillDays === opt ? 'solid' : 'soft'"
               @click="backfillDays = opt"
-            >{{ opt }}d</UButton>
+            >{{ opt }}d</EButton>
           </div>
         </div>
 
         <div class="rounded-md bg-warning/10 dark:bg-warning/20 border border-warning/30 dark:border-warning/40 p-3 text-xs text-warning space-y-1">
           <p>
-            <UIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
+            <EIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
             Meta retains roughly 28 days of account-level insights — anything before that may come back empty.
           </p>
           <p>
@@ -613,10 +613,10 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       <template #footer>
         <span />
         <div class="flex items-center gap-2">
-          <UButton variant="ghost" @click="showBackfillModal = false">Cancel</UButton>
-          <UButton color="primary" @click="runBackfill">
+          <EButton variant="ghost" @click="showBackfillModal = false">Cancel</EButton>
+          <EButton color="primary" @click="runBackfill">
             Fetch {{ backfillDays }} days of history
-          </UButton>
+          </EButton>
         </div>
       </template>
     </AppsAppBottomSheet>
@@ -634,10 +634,10 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
       <template #footer>
         <span />
         <div class="flex items-center gap-2">
-          <UButton variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
-          <UButton color="red" :loading="isDeleting === accountToDelete?.id" @click="disconnectAccount">
+          <EButton variant="ghost" @click="showDeleteModal = false">Cancel</EButton>
+          <EButton color="red" :loading="isDeleting === accountToDelete?.id" @click="disconnectAccount">
             Disconnect
-          </UButton>
+          </EButton>
         </div>
       </template>
     </AppsAppBottomSheet>

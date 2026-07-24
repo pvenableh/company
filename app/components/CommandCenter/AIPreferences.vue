@@ -93,7 +93,7 @@ const formatTokens = (n: number) => {
 							class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
 							:class="isEnabled(mod.key) ? 'bg-primary/10' : 'bg-muted'"
 						>
-							<UIcon
+							<EIcon
 								:name="mod.icon"
 								class="w-4 h-4"
 								:class="isEnabled(mod.key) ? 'text-primary' : 'text-muted-foreground'"

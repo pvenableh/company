@@ -3,7 +3,7 @@
 		<!-- Header row -->
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">
 					Marketing &amp; Social Pulse
 				</h3>
@@ -19,7 +19,7 @@
 					v-if="metrics?.failedPosts && metrics.failedPosts > 0"
 					class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold uppercase tracking-wider"
 				>
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />
 					{{ metrics.failedPosts }} failed
 				</span>
 				<UiViewLink to="/apps/marketing" size="sm">View marketing</UiViewLink>
@@ -40,7 +40,7 @@
 
 				<div v-else-if="!pulse.topRec.value" class="flex items-center gap-3 h-full">
 					<div class="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
-						<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-muted-foreground/60" />
+						<EIcon name="i-heroicons-check-circle" class="w-5 h-5 text-muted-foreground/60" />
 					</div>
 					<div>
 						<p class="text-sm font-medium text-foreground/80">No marketing actions this week</p>
@@ -53,7 +53,7 @@
 				<div v-else class="flex flex-col h-full">
 					<div class="flex items-start gap-3">
 						<div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-							<UIcon :name="cardTypeIcon(pulse.topRec.value.card_type)" class="w-5 h-5 text-primary" />
+							<EIcon :name="cardTypeIcon(pulse.topRec.value.card_type)" class="w-5 h-5 text-primary" />
 						</div>
 						<div class="flex-1 min-w-0">
 							<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
@@ -85,7 +85,7 @@
 						</span>
 						<span class="text-[11px] font-medium text-primary flex items-center gap-1 group-hover:gap-1.5 transition-all">
 							Open feed
-							<UIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
+							<EIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
 						</span>
 					</div>
 				</div>
@@ -100,7 +100,7 @@
 					class="rounded-xl bg-muted/20 hover:bg-muted/40 transition-colors p-3 flex flex-col gap-1 group"
 				>
 					<div class="flex items-center gap-1.5">
-						<UIcon :name="kpi.icon" class="w-3.5 h-3.5 text-muted-foreground" />
+						<EIcon :name="kpi.icon" class="w-3.5 h-3.5 text-muted-foreground" />
 						<span class="text-[10px] uppercase tracking-wider text-muted-foreground truncate">
 							{{ kpi.label }}
 						</span>
@@ -134,7 +134,7 @@
 						:key="account.id"
 						class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30 text-[11px]"
 					>
-						<UIcon :name="platformIcon(account.platform)" class="w-3 h-3" />
+						<EIcon :name="platformIcon(account.platform)" class="w-3 h-3" />
 						<span class="truncate max-w-[140px]">{{ account.account_name }}</span>
 					</span>
 					<span

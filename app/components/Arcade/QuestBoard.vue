@@ -22,7 +22,7 @@
 						class="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
 						:class="q.done ? 'bg-primary/15 text-primary' : 'bg-muted/60 text-muted-foreground'"
 					>
-						<UIcon :name="q.icon" class="w-4.5 h-4.5" />
+						<EIcon :name="q.icon" class="w-4.5 h-4.5" />
 					</div>
 
 					<!-- Body -->
@@ -61,10 +61,10 @@
 							v-else-if="claimedIds.has(q.id)"
 							class="inline-flex items-center gap-1 text-[11px] font-medium text-primary"
 						>
-							<UIcon name="i-heroicons-check-circle-solid" class="w-4 h-4" />
+							<EIcon name="i-heroicons-check-circle-solid" class="w-4 h-4" />
 							Claimed
 						</span>
-						<UIcon
+						<EIcon
 							v-else
 							name="i-heroicons-lock-closed"
 							class="w-4 h-4 text-muted-foreground/50"

@@ -161,7 +161,7 @@ onMounted(() => {
     </div>
 
     <!-- Event Detail Modal -->
-    <UModal v-model="showEventDetail" class="sm:max-w-xl">
+    <EModal v-model="showEventDetail" class="sm:max-w-xl">
       <template #header>
         <div class="flex items-center gap-2">
           <span
@@ -182,6 +182,6 @@ onMounted(() => {
           @updated="refresh"
         />
       </div>
-    </UModal>
+    </EModal>
   </div>
 </template>

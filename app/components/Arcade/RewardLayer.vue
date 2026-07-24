@@ -29,7 +29,7 @@
 				<TransitionGroup name="arcade-badge">
 					<div v-for="b in badgeToasts" :key="b.id" class="arcade-badge">
 						<div class="arcade-badge__medal">
-							<UIcon :name="b.icon || 'i-heroicons-trophy'" class="size-5" />
+							<EIcon :name="b.icon || 'i-heroicons-trophy'" class="size-5" />
 						</div>
 						<div class="arcade-badge__body">
 							<div class="arcade-badge__eyebrow">Badge unlocked</div>

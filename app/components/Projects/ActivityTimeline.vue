@@ -149,7 +149,7 @@ const getUserAvatar = (u) => {
 	<div>
 		<div v-if="!hideHeader" class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-clock" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-clock" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Activity</h3>
 			</div>
 			<button @click="loadActivity" :disabled="loading" class="text-xs text-primary hover:underline disabled:opacity-50">
@@ -170,7 +170,7 @@ const getUserAvatar = (u) => {
 
 		<!-- Empty -->
 		<div v-else-if="activities.length === 0" class="text-center py-12">
-			<UIcon name="i-heroicons-clock" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+			<EIcon name="i-heroicons-clock" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
 			<p class="text-sm text-muted-foreground">No activity yet</p>
 		</div>
 
@@ -182,7 +182,7 @@ const getUserAvatar = (u) => {
 			<div v-for="item in activities" :key="item.id" class="relative flex items-start gap-4 pb-6">
 				<!-- Avatar / icon -->
 				<div class="relative z-10 flex-shrink-0">
-					<UAvatar
+					<EAvatar
 						v-if="item.user"
 						:src="getUserAvatar(item.user)"
 						:alt="getUserName(item.user)"
@@ -190,7 +190,7 @@ const getUserAvatar = (u) => {
 						class="ring-2 ring-background"
 					/>
 					<div v-else class="w-8 h-8 rounded-full bg-muted flex items-center justify-center ring-2 ring-background">
-						<UIcon :name="collectionIcons[item.collection] || 'i-heroicons-information-circle'" class="w-4 h-4 text-muted-foreground" />
+						<EIcon :name="collectionIcons[item.collection] || 'i-heroicons-information-circle'" class="w-4 h-4 text-muted-foreground" />
 					</div>
 				</div>
 
@@ -213,7 +213,7 @@ const getUserAvatar = (u) => {
 							class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
 							:class="collectionColors[item.collection] || 'text-muted-foreground bg-muted'"
 						>
-							<UIcon :name="collectionIcons[item.collection] || 'i-heroicons-document'" class="w-3 h-3" />
+							<EIcon :name="collectionIcons[item.collection] || 'i-heroicons-document'" class="w-3 h-3" />
 							{{ collectionLabels[item.collection] || item.collection }}
 						</span>
 						<span class="text-[10px] text-muted-foreground">{{ formatTime(item.timestamp) }}</span>

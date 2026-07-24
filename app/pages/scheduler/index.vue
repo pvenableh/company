@@ -14,7 +14,7 @@
 					title="Your past meetings, recordings & recaps"
 					@click="showHistory = true"
 				>
-					<UIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground" />
+					<EIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground" />
 					History
 				</button>
 			</div>
@@ -32,7 +32,7 @@
 							: 'text-muted-foreground hover:text-foreground'"
 					>
 						<span class="flex items-center gap-1.5">
-							<UIcon :name="tab.icon" class="w-3.5 h-3.5" />
+							<EIcon :name="tab.icon" class="w-3.5 h-3.5" />
 							{{ tab.label }}
 						</span>
 					</button>
@@ -45,7 +45,7 @@
 					</div>
 
 					<div v-else-if="availableHosts.length === 0" class="ios-card p-8 text-center">
-						<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+						<EIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
 						<p class="text-sm font-medium text-muted-foreground">No hosts available</p>
 						<p class="text-xs text-muted-foreground/60 mt-1">No team members have booking enabled at this time</p>
 					</div>
@@ -57,7 +57,7 @@
 							class="ios-card p-4"
 						>
 							<div class="flex items-center gap-4">
-								<UAvatar :alt="`${host.first_name} ${host.last_name}`" size="lg" />
+								<EAvatar :alt="`${host.first_name} ${host.last_name}`" size="lg" />
 								<div class="flex-1 min-w-0">
 									<h3 class="text-sm font-semibold text-foreground">{{ host.first_name }} {{ host.last_name }}</h3>
 									<p v-if="host.booking_page_title" class="text-xs text-muted-foreground mt-0.5">{{ host.booking_page_title }}</p>
@@ -75,7 +75,7 @@
 										target="_blank"
 										class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
 									>
-										<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
+										<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
 									</NuxtLink>
 								</div>
 							</div>
@@ -90,7 +90,7 @@
 					</div>
 
 					<div v-else-if="clientRequests.length === 0" class="ios-card p-8 text-center">
-						<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+						<EIcon name="i-heroicons-inbox" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
 						<p class="text-sm font-medium text-muted-foreground">No meeting requests yet</p>
 						<p class="text-xs text-muted-foreground/60 mt-1">Request a meeting to get started</p>
 					</div>
@@ -105,11 +105,11 @@
 									</div>
 									<div class="flex items-center gap-3 text-[11px] text-muted-foreground">
 										<span class="flex items-center gap-1">
-											<UIcon name="i-heroicons-calendar" class="w-3 h-3" />
+											<EIcon name="i-heroicons-calendar" class="w-3 h-3" />
 											{{ clientFormatDate(request.requested_date) }}
 										</span>
 										<span v-if="request.preferred_time" class="flex items-center gap-1">
-											<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+											<EIcon name="i-heroicons-clock" class="w-3 h-3" />
 											{{ clientFormatTime(request.preferred_time) }}
 										</span>
 										<span v-if="request.duration_minutes">{{ request.duration_minutes }}min</span>
@@ -122,7 +122,7 @@
 									class="flex items-center gap-1 px-2.5 py-1.5 bg-success/10 text-success rounded-lg text-[11px] font-medium ios-press"
 									@click="joinRequestMeeting(request)"
 								>
-									<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
+									<EIcon name="i-heroicons-video-camera" class="w-3 h-3" />
 									Join
 								</button>
 							</div>
@@ -132,39 +132,39 @@
 			</div>
 
 			<!-- Meeting Request Modal -->
-			<UModal v-model="showRequestModal">
+			<EModal v-model="showRequestModal">
 				<div class="ios-card overflow-hidden !rounded-2xl">
 					<div class="px-5 py-4 border-b border-border/30 flex items-center justify-between">
 						<h3 class="text-sm font-semibold text-foreground">Request a Meeting</h3>
 						<button @click="showRequestModal = false" class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors">
-							<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
+							<EIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
 						</button>
 					</div>
 
 					<div v-if="selectedHost" class="p-5 space-y-4">
 						<div class="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
-							<UAvatar :alt="`${selectedHost.first_name} ${selectedHost.last_name}`" size="sm" />
+							<EAvatar :alt="`${selectedHost.first_name} ${selectedHost.last_name}`" size="sm" />
 							<div>
 								<p class="text-sm font-medium text-foreground">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
 								<p class="text-xs text-muted-foreground">{{ selectedHost.email }}</p>
 							</div>
 						</div>
 
-						<UFormGroup label="Preferred Date" required>
-							<UInput v-model="requestForm.date" type="date" :min="minDate" />
-						</UFormGroup>
-						<UFormGroup label="Preferred Time">
-							<UInput v-model="requestForm.time" type="time" />
-						</UFormGroup>
-						<UFormGroup label="Duration">
-							<USelect v-model="requestForm.duration" :options="durationOptions" />
-						</UFormGroup>
-						<UFormGroup label="Meeting Type">
-							<USelect v-model="requestForm.meetingType" :options="meetingTypeOptions" />
-						</UFormGroup>
-						<UFormGroup label="Notes (optional)">
-							<UTextarea v-model="requestForm.notes" placeholder="Describe what you'd like to discuss..." rows="3" />
-						</UFormGroup>
+						<EFormGroup label="Preferred Date" required>
+							<EInput v-model="requestForm.date" type="date" :min="minDate" />
+						</EFormGroup>
+						<EFormGroup label="Preferred Time">
+							<EInput v-model="requestForm.time" type="time" />
+						</EFormGroup>
+						<EFormGroup label="Duration">
+							<ESelect v-model="requestForm.duration" :options="durationOptions" />
+						</EFormGroup>
+						<EFormGroup label="Meeting Type">
+							<ESelect v-model="requestForm.meetingType" :options="meetingTypeOptions" />
+						</EFormGroup>
+						<EFormGroup label="Notes (optional)">
+							<ETextarea v-model="requestForm.notes" placeholder="Describe what you'd like to discuss..." rows="3" />
+						</EFormGroup>
 
 						<div class="flex justify-end gap-2 pt-2">
 							<button
@@ -183,7 +183,7 @@
 						</div>
 					</div>
 				</div>
-			</UModal>
+			</EModal>
 		</div>
 
 		<!-- ═══ Admin: Calendar-First CRM Hub ═══ -->
@@ -205,7 +205,7 @@
 							aria-label="Meeting history"
 							@click="showHistory = true"
 						>
-							<UIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
+							<EIcon name="i-lucide-history" class="w-4.5 h-4.5 text-muted-foreground" />
 						</button>
 						<button
 							type="button"
@@ -214,7 +214,7 @@
 							aria-label="Open scheduler settings"
 							@click="showSettings = true"
 						>
-							<UIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
 						</button>
 					</div>
 				</div>
@@ -250,7 +250,7 @@
 							: 'bg-muted/30 text-muted-foreground hover:bg-muted/50'"
 						:title="mineOnly ? 'Showing only your events — click to include teammates' : 'Showing all org events — click to filter to your own'"
 					>
-						<UIcon :name="mineOnly ? 'i-heroicons-user' : 'i-heroicons-user-group'" class="w-3 h-3" />
+						<EIcon :name="mineOnly ? 'i-heroicons-user' : 'i-heroicons-user-group'" class="w-3 h-3" />
 						{{ mineOnly ? 'Mine only' : 'Team' }}
 					</button>
 				</div>
@@ -306,17 +306,17 @@
 			/>
 
 			<!-- Requests Modal -->
-			<UModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
+			<EModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
 				<div class="ios-card overflow-hidden !rounded-2xl">
 					<div class="px-5 py-4 border-b border-border/30 flex items-center justify-between">
 						<h3 class="text-sm font-semibold text-foreground">Meeting Requests</h3>
 						<button @click="showRequestsModal = false" class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors">
-							<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
+							<EIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
 						</button>
 					</div>
 					<SchedulerMeetingRequests />
 				</div>
-			</UModal>
+			</EModal>
 
 			<!-- Scheduler settings slide-over — one-deep edit per nav strategy. -->
 			<AppSlideOver v-model="showSettings" title="Scheduler Settings" :ui="{ body: 'p-0' }">

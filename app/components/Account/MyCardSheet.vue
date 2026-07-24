@@ -137,7 +137,7 @@ function downloadVcard() {
 <template>
   <AppsAppBottomSheet v-model="isOpen" title="My Card" subtitle="Your shareable business card & booking link">
     <div v-if="loading && !data" class="flex items-center justify-center py-16 gap-2 text-sm text-muted-foreground">
-      <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading your card…
+      <EIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading your card…
     </div>
 
     <div v-else-if="data" class="space-y-5 pb-2">
@@ -160,38 +160,38 @@ function downloadVcard() {
       <!-- Share row -->
       <div class="flex flex-wrap gap-2">
         <button type="button" class="pill-action" @click="copy(data.publicCardUrl, 'Card link')">
-          <UIcon name="i-lucide-link" class="w-3.5 h-3.5" /> Copy link
+          <EIcon name="i-lucide-link" class="w-3.5 h-3.5" /> Copy link
         </button>
         <button type="button" class="pill-action" @click="openPublicCard">
-          <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5" /> Open card
+          <EIcon name="i-lucide-external-link" class="w-3.5 h-3.5" /> Open card
         </button>
         <button type="button" class="pill-action" @click="downloadVcard">
-          <UIcon name="i-lucide-contact" class="w-3.5 h-3.5" /> vCard
+          <EIcon name="i-lucide-contact" class="w-3.5 h-3.5" /> vCard
         </button>
         <button v-if="data.booking.public_booking_enabled && bookingUrl" type="button" class="pill-action" @click="copy(bookingUrl, 'Booking link')">
-          <UIcon name="i-lucide-calendar-clock" class="w-3.5 h-3.5" /> Copy booking link
+          <EIcon name="i-lucide-calendar-clock" class="w-3.5 h-3.5" /> Copy booking link
         </button>
         <span class="ml-auto self-center text-[11px] text-muted-foreground">
           <template v-if="saving">Saving…</template>
-          <template v-else-if="savedAt"><UIcon name="i-lucide-check" class="w-3 h-3 inline -mt-0.5" /> Saved</template>
+          <template v-else-if="savedAt"><EIcon name="i-lucide-check" class="w-3 h-3 inline -mt-0.5" /> Saved</template>
         </span>
       </div>
 
       <!-- Card fields -->
       <section class="rounded-2xl border border-border/60 bg-background/40 p-4 space-y-2.5">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Card</p>
-        <UInput v-model="card.display_name" placeholder="Display name" @update:model-value="touch" />
+        <EInput v-model="card.display_name" placeholder="Display name" @update:model-value="touch" />
         <div class="grid grid-cols-2 gap-2.5">
-          <UInput v-model="card.title" placeholder="Title" @update:model-value="touch" />
-          <UInput v-model="card.company" placeholder="Company" @update:model-value="touch" />
+          <EInput v-model="card.title" placeholder="Title" @update:model-value="touch" />
+          <EInput v-model="card.company" placeholder="Company" @update:model-value="touch" />
         </div>
-        <UTextarea v-model="card.headline" :rows="2" autoresize placeholder="Short tagline / headline" @update:model-value="touch" />
+        <ETextarea v-model="card.headline" :rows="2" autoresize placeholder="Short tagline / headline" @update:model-value="touch" />
         <div class="grid grid-cols-2 gap-2.5">
-          <UInput v-model="card.email" type="email" placeholder="Email" @update:model-value="touch" />
-          <UInput v-model="card.phone" placeholder="Phone" @update:model-value="touch" />
+          <EInput v-model="card.email" type="email" placeholder="Email" @update:model-value="touch" />
+          <EInput v-model="card.phone" placeholder="Phone" @update:model-value="touch" />
         </div>
-        <UInput v-model="card.website" placeholder="Website (https://…)" @update:model-value="touch" />
-        <UTextarea v-model="card.office_address" :rows="2" autoresize placeholder="Office / business address" @update:model-value="touch" />
+        <EInput v-model="card.website" placeholder="Website (https://…)" @update:model-value="touch" />
+        <ETextarea v-model="card.office_address" :rows="2" autoresize placeholder="Office / business address" @update:model-value="touch" />
       </section>
 
       <!-- Socials -->
@@ -199,8 +199,8 @@ function downloadVcard() {
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Social</p>
         <div class="grid grid-cols-1 gap-2.5">
           <div v-for="s in SOCIALS" :key="s.key" class="flex items-center gap-2">
-            <UIcon :name="s.icon" class="w-4 h-4 shrink-0" />
-            <UInput v-model="card[s.key]" :placeholder="`${s.label} handle or URL`" class="flex-1" @update:model-value="touch" />
+            <EIcon :name="s.icon" class="w-4 h-4 shrink-0" />
+            <EInput v-model="card[s.key]" :placeholder="`${s.label} handle or URL`" class="flex-1" @update:model-value="touch" />
           </div>
         </div>
       </section>
@@ -221,7 +221,7 @@ function downloadVcard() {
               <span class="text-[15px] font-extrabold opacity-95" :style="{ fontFamily: `'Bauer Bodoni', Georgia, serif`, color: t.swatchInk }">Aa</span>
             </span>
             <span class="text-[11px] font-bold" :class="(card.card_theme || 'carddesk') === t.id ? 'text-foreground' : 'text-muted-foreground'">{{ t.label }}</span>
-            <UIcon v-if="(card.card_theme || 'carddesk') === t.id" name="i-lucide-check" class="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-primary" />
+            <EIcon v-if="(card.card_theme || 'carddesk') === t.id" name="i-lucide-check" class="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-primary" />
           </button>
         </div>
         <p class="text-[11px] text-muted-foreground leading-relaxed">
@@ -233,7 +233,7 @@ function downloadVcard() {
             <p class="text-xs font-medium">Minimal rows</p>
             <p class="text-[11px] text-muted-foreground">Hide the boxed row backgrounds &amp; borders for a cleaner look.</p>
           </div>
-          <UToggle v-model="card.flat_layout" @update:model-value="touch" />
+          <EToggle v-model="card.flat_layout" @update:model-value="touch" />
         </div>
       </section>
 
@@ -241,18 +241,18 @@ function downloadVcard() {
       <section class="rounded-2xl border border-border/60 bg-background/40 p-4 space-y-2.5">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Booking</p>
-          <UToggle v-model="data.booking.public_booking_enabled" @update:model-value="touch" />
+          <EToggle v-model="data.booking.public_booking_enabled" @update:model-value="touch" />
         </div>
         <template v-if="data.booking.public_booking_enabled">
           <div v-if="data.bookingPath !== null || data.booking.booking_page_slug !== null">
-            <UInput v-model="data.booking.booking_page_slug" placeholder="your-name (booking URL slug)" @update:model-value="touch" />
+            <EInput v-model="data.booking.booking_page_slug" placeholder="your-name (booking URL slug)" @update:model-value="touch" />
             <p v-if="bookingUrl" class="text-[11px] text-muted-foreground mt-1 truncate">
-              <UIcon name="i-lucide-link" class="w-3 h-3 inline -mt-0.5" /> {{ bookingUrl }}
+              <EIcon name="i-lucide-link" class="w-3 h-3 inline -mt-0.5" /> {{ bookingUrl }}
             </p>
             <p v-else class="text-[11px] text-amber-600 mt-1">Set an organization slug (Org settings) to activate your booking link.</p>
           </div>
-          <UInput v-model="data.booking.booking_page_title" placeholder="Booking page title (optional)" @update:model-value="touch" />
-          <UTextarea v-model="data.booking.booking_page_description" :rows="2" autoresize placeholder="What this meeting is for (optional)" @update:model-value="touch" />
+          <EInput v-model="data.booking.booking_page_title" placeholder="Booking page title (optional)" @update:model-value="touch" />
+          <ETextarea v-model="data.booking.booking_page_description" :rows="2" autoresize placeholder="What this meeting is for (optional)" @update:model-value="touch" />
           <p class="text-[11px] text-muted-foreground">
             Availability & meeting types live in <NuxtLink to="/scheduler/settings" class="text-primary hover:underline">Scheduler settings</NuxtLink>.
           </p>

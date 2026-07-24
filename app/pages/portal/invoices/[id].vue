@@ -56,7 +56,7 @@ const defaultEmail = computed(() => {
 				<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
 
 				<div v-if="invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
-					<UButton
+					<EButton
 						v-if="invoice.melio"
 						:to="invoice.melio"
 						target="_blank"
@@ -66,7 +66,7 @@ const defaultEmail = computed(() => {
 						size="sm"
 					>
 						Pay with Melio
-					</UButton>
+					</EButton>
 					<PaymentMethods
 						:amount="invoice.total_amount"
 						:email="defaultEmail"

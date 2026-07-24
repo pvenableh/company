@@ -2,7 +2,7 @@
 	<form @submit.prevent="handleSubmit" class="space-y-4">
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Name *</label>
-			<UInput v-model="form.name" placeholder="e.g. Brand Identity Package" required />
+			<EInput v-model="form.name" placeholder="e.g. Brand Identity Package" required />
 		</div>
 
 		<div class="grid grid-cols-2 gap-4">
@@ -34,17 +34,17 @@
 
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">One-line description</label>
-			<UInput v-model="form.description" placeholder="Shown in the picker" />
+			<EInput v-model="form.description" placeholder="Shown in the picker" />
 		</div>
 
 		<div class="grid grid-cols-2 gap-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Default total</label>
-				<UInput v-model="form.default_total" type="number" step="0.01" placeholder="0.00" icon="i-heroicons-currency-dollar" />
+				<EInput v-model="form.default_total" type="number" step="0.01" placeholder="0.00" icon="i-heroicons-currency-dollar" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Duration (days)</label>
-				<UInput v-model="form.default_duration_days" type="number" placeholder="30" />
+				<EInput v-model="form.default_duration_days" type="number" placeholder="30" />
 			</div>
 		</div>
 
@@ -82,7 +82,7 @@
 					<label class="relative inline-flex items-center justify-center w-9 h-9 rounded-full border cursor-pointer overflow-hidden shrink-0" :style="swatchStyle">
 						<input type="color" :value="colorOrFallback" @input="onColorInput" class="absolute inset-0 opacity-0 cursor-pointer" />
 					</label>
-					<UInput v-model="form.color" placeholder="#56cfe1" class="flex-1 max-w-[180px]" />
+					<EInput v-model="form.color" placeholder="#56cfe1" class="flex-1 max-w-[180px]" />
 					<button
 						v-if="form.color"
 						type="button"

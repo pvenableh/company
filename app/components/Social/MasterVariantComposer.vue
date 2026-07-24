@@ -217,7 +217,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
 </script>
 
 <template>
-  <UCard>
+  <ECard>
     <template #header>
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 min-w-0">
@@ -246,7 +246,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
         :class="{ 'lane-chip--active': activeLane === 'master' }"
         @click="activeLane = 'master'"
       >
-        <UIcon name="i-lucide-asterisk" class="w-3.5 h-3.5" />
+        <EIcon name="i-lucide-asterisk" class="w-3.5 h-3.5" />
         <span>Master</span>
       </button>
 
@@ -265,9 +265,9 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
         :title="isForked(p) ? `${platformLabel(p)} — forked variant` : `${platformLabel(p)} — in sync with master`"
         @click="activeLane = p"
       >
-        <UIcon :name="platformIcon(p)" class="w-3.5 h-3.5" />
+        <EIcon :name="platformIcon(p)" class="w-3.5 h-3.5" />
         <span>{{ platformLabel(p) }}</span>
-        <UIcon
+        <EIcon
           v-if="isForked(p)"
           name="i-lucide-git-branch"
           class="w-3 h-3 opacity-75 -ml-0.5"
@@ -285,7 +285,7 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
          lane changes we briefly drop opacity + nudge Y, then settle. No
          Vue Transition (RAF-dependent — see motion-stack policy). -->
     <div :style="laneSwapStyle" class="lane-textarea">
-      <UTextarea
+      <ETextarea
         v-model="activeText"
         :placeholder="
           activeLane === 'master'
@@ -316,14 +316,14 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
           class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           @click="resyncActiveLane"
         >
-          <UIcon name="i-lucide-rotate-ccw" class="w-3.5 h-3.5" />
+          <EIcon name="i-lucide-rotate-ccw" class="w-3.5 h-3.5" />
           Resync to master
         </button>
         <span
           v-else-if="activeLane !== 'master'"
           class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <UIcon name="i-lucide-link" class="w-3.5 h-3.5" />
+          <EIcon name="i-lucide-link" class="w-3.5 h-3.5" />
           In sync with master — start typing to fork
         </span>
       </div>
@@ -334,11 +334,11 @@ function chipStyle(p: SocialPlatform): Record<string, string> {
         class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors"
         @click="requestTrim"
       >
-        <UIcon name="i-lucide-sparkles" class="w-3.5 h-3.5" />
+        <EIcon name="i-lucide-sparkles" class="w-3.5 h-3.5" />
         Earnest can trim to {{ activeLimit }}
       </button>
     </div>
-  </UCard>
+  </ECard>
 </template>
 
 <style scoped>

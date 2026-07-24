@@ -36,7 +36,7 @@
 		<template #footer>
 			<!-- Left: destructive + secondary nav, kept away from Save -->
 			<div class="flex items-center gap-2">
-				<UTooltip v-if="isEditing && canDelete" text="Delete">
+				<ETooltip v-if="isEditing && canDelete" text="Delete">
 					<Button
 						variant="ghost"
 						size="icon-sm"
@@ -46,7 +46,7 @@
 					>
 						<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 					</Button>
-				</UTooltip>
+				</ETooltip>
 				<NuxtLink
 					v-if="isEditing && detailRoute"
 					:to="detailRoute"

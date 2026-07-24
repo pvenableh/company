@@ -189,7 +189,7 @@ onUnmounted(() => clearEntity());
 		</div>
 
 		<!-- Tabs -->
-		<UTabs v-model="activeTab" :items="tabs" class="mb-6" />
+		<ETabs v-model="activeTab" :items="tabs" class="mb-6" />
 
 		<!-- Templates Tab -->
 		<div v-if="tabs[activeTab]?.key === 'templates'">

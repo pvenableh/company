@@ -1,30 +1,30 @@
 <template>
   <div class="flex flex-wrap gap-4 items-center mb-6">
     <div class="flex-grow">
-      <UFormGroup label="Time Period">
-        <USelect 
+      <EFormGroup label="Time Period">
+        <ESelect 
           :model-value="timePeriod" 
           :options="timePeriodOptions" 
           @update:model-value="updateTimePeriod"
         />
-      </UFormGroup>
+      </EFormGroup>
     </div>
     <div v-if="showTeamFilter" class="flex-grow">
-      <UFormGroup label="Team Filter">
-        <USelect 
+      <EFormGroup label="Team Filter">
+        <ESelect 
           :model-value="teamFilter" 
           :options="teamOptions" 
           @update:model-value="updateTeamFilter"
         />
-      </UFormGroup>
+      </EFormGroup>
     </div>
     <div class="flex-grow">
-      <UFormGroup label="Your Tickets Only">
-        <UToggle 
+      <EFormGroup label="Your Tickets Only">
+        <EToggle 
           :model-value="showOnlyMyTickets"
           @update:model-value="updateShowOnlyMyTickets"
         />
-      </UFormGroup>
+      </EFormGroup>
     </div>
   </div>
 </template>

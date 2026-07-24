@@ -53,7 +53,7 @@ onMounted(() => {
 		<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
 			<div class="flex items-center gap-2">
 				<div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
-					<UIcon name="i-heroicons-identification" class="w-5 h-5 text-white" />
+					<EIcon name="i-heroicons-identification" class="w-5 h-5 text-white" />
 				</div>
 				<div>
 					<h3 class="text-sm font-semibold uppercase tracking-wide">CardDesk</h3>
@@ -109,7 +109,7 @@ onMounted(() => {
 
 			<!-- Converted Contacts -->
 			<div v-if="stats.convertedClients > 0" class="flex items-center gap-2 px-3 py-2 bg-success/10 dark:bg-success/20 rounded-lg">
-				<UIcon name="i-heroicons-check-badge" class="w-4 h-4 text-success" />
+				<EIcon name="i-heroicons-check-badge" class="w-4 h-4 text-success" />
 				<span class="text-xs font-medium text-success dark:text-success">
 					{{ stats.convertedClients }} converted to contact{{ stats.convertedClients !== 1 ? 's' : '' }}
 				</span>
@@ -157,7 +157,7 @@ onMounted(() => {
 						:key="act.id"
 						class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
 					>
-						<UIcon :name="activityIcons[act.type] || activityIcons.other" class="w-3.5 h-3.5 flex-shrink-0" />
+						<EIcon :name="activityIcons[act.type] || activityIcons.other" class="w-3.5 h-3.5 flex-shrink-0" />
 						<span class="truncate">
 							{{ act.type }} {{ act.contactName ? `with ${act.contactName}` : '' }}
 						</span>
@@ -169,14 +169,14 @@ onMounted(() => {
 
 			<!-- Empty State -->
 			<div v-if="stats.totalContacts === 0 && !isLoading" class="text-center py-4">
-				<UIcon name="i-heroicons-identification" class="w-8 h-8 mx-auto text-gray-300 mb-2" />
+				<EIcon name="i-heroicons-identification" class="w-8 h-8 mx-auto text-gray-300 mb-2" />
 				<p class="text-xs text-gray-400">No CardDesk contacts yet</p>
 				<p class="text-[10px] text-gray-400 mt-1">Scan business cards to build your networking pipeline.</p>
 				<NuxtLink
 					to="/apps/clients?view=carddesk"
 					class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
 				>
-					<UIcon name="i-heroicons-camera" class="w-3 h-3" />
+					<EIcon name="i-heroicons-camera" class="w-3 h-3" />
 					Start scanning cards
 				</NuxtLink>
 			</div>

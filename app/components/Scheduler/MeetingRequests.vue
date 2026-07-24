@@ -69,25 +69,25 @@ onMounted(() => fetchRequests());
 		<div>
 			<h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
 				Pending Requests
-				<UBadge v-if="pendingRequests.length" color="yellow" variant="soft" size="xs">
+				<EBadge v-if="pendingRequests.length" color="yellow" variant="soft" size="xs">
 					{{ pendingRequests.length }}
-				</UBadge>
+				</EBadge>
 			</h3>
 
 			<div v-if="loading" class="flex justify-center py-8">
-				<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
+				<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
 			</div>
 
 			<div v-else-if="pendingRequests.length === 0" class="text-center py-8 border-2 border-dashed rounded-lg">
-				<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+				<EIcon name="i-heroicons-inbox" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
 				<p class="text-sm text-gray-500">No pending meeting requests</p>
 			</div>
 
 			<div v-else class="space-y-3">
-				<UCard v-for="request in pendingRequests" :key="request.id">
+				<ECard v-for="request in pendingRequests" :key="request.id">
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex items-start gap-3 flex-1">
-							<UAvatar
+							<EAvatar
 								:alt="getRequesterName(request)"
 								:src="request.requester_id?.avatar ? `/api/directus/assets/${request.requester_id.avatar}` : undefined"
 								size="sm"
@@ -97,25 +97,25 @@ onMounted(() => fetchRequests());
 								<p class="text-sm text-gray-500">{{ request.requester_id?.email }}</p>
 								<div class="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600 dark:text-gray-400">
 									<span class="flex items-center gap-1">
-										<UIcon name="i-heroicons-calendar" class="w-4 h-4" />
+										<EIcon name="i-heroicons-calendar" class="w-4 h-4" />
 										{{ formatDate(request.requested_date) }}
 									</span>
 									<span v-if="request.preferred_time" class="flex items-center gap-1">
-										<UIcon name="i-heroicons-clock" class="w-4 h-4" />
+										<EIcon name="i-heroicons-clock" class="w-4 h-4" />
 										{{ formatTime(request.preferred_time) }}
 									</span>
 									<span v-if="request.duration_minutes" class="flex items-center gap-1">
 										{{ request.duration_minutes }} min
 									</span>
-									<UBadge v-if="request.meeting_type" color="gray" variant="soft" size="xs">
+									<EBadge v-if="request.meeting_type" color="gray" variant="soft" size="xs">
 										{{ request.meeting_type }}
-									</UBadge>
+									</EBadge>
 								</div>
 								<p v-if="request.notes" class="mt-2 text-sm text-gray-500 italic">"{{ request.notes }}"</p>
 							</div>
 						</div>
 						<div class="flex items-center gap-2 flex-shrink-0">
-							<UButton
+							<EButton
 								color="green"
 								variant="soft"
 								size="sm"
@@ -124,8 +124,8 @@ onMounted(() => fetchRequests());
 								@click="handleRequest(request.id, 'approved')"
 							>
 								Approve
-							</UButton>
-							<UButton
+							</EButton>
+							<EButton
 								color="red"
 								variant="soft"
 								size="sm"
@@ -134,10 +134,10 @@ onMounted(() => fetchRequests());
 								@click="handleRequest(request.id, 'rejected')"
 							>
 								Decline
-							</UButton>
+							</EButton>
 						</div>
 					</div>
-				</UCard>
+				</ECard>
 			</div>
 		</div>
 
@@ -151,7 +151,7 @@ onMounted(() => fetchRequests());
 					class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
 				>
 					<div class="flex items-center gap-3">
-						<UAvatar
+						<EAvatar
 							:alt="getRequesterName(request)"
 							:src="request.requester_id?.avatar ? `/api/directus/assets/${request.requester_id.avatar}` : undefined"
 							size="xs"
@@ -161,9 +161,9 @@ onMounted(() => fetchRequests());
 							<p class="text-xs text-gray-500">{{ formatDate(request.requested_date) }}</p>
 						</div>
 					</div>
-					<UBadge :color="getStatusColor(request.request_status)" variant="soft" size="xs" class="capitalize">
+					<EBadge :color="getStatusColor(request.request_status)" variant="soft" size="xs" class="capitalize">
 						{{ request.request_status }}
-					</UBadge>
+					</EBadge>
 				</div>
 			</div>
 		</div>

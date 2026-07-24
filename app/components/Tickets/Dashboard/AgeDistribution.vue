@@ -1,11 +1,11 @@
 <template>
-	<UCard>
+	<ECard>
 		<template #header>
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
 					<h2 class="font-bold uppercase tracking-wide text-sm">Completion Rate</h2>
-					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
-						<UIcon
+					<EPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
+						<EIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
@@ -18,9 +18,9 @@
 								</p>
 							</div>
 						</template>
-					</UPopover>
+					</EPopover>
 				</div>
-				<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
+				<EBadge color="blue" variant="soft">Non-Completed Tickets</EBadge>
 			</div>
 		</template>
 		<div class="h-80">
@@ -52,7 +52,7 @@
 				<div v-else class="h-full flex items-center justify-center text-muted-foreground">No data available</div>
 			</ClientOnly>
 		</div>
-	</UCard>
+	</ECard>
 </template>
 
 <script setup lang="ts">

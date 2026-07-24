@@ -7,7 +7,7 @@
 		<form @submit.prevent="handleSubmit" class="space-y-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Why was this lead lost? *</label>
-				<UTextarea
+				<ETextarea
 					v-model="form.lost_reason"
 					:rows="3"
 					placeholder="e.g. Budget constraints, went with competitor, timing not right..."
@@ -16,7 +16,7 @@
 
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Closed Date</label>
-				<UInput v-model="form.closed_date" type="date" />
+				<EInput v-model="form.closed_date" type="date" />
 			</div>
 		</form>
 

@@ -1,6 +1,6 @@
 # components/TeamCard.vue
 <template>
-	<UCard class="mb-4">
+	<ECard class="mb-4">
 		<template #header>
 			<div class="flex items-center justify-between">
 				<div>
@@ -9,7 +9,7 @@
 						{{ team.description }}
 					</p>
 				</div>
-				<UButton
+				<EButton
 					v-if="canManageTeam"
 					color="gray"
 					variant="ghost"
@@ -27,7 +27,7 @@
 					:key="index"
 					class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1"
 				>
-					<UAvatar
+					<EAvatar
 						:src="getAvatarUrl(member.directus_users_id)"
 						:alt="getUserFullName(member.directus_users_id)"
 						size="sm"
@@ -35,7 +35,7 @@
 					<span class="text-sm">
 						{{ getUserFullName(member.directus_users_id) }}
 					</span>
-					<UButton
+					<EButton
 						v-if="canManageTeam"
 						size="xs"
 						color="gray"
@@ -48,7 +48,7 @@
 			</div>
 		</div>
 
-		<UButton
+		<EButton
 			v-if="canManageTeam"
 			size="sm"
 			variant="outline"
@@ -56,16 +56,16 @@
 			@click="showAddMember = true"
 		>
 			Add Member
-		</UButton>
+		</EButton>
 
 		<!-- Add Member Modal -->
-		<UModal v-model="showAddMember">
+		<EModal v-model="showAddMember">
 			<template #header>
 				<h4 class="text-lg font-medium">Add Team Member</h4>
 			</template>
 
 			<div class="py-4">
-				<USelect
+				<ESelect
 					v-model="selectedUser"
 					:options="availableUsersFormatted"
 					option-attribute="email"
@@ -76,26 +76,26 @@
 				>
 					<template #option="{ option }">
 						<div class="flex items-center gap-2 py-1">
-							<UAvatar :src="getAvatarUrl(option)" :alt="getUserFullName(option)" size="sm" />
+							<EAvatar :src="getAvatarUrl(option)" :alt="getUserFullName(option)" size="sm" />
 							<div>
 								<div class="font-medium">{{ getUserFullName(option) }}</div>
 								<div class="text-sm text-gray-500">{{ option.email }}</div>
 							</div>
 						</div>
 					</template>
-				</USelect>
+				</ESelect>
 			</div>
 
 			<template #footer>
 				<div class="flex justify-end gap-2">
-					<UButton color="gray" variant="ghost" @click="closeAddMemberModal">Cancel</UButton>
-					<UButton color="primary" :loading="addLoading" @click="addMember" :disabled="!selectedUser || addLoading">
+					<EButton color="gray" variant="ghost" @click="closeAddMemberModal">Cancel</EButton>
+					<EButton color="primary" :loading="addLoading" @click="addMember" :disabled="!selectedUser || addLoading">
 						Add Member
-					</UButton>
+					</EButton>
 				</div>
 			</template>
-		</UModal>
-	</UCard>
+		</EModal>
+	</ECard>
 </template>
 
 <script setup>

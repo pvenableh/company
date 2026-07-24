@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-xl">
+	<EModal v-model="isOpen" class="sm:max-w-xl">
 		<template #header>
 			<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Event Type' : 'New Event Type' }}</h3>
 		</template>
@@ -9,18 +9,18 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title <span class="text-destructive">*</span></label>
-					<UInput v-model="form.title" placeholder="Intro Call" @input="onTitleInput" />
+					<EInput v-model="form.title" placeholder="Intro Call" @input="onTitleInput" />
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">URL slug <span class="text-destructive">*</span></label>
-					<UInput v-model="form.slug" placeholder="intro-call" />
+					<EInput v-model="form.slug" placeholder="intro-call" />
 				</div>
 			</div>
 
 			<!-- Description -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Description</label>
-				<UTextarea v-model="form.description" :rows="2" placeholder="Quick chat to discuss your project" />
+				<ETextarea v-model="form.description" :rows="2" placeholder="Quick chat to discuss your project" />
 			</div>
 
 			<!-- Duration + color -->
@@ -70,7 +70,7 @@
 					class="rounded-lg border bg-muted/30 p-3 space-y-2"
 				>
 					<div class="flex items-center gap-2">
-						<UInput
+						<EInput
 							v-model="field.label"
 							placeholder="Question label"
 							class="flex-1"
@@ -89,7 +89,7 @@
 						</Button>
 					</div>
 					<div class="flex items-center gap-3">
-						<UInput
+						<EInput
 							v-model="field.name"
 							placeholder="machine_name"
 							class="flex-1 font-mono text-xs"
@@ -102,7 +102,7 @@
 					</div>
 					<div v-if="field.type === 'select'" class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Options (comma-separated)</label>
-						<UInput
+						<EInput
 							:model-value="(field.options || []).join(', ')"
 							placeholder="Under $5k, $5k-$25k, $25k+"
 							@update:model-value="(v) => (field.options = String(v).split(',').map((s) => s.trim()).filter(Boolean))"
@@ -118,11 +118,11 @@
 						<p class="text-xs font-medium">Require payment</p>
 						<p class="text-[11px] text-muted-foreground">Collect a fee via Stripe Checkout before confirming.</p>
 					</div>
-					<UToggle v-model="requirePayment" />
+					<EToggle v-model="requirePayment" />
 				</div>
 				<div v-if="requirePayment" class="space-y-1 pl-1">
 					<label class="t-label text-muted-foreground">Price (USD) <span class="text-destructive">*</span></label>
-					<UInput
+					<EInput
 						:model-value="priceDollars ?? ''"
 						type="number"
 						min="0"
@@ -194,14 +194,14 @@
 						<p class="text-xs font-medium">Default</p>
 						<p class="text-[11px] text-muted-foreground">Bare booking URL lands here.</p>
 					</div>
-					<UToggle v-model="form.is_default" />
+					<EToggle v-model="form.is_default" />
 				</div>
 				<div class="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
 					<div>
 						<p class="text-xs font-medium">Enabled</p>
 						<p class="text-[11px] text-muted-foreground">Off = bookable URL 404s.</p>
 					</div>
-					<UToggle v-model="form.enabled" />
+					<EToggle v-model="form.enabled" />
 				</div>
 			</div>
 
@@ -211,7 +211,7 @@
 		<template #footer>
 			<div class="flex items-center justify-between w-full">
 				<div class="flex items-center gap-1">
-					<UTooltip v-if="isEditing" text="Delete">
+					<ETooltip v-if="isEditing" text="Delete">
 						<Button
 							variant="ghost"
 							size="icon-sm"
@@ -221,7 +221,7 @@
 						>
 							<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 						</Button>
-					</UTooltip>
+					</ETooltip>
 					<Button size="sm" :disabled="saving || !canSubmit" @click="handleSubmit">
 						<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
 						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
@@ -230,7 +230,7 @@
 				</div>
 			</div>
 		</template>
-	</UModal>
+	</EModal>
 </template>
 
 <script setup lang="ts">

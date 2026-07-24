@@ -31,7 +31,7 @@
 					rel="noopener"
 					class="ios-card p-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors ios-press"
 				>
-					<UAvatar :src="userAvatar(h)" :alt="hostName(h)" size="sm" class="shrink-0" />
+					<EAvatar :src="userAvatar(h)" :alt="hostName(h)" size="sm" class="shrink-0" />
 					<div class="min-w-0 flex-1">
 						<p class="text-sm font-semibold truncate">{{ hostName(h) }}</p>
 						<p v-if="h.booking_page_title" class="text-xs text-muted-foreground truncate">{{ h.booking_page_title }}</p>

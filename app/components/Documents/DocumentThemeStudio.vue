@@ -219,7 +219,7 @@ function onSave() {
 				<button type="button" class="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2" @click="reset">
 					Reset customization
 				</button>
-				<UButton size="sm" color="primary" :loading="saving" @click="onSave">Save theme</UButton>
+				<EButton size="sm" color="primary" :loading="saving" @click="onSave">Save theme</EButton>
 			</div>
 		</div>
 

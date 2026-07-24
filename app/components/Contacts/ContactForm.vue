@@ -13,34 +13,34 @@
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">First Name *</label>
-        <UInput v-model="formData.first_name" required />
+        <EInput v-model="formData.first_name" required />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Last Name *</label>
-        <UInput v-model="formData.last_name" required />
+        <EInput v-model="formData.last_name" required />
       </div>
     </div>
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Email *</label>
-      <UInput v-model="formData.email" type="email" required />
+      <EInput v-model="formData.email" type="email" required />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Phone</label>
-        <UInput v-model="formData.phone" />
+        <EInput v-model="formData.phone" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Title</label>
-        <UInput v-model="formData.title" />
+        <EInput v-model="formData.title" />
       </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Company</label>
-        <UInput v-model="formData.company" />
+        <EInput v-model="formData.company" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Industry</label>
@@ -96,12 +96,12 @@
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Website</label>
-      <UInput v-model="formData.website" placeholder="https://" />
+      <EInput v-model="formData.website" placeholder="https://" />
     </div>
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Mailing Address</label>
-      <UTextarea v-model="formData.mailing_address" :rows="2" />
+      <ETextarea v-model="formData.mailing_address" :rows="2" />
     </div>
 
     <div class="space-y-1">
@@ -114,7 +114,7 @@
           removable
           @remove="removeTag(tag)"
         />
-        <UInput
+        <EInput
           v-model="newTag"
           size="xs"
           class="w-28"
@@ -128,7 +128,7 @@
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Notes</label>
-      <UTextarea v-model="formData.notes" :rows="3" />
+      <ETextarea v-model="formData.notes" :rows="3" />
     </div>
   </form>
 </template>

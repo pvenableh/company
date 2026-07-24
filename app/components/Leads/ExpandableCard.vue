@@ -7,22 +7,22 @@
 
 		<!-- Quick Actions (hover) -->
 		<div class="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
-			<UTooltip text="Archive">
+			<ETooltip text="Archive">
 				<button
 					class="p-1 rounded-md bg-card/90 backdrop-blur border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
 					@click.stop="handleArchive"
 				>
-					<UIcon name="i-heroicons-archive-box" class="w-3 h-3" />
+					<EIcon name="i-heroicons-archive-box" class="w-3 h-3" />
 				</button>
-			</UTooltip>
-			<UTooltip text="Junk">
+			</ETooltip>
+			<ETooltip text="Junk">
 				<button
 					class="p-1 rounded-md bg-card/90 backdrop-blur border border-border/50 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
 					@click.stop="handleJunk"
 				>
-					<UIcon name="i-heroicons-trash" class="w-3 h-3" />
+					<EIcon name="i-heroicons-trash" class="w-3 h-3" />
 				</button>
-			</UTooltip>
+			</ETooltip>
 		</div>
 
 		<!-- Quick Edit Modal -->

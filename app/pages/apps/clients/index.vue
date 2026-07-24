@@ -577,7 +577,7 @@ watch(view, (next) => {
       <!-- ── Clients view ─────────────────────────────────────────────── -->
       <template v-if="view === 'clients'">
         <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
-          <UTabs
+          <ETabs
             v-if="clientsViewMode === 'table'"
             v-model="activeClientTab"
             :items="clientTabs.map((t) => ({ key: t.value, label: t.label, dotColor: t.color }))"
@@ -836,7 +836,7 @@ watch(view, (next) => {
 
         <template v-else>
         <!-- Category tabs — same UTabs strip used on the standalone /contacts -->
-        <UTabs
+        <ETabs
           :model-value="contactsFilterCategory || 'all'"
           :items="contactCategoryItems"
           class="mb-3 w-fit"
@@ -934,7 +934,7 @@ watch(view, (next) => {
             @clear="fetchLeadsData"
           />
           <div v-if="leadsLoading" class="flex items-center justify-center py-20">
-            <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+            <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
           <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <LeadsLeadCard
@@ -945,7 +945,7 @@ watch(view, (next) => {
             />
           </div>
           <div v-else class="text-center py-20">
-            <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <EIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p class="text-muted-foreground">No leads found</p>
             <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms will appear here</p>
             <div class="mt-4">

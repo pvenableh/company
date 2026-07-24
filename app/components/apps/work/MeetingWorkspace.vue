@@ -868,14 +868,14 @@ const promoteActionItem = async (idx) => {
 			to="/apps/work?floor=calendar&history=1"
 			class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4"
 		>
-			<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
+			<EIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
 			All meetings
 		</NuxtLink>
 
 		<div v-if="loading" class="text-center py-12 text-sm text-muted-foreground">Loading…</div>
 		<div v-else-if="error" class="ios-card p-8 text-center">
 			<div class="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-3">
-				<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
+				<EIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
 			</div>
 			<p class="text-sm text-foreground">{{ error }}</p>
 		</div>
@@ -904,7 +904,7 @@ const promoteActionItem = async (idx) => {
 							title="Mark this meeting as ended (host only)"
 							@click="endMeeting"
 						>
-							<UIcon
+							<EIcon
 								:name="ending ? 'i-heroicons-arrow-path' : 'i-heroicons-stop-circle'"
 								:class="['w-3 h-3', ending ? 'animate-spin' : '']"
 							/>
@@ -926,7 +926,7 @@ const promoteActionItem = async (idx) => {
 						class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
 						@click="openProject(projectId)"
 					>
-						<UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-folder" class="w-3.5 h-3.5" />
 						{{ projectTitle }}
 					</button>
 					<button
@@ -935,7 +935,7 @@ const promoteActionItem = async (idx) => {
 						class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
 						@click="openEvent(meeting.project_event.id, $event)"
 					>
-						<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
 						{{ meeting.project_event.title }}
 					</button>
 					<button
@@ -944,11 +944,11 @@ const promoteActionItem = async (idx) => {
 						class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
 						@click="openClient(meetingClient.id)"
 					>
-						<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
 						{{ meetingClient.name }}
 					</button>
 					<span v-else-if="meetingClient?.name" class="inline-flex items-center gap-1 text-muted-foreground">
-						<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
 						{{ meetingClient.name }}
 					</span>
 				</div>
@@ -971,7 +971,7 @@ const promoteActionItem = async (idx) => {
 						:title="!meeting.title?.trim() ? 'Add a title first.' : ''"
 						@click="generateAgenda"
 					>
-						<UIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+						<EIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
 						<EarnestIcon v-else class="w-3 h-3" />
 						{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
 					</button>
@@ -1039,7 +1039,7 @@ const promoteActionItem = async (idx) => {
 						:disabled="recordingsLoading"
 						@click="fetchRecordings"
 					>
-						<UIcon
+						<EIcon
 							:name="recordingsLoading ? 'i-heroicons-arrow-path' : 'i-heroicons-arrow-path-rounded-square'"
 							:class="['w-3 h-3', recordingsLoading ? 'animate-spin' : '']"
 						/>
@@ -1062,7 +1062,7 @@ const promoteActionItem = async (idx) => {
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+									<EIcon name="i-heroicons-video-camera" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 									<span class="text-[13px] font-medium text-foreground">
 										{{ formatRecordingDate(rec.start_ts) }}
 									</span>
@@ -1087,7 +1087,7 @@ const promoteActionItem = async (idx) => {
 									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 									@click="playRecording(rec.id)"
 								>
-									<UIcon
+									<EIcon
 										:name="linkLoadingId === rec.id ? 'i-heroicons-arrow-path' : 'i-heroicons-play'"
 										:class="['w-3 h-3', linkLoadingId === rec.id ? 'animate-spin' : '']"
 									/>
@@ -1100,7 +1100,7 @@ const promoteActionItem = async (idx) => {
 									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted/40 hover:bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
 									@click="downloadRecording(rec.id)"
 								>
-									<UIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
+									<EIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
 									Download
 								</button>
 							</div>
@@ -1132,7 +1132,7 @@ const promoteActionItem = async (idx) => {
 						:disabled="snapshotsLoading"
 						@click="fetchSnapshots"
 					>
-						<UIcon
+						<EIcon
 							:name="snapshotsLoading ? 'i-heroicons-arrow-path' : 'i-heroicons-arrow-path-rounded-square'"
 							:class="['w-3 h-3', snapshotsLoading ? 'animate-spin' : '']"
 						/>
@@ -1185,7 +1185,7 @@ const promoteActionItem = async (idx) => {
 							class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
 							@click="previewSnapshot = null"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+							<EIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 						</button>
 					</div>
 					<img
@@ -1206,8 +1206,8 @@ const promoteActionItem = async (idx) => {
 						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 						@click="generateSummary"
 					>
-						<UIcon v-if="generating" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
-						<UIcon v-else-if="meeting.summary" name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3" />
+						<EIcon v-if="generating" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+						<EIcon v-else-if="meeting.summary" name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3" />
 						<EarnestIcon v-else class="w-3 h-3" />
 						{{ meeting.summary ? 'Regenerate' : meeting.summary_status === 'pending' ? 'Force generate' : 'Generate' }}
 					</button>
@@ -1254,7 +1254,7 @@ const promoteActionItem = async (idx) => {
 							:disabled="!noteDraft.trim() || noteSubmitting"
 							@click="submitNote('note')"
 						>
-							<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
+							<EIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
 							Note
 						</button>
 						<button
@@ -1262,7 +1262,7 @@ const promoteActionItem = async (idx) => {
 							:disabled="!noteDraft.trim() || noteSubmitting"
 							@click="submitNote('decision')"
 						>
-							<UIcon name="i-heroicons-megaphone" class="w-3 h-3" />
+							<EIcon name="i-heroicons-megaphone" class="w-3 h-3" />
 							Decision
 						</button>
 					</div>
@@ -1288,7 +1288,7 @@ const promoteActionItem = async (idx) => {
 									title="Delete"
 									@click="handleDeleteNote(n.id)"
 								>
-									<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+									<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 								</button>
 							</div>
 							<p class="text-[10px] text-muted-foreground mt-1.5">
@@ -1314,7 +1314,7 @@ const promoteActionItem = async (idx) => {
 									title="Delete"
 									@click="handleDeleteNote(n.id)"
 								>
-									<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+									<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 								</button>
 							</div>
 							<p class="text-[10px] text-muted-foreground mt-1.5">
@@ -1334,7 +1334,7 @@ const promoteActionItem = async (idx) => {
 						:key="i"
 						class="flex items-start gap-2.5 text-sm"
 					>
-						<UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+						<EIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
 						<div class="flex-1 min-w-0">
 							<p class="text-foreground" :class="item.promoted ? 'line-through text-muted-foreground' : ''">{{ item.description }}</p>
 							<p v-if="item.assignee || item.due_date" class="text-[11px] text-muted-foreground mt-0.5">
@@ -1349,7 +1349,7 @@ const promoteActionItem = async (idx) => {
 							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 							@click="promoteActionItem(i)"
 						>
-							<UIcon
+							<EIcon
 								:name="promotingIndex === i ? 'i-heroicons-arrow-path' : 'i-heroicons-plus'"
 								:class="['w-3 h-3', promotingIndex === i ? 'animate-spin' : '']"
 							/>
@@ -1359,7 +1359,7 @@ const promoteActionItem = async (idx) => {
 							v-else
 							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted/40 text-muted-foreground"
 						>
-							<UIcon name="i-heroicons-check" class="w-3 h-3" />
+							<EIcon name="i-heroicons-check" class="w-3 h-3" />
 							Promoted
 						</span>
 					</li>
@@ -1398,10 +1398,10 @@ const promoteActionItem = async (idx) => {
 							:title="(p.contact && !p.isYou) ? 'Open contact insights' : undefined"
 							@click="(p.contact && !p.isYou) && openAttendeeInsight(p)"
 						>
-							<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
 							<span class="font-medium">{{ p.name }}<span v-if="p.isYou" class="text-muted-foreground/70 font-normal"> (you)</span></span>
 							<span class="text-muted-foreground">· {{ p.role }}</span>
-							<UIcon
+							<EIcon
 								v-if="p.contact && !p.isYou"
 								name="i-heroicons-arrow-top-right-on-square"
 								class="w-3 h-3 text-muted-foreground/60"
@@ -1429,7 +1429,7 @@ const promoteActionItem = async (idx) => {
 									<p v-if="selectedAttendee.contact.company" class="text-xs text-muted-foreground/80 truncate mt-0.5">{{ selectedAttendee.contact.company }}</p>
 								</div>
 								<button class="p-1.5 rounded-full hover:bg-muted/60" @click="closeAttendeeInsight">
-									<UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+									<EIcon name="i-heroicons-x-mark" class="w-5 h-5" />
 								</button>
 							</div>
 
@@ -1477,7 +1477,7 @@ const promoteActionItem = async (idx) => {
 									@click="() => { const id = selectedAttendee.contact.id; closeAttendeeInsight(); openContact(id); }"
 								>
 									Open contact
-									<UIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
+									<EIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
 								</button>
 							</div>
 						</div>
@@ -1492,7 +1492,7 @@ const promoteActionItem = async (idx) => {
 					@click="transcriptOpen = !transcriptOpen"
 				>
 					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Transcript</h2>
-					<UIcon
+					<EIcon
 						:name="transcriptOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
 						class="w-4 h-4 text-muted-foreground"
 					/>
@@ -1509,7 +1509,7 @@ const promoteActionItem = async (idx) => {
 						<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
 							In-call Chat <span class="text-muted-foreground/60 ml-1">({{ chatMessages.length }})</span>
 						</h2>
-						<UIcon
+						<EIcon
 							:name="chatOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
 							class="w-4 h-4 text-muted-foreground"
 						/>
@@ -1519,7 +1519,7 @@ const promoteActionItem = async (idx) => {
 						title="Download chat transcript as a text file"
 						@click="downloadChat"
 					>
-						<UIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
+						<EIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
 						Download
 					</button>
 				</div>

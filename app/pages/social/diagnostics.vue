@@ -99,7 +99,7 @@ const requiredCounts = computed(() => {
       </p>
 
     <div v-if="isForbidden" class="rounded-xl border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-6 text-center">
-      <UIcon name="i-lucide-lock" class="w-8 h-8 text-destructive mx-auto mb-2" />
+      <EIcon name="i-lucide-lock" class="w-8 h-8 text-destructive mx-auto mb-2" />
       <h2 class="font-semibold text-gray-900 dark:text-white mb-1">Admins only</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300">{{ errorMessage }}</p>
     </div>
@@ -115,7 +115,7 @@ const requiredCounts = computed(() => {
     <template v-else-if="data">
       <!-- Summary -->
       <div v-if="requiredCounts" class="grid grid-cols-2 gap-4 mb-8">
-        <UCard>
+        <ECard>
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs uppercase tracking-wider text-muted-foreground">Required env vars</p>
@@ -126,15 +126,15 @@ const requiredCounts = computed(() => {
                 <span class="text-gray-400 text-base"> / {{ requiredCounts.envTotal }}</span>
               </p>
             </div>
-            <UIcon
+            <EIcon
               :name="requiredCounts.envOk === requiredCounts.envTotal ? 'i-lucide-check-circle' : 'i-lucide-alert-triangle'"
               :class="requiredCounts.envOk === requiredCounts.envTotal ? 'text-success' : 'text-warning'"
               class="w-7 h-7"
             />
           </div>
-        </UCard>
+        </ECard>
 
-        <UCard>
+        <ECard>
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs uppercase tracking-wider text-muted-foreground">Account pings OK</p>
@@ -145,13 +145,13 @@ const requiredCounts = computed(() => {
                 <span class="text-gray-400 text-base"> / {{ requiredCounts.pingTotal }}</span>
               </p>
             </div>
-            <UIcon
+            <EIcon
               :name="requiredCounts.pingTotal === 0 ? 'i-lucide-circle-dashed' : requiredCounts.pingOk === requiredCounts.pingTotal ? 'i-lucide-check-circle' : 'i-lucide-x-circle'"
               :class="requiredCounts.pingTotal === 0 ? 'text-gray-400' : requiredCounts.pingOk === requiredCounts.pingTotal ? 'text-success' : 'text-destructive'"
               class="w-7 h-7"
             />
           </div>
-        </UCard>
+        </ECard>
       </div>
 
       <p class="text-xs text-muted-foreground mb-4">
@@ -161,11 +161,11 @@ const requiredCounts = computed(() => {
 
       <!-- Per-platform reports -->
       <div class="space-y-4">
-        <UCard v-for="report in data.reports" :key="report.platform">
+        <ECard v-for="report in data.reports" :key="report.platform">
           <template #header>
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
-                <UIcon :name="platformIcon(report.platform)" class="w-9 h-9 shrink-0" />
+                <EIcon :name="platformIcon(report.platform)" class="w-9 h-9 shrink-0" />
                 <div>
                   <h2 class="font-semibold text-gray-900 dark:text-white">
                     {{ platformLabel(report.platform) }}
@@ -175,13 +175,13 @@ const requiredCounts = computed(() => {
                   </p>
                 </div>
               </div>
-              <UBadge
+              <EBadge
                 :color="report.configured ? 'emerald' : 'rose'"
                 variant="subtle"
                 size="sm"
               >
                 {{ report.configured ? 'Configured' : 'Not configured' }}
-              </UBadge>
+              </EBadge>
             </div>
           </template>
 
@@ -191,7 +191,7 @@ const requiredCounts = computed(() => {
               <p class="text-xs uppercase tracking-wider text-muted-foreground mb-2">Environment variables</p>
               <ul class="space-y-1">
                 <li v-for="env in report.envChecks" :key="env.name" class="flex items-center gap-2 text-sm">
-                  <UIcon
+                  <EIcon
                     :name="env.present ? 'i-lucide-check-circle-2' : (env.required ? 'i-lucide-x-circle' : 'i-lucide-circle-dashed')"
                     :class="env.present ? 'text-success' : (env.required ? 'text-destructive' : 'text-gray-400')"
                     class="w-4 h-4 shrink-0"
@@ -239,7 +239,7 @@ const requiredCounts = computed(() => {
                 >
                   <summary class="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer list-none select-none hover:bg-muted/30 rounded-lg">
                     <div class="flex items-center gap-3 min-w-0">
-                      <UIcon
+                      <EIcon
                         :name="acc.status === 'ok' ? 'i-lucide-check-circle-2' : 'i-lucide-x-circle'"
                         :class="acc.status === 'ok' ? 'text-success' : 'text-destructive'"
                         class="w-4 h-4 shrink-0"
@@ -253,7 +253,7 @@ const requiredCounts = computed(() => {
                         class="text-[11px] font-medium"
                         :class="acc.status === 'ok' ? 'text-success' : 'text-destructive'"
                       >HTTP {{ acc.httpStatus }}</span>
-                      <UIcon name="i-lucide-chevron-down" class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                      <EIcon name="i-lucide-chevron-down" class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
                     </div>
                   </summary>
 
@@ -271,7 +271,7 @@ const requiredCounts = computed(() => {
               </div>
             </div>
           </div>
-        </UCard>
+        </ECard>
       </div>
     </template>
     </LayoutPageContainer>

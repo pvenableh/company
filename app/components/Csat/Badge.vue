@@ -24,7 +24,7 @@ const when = computed(() => {
 		<div class="csat-badge__row">
 			<span class="csat-badge__label">Client rating</span>
 			<span class="csat-badge__stars" aria-hidden="true">
-				<UIcon
+				<EIcon
 					v-for="n in 5"
 					:key="n"
 					:name="n <= (rating || 0) ? 'i-heroicons-star-solid' : 'i-heroicons-star'"

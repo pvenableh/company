@@ -54,14 +54,14 @@ onMounted(() => fetchBookingData());
 				v-if="!activeEventType && !showPicker && (data.eventTypes?.length > 0)"
 				class="ios-card p-6 text-center"
 			>
-				<UIcon name="i-heroicons-exclamation-circle" class="w-10 h-10 text-warning mx-auto mb-3" />
+				<EIcon name="i-heroicons-exclamation-circle" class="w-10 h-10 text-warning mx-auto mb-3" />
 				<h2 class="text-base font-semibold mb-1">No default event type</h2>
 				<p class="text-sm text-muted-foreground mb-4">
 					{{ data.user?.first_name }} hasn't published a default event type yet.
 				</p>
-				<UButton :to="`/book/${orgSlug}/${userSlug}?picker=1`" color="primary">
+				<EButton :to="`/book/${orgSlug}/${userSlug}?picker=1`" color="primary">
 					Choose from {{ data.eventTypes.length }} options
-				</UButton>
+				</EButton>
 			</div>
 
 			<SchedulerBookingFlow

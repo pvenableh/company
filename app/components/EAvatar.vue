@@ -48,7 +48,7 @@ const initials = computed(() => {
 		<AvatarImage v-if="src" :src="src" :alt="alt" />
 		<AvatarFallback v-if="$slots.fallback || icon || !src">
 			<slot name="fallback">
-				<UIcon v-if="icon" :name="icon" class="size-1/2" />
+				<EIcon v-if="icon" :name="icon" class="size-1/2" />
 				<span v-else>{{ initials }}</span>
 			</slot>
 		</AvatarFallback>

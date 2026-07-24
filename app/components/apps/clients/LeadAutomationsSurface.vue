@@ -271,7 +271,7 @@ defineExpose({ openNew });
 
 							<!-- Toggle (stop propagation so row click doesn't fire) -->
 							<div class="flex-shrink-0" @click.stop>
-								<UToggle
+								<EToggle
 									:model-value="!!rule.enabled"
 									@update:model-value="(v: boolean) => handleToggle(rule, v)"
 								/>

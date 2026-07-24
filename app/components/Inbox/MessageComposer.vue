@@ -88,7 +88,7 @@ function onPicked(files: { url: string; type: 'image' | 'video' }[]) {
         :disabled="disabled"
         @keydown.enter="onEnter"
       />
-      <UButton
+      <EButton
         :loading="sending"
         :disabled="!canSend || disabled"
         size="sm"
@@ -96,7 +96,7 @@ function onPicked(files: { url: string; type: 'image' | 'video' }[]) {
         @click="submit"
       >
         Send
-      </UButton>
+      </EButton>
     </div>
 
     <SocialMediaFilePicker

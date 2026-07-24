@@ -184,7 +184,7 @@ const filteredMeetings = computed(() => {
         <div class="min-w-0">
           <h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight flex items-center gap-2">
             The Boardroom
-            <UIcon
+            <EIcon
               name="i-lucide-info"
               class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0"
               title="Earnest's room — it convenes your board, reviews the business, and proposes a plan you approve step by step. Nothing runs on its own."
@@ -199,7 +199,7 @@ const filteredMeetings = computed(() => {
           title="Review just your own tasks & tickets"
           @click="reviewMyWork"
         >
-          <UIcon name="i-lucide-user-round" class="w-5 h-5" />
+          <EIcon name="i-lucide-user-round" class="w-5 h-5" />
           <span class="hidden sm:inline">My work</span>
         </button>
         <button
@@ -233,7 +233,7 @@ const filteredMeetings = computed(() => {
         >
           <div class="flex items-center gap-3">
             <span class="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-              <UIcon name="i-lucide-users-round" class="w-4.5 h-4.5" />
+              <EIcon name="i-lucide-users-round" class="w-4.5 h-4.5" />
             </span>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-semibold truncate">{{ liveLabel(m) }}</p>
@@ -242,7 +242,7 @@ const filteredMeetings = computed(() => {
               </p>
             </div>
             <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary text-primary-foreground shrink-0 group-hover:bg-primary/90">
-              <UIcon name="i-lucide-log-in" class="w-3.5 h-3.5" /> Join
+              <EIcon name="i-lucide-log-in" class="w-3.5 h-3.5" /> Join
             </span>
           </div>
         </button>
@@ -252,7 +252,7 @@ const filteredMeetings = computed(() => {
     <!-- Decision records — recorded minutes, shared for async review -->
     <div v-if="decisionRecords.length" class="mb-6">
       <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
-        <UIcon name="i-lucide-gavel" class="w-3.5 h-3.5" /> Decision records
+        <EIcon name="i-lucide-gavel" class="w-3.5 h-3.5" /> Decision records
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
         <NuxtLink
@@ -263,7 +263,7 @@ const filteredMeetings = computed(() => {
         >
           <div class="flex items-center gap-3">
             <span class="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-              <UIcon name="i-lucide-gavel" class="w-4.5 h-4.5" />
+              <EIcon name="i-lucide-gavel" class="w-4.5 h-4.5" />
             </span>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-semibold truncate group-hover:text-primary">{{ r.title || 'Working session' }}</p>
@@ -285,7 +285,7 @@ const filteredMeetings = computed(() => {
       <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Past meetings</p>
       <span v-if="meetings.length" class="text-[10px] text-muted-foreground">· {{ filteredMeetings.length }}</span>
       <div v-if="meetings.length" class="ml-auto relative">
-        <UIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+        <EIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
         <input
           v-model="search"
           type="text"
@@ -296,7 +296,7 @@ const filteredMeetings = computed(() => {
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 text-sm text-muted-foreground py-8">
-      <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading meeting history…
+      <EIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading meeting history…
     </div>
 
     <div v-else-if="!meetings.length" class="rounded-2xl border border-dashed border-border p-8 text-center">
@@ -331,7 +331,7 @@ const filteredMeetings = computed(() => {
               <td class="px-4 py-2.5">
                 <div class="flex items-center gap-2.5 min-w-0">
                   <span class="w-8 h-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                    <UIcon :name="subjectIcon(m)" class="w-4 h-4" />
+                    <EIcon :name="subjectIcon(m)" class="w-4 h-4" />
                   </span>
                   <span class="font-medium truncate">{{ subjectLabel(m) }}</span>
                 </div>

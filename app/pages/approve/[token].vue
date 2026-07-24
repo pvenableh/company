@@ -82,7 +82,7 @@ onMounted(loadEvent);
 			<!-- Error -->
 			<div v-else-if="error && !eventData" class="text-center py-20">
 				<div class="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
 				</div>
 				<h2 class="text-lg font-semibold text-foreground mb-1">Link Invalid</h2>
 				<p class="text-sm text-muted-foreground">{{ error }}</p>
@@ -93,7 +93,7 @@ onMounted(loadEvent);
 				<div class="h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-4"
 					:class="submittedAction === 'changes_requested' ? 'bg-warning/10' : 'bg-success/10'"
 				>
-					<UIcon
+					<EIcon
 						:name="submittedAction === 'changes_requested' ? 'i-heroicons-chat-bubble-left-right' : 'i-heroicons-check-circle'"
 						class="w-6 h-6"
 						:class="submittedAction === 'changes_requested' ? 'text-warning' : 'text-success'"
@@ -125,7 +125,7 @@ onMounted(loadEvent);
 				<!-- Already approved -->
 				<div v-if="eventData.approval === 'Approved'" class="ios-card p-6 text-center">
 					<div class="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3">
-						<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success" />
+						<EIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success" />
 					</div>
 					<h2 class="text-sm font-semibold text-foreground">Already Approved</h2>
 					<p v-if="eventData.approved_at" class="text-xs text-muted-foreground mt-1">
@@ -137,7 +137,7 @@ onMounted(loadEvent);
 				<div class="ios-card p-6">
 					<div class="flex items-start gap-3 mb-4">
 						<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :class="typeInfo.bg">
-							<UIcon :name="typeInfo.icon" class="w-4 h-4" :class="typeInfo.color" />
+							<EIcon :name="typeInfo.icon" class="w-4 h-4" :class="typeInfo.color" />
 						</div>
 						<div>
 							<h2 class="text-base font-semibold text-foreground">{{ eventData.title }}</h2>
@@ -165,13 +165,13 @@ onMounted(loadEvent);
 							class="ios-card p-3 flex items-center gap-3 ios-press block hover:shadow-md transition-shadow"
 						>
 							<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-								<UIcon name="i-heroicons-cursor-arrow-ripple" class="w-4 h-4 text-purple-500" />
+								<EIcon name="i-heroicons-cursor-arrow-ripple" class="w-4 h-4 text-purple-500" />
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium text-foreground">View Prototype</p>
 								<p class="text-[10px] text-muted-foreground truncate">{{ eventData.prototype_link }}</p>
 							</div>
-							<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
+							<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
 						</a>
 					</div>
 
@@ -183,13 +183,13 @@ onMounted(loadEvent);
 							class="ios-card p-3 flex items-center gap-3 ios-press block hover:shadow-md transition-shadow"
 						>
 							<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-								<UIcon name="i-heroicons-link" class="w-4 h-4 text-blue-500" />
+								<EIcon name="i-heroicons-link" class="w-4 h-4 text-blue-500" />
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium text-foreground">View Link</p>
 								<p class="text-[10px] text-muted-foreground truncate">{{ eventData.link }}</p>
 							</div>
-							<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
+							<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
 						</a>
 					</div>
 				</div>
@@ -206,7 +206,7 @@ onMounted(loadEvent);
 							class="w-full rounded-xl glass-field px-3 py-2 text-sm resize-none focus:outline-none"
 						/>
 						<div class="flex items-center gap-2 mt-3">
-							<UButton
+							<EButton
 								color="amber"
 								variant="soft"
 								size="sm"
@@ -215,10 +215,10 @@ onMounted(loadEvent);
 								:disabled="!changesComment.trim()"
 							>
 								Submit Feedback
-							</UButton>
-							<UButton color="gray" variant="ghost" size="sm" @click="showChangesForm = false">
+							</EButton>
+							<EButton color="gray" variant="ghost" size="sm" @click="showChangesForm = false">
 								Cancel
-							</UButton>
+							</EButton>
 						</div>
 					</div>
 
@@ -229,15 +229,15 @@ onMounted(loadEvent);
 							:disabled="submitting"
 							@click="handleApprove"
 						>
-							<UIcon v-if="submitting" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
-							<UIcon v-else name="i-heroicons-check" class="w-4 h-4" />
+							<EIcon v-if="submitting" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+							<EIcon v-else name="i-heroicons-check" class="w-4 h-4" />
 							Approve
 						</button>
 						<button
 							class="w-full py-3 rounded-xl border border-border text-foreground font-medium text-sm hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
 							@click="showChangesForm = true"
 						>
-							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
+							<EIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
 							Request Changes
 						</button>
 					</div>

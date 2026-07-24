@@ -92,17 +92,17 @@ async function onShare(userIds: string[]) {
 <template>
   <LayoutPageContainer>
     <div v-if="loading" class="flex items-center gap-2 text-sm text-muted-foreground py-16 justify-center">
-      <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading the recap…
+      <EIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin" /> Loading the recap…
     </div>
 
     <div v-else-if="!minutes" class="rounded-2xl border border-dashed border-border p-10 text-center max-w-lg mx-auto mt-8">
       <div class="mx-auto mb-3 w-12 h-12 rounded-2xl bg-muted flex items-center justify-center">
-        <UIcon name="i-lucide-file-x" class="w-6 h-6 text-muted-foreground" />
+        <EIcon name="i-lucide-file-x" class="w-6 h-6 text-muted-foreground" />
       </div>
       <p class="text-sm font-medium text-foreground">This decision record isn't available</p>
       <p class="text-xs text-muted-foreground mt-0.5">It may have been removed, or you don't have access to its organization.</p>
       <NuxtLink to="/boardroom" class="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline">
-        <UIcon name="i-lucide-arrow-left" class="w-4 h-4" /> Back to the Boardroom
+        <EIcon name="i-lucide-arrow-left" class="w-4 h-4" /> Back to the Boardroom
       </NuxtLink>
     </div>
 
@@ -111,7 +111,7 @@ async function onShare(userIds: string[]) {
       <div class="flex items-start justify-between gap-4 pt-2 mb-5">
         <div class="flex items-center gap-3 min-w-0">
           <div class="w-11 h-11 rounded-2xl bg-muted ring-1 ring-border flex items-center justify-center shrink-0">
-            <UIcon name="i-lucide-gavel" class="w-6 h-6 text-muted-foreground" />
+            <EIcon name="i-lucide-gavel" class="w-6 h-6 text-muted-foreground" />
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
@@ -134,7 +134,7 @@ async function onShare(userIds: string[]) {
             title="Share this recap with teammates for review"
             @click="showShare = true"
           >
-            <UIcon name="i-lucide-send" class="w-4.5 h-4.5" />
+            <EIcon name="i-lucide-send" class="w-4.5 h-4.5" />
             <span class="hidden sm:inline">Share for review</span>
           </button>
         </div>
@@ -178,12 +178,12 @@ async function onShare(userIds: string[]) {
       <!-- Action items captured -->
       <div v-if="minutes.captured.length" class="rounded-2xl border border-border bg-card p-5 mb-5">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-3 flex items-center gap-1.5">
-          <UIcon name="i-lucide-clipboard-check" class="w-3.5 h-3.5" /> Action items captured
+          <EIcon name="i-lucide-clipboard-check" class="w-3.5 h-3.5" /> Action items captured
         </p>
         <ul class="space-y-2">
           <li v-for="(c, i) in minutes.captured" :key="i" class="flex items-center gap-3">
             <span class="w-7 h-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-              <UIcon :name="c.type === 'ticket' ? 'i-lucide-ticket' : 'i-lucide-list-checks'" class="w-4 h-4" />
+              <EIcon :name="c.type === 'ticket' ? 'i-lucide-ticket' : 'i-lucide-list-checks'" class="w-4 h-4" />
             </span>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium truncate">{{ c.title }}</p>

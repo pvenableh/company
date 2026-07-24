@@ -244,14 +244,14 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 						@click="emit('new-meeting', date)"
 						class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-success/10 text-success text-[11px] font-medium hover:bg-success/20 transition-colors ios-press"
 					>
-						<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
+						<EIcon name="i-heroicons-video-camera" class="w-3 h-3" />
 						Video
 					</button>
 					<button
 						@click="emit('new-event', date)"
 						class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20 transition-colors ios-press"
 					>
-						<UIcon name="i-heroicons-plus" class="w-3 h-3" />
+						<EIcon name="i-heroicons-plus" class="w-3 h-3" />
 						Event
 					</button>
 				</div>
@@ -260,7 +260,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 
 		<!-- Empty state -->
 		<div v-if="events.length === 0" class="text-center py-8 px-3">
-			<UIcon name="i-heroicons-calendar" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
+			<EIcon name="i-heroicons-calendar" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
 			<p class="text-xs text-muted-foreground">No events scheduled</p>
 			<p class="text-[10px] text-muted-foreground/60 mt-0.5">Click + to add one</p>
 		</div>
@@ -318,7 +318,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 							<button type="button" class="day-timeline__label-body">
 								<!-- Title row -->
 								<div class="day-timeline__label-row1">
-									<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
+									<EIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
 									<span class="day-timeline__label-title" :title="event.title">{{ event.title }}</span>
 									<span
 										v-if="event.lead"
@@ -341,28 +341,28 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 										class="day-timeline__pill day-timeline__pill--rec"
 										title="Recording"
 									>
-										<UIcon name="i-heroicons-video-camera" class="w-2.5 h-2.5" />
+										<EIcon name="i-heroicons-video-camera" class="w-2.5 h-2.5" />
 									</span>
 									<span
 										v-if="event.transcription_enabled"
 										class="day-timeline__pill day-timeline__pill--trx"
 										title="Live transcription"
 									>
-										<UIcon name="i-heroicons-document-text" class="w-2.5 h-2.5" />
+										<EIcon name="i-heroicons-document-text" class="w-2.5 h-2.5" />
 									</span>
 									<span
 										v-if="event.waiting_room_enabled"
 										class="day-timeline__pill day-timeline__pill--wait"
 										title="Waiting room"
 									>
-										<UIcon name="i-heroicons-lock-closed" class="w-2.5 h-2.5" />
+										<EIcon name="i-heroicons-lock-closed" class="w-2.5 h-2.5" />
 									</span>
 									<span
 										v-if="(event.members?.length || 0) > 0"
 										class="day-timeline__pill day-timeline__pill--meta"
 										:title="`${event.members.length} ${event.members.length === 1 ? 'member' : 'members'}`"
 									>
-										<UIcon name="i-heroicons-users" class="w-2.5 h-2.5" />
+										<EIcon name="i-heroicons-users" class="w-2.5 h-2.5" />
 										{{ event.members.length }}
 									</span>
 									<span
@@ -380,7 +380,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 							@click="handleEventClick(event)"
 						>
 							<div class="day-timeline__label-row1">
-								<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
+								<EIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
 								<span class="day-timeline__label-title" :title="event.title">{{ event.title }}</span>
 								<span
 									v-if="event.lead"
@@ -398,7 +398,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 
 					<!-- Track -->
 					<div class="day-timeline__track">
-						<UTooltip :text="tooltipFor(event)" :popper="{ placement: 'top', offsetDistance: 6 }">
+						<ETooltip :text="tooltipFor(event)" :popper="{ placement: 'top', offsetDistance: 6 }">
 							<div
 								v-if="getBarStyle(event)"
 								class="day-timeline__bar"
@@ -420,7 +420,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 									:style="{ backgroundColor: typeStyles(event).color, opacity: getStatusOpacity(event.status) }"
 								/>
 							</div>
-						</UTooltip>
+						</ETooltip>
 					</div>
 				</div>
 

@@ -129,7 +129,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
     <p class="text-xs text-muted-foreground mb-5">Track your social media performance</p>
 
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <USelectMenu
+      <ESelectMenu
         v-model="selectedClientId"
         :options="[
           { label: 'All clients', value: null },
@@ -141,7 +141,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         placeholder="Filter by client"
         class="w-44"
       />
-      <USelectMenu
+      <ESelectMenu
         v-model="selectedAccountId"
         :options="accountSelectOptions"
         value-attribute="value"
@@ -150,7 +150,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         :disabled="filteredAccounts.length === 0"
         class="w-56"
       />
-      <UButton
+      <EButton
         v-if="filteredAccounts.length === 0"
         to="/apps/marketing?floor=accounts&view=settings"
         variant="soft"
@@ -158,12 +158,12 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         icon="i-lucide-plus"
       >
         Connect
-      </UButton>
+      </EButton>
 
       <div class="flex-1" />
 
       <div class="flex items-center gap-2">
-        <USelectMenu
+        <ESelectMenu
           v-model="selectedPreset"
           :options="dateRangePresets"
           value-attribute="value"
@@ -173,9 +173,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
       </div>
     </div>
 
-    <UCard v-if="showEmptyState" class="mb-6">
+    <ECard v-if="showEmptyState" class="mb-6">
       <div class="flex flex-col items-center justify-center py-12 text-center">
-        <UIcon name="i-lucide-bar-chart-3" class="h-10 w-10 text-muted-foreground mb-3" />
+        <EIcon name="i-lucide-bar-chart-3" class="h-10 w-10 text-muted-foreground mb-3" />
         <p class="text-sm font-medium text-foreground dark:text-white">
           {{ hasAnyAccount ? 'No metrics yet' : 'Connect a social account to start tracking' }}
         </p>
@@ -184,7 +184,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             ? 'The daily refresh runs at 4 AM UTC. New snapshots will appear here within 24 hours of connecting an account.'
             : 'Once a Facebook Page, Instagram, Threads, LinkedIn, or TikTok account is connected, daily metrics snapshots will populate this dashboard.' }}
         </p>
-        <UButton
+        <EButton
           v-if="!hasAnyAccount"
           to="/apps/marketing?floor=accounts&view=settings"
           variant="solid"
@@ -193,12 +193,12 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           class="mt-4"
         >
           Connect account
-        </UButton>
+        </EButton>
       </div>
-    </UCard>
+    </ECard>
 
     <div v-show="!showEmptyState" class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Followers</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -209,9 +209,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             <span class="text-muted-foreground">({{ formatChange(analytics.overview.followers.change_pct, '%') }})</span>
           </p>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reach</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -221,9 +221,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             {{ formatChange(analytics.overview.reach.change_pct, '%') }} vs previous
           </p>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Impressions</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -233,9 +233,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             {{ formatChange(analytics.overview.impressions.change_pct, '%') }} vs previous
           </p>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Engagement Rate</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -245,9 +245,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             {{ formatChange(analytics.overview.engagement_rate.change, '%') }} vs previous
           </p>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Posts</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -255,9 +255,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           </p>
           <p class="text-xs text-muted-foreground mt-1">this period</p>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <div>
           <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Video Views</p>
           <p class="text-2xl font-bold text-foreground dark:text-white mt-1">
@@ -265,11 +265,11 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           </p>
           <p class="text-xs text-muted-foreground mt-1">this period</p>
         </div>
-      </UCard>
+      </ECard>
     </div>
 
     <div v-show="!showEmptyState" class="grid lg:grid-cols-3 gap-6 mb-6">
-      <UCard class="lg:col-span-2">
+      <ECard class="lg:col-span-2">
         <template #header>
           <h3 class="font-semibold text-foreground dark:text-white">Follower Growth</h3>
         </template>
@@ -289,9 +289,9 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             </span>
           </div>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <h3 class="font-semibold text-foreground dark:text-white">Platform Breakdown</h3>
         </template>
@@ -322,14 +322,14 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             </div>
           </div>
         </div>
-      </UCard>
+      </ECard>
     </div>
 
-    <UCard v-show="!showEmptyState">
+    <ECard v-show="!showEmptyState">
       <template #header>
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-foreground dark:text-white">Top Performing Posts</h3>
-          <UButton variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right" class="text-[10px] font-medium uppercase tracking-wide">View all</UButton>
+          <EButton variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right" class="text-[10px] font-medium uppercase tracking-wide">View all</EButton>
         </div>
       </template>
 
@@ -354,20 +354,20 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           </p>
           <div class="flex items-center gap-4 text-xs text-muted-foreground">
             <span class="flex items-center gap-1">
-              <UIcon name="i-lucide-heart" class="w-3.5 h-3.5" />
+              <EIcon name="i-lucide-heart" class="w-3.5 h-3.5" />
               {{ formatNumber(post.engagement) }}
             </span>
             <span class="flex items-center gap-1">
-              <UIcon name="i-lucide-eye" class="w-3.5 h-3.5" />
+              <EIcon name="i-lucide-eye" class="w-3.5 h-3.5" />
               {{ formatNumber(post.reach) }}
             </span>
             <span>{{ format(new Date(post.posted_at), 'MMM d') }}</span>
           </div>
         </div>
       </div>
-    </UCard>
+    </ECard>
 
-    <UCard v-show="!showEmptyState" class="mt-6">
+    <ECard v-show="!showEmptyState" class="mt-6">
       <template #header>
         <h3 class="font-semibold text-foreground dark:text-white">Engagement Rate Trend</h3>
       </template>
@@ -396,6 +396,6 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           </div>
         </div>
       </div>
-    </UCard>
+    </ECard>
   </div>
 </template>

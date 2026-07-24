@@ -3,7 +3,7 @@
 		<!-- Access gate — only shown when the server refuses entirely (non-member). -->
 		<div v-if="accessDenied" class="flex flex-col items-center justify-center py-16">
 			<div class="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-destructive" />
+				<EIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-destructive" />
 			</div>
 			<h3 class="font-semibold text-foreground mb-1">Access Restricted</h3>
 			<p class="text-sm text-muted-foreground text-center max-w-sm">
@@ -111,7 +111,7 @@
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
 						<div class="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-blue-500" />
+							<EIcon name="i-heroicons-bolt" class="w-4 h-4 text-blue-500" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Requests</span>
@@ -120,7 +120,7 @@
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
 						<div class="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-cpu-chip" class="w-4 h-4 text-purple-500" />
+							<EIcon name="i-heroicons-cpu-chip" class="w-4 h-4 text-purple-500" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tokens</span>
@@ -130,7 +130,7 @@
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
 						<div class="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-success" />
+							<EIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-success" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Est. Cost</span>
@@ -139,7 +139,7 @@
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
 						<div class="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-users" class="w-4 h-4 text-warning" />
+							<EIcon name="i-heroicons-users" class="w-4 h-4 text-warning" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Users</span>
@@ -230,7 +230,7 @@
 								</div>
 								<span class="text-[10px] text-muted-foreground">{{ u.requests }} requests · ${{ u.cost.toFixed(2) }}</span>
 							</div>
-							<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+							<EIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
 						</button>
 						<p v-if="!userData.users.length" class="text-sm text-muted-foreground text-center py-4">No usage data yet</p>
 					</div>
@@ -291,7 +291,7 @@
 		<div v-if="canManageAI">
 			<div class="flex items-center justify-between mb-4">
 				<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Token Management</h4>
-				<UButton
+				<EButton
 					color="gray"
 					variant="ghost"
 					size="xs"
@@ -299,7 +299,7 @@
 					@click="showManagement = !showManagement"
 				>
 					{{ showManagement ? 'Hide' : 'Manage' }}
-				</UButton>
+				</EButton>
 			</div>
 			<OrganizationAITokenManagement
 				v-if="showManagement"

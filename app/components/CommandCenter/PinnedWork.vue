@@ -72,14 +72,14 @@ function statusChip(s: string | null) {
 						class="w-2 h-2 rounded-full mt-2 shrink-0"
 						:style="{ backgroundColor: item.accent || 'var(--primary)' }"
 					/>
-					<UIcon v-else :name="TYPE_ICON[item.type]" class="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+					<EIcon v-else :name="TYPE_ICON[item.type]" class="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
 
 					<p class="text-sm font-medium text-foreground line-clamp-2 leading-snug flex-1">{{ item.title }}</p>
 					<PinButton :pinned="true" always size="xs" @toggle="unpin(item)" />
 				</div>
 				<div class="flex items-center justify-between gap-2">
 					<span class="inline-flex items-center gap-1 text-[11px] text-muted-foreground truncate">
-						<UIcon :name="TYPE_ICON[item.type]" class="w-3 h-3 shrink-0" />
+						<EIcon :name="TYPE_ICON[item.type]" class="w-3 h-3 shrink-0" />
 						{{ item.subtitle }}
 					</span>
 					<span

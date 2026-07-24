@@ -60,7 +60,7 @@
 					@click="selectedAssignee = null"
 				>
 					<span>{{ selectedAssignee.first_name }} {{ selectedAssignee.last_name?.charAt(0) }}.</span>
-					<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+					<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 				</button>
 				<!-- @ button -->
 				<button
@@ -68,7 +68,7 @@
 					title="Assign to someone"
 					@click="toggleMentionDropdown"
 				>
-					<UIcon name="i-heroicons-at-symbol" class="w-4 h-4" />
+					<EIcon name="i-heroicons-at-symbol" class="w-4 h-4" />
 				</button>
 				<!-- Mention dropdown -->
 				<div v-if="showMentionDropdown" class="mention-dropdown">
@@ -153,7 +153,7 @@
 					class="px-2 py-0.5 rounded-full text-xs font-medium transition-colors border border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
 					@click="toggleMentionDropdown"
 				>
-					<UIcon name="i-heroicons-at-symbol" class="w-3 h-3 inline-block mr-0.5 -mt-px" />
+					<EIcon name="i-heroicons-at-symbol" class="w-3 h-3 inline-block mr-0.5 -mt-px" />
 					Mention
 				</button>
 				<button
@@ -162,7 +162,7 @@
 					@click="selectedAssignee = null"
 				>
 					{{ selectedAssignee.first_name }} {{ selectedAssignee.last_name?.charAt(0) || '' }}.
-					<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+					<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 				</button>
 			</div>
 		</div>
@@ -176,7 +176,7 @@
 			>
 				<EarnestIcon class="w-4 h-4 group-hover:text-primary transition-colors" />
 				<span class="uppercase tracking-wide font-medium">Earnest Suggestions</span>
-				<UIcon
+				<EIcon
 					:name="showAiPrompt ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
 					class="w-3 h-3"
 				/>
@@ -196,7 +196,7 @@
 						:disabled="aiLoading"
 						@click="fetchAiSuggestions"
 					>
-						<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<EIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 						<EarnestIcon v-else class="w-3.5 h-3.5" />
 						{{ aiLoading ? 'Thinking...' : 'Suggest' }}
 					</button>
@@ -210,7 +210,7 @@
 						class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-sm hover:bg-primary/10 hover:border-primary/20 transition-colors group"
 						@click="addAiSuggestion(suggestion)"
 					>
-						<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
+						<EIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
 						<span class="flex-1 text-foreground/80">{{ suggestion }}</span>
 					</button>
 				</div>
@@ -224,7 +224,7 @@
 			<!-- Today -->
 			<template v-if="todayTasks.length">
 				<div class="schedule-header">
-					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
+					<EIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
 					<span>Today</span>
 					<span class="schedule-count">{{ todayTasks.length }}</span>
 				</div>
@@ -251,7 +251,7 @@
 			<!-- This Week -->
 			<template v-if="thisWeekTasks.length">
 				<div class="schedule-header" :class="{ 'mt-3': todayTasks.length }">
-					<UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-blue-500" />
+					<EIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-blue-500" />
 					<span>This Week</span>
 					<span class="schedule-count">{{ thisWeekTasks.length }}</span>
 				</div>
@@ -278,7 +278,7 @@
 			<!-- Later -->
 			<template v-if="laterTasks.length">
 				<div class="schedule-header" :class="{ 'mt-3': todayTasks.length || thisWeekTasks.length }">
-					<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-gray-400" />
+					<EIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-gray-400" />
 					<span>Later</span>
 					<span class="schedule-count">{{ laterTasks.length }}</span>
 				</div>
@@ -305,7 +305,7 @@
 			<!-- Unscheduled -->
 			<template v-if="unscheduledTasks.length">
 				<div class="schedule-header" :class="{ 'mt-3': todayTasks.length || thisWeekTasks.length || laterTasks.length }">
-					<UIcon name="i-heroicons-inbox" class="w-3.5 h-3.5 text-gray-400" />
+					<EIcon name="i-heroicons-inbox" class="w-3.5 h-3.5 text-gray-400" />
 					<span>Unscheduled</span>
 					<span class="schedule-count">{{ unscheduledTasks.length }}</span>
 				</div>
@@ -332,7 +332,7 @@
 			<!-- Completed tasks -->
 			<template v-if="completedTasks.length">
 				<div class="schedule-header mt-3">
-					<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-success" />
+					<EIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-success" />
 					<span>Completed</span>
 					<span class="schedule-count">{{ completedTasks.length }}</span>
 					<button
@@ -350,7 +350,7 @@
 				>
 					<button class="flex-shrink-0 pt-0.5" @click="handleToggle(task.id)">
 						<div class="w-[18px] h-[18px] rounded-[6px] bg-[hsl(var(--primary))] border-2 border-[hsl(var(--primary))] flex items-center justify-center">
-							<UIcon name="i-heroicons-check" class="w-3 h-3 text-white" />
+							<EIcon name="i-heroicons-check" class="w-3 h-3 text-white" />
 						</div>
 					</button>
 					<div class="flex-1 min-w-0">
@@ -364,14 +364,14 @@
 						class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-destructive"
 						@click="removeTask(task.id)"
 					>
-						<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 					</button>
 				</div>
 			</template>
 
 			<!-- Empty state -->
 			<div v-if="!activeTasks.length && !completedTasks.length" class="py-8 text-center">
-				<UIcon name="i-heroicons-clipboard-document-check" class="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
+				<EIcon name="i-heroicons-clipboard-document-check" class="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
 				<p class="text-sm text-muted-foreground">No tasks yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Add one above or try AI suggestions</p>
 			</div>
@@ -638,7 +638,7 @@ const TaskRow = defineComponent({
 					class: 'qt-handle flex-shrink-0 pt-0.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-muted-foreground',
 					title: 'Drag to reorder',
 				}, [
-					h(resolveComponent('UIcon'), { name: 'i-heroicons-bars-2', class: 'w-3.5 h-3.5' }),
+					h(resolveComponent('EIcon'), { name: 'i-heroicons-bars-2', class: 'w-3.5 h-3.5' }),
 				]),
 				h('button', { class: 'flex-shrink-0 pt-0.5', onClick: () => emit('toggle') }, [
 					h('div', { class: 'w-[18px] h-[18px] rounded-[6px] border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors flex items-center justify-center' }),
@@ -675,7 +675,7 @@ const TaskRow = defineComponent({
 						class: 'opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-primary text-[10px] uppercase tracking-wider',
 						onClick: () => { showScheduleMenu.value = !showScheduleMenu.value; },
 					}, [
-						h(resolveComponent('UIcon'), { name: 'i-heroicons-calendar', class: 'w-3.5 h-3.5' }),
+						h(resolveComponent('EIcon'), { name: 'i-heroicons-calendar', class: 'w-3.5 h-3.5' }),
 					]),
 					showScheduleMenu.value
 						? h('div', {
@@ -691,7 +691,7 @@ const TaskRow = defineComponent({
 									showScheduleMenu.value = false;
 								},
 							}, [
-								h(resolveComponent('UIcon'), { name: opt.icon, class: 'w-3.5 h-3.5' }),
+								h(resolveComponent('EIcon'), { name: opt.icon, class: 'w-3.5 h-3.5' }),
 								opt.label,
 							]),
 						))
@@ -701,7 +701,7 @@ const TaskRow = defineComponent({
 					class: 'opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-destructive',
 					onClick: () => emit('remove'),
 				}, [
-					h(resolveComponent('UIcon'), { name: 'i-heroicons-x-mark', class: 'w-3.5 h-3.5' }),
+					h(resolveComponent('EIcon'), { name: 'i-heroicons-x-mark', class: 'w-3.5 h-3.5' }),
 				]),
 			]);
 	},

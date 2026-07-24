@@ -167,21 +167,21 @@ async function acceptInvite() {
 			<div class="w-full max-w-md">
 				<!-- Loading -->
 				<div v-if="loading" class="text-center py-8">
-					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-2" />
+					<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-2" />
 					<p class="text-sm text-muted-foreground uppercase tracking-wide font-bold">Loading invitation…</p>
 				</div>
 
 				<!-- Error -->
 				<div v-else-if="error" class="ios-card p-6 text-center">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 text-warning mx-auto mb-4" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 text-warning mx-auto mb-4" />
 					<p class="mb-2">{{ error }}</p>
 					<p class="text-sm text-muted-foreground mb-4">Please check the URL or contact your administrator.</p>
-					<UButton variant="ghost" @click="router.push('/auth/signin')">Go to Login</UButton>
+					<EButton variant="ghost" @click="router.push('/auth/signin')">Go to Login</EButton>
 				</div>
 
 				<!-- Already accepted -->
 				<div v-else-if="membership?.status !== 'pending'" class="ios-card p-6 text-center">
-					<UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-success mx-auto mb-4" />
+					<EIcon name="i-heroicons-check-circle" class="w-8 h-8 text-success mx-auto mb-4" />
 					<p class="mb-4">This invitation has already been accepted.</p>
 					<button class="invite-btn" @click="router.push('/auth/signin')">Sign In</button>
 				</div>
@@ -221,9 +221,9 @@ async function acceptInvite() {
 						<template v-if="isNewUser">
 							<p class="text-sm text-muted-foreground">Set a password to create your account.</p>
 
-							<UFormGroup label="Password" required :error="passwordError">
+							<EFormGroup label="Password" required :error="passwordError">
 								<div class="relative">
-									<UInput
+									<EInput
 										v-model="password"
 										:type="showPassword ? 'text' : 'password'"
 										placeholder="Choose a password"
@@ -233,18 +233,18 @@ async function acceptInvite() {
 										class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 										@click="showPassword = !showPassword"
 									>
-										<UIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4" />
+										<EIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4" />
 									</button>
 								</div>
-							</UFormGroup>
+							</EFormGroup>
 
-							<UFormGroup label="Confirm Password">
-								<UInput
+							<EFormGroup label="Confirm Password">
+								<EInput
 									v-model="confirmPassword"
 									:type="showPassword ? 'text' : 'password'"
 									placeholder="Confirm your password"
 								/>
-							</UFormGroup>
+							</EFormGroup>
 						</template>
 
 						<!-- Existing user: just confirm -->
@@ -253,7 +253,7 @@ async function acceptInvite() {
 						</p>
 
 						<button class="invite-btn" :disabled="accepting" @click="acceptInvite">
-							<UIcon v-if="accepting" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+							<EIcon v-if="accepting" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 							<span>{{ isNewUser ? 'Create Account & Join' : 'Accept Invitation' }}</span>
 						</button>
 

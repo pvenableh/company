@@ -127,13 +127,13 @@ const startMeeting = async () => {
 </script>
 
 <template>
-	<UPopover v-model:open="open" :popper="{ placement: 'bottom-end', offsetDistance: 6, strategy: 'fixed' }">
+	<EPopover v-model:open="open" :popper="{ placement: 'bottom-end', offsetDistance: 6, strategy: 'fixed' }">
 		<button
 			:disabled="loading"
 			class="flex items-center gap-2 px-4 py-2 rounded-xl bg-app-work hover:bg-app-work/90 text-white text-sm font-medium shadow-sm transition-colors ios-press disabled:opacity-50"
 		>
-			<UIcon v-if="!loading" name="i-heroicons-video-camera" class="w-4 h-4" />
-			<UIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+			<EIcon v-if="!loading" name="i-heroicons-video-camera" class="w-4 h-4" />
+			<EIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 			Start Instant Meeting
 		</button>
 
@@ -166,20 +166,20 @@ const startMeeting = async () => {
 				<div class="flex items-center justify-between gap-2">
 					<div class="flex items-center gap-1.5 text-[12px] text-foreground">
 						<span>Record</span>
-						<UIcon
+						<EIcon
 							v-if="!meetingDefaults.recordingAvailable"
 							name="i-heroicons-lock-closed"
 							class="w-3 h-3 text-muted-foreground"
 							title="Upgrade to a paid plan to record meetings"
 						/>
 					</div>
-					<UToggle v-model="prefs.recording" :disabled="!meetingDefaults.recordingAvailable" />
+					<EToggle v-model="prefs.recording" :disabled="!meetingDefaults.recordingAvailable" />
 				</div>
 
 				<!-- Waiting room -->
 				<div class="flex items-center justify-between gap-2">
 					<span class="text-[12px] text-foreground">Waiting room</span>
-					<UToggle v-model="prefs.waitingRoom" />
+					<EToggle v-model="prefs.waitingRoom" />
 				</div>
 
 				<!-- Start -->
@@ -189,11 +189,11 @@ const startMeeting = async () => {
 					@click="startMeeting"
 					class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-app-work hover:bg-app-work/90 text-white text-[12px] font-semibold transition-colors ios-press disabled:opacity-50"
 				>
-					<UIcon v-if="loading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-					<UIcon v-else name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
+					<EIcon v-if="loading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+					<EIcon v-else name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
 					{{ loading ? 'Starting…' : 'Start' }}
 				</button>
 			</div>
 		</template>
-	</UPopover>
+	</EPopover>
 </template>

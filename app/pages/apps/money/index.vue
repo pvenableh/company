@@ -1251,7 +1251,7 @@ const headerAction = computed(() => {
               class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
               @input="debouncedFetchInvoices"
             />
-            <UTabs
+            <ETabs
               v-model="invoicesStatus"
               :items="invoiceStatusItems"
               class="w-fit"
@@ -1706,7 +1706,7 @@ const headerAction = computed(() => {
                   <td class="py-3 px-4 font-medium">{{ expense.name }}</td>
                   <td class="py-3 px-4">
                     <div class="flex items-center gap-1.5">
-                      <UIcon
+                      <EIcon
                         :name="getExpenseCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
                         class="w-3.5 h-3.5"
                         :class="getExpenseCategoryConfig(expense.category || 'other')?.color ?? 'text-muted-foreground'"
@@ -1733,7 +1733,7 @@ const headerAction = computed(() => {
                       class="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
                       @click="handleExpenseDelete(expense)"
                     >
-                      <UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
+                      <EIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
                     </button>
                   </td>
                 </tr>

@@ -74,7 +74,7 @@ const renderMarkdown = (text: string): string => {
 </script>
 
 <template>
-  <UModal
+  <EModal
     :model-value="modelValue"
     :ui="{ content: 'max-w-2xl max-h-[80vh] flex flex-col' }"
     @update:model-value="emit('update:modelValue', $event)"
@@ -91,7 +91,7 @@ const renderMarkdown = (text: string): string => {
             v-else
             class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"
           >
-            <UIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
+            <EIcon name="i-heroicons-user" class="w-4 h-4 text-primary" />
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-sm font-semibold truncate">{{ session?.title || 'Untitled Conversation' }}</h3>
@@ -109,7 +109,7 @@ const renderMarkdown = (text: string): string => {
       <!-- Messages -->
       <div class="flex-1 overflow-y-auto space-y-4 py-2">
         <div v-if="isLoading" class="flex items-center justify-center py-12">
-          <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+          <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
 
         <div v-else-if="messages.length === 0" class="text-center py-12 text-muted-foreground text-sm">
@@ -134,7 +134,7 @@ const renderMarkdown = (text: string): string => {
               v-else-if="msg.role === 'user'"
               class="w-7 h-7 rounded-full bg-muted flex items-center justify-center"
             >
-              <UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
+              <EIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
             </div>
             <div
               v-else
@@ -169,10 +169,10 @@ const renderMarkdown = (text: string): string => {
 
     <template #footer>
       <div class="flex justify-end">
-        <UButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
+        <EButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
           Close
-        </UButton>
+        </EButton>
       </div>
     </template>
-  </UModal>
+  </EModal>
 </template>

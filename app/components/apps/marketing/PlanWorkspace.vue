@@ -507,15 +507,15 @@ onMounted(() => {
             </header>
 
             <div class="plan-card__body space-y-4">
-              <UFormGroup label="Objective" description="One-line goal for this plan.">
-                <UInput
+              <EFormGroup label="Objective" description="One-line goal for this plan.">
+                <EInput
                   :model-value="plan.objective || ''"
                   placeholder="e.g. Drive RSVPs to the launch event."
                   @blur="(e: any) => patchPlan({ objective: e.target.value || null })"
                 />
-              </UFormGroup>
+              </EFormGroup>
 
-              <UFormGroup
+              <EFormGroup
                 label="Themes"
                 description="Themes / pillars (e.g. behind-the-scenes, product hero, testimonials)."
               >
@@ -534,16 +534,16 @@ onMounted(() => {
                     @keydown.enter.prevent="addTheme"
                   />
                 </div>
-              </UFormGroup>
+              </EFormGroup>
 
-              <UFormGroup label="Strategy" description="What you want the client to understand about the month.">
-                <UTextarea
+              <EFormGroup label="Strategy" description="What you want the client to understand about the month.">
+                <ETextarea
                   :model-value="plan.strategy || ''"
                   :rows="6"
                   placeholder="May leans into the new product launch — lead with hero shots in week 1, behind-the-scenes in week 2…"
                   @update:model-value="(v: string) => onStrategyInput(v)"
                 />
-              </UFormGroup>
+              </EFormGroup>
             </div>
           </section>
 
@@ -612,12 +612,12 @@ onMounted(() => {
               <!-- Inline add-post -->
               <div class="plan-add-post">
                 <div class="plan-add-post__row">
-                  <UInput
+                  <EInput
                     v-model="newPostCaption"
                     placeholder="Caption / post idea…"
                     class="flex-1"
                   />
-                  <USelect
+                  <ESelect
                     v-model="newPostType"
                     :options="[
                       { label: 'Image', value: 'image' },
@@ -630,7 +630,7 @@ onMounted(() => {
                     value-attribute="value"
                     class="w-32"
                   />
-                  <UInput
+                  <EInput
                     v-model="newPostScheduledAt"
                     type="datetime-local"
                     class="w-52"

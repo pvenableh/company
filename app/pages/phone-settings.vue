@@ -303,7 +303,7 @@ onMounted(() => {
 				<!-- Line Selector -->
 				<div class="flex items-center justify-between mb-6">
 					<div class="flex items-center gap-3">
-						<USelect
+						<ESelect
 							v-if="phoneLines.length"
 							:model-value="selectedLineId"
 							@update:model-value="handleLineChange"
@@ -311,20 +311,20 @@ onMounted(() => {
 							placeholder="Select a phone line"
 							class="min-w-[200px]"
 						/>
-						<UBadge v-if="selectedLine?.active" color="green" variant="soft">Active</UBadge>
-						<UBadge v-else-if="selectedLine" color="gray" variant="soft">Inactive</UBadge>
+						<EBadge v-if="selectedLine?.active" color="green" variant="soft">Active</EBadge>
+						<EBadge v-else-if="selectedLine" color="gray" variant="soft">Inactive</EBadge>
 					</div>
-					<UButton icon="i-heroicons-plus" size="sm" @click="openCreateModal">
+					<EButton icon="i-heroicons-plus" size="sm" @click="openCreateModal">
 						New Line
-					</UButton>
+					</EButton>
 				</div>
 
 				<!-- Create Line Modal — improved step-based UX -->
-				<UModal v-model="showCreateLine">
+				<EModal v-model="showCreateLine">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-6">
 							<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon name="i-heroicons-phone" class="w-5 h-5 text-primary" />
+								<EIcon name="i-heroicons-phone" class="w-5 h-5 text-primary" />
 							</div>
 							<div>
 								<h3 class="text-lg font-semibold text-foreground">Create Phone Line</h3>
@@ -336,16 +336,16 @@ onMounted(() => {
 
 						<!-- Step 1: Basics -->
 						<div v-if="createStep === 1" class="space-y-4">
-							<UFormGroup label="Line Name" required hint="A friendly name for this phone line">
-								<UInput v-model="newLineForm.line_name" placeholder="e.g. Main Office, Sales Line, Support" />
-							</UFormGroup>
+							<EFormGroup label="Line Name" required hint="A friendly name for this phone line">
+								<EInput v-model="newLineForm.line_name" placeholder="e.g. Main Office, Sales Line, Support" />
+							</EFormGroup>
 
-							<UFormGroup label="Company Name" required hint="Shown in caller ID and used in greetings">
-								<UInput v-model="newLineForm.company_name" placeholder="Your company or brand name" />
-							</UFormGroup>
+							<EFormGroup label="Company Name" required hint="Shown in caller ID and used in greetings">
+								<EInput v-model="newLineForm.company_name" placeholder="Your company or brand name" />
+							</EFormGroup>
 
-							<UFormGroup label="Twilio Phone Number" hint="The phone number from your Twilio account">
-								<UInput v-model="newLineForm.twilio_phone_number" placeholder="+1 (555) 123-4567" />
+							<EFormGroup label="Twilio Phone Number" hint="The phone number from your Twilio account">
+								<EInput v-model="newLineForm.twilio_phone_number" placeholder="+1 (555) 123-4567" />
 								<template #help>
 									<span class="text-xs text-muted-foreground">
 										Format: +1XXXXXXXXXX. Find this in your
@@ -353,98 +353,98 @@ onMounted(() => {
 										You can add this later.
 									</span>
 								</template>
-							</UFormGroup>
+							</EFormGroup>
 
 							<div class="flex justify-end gap-2 pt-4 border-t border-border">
-								<UButton color="gray" variant="soft" @click="showCreateLine = false">Cancel</UButton>
-								<UButton
+								<EButton color="gray" variant="soft" @click="showCreateLine = false">Cancel</EButton>
+								<EButton
 									:disabled="!newLineForm.line_name || !newLineForm.company_name"
 									@click="createStep = 2"
 								>
 									Next
-									<UIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5 ml-1" />
-								</UButton>
+									<EIcon name="i-heroicons-arrow-right" class="w-3.5 h-3.5 ml-1" />
+								</EButton>
 							</div>
 						</div>
 
 						<!-- Step 2: Voice & Greeting -->
 						<div v-else-if="createStep === 2" class="space-y-4">
-							<UFormGroup label="Greeting Message" hint="What callers hear when they dial in">
-								<UTextarea
+							<EFormGroup label="Greeting Message" hint="What callers hear when they dial in">
+								<ETextarea
 									v-model="newLineForm.greeting_text"
 									placeholder="Thank you for calling [Company]. For sales, press 1. For support, press 2. To speak with a representative, please stay on the line."
 									rows="3"
 								/>
-							</UFormGroup>
+							</EFormGroup>
 
 							<div class="grid grid-cols-2 gap-4">
-								<UFormGroup label="Voice" hint="Text-to-speech voice for greetings">
-									<USelect v-model="newLineForm.voice" :options="VOICE_OPTIONS" />
-								</UFormGroup>
+								<EFormGroup label="Voice" hint="Text-to-speech voice for greetings">
+									<ESelect v-model="newLineForm.voice" :options="VOICE_OPTIONS" />
+								</EFormGroup>
 
-								<UFormGroup label="Timezone" hint="Used for business hours">
-									<USelect v-model="newLineForm.timezone" :options="TIMEZONE_OPTIONS" />
-								</UFormGroup>
+								<EFormGroup label="Timezone" hint="Used for business hours">
+									<ESelect v-model="newLineForm.timezone" :options="TIMEZONE_OPTIONS" />
+								</EFormGroup>
 							</div>
 
 							<div class="bg-muted/50 rounded-lg p-3">
 								<p class="text-xs text-muted-foreground">
-									<UIcon name="i-heroicons-information-circle" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+									<EIcon name="i-heroicons-information-circle" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
 									You can configure business hours and call routing after creating the line.
 								</p>
 							</div>
 
 							<div class="flex justify-between pt-4 border-t border-border">
-								<UButton color="gray" variant="ghost" @click="createStep = 1">
-									<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5 mr-1" />
+								<EButton color="gray" variant="ghost" @click="createStep = 1">
+									<EIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5 mr-1" />
 									Back
-								</UButton>
+								</EButton>
 								<div class="flex gap-2">
-									<UButton color="gray" variant="soft" @click="showCreateLine = false">Cancel</UButton>
-									<UButton :loading="saving" @click="createLine">
-										<UIcon name="i-heroicons-phone" class="w-3.5 h-3.5 mr-1" />
+									<EButton color="gray" variant="soft" @click="showCreateLine = false">Cancel</EButton>
+									<EButton :loading="saving" @click="createLine">
+										<EIcon name="i-heroicons-phone" class="w-3.5 h-3.5 mr-1" />
 										Create Line
-									</UButton>
+									</EButton>
 								</div>
 							</div>
 						</div>
 					</div>
-				</UModal>
+				</EModal>
 
 				<!-- No Lines -->
 				<div v-if="phoneLines.length === 0" class="text-center py-12 border-2 border-dashed border-border rounded-lg">
-					<UIcon name="i-heroicons-phone" class="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+					<EIcon name="i-heroicons-phone" class="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
 					<h3 class="text-lg font-medium text-foreground">No Phone Lines Configured</h3>
 					<p class="text-sm text-muted-foreground mt-1 mb-4">Create your first phone line to get started with your IVR system.</p>
-					<UButton icon="i-heroicons-plus" @click="openCreateModal">Create Phone Line</UButton>
+					<EButton icon="i-heroicons-plus" @click="openCreateModal">Create Phone Line</EButton>
 				</div>
 
 				<!-- Line Settings -->
 				<div v-else-if="selectedLine" class="space-y-8">
 					<!-- General Settings -->
-					<UCard>
+					<ECard>
 						<template #header>
 							<h3 class="font-semibold text-sm uppercase tracking-wider">General Settings</h3>
 						</template>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<UFormGroup label="Line Name" required>
-								<UInput v-model="lineForm.line_name" />
-							</UFormGroup>
-							<UFormGroup label="Line Identifier" hint="Used in API integrations">
-								<UInput v-model="lineForm.line_identifier" placeholder="e.g. main, support" />
-							</UFormGroup>
-							<UFormGroup label="Company Name" required>
-								<UInput v-model="lineForm.company_name" />
-							</UFormGroup>
-							<UFormGroup label="Twilio Phone Number">
-								<UInput v-model="lineForm.twilio_phone_number" placeholder="+15551234567" />
-							</UFormGroup>
-							<UFormGroup label="TTS Voice" hint="Voice used for automated messages">
-								<USelect v-model="lineForm.voice" :options="VOICE_OPTIONS" />
-							</UFormGroup>
-							<UFormGroup label="Timezone">
-								<USelect v-model="lineForm.timezone" :options="TIMEZONE_OPTIONS" />
-							</UFormGroup>
+							<EFormGroup label="Line Name" required>
+								<EInput v-model="lineForm.line_name" />
+							</EFormGroup>
+							<EFormGroup label="Line Identifier" hint="Used in API integrations">
+								<EInput v-model="lineForm.line_identifier" placeholder="e.g. main, support" />
+							</EFormGroup>
+							<EFormGroup label="Company Name" required>
+								<EInput v-model="lineForm.company_name" />
+							</EFormGroup>
+							<EFormGroup label="Twilio Phone Number">
+								<EInput v-model="lineForm.twilio_phone_number" placeholder="+15551234567" />
+							</EFormGroup>
+							<EFormGroup label="TTS Voice" hint="Voice used for automated messages">
+								<ESelect v-model="lineForm.voice" :options="VOICE_OPTIONS" />
+							</EFormGroup>
+							<EFormGroup label="Timezone">
+								<ESelect v-model="lineForm.timezone" :options="TIMEZONE_OPTIONS" />
+							</EFormGroup>
 						</div>
 						<div class="flex items-center gap-4 mt-4">
 							<label class="flex items-center gap-2 text-sm">
@@ -452,20 +452,20 @@ onMounted(() => {
 								Line Active
 							</label>
 						</div>
-					</UCard>
+					</ECard>
 
 					<!-- Greeting -->
-					<UCard>
+					<ECard>
 						<template #header>
 							<h3 class="font-semibold text-sm uppercase tracking-wider">Greeting Message</h3>
 						</template>
-						<UFormGroup label="Greeting Text" hint="What callers hear when they dial in">
-							<UTextarea v-model="lineForm.greeting_text" placeholder="Welcome to our company. Please listen to the following options..." rows="3" />
-						</UFormGroup>
-					</UCard>
+						<EFormGroup label="Greeting Text" hint="What callers hear when they dial in">
+							<ETextarea v-model="lineForm.greeting_text" placeholder="Welcome to our company. Please listen to the following options..." rows="3" />
+						</EFormGroup>
+					</ECard>
 
 					<!-- Business Hours -->
-					<UCard>
+					<ECard>
 						<template #header>
 							<div class="flex items-center justify-between">
 								<h3 class="font-semibold text-sm uppercase tracking-wider">Business Hours</h3>
@@ -482,22 +482,22 @@ onMounted(() => {
 									{{ day }}
 								</label>
 								<template v-if="businessHours[day].is_open">
-									<UInput v-model="businessHours[day].open_time" type="time" size="sm" class="w-32" />
+									<EInput v-model="businessHours[day].open_time" type="time" size="sm" class="w-32" />
 									<span class="text-muted-foreground">to</span>
-									<UInput v-model="businessHours[day].close_time" type="time" size="sm" class="w-32" />
+									<EInput v-model="businessHours[day].close_time" type="time" size="sm" class="w-32" />
 								</template>
 								<span v-else class="text-sm text-muted-foreground">Closed</span>
 							</div>
 
-							<UFormGroup label="After Hours Message" class="mt-4">
-								<UTextarea v-model="lineForm.after_hours_message" placeholder="We are currently closed. Please call back during business hours." rows="2" />
-							</UFormGroup>
+							<EFormGroup label="After Hours Message" class="mt-4">
+								<ETextarea v-model="lineForm.after_hours_message" placeholder="We are currently closed. Please call back during business hours." rows="2" />
+							</EFormGroup>
 						</div>
 						<p v-else class="text-sm text-muted-foreground">Enable business hours to configure when callers can reach you.</p>
-					</UCard>
+					</ECard>
 
 					<!-- Call Routing -->
-					<UCard>
+					<ECard>
 						<template #header>
 							<div>
 								<h3 class="font-semibold text-sm uppercase tracking-wider">Call Routing (IVR Menu)</h3>
@@ -506,10 +506,10 @@ onMounted(() => {
 						</template>
 						<div class="space-y-3">
 							<div v-for="route in callRoutes" :key="route.id" class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-								<UBadge color="primary" variant="soft">Press {{ route.menu_key }}</UBadge>
+								<EBadge color="primary" variant="soft">Press {{ route.menu_key }}</EBadge>
 								<span class="flex-1 text-sm font-medium">{{ route.department }}</span>
 								<span class="text-sm text-muted-foreground">{{ route.phone_number }}</span>
-								<UButton size="xs" color="red" variant="ghost" icon="i-heroicons-trash" @click="removeCallRoute(route.id)" />
+								<EButton size="xs" color="red" variant="ghost" icon="i-heroicons-trash" @click="removeCallRoute(route.id)" />
 							</div>
 
 							<div v-if="callRoutes.length === 0" class="text-center py-4 text-muted-foreground text-sm">
@@ -518,27 +518,27 @@ onMounted(() => {
 
 							<!-- Add Route -->
 							<div class="flex items-end gap-3 pt-3 border-t border-border">
-								<UFormGroup label="Department" class="flex-1" hint="e.g. Sales, Support">
-									<UInput v-model="newRoute.department" placeholder="Sales" size="sm" />
-								</UFormGroup>
-								<UFormGroup label="Key" class="w-20" hint="0-9">
-									<UInput v-model="newRoute.menu_key" placeholder="1" size="sm" maxlength="1" />
-								</UFormGroup>
-								<UFormGroup label="Forward To" class="flex-1" hint="Phone number">
-									<UInput v-model="newRoute.phone_number" placeholder="+15551234567" size="sm" />
-								</UFormGroup>
-								<UButton size="sm" icon="i-heroicons-plus" :disabled="!newRoute.department || !newRoute.menu_key || !newRoute.phone_number" @click="addCallRoute">
+								<EFormGroup label="Department" class="flex-1" hint="e.g. Sales, Support">
+									<EInput v-model="newRoute.department" placeholder="Sales" size="sm" />
+								</EFormGroup>
+								<EFormGroup label="Key" class="w-20" hint="0-9">
+									<EInput v-model="newRoute.menu_key" placeholder="1" size="sm" maxlength="1" />
+								</EFormGroup>
+								<EFormGroup label="Forward To" class="flex-1" hint="Phone number">
+									<EInput v-model="newRoute.phone_number" placeholder="+15551234567" size="sm" />
+								</EFormGroup>
+								<EButton size="sm" icon="i-heroicons-plus" :disabled="!newRoute.department || !newRoute.menu_key || !newRoute.phone_number" @click="addCallRoute">
 									Add
-								</UButton>
+								</EButton>
 							</div>
 						</div>
-					</UCard>
+					</ECard>
 
 					<!-- Save Button -->
 					<div class="flex justify-end pb-safe">
-						<UButton :loading="saving" size="lg" @click="saveLine">
+						<EButton :loading="saving" size="lg" @click="saveLine">
 							Save Settings
-						</UButton>
+						</EButton>
 					</div>
 				</div>
 			</template>

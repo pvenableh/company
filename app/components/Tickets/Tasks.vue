@@ -402,11 +402,11 @@ onUnmounted(() => {
 
 		<transition name="fade">
 			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tasks__connection">
-				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+				<EAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
-						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+						<EButton size="sm" color="yellow" @click="refresh">Retry Connection</EButton>
 					</template>
-				</UAlert>
+				</EAlert>
 			</div>
 		</transition>
 		<div class="transform scale-[0.35] lg:scale-[0.4] absolute -top-[80px] lg:-top-[84px] -right-[54px] lg:-right-[50px]">
@@ -428,7 +428,7 @@ onUnmounted(() => {
 				@mention="handleMention"
 				:showCharCount="false"
 			/>
-			<UButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
+			<EButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
 		</div>
 		<div v-if="!isConnected && isLoading" class="w-full text-[10px] text-center mt-20 uppercase"></div>
 		<draggable
@@ -442,14 +442,14 @@ onUnmounted(() => {
 		>
 			<template #item="{ element: task }">
 				<div class="flex items-center space-x-3 group p-2 rounded-lg hover:bg-muted/50 transition-colors">
-					<UButton
+					<EButton
 						color="gray"
 						variant="ghost"
 						icon="i-heroicons-bars-3"
 						size="xs"
 						class="drag-handle cursor-move opacity-0 group-hover:opacity-100 transition-opacity"
 					/>
-					<UCheckbox :key="`cb-${task.id}-${task.status}`" :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
+					<ECheckbox :key="`cb-${task.id}-${task.status}`" :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
 					<div class="relative flex-1">
 						<LazyFormTiptap
 							v-if="editingTaskId === task.id"
@@ -479,16 +479,16 @@ onUnmounted(() => {
 							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}
 						</div>
 					</div>
-					<UTooltip :text="getCreatorInfo(task)">
-						<UButton
+					<ETooltip :text="getCreatorInfo(task)">
+						<EButton
 							color="gray"
 							variant="ghost"
 							icon="i-heroicons-information-circle"
 							size="xs"
 							class="opacity-0 group-hover:opacity-100 transition-opacity"
 						/>
-					</UTooltip>
-					<UButton
+					</ETooltip>
+					<EButton
 						color="gray"
 						variant="ghost"
 						icon="i-heroicons-trash"

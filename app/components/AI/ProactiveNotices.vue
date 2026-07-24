@@ -77,7 +77,7 @@ const handleAction = (notice: any) => {
           <div class="flex items-start gap-3">
             <!-- Icon -->
             <div class="flex-shrink-0 mt-0.5">
-              <UIcon
+              <EIcon
                 :name="notice.icon"
                 class="w-4 h-4"
                 :class="getPriorityIconClass(notice.priority)"
@@ -107,7 +107,7 @@ const handleAction = (notice: any) => {
               class="flex-shrink-0 p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-background/60 transition-all"
               title="Dismiss"
             >
-              <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground" />
+              <EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           </div>
         </AccentCard>

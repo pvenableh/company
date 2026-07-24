@@ -30,7 +30,7 @@ const cancelEdit = () => {
 </script>
 
 <template>
-	<UCard>
+	<ECard>
 		<template #header>
 			<h5>Confirm Your Information</h5>
 		</template>
@@ -39,7 +39,7 @@ const cancelEdit = () => {
 			<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4 h-16">
 				<div v-if="!isEditing">
 					<div class="flex items-start gap-2">
-						<UInput
+						<EInput
 							v-model="email"
 							type="email"
 							required
@@ -48,18 +48,18 @@ const cancelEdit = () => {
 							class="flex-grow"
 							readonly
 						/>
-						<UButton color="gray" variant="ghost" size="sm" @click="isEditing = true">Edit</UButton>
+						<EButton color="gray" variant="ghost" size="sm" @click="isEditing = true">Edit</EButton>
 					</div>
 				</div>
 
 				<div v-else>
 					<div class="flex items-start gap-2">
-						<UInput v-model="email" type="email" required placeholder="your@email.com" autofocus class="flex-grow" />
-						<UButton color="gray" variant="soft" size="sm" @click="cancelEdit">Cancel</UButton>
+						<EInput v-model="email" type="email" required placeholder="your@email.com" autofocus class="flex-grow" />
+						<EButton color="gray" variant="soft" size="sm" @click="cancelEdit">Cancel</EButton>
 					</div>
 				</div>
 			</div>
-			<UButton type="submit" block :loading="isLoading" @click="handleSubmit">Continue to Payment</UButton>
+			<EButton type="submit" block :loading="isLoading" @click="handleSubmit">Continue to Payment</EButton>
 		</div>
-	</UCard>
+	</ECard>
 </template>

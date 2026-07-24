@@ -123,10 +123,10 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 <template>
 	<div class="w-full flex flex-col items-center justify-start min-h-screen bg-gray-50 dark:bg-gray-900">
 		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
+			<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
 		</div>
 		<div v-else-if="errorMsg" class="py-20 text-sm text-muted-foreground text-center">
-			<UIcon name="lucide:file-x" class="w-12 h-12 mx-auto mb-3 opacity-50" />
+			<EIcon name="lucide:file-x" class="w-12 h-12 mx-auto mb-3 opacity-50" />
 			<p>{{ errorMsg }}</p>
 		</div>
 		<div v-else-if="contract" class="w-full flex flex-col items-center justify-center relative z-10 mt-12 py-8">
@@ -165,11 +165,11 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 							<div>
 								<label class="block text-xs text-muted-foreground mb-1">Full name</label>
-								<UInput v-model="signerName" placeholder="Your full name" :disabled="signing" />
+								<EInput v-model="signerName" placeholder="Your full name" :disabled="signing" />
 							</div>
 							<div>
 								<label class="block text-xs text-muted-foreground mb-1">Email</label>
-								<UInput v-model="signerEmail" type="email" placeholder="you@example.com" :disabled="signing" />
+								<EInput v-model="signerEmail" type="email" placeholder="you@example.com" :disabled="signing" />
 							</div>
 						</div>
 
@@ -194,7 +194,7 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 							:disabled="!canSubmit"
 							@click="submitSignature"
 						>
-							<UIcon
+							<EIcon
 								:name="signing ? 'lucide:loader-2' : 'lucide:pen-line'"
 								class="w-4 h-4"
 								:class="signing ? 'animate-spin' : ''"

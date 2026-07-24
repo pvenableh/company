@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-wrap items-center gap-2">
-		<UInput
+		<EInput
 			v-model="search"
 			icon="i-heroicons-magnifying-glass"
 			placeholder="Search leads..."
@@ -8,7 +8,7 @@
 			class="w-48"
 			@update:model-value="$emit('update:search', $event)"
 		/>
-		<USelectMenu
+		<ESelectMenu
 			v-model="stage"
 			:options="stageOptions"
 			value-attribute="value"
@@ -18,7 +18,7 @@
 			class="w-36"
 			@update:model-value="$emit('update:stage', $event)"
 		/>
-		<USelectMenu
+		<ESelectMenu
 			v-model="priority"
 			:options="priorityOptions"
 			value-attribute="value"
@@ -28,7 +28,7 @@
 			class="w-32"
 			@update:model-value="$emit('update:priority', $event)"
 		/>
-		<UButton
+		<EButton
 			v-if="hasActiveFilters"
 			variant="ghost"
 			size="xs"
@@ -36,7 +36,7 @@
 			@click="clearFilters"
 		>
 			Clear
-		</UButton>
+		</EButton>
 	</div>
 </template>
 

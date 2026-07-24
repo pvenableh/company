@@ -16,7 +16,7 @@
 		:class="[sizeClass, variantClass]"
 	>
 		<span><slot>{{ label }}</slot></span>
-		<UIcon
+		<EIcon
 			name="i-heroicons-chevron-right"
 			class="shrink-0 transition-transform group-hover/vl:translate-x-0.5"
 			:class="chevronSize"

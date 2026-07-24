@@ -86,7 +86,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
 					<div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
+						<EIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Details</span>
 				</div>
@@ -126,7 +126,7 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
 					<div class="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-success" />
+						<EIcon name="i-heroicons-banknotes" class="w-4 h-4 text-success" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financials</span>
 				</div>
@@ -167,7 +167,7 @@
 			<div class="flex items-center justify-between gap-2 mb-4">
 				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
 					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
-						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-info" />
+						<EIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-info" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
 					<span v-if="allTimelineItems.length" class="text-[10px] text-muted-foreground/50">({{ allTimelineItems.length }})</span>
@@ -178,23 +178,23 @@
 						<span class="hidden sm:inline">Generate</span> Timeline
 					</Button>
 					<Button size="sm" variant="outline" class="text-[11px] h-7 px-2 sm:px-3" @click="showScheduleMeeting = true">
-						<UIcon name="i-heroicons-video-camera" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						<EIcon name="i-heroicons-video-camera" class="h-3 w-3 mr-0.5 sm:mr-1" />
 						<span class="hidden sm:inline">Schedule</span> Meeting
 					</Button>
 					<Button size="sm" variant="outline" class="text-[11px] h-7 px-2 sm:px-3" @click="showNewEventModal = true">
-						<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						<EIcon name="i-heroicons-plus" class="h-3 w-3 mr-0.5 sm:mr-1" />
 						New
 					</Button>
 				</div>
 			</div>
 
 			<div v-if="allTimelineItems.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
-				<UIcon name="i-heroicons-calendar" class="w-8 h-8 text-muted-foreground/30 mb-2" />
+				<EIcon name="i-heroicons-calendar" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 				<p class="text-sm text-muted-foreground">No events yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Create events manually or generate a timeline with AI.</p>
 			</div>
 
-			<UTabs v-else :items="eventTabs">
+			<ETabs v-else :items="eventTabs">
 				<template #timeline>
 					<ProjectsMiniGantt :project="project" :meetings="projectMeetings" :invoices="projectInvoices" class="mt-2" @event-click="openEventDetail" />
 				</template>
@@ -210,10 +210,10 @@
 								<div class="flex items-center gap-2 min-w-0">
 									<!-- Source-aware dot/icon -->
 									<div v-if="item.source === 'meeting'" class="h-5 w-5 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
-										<UIcon name="i-heroicons-video-camera" class="w-3 h-3 text-purple-500" />
+										<EIcon name="i-heroicons-video-camera" class="w-3 h-3 text-purple-500" />
 									</div>
 									<div v-else-if="item.source === 'invoice'" class="h-5 w-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-										<UIcon name="i-heroicons-document-text" class="w-3 h-3 text-success" />
+										<EIcon name="i-heroicons-document-text" class="w-3 h-3 text-success" />
 									</div>
 									<div v-else
 										class="h-2.5 w-2.5 rounded-full shrink-0"
@@ -250,17 +250,17 @@
 										class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
 										:class="meetingStatusColor(item.status)"
 									>{{ item.status }}</span>
-									<UIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
+									<EIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
 								</div>
 							</div>
 						</button>
 					</div>
 				</template>
-			</UTabs>
+			</ETabs>
 		</div>
 
 		<!-- New Event Modal -->
-		<UModal v-model="showNewEventModal" title="New Event">
+		<EModal v-model="showNewEventModal" title="New Event">
 			<template #header>
 				<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
 			</template>
@@ -268,35 +268,35 @@
 			<form @submit.prevent="handleCreateEvent" class="space-y-4">
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title *</label>
-					<UInput v-model="newEventForm.title" placeholder="Event title" />
+					<EInput v-model="newEventForm.title" placeholder="Event title" />
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Description</label>
-					<UTextarea v-model="newEventForm.description" placeholder="Event description..." :rows="3" />
+					<ETextarea v-model="newEventForm.description" placeholder="Event description..." :rows="3" />
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Type</label>
-						<USelectMenu v-model="newEventForm.type" :options="eventTypeOptions" option-attribute="label" value-attribute="value" placeholder="Select type" />
+						<ESelectMenu v-model="newEventForm.type" :options="eventTypeOptions" option-attribute="label" value-attribute="value" placeholder="Select type" />
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Status</label>
-						<USelectMenu v-model="newEventForm.status" :options="eventStatusOptions" option-attribute="label" value-attribute="value" placeholder="Select status" />
+						<ESelectMenu v-model="newEventForm.status" :options="eventStatusOptions" option-attribute="label" value-attribute="value" placeholder="Select status" />
 					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Date</label>
-						<UInput v-model="newEventForm.date" type="date" />
+						<EInput v-model="newEventForm.date" type="date" />
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Priority</label>
-						<USelectMenu v-model="newEventForm.priority" :options="priorityOptions" option-attribute="label" value-attribute="value" placeholder="Select priority" />
+						<ESelectMenu v-model="newEventForm.priority" :options="priorityOptions" option-attribute="label" value-attribute="value" placeholder="Select priority" />
 					</div>
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Figma / Prototype Link</label>
-					<UInput v-model="newEventForm.prototype_link" placeholder="https://www.figma.com/proto/..." />
+					<EInput v-model="newEventForm.prototype_link" placeholder="https://www.figma.com/proto/..." />
 					<p class="text-[10px] text-muted-foreground/70">Paste the <strong>prototype</strong> share link (Figma → Share → Copy link, with "Link to current frame" toggled on). Design or dev-mode links won't drive live frame sync in meetings.</p>
 				</div>
 				<div class="space-y-1">
@@ -305,16 +305,16 @@
 						class="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/40 transition-colors"
 						@click="eventFileInput?.click()"
 					>
-						<UIcon name="i-heroicons-arrow-up-tray" class="w-5 h-5 mx-auto mb-1 text-muted-foreground/50" />
+						<EIcon name="i-heroicons-arrow-up-tray" class="w-5 h-5 mx-auto mb-1 text-muted-foreground/50" />
 						<p class="text-xs text-muted-foreground">Click to upload images or files</p>
 						<input ref="eventFileInput" type="file" multiple accept="image/*,.pdf,.fig" class="hidden" @change="handleEventFiles" />
 					</div>
 					<div v-if="pendingFiles.length" class="space-y-1 mt-2">
 						<div v-for="(file, i) in pendingFiles" :key="i" class="flex items-center gap-2 text-xs text-foreground bg-muted/30 rounded-lg px-3 py-1.5">
-							<UIcon name="i-heroicons-document" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+							<EIcon name="i-heroicons-document" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
 							<span class="truncate flex-1">{{ file.name }}</span>
 							<button @click.prevent="removeEventFile(i)" class="text-muted-foreground hover:text-destructive flex-shrink-0">
-								<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+								<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 							</button>
 						</div>
 					</div>
@@ -325,12 +325,12 @@
 				<div class="flex justify-end gap-3 w-full">
 					<Button variant="outline" size="sm" @click="showNewEventModal = false">Cancel</Button>
 					<Button size="sm" :disabled="creatingEvent || !newEventForm.title.trim()" @click="handleCreateEvent">
-						<UIcon v-if="creatingEvent" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
+						<EIcon v-if="creatingEvent" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
 						Create Event
 					</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Timeline Generator Wizard -->
 		<ProjectsAITimelineWizard
@@ -341,7 +341,7 @@
 		/>
 
 		<!-- Event Detail Modal -->
-		<UModal v-model="showEventDetail" class="sm:max-w-xl">
+		<EModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="w-full space-y-3">
 					<div class="flex items-center justify-between gap-2 pr-8">
@@ -406,7 +406,7 @@
 			<template #footer v-if="selectedEventFull && !loadingEventDetail">
 				<div class="flex items-center justify-between w-full">
 					<div class="flex items-center gap-1">
-						<UTooltip text="Delete event">
+						<ETooltip text="Delete event">
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -415,7 +415,7 @@
 							>
 								<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 							</Button>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<Button
 						size="sm"
@@ -428,14 +428,14 @@
 					</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Meeting Detail Modal (read-only) -->
 		<ResponsiveModal v-model="showMeetingDetail" size="lg">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<div class="h-7 w-7 rounded-full bg-purple-500/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
+						<EIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
 					</div>
 					<h3 class="text-sm font-bold uppercase tracking-wide">Meeting</h3>
 				</div>
@@ -452,22 +452,22 @@
 
 				<div class="space-y-2">
 					<div v-if="selectedMeeting.scheduled_start" class="flex items-center gap-2 text-sm">
-						<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<EIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground shrink-0" />
 						<span>{{ new Date(selectedMeeting.scheduled_start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) }}</span>
 						<span class="text-muted-foreground">
 							{{ new Date(selectedMeeting.scheduled_start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }}
 						</span>
 					</div>
 					<div v-if="selectedMeeting.duration_minutes" class="flex items-center gap-2 text-sm">
-						<UIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<EIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground shrink-0" />
 						<span>{{ selectedMeeting.duration_minutes }} minutes</span>
 					</div>
 					<div v-if="selectedMeeting.meeting_type" class="flex items-center gap-2 text-sm">
-						<UIcon name="i-heroicons-tag" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<EIcon name="i-heroicons-tag" class="w-4 h-4 text-muted-foreground shrink-0" />
 						<span class="capitalize">{{ selectedMeeting.meeting_type.replace('_', ' ') }}</span>
 					</div>
 					<div v-if="selectedMeeting.invitee_name || selectedMeeting.invitee_email" class="flex items-center gap-2 text-sm">
-						<UIcon name="i-heroicons-user" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<EIcon name="i-heroicons-user" class="w-4 h-4 text-muted-foreground shrink-0" />
 						<span>{{ selectedMeeting.invitee_name || selectedMeeting.invitee_email }}</span>
 					</div>
 				</div>
@@ -478,7 +478,7 @@
 					target="_blank"
 					class="inline-flex items-center gap-2 rounded-lg bg-purple-500 text-white px-4 py-2 text-sm font-medium hover:bg-purple-600 transition-colors"
 				>
-					<UIcon name="i-heroicons-video-camera" class="w-4 h-4" />
+					<EIcon name="i-heroicons-video-camera" class="w-4 h-4" />
 					Join Meeting
 				</a>
 			</div>

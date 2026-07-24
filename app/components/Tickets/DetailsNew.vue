@@ -60,7 +60,7 @@
 		</ClientOnly>
 
 		<!-- Tabs -->
-		<UTabs
+		<ETabs
 			v-model="activeTab"
 			:items="tabItems"
 			class="w-full"
@@ -103,7 +103,7 @@
 
 							<!-- Description -->
 							<div class="mt-4">
-								<UFormGroup label="Description">
+								<EFormGroup label="Description">
 									<div class="max-h-64 overflow-y-auto rounded-lg shadow-[inset_0_2px_4px_rgba(0,0,0,0.04),inset_0_-2px_4px_rgba(0,0,0,0.04)] border border-border/40">
 										<LazyFormTiptap
 											v-if="formRef?.form"
@@ -123,7 +123,7 @@
 										/>
 										<div v-else-if="displayDescription" v-html="displayDescription" class="text-sm w-full ticket__description" />
 									</div>
-								</UFormGroup>
+								</EFormGroup>
 							</div>
 
 							<!-- Comments -->
@@ -202,7 +202,7 @@
 					</div>
 				</div>
 			</template>
-		</UTabs>
+		</ETabs>
 
 		<!-- Modals -->
 		<TicketsModalDelete

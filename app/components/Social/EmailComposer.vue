@@ -566,7 +566,7 @@ async function save() {
         </span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <UButton
+        <EButton
           @click="save"
           :loading="isSubmitting"
           :disabled="!canSubmit"
@@ -578,7 +578,7 @@ async function save() {
               ? isDraft ? 'Create Draft' : 'Create & Schedule'
               : isDraft ? 'Save Draft' : 'Save & Schedule'
           }}
-        </UButton>
+        </EButton>
       </div>
     </header>
 
@@ -590,11 +590,11 @@ async function save() {
     <div v-else-if="fetchErr" class="composer-surface__error">
       <Icon name="lucide:alert-circle" class="w-6 h-6 text-rose-500" />
       <p class="text-sm text-foreground">{{ fetchErr }}</p>
-      <UButton size="sm" variant="soft" @click="emit('close')">Close</UButton>
+      <EButton size="sm" variant="soft" @click="emit('close')">Close</EButton>
     </div>
 
     <div v-else class="composer-surface__body">
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Subject</h2>
@@ -606,14 +606,14 @@ async function save() {
             </span>
           </div>
         </template>
-        <UInput
+        <EInput
           v-model="subject"
           placeholder="What's the email about?"
           size="lg"
         />
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Preview Text</h2>
@@ -625,13 +625,13 @@ async function save() {
             </span>
           </div>
         </template>
-        <UInput
+        <EInput
           v-model="previewText"
           placeholder="Optional — shown next to the subject in the inbox"
         />
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Body</h2>
@@ -658,11 +658,11 @@ async function save() {
           shortcut. No tables or images in body — email clients render them
           inconsistently.
         </p>
-      </UCard>
+      </ECard>
 
       <!-- P4 Item A.2 — Per-target variants. Hidden when targets.length
            is 0 or 1 (variants only deliver value with multi-target). -->
-      <UCard v-if="targets.length > 1">
+      <ECard v-if="targets.length > 1">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -728,7 +728,7 @@ async function save() {
             >
               <div class="space-y-1">
                 <label class="composer-lane__label">Subject</label>
-                <UInput
+                <EInput
                   :model-value="laneSubject(targetKeyForChip(t))"
                   :placeholder="subject || 'Subject (inherits master)'"
                   @update:model-value="setLaneSubject(targetKeyForChip(t), String($event))"
@@ -749,9 +749,9 @@ async function save() {
             </div>
           </div>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Recipients</h2>
@@ -843,7 +843,7 @@ async function save() {
                 </p>
               </div>
               <div v-else class="flex items-center gap-2">
-                <USelect
+                <ESelect
                   v-model="pickerListId"
                   :options="mailingListOptions"
                   option-attribute="label"
@@ -851,7 +851,7 @@ async function save() {
                   placeholder="Pick a mailing list"
                   class="flex-1"
                 />
-                <UButton
+                <EButton
                   size="sm"
                   variant="soft"
                   icon="i-lucide-plus"
@@ -859,7 +859,7 @@ async function save() {
                   @click="addMailingListTarget"
                 >
                   Add
-                </UButton>
+                </EButton>
               </div>
             </div>
 
@@ -898,44 +898,44 @@ async function save() {
                 </label>
               </div>
               <div class="flex justify-end">
-                <UButton
+                <EButton
                   size="sm"
                   variant="soft"
                   icon="i-lucide-plus"
                   @click="addSegmentTarget"
                 >
                   Add segment
-                </UButton>
+                </EButton>
               </div>
             </div>
           </div>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Call to Action</h2>
             <span class="text-xs text-muted-foreground">Optional</span>
           </div>
         </template>
-        <USelect
+        <ESelect
           v-model="cta"
           :options="[{ label: 'No CTA', value: '' }, ...CTA_OPTIONS]"
           option-attribute="label"
           value-attribute="value"
         />
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <h2 class="font-semibold text-gray-900 dark:text-white">Schedule</h2>
         </template>
         <div class="space-y-3">
-          <UInput v-model="scheduledAt" type="datetime-local" />
-          <UCheckbox v-model="isDraft" label="Save as draft (won't send)" />
+          <EInput v-model="scheduledAt" type="datetime-local" />
+          <ECheckbox v-model="isDraft" label="Save as draft (won't send)" />
         </div>
-      </UCard>
+      </ECard>
     </div>
   </section>
 </template>

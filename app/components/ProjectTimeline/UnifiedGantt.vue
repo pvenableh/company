@@ -1233,7 +1233,7 @@ const showUndated = ref(false);
 								class="gantt__overflow"
 								:style="getOverflowStyle(row)!"
 							/>
-							<UTooltip
+							<ETooltip
 								v-if="hasBar(row)"
 								:text="`${row.label}${row.status ? ' — ' + statusLabel(row.status) : ''}${row.startDate ? ' · ' + getFriendlyDate(row.startDate) : ''}${row.endDate && row.endDate !== row.startDate ? ' → ' + getFriendlyDate(row.endDate) : ''}`"
 								:popper="{ placement: 'top', offsetDistance: 6 }"
@@ -1247,7 +1247,7 @@ const showUndated = ref(false);
 									}"
 									@click="handleRowClick(row)"
 								/>
-							</UTooltip>
+							</ETooltip>
 
 							<!-- Milestone diamond (events/tickets without date range) -->
 							<div
@@ -1295,7 +1295,7 @@ const showUndated = ref(false);
 		</div>
 
 		<!-- Event Modal (editable if permitted, read-only otherwise) -->
-		<UModal v-model="showEventDetail" class="sm:max-w-xl">
+		<EModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="w-full space-y-3">
 					<h3 class="text-sm font-bold uppercase tracking-wide pr-8">Event Details</h3>
@@ -1327,14 +1327,14 @@ const showUndated = ref(false);
 			<template #footer v-if="selectedEventFull && !loadingEventDetail">
 				<div class="flex items-center justify-between w-full">
 					<div class="flex items-center gap-1">
-						<UTooltip text="Delete event">
+						<ETooltip text="Delete event">
 							<button
 								class="p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
 								@click="handleDeleteEventFromModal"
 							>
 								<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
 							</button>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<button
 						class="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -1346,7 +1346,7 @@ const showUndated = ref(false);
 					</button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Project Modal (editable if permitted, read-only otherwise) -->
 		<ResponsiveModal v-model="showProjectPreview" size="lg">

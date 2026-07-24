@@ -41,7 +41,7 @@ const handleAction = () => {
 	>
 		<div class="flex items-start gap-3">
 			<div class="flex-shrink-0 mt-0.5">
-				<UIcon
+				<EIcon
 					:name="suggestion.icon"
 					class="w-5 h-5"
 					:class="getPriorityIconClass(suggestion.priority)"

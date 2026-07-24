@@ -348,7 +348,7 @@ onMounted(() => {
 		<!-- Header -->
 		<div class="flex items-center justify-between p-4 border-b border-border/30">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-success" />
+				<EIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-success" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide">Financial Analysis</h3>
 			</div>
 			<div class="flex items-center gap-2">
@@ -358,7 +358,7 @@ onMounted(() => {
 					class="text-xs text-muted-foreground hover:text-foreground transition-colors"
 					title="How are financials calculated?"
 				>
-					<UIcon name="i-heroicons-question-mark-circle" class="w-4 h-4" />
+					<EIcon name="i-heroicons-question-mark-circle" class="w-4 h-4" />
 				</button>
 				<button
 					@click="editingGoals = !editingGoals"
@@ -414,18 +414,18 @@ onMounted(() => {
 		</div>
 
 		<div v-if="isLoading" class="p-8 flex items-center justify-center">
-			<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
+			<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
 		</div>
 
 		<div v-else-if="yearlyActual === 0 && yearlyExpenses === 0" class="p-8 text-center">
-			<UIcon name="i-heroicons-banknotes" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+			<EIcon name="i-heroicons-banknotes" class="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
 			<p class="text-sm font-medium text-foreground">No financial activity yet</p>
 			<p class="text-xs text-muted-foreground mt-1">Create your first invoice to start tracking revenue and expenses.</p>
 			<NuxtLink
 				to="/invoices?new=1"
 				class="inline-flex items-center gap-1.5 mt-4 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
 			>
-				<UIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
+				<EIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
 				Create your first invoice
 			</NuxtLink>
 		</div>

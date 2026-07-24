@@ -1441,8 +1441,8 @@ watch(() => props.clientId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
-							<USkeleton class="h-3.5 flex-1 max-w-[40%]" />
-							<USkeleton class="h-4 w-16 rounded-full" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[40%]" />
+							<ESkeleton class="h-4 w-16 rounded-full" />
 						</div>
 					</div>
 					<div v-else-if="!relatedProjects.length" class="text-sm text-muted-foreground text-center py-10">
@@ -1601,10 +1601,10 @@ watch(() => props.clientId, () => {
 						</div>
 						<div v-if="clientFilesLoading && !clientFiles.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
 							<div v-for="i in skeletonRows(clientFiles.length, 4, 6)" :key="`cf-skel-${i}`" class="ios-card p-3 flex items-center gap-3">
-								<USkeleton class="w-4 h-4 shrink-0" />
+								<ESkeleton class="w-4 h-4 shrink-0" />
 								<div class="flex-1 space-y-1.5">
-									<USkeleton class="h-3.5 w-3/4" />
-									<USkeleton class="h-2.5 w-20" />
+									<ESkeleton class="h-3.5 w-3/4" />
+									<ESkeleton class="h-2.5 w-20" />
 								</div>
 							</div>
 						</div>
@@ -1991,10 +1991,10 @@ watch(() => props.clientId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
-							<USkeleton class="h-3.5 w-24" />
-							<USkeleton class="h-3.5 flex-1 max-w-[20%]" />
-							<USkeleton class="h-4 w-16" />
-							<USkeleton class="h-4 w-14 rounded-full" />
+							<ESkeleton class="h-3.5 w-24" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[20%]" />
+							<ESkeleton class="h-4 w-16" />
+							<ESkeleton class="h-4 w-14 rounded-full" />
 						</div>
 					</div>
 					<div v-else-if="!relatedInvoices.length" class="text-sm text-muted-foreground text-center py-10">
@@ -2089,8 +2089,8 @@ watch(() => props.clientId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-							<USkeleton class="h-3.5 flex-1 max-w-[35%]" />
-							<USkeleton class="h-3.5 w-32 hidden md:block" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[35%]" />
+							<ESkeleton class="h-3.5 w-32 hidden md:block" />
 						</div>
 					</div>
 					<div v-else-if="!relatedChannels.length" class="text-sm text-muted-foreground text-center py-10">

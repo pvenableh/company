@@ -287,7 +287,7 @@ if (!props.compact) {
 <template>
   <div>
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
+      <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground/40" />
     </div>
 
     <template v-else-if="contract">
@@ -296,7 +296,7 @@ if (!props.compact) {
         to="/apps/money?floor=documents&tab=contracts"
         class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
-        <UIcon name="lucide:chevron-left" class="w-3 h-3" />
+        <EIcon name="lucide:chevron-left" class="w-3 h-3" />
         Contracts
       </NuxtLink>
 
@@ -329,7 +329,7 @@ if (!props.compact) {
               :class="mode === 'view' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
               @click="mode = 'view'"
             >
-              <UIcon name="lucide:eye" class="w-3.5 h-3.5 inline -mt-0.5" />
+              <EIcon name="lucide:eye" class="w-3.5 h-3.5 inline -mt-0.5" />
               <span class="ml-1 hidden sm:inline">View</span>
             </button>
             <button
@@ -337,7 +337,7 @@ if (!props.compact) {
               :class="mode === 'edit' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
               @click="mode = 'edit'"
             >
-              <UIcon name="lucide:pencil" class="w-3.5 h-3.5 inline -mt-0.5" />
+              <EIcon name="lucide:pencil" class="w-3.5 h-3.5 inline -mt-0.5" />
               <span class="ml-1 hidden sm:inline">Edit</span>
             </button>
             <button
@@ -345,7 +345,7 @@ if (!props.compact) {
               :class="mode === 'activity' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
               @click="mode = 'activity'"
             >
-              <UIcon name="lucide:history" class="w-3.5 h-3.5 inline -mt-0.5" />
+              <EIcon name="lucide:history" class="w-3.5 h-3.5 inline -mt-0.5" />
               <span class="ml-1 hidden sm:inline">Activity</span>
             </button>
           </div>
@@ -356,7 +356,7 @@ if (!props.compact) {
             :disabled="sendingForSignature"
             @click="sendForSignature"
           >
-            <UIcon
+            <EIcon
               :name="sendingForSignature ? 'lucide:loader-2' : 'lucide:send'"
               class="w-3.5 h-3.5"
               :class="sendingForSignature ? 'animate-spin' : ''"
@@ -375,7 +375,7 @@ if (!props.compact) {
             class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
             @click="showEditModal = true"
           >
-            <UIcon name="lucide:settings-2" class="w-3.5 h-3.5" />
+            <EIcon name="lucide:settings-2" class="w-3.5 h-3.5" />
             <span class="hidden sm:inline">Details</span>
           </button>
         </div>
@@ -406,7 +406,7 @@ if (!props.compact) {
           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted shrink-0"
           @click="copySigningLink"
         >
-          <UIcon name="lucide:copy" class="w-3.5 h-3.5" />
+          <EIcon name="lucide:copy" class="w-3.5 h-3.5" />
           Copy link
         </button>
       </div>
@@ -432,7 +432,7 @@ if (!props.compact) {
             :disabled="billingContract"
             @click="handleBillContract"
           >
-            <UIcon
+            <EIcon
               :name="billingContract ? 'lucide:loader-2' : 'lucide:receipt'"
               class="w-3.5 h-3.5"
               :class="billingContract ? 'animate-spin' : ''"
@@ -441,7 +441,7 @@ if (!props.compact) {
           </button>
         </div>
         <p v-if="billedActionId" class="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-          <UIcon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-success" />
+          <EIcon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-success" />
           Invoice drafted — approve it in AI Activity to send.
         </p>
       </div>
@@ -457,7 +457,7 @@ if (!props.compact) {
           :disabled="savingBlocks"
           @click="saveBlocks"
         >
-          <UIcon
+          <EIcon
             :name="savingBlocks ? 'lucide:loader-2' : 'lucide:save'"
             class="w-3.5 h-3.5"
             :class="savingBlocks ? 'animate-spin' : ''"

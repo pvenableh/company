@@ -17,13 +17,13 @@
 		<!-- Title -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Title *</label>
-			<UInput v-model="form.title" placeholder="Project title" />
+			<EInput v-model="form.title" placeholder="Project title" />
 		</div>
 
 		<!-- Description -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Description</label>
-			<UTextarea v-model="form.description" placeholder="Project description..." :rows="3" />
+			<ETextarea v-model="form.description" placeholder="Project description..." :rows="3" />
 		</div>
 
 		<!-- Client & Service -->
@@ -54,7 +54,7 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div v-if="!isEditing" class="space-y-1">
 				<label class="t-label text-muted-foreground">Status</label>
-				<USelectMenu
+				<ESelectMenu
 					v-model="currentStatus"
 					:options="statusOptions"
 					option-attribute="label"
@@ -63,7 +63,7 @@
 			</div>
 			<div class="space-y-1" :class="{ 'col-span-2': isEditing }">
 				<label class="t-label text-muted-foreground">Template</label>
-				<USelectMenu
+				<ESelectMenu
 					v-model="form.template"
 					:options="templateOptions"
 					option-attribute="label"
@@ -76,11 +76,11 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Start Date</label>
-				<UInput v-model="form.start_date" type="date" />
+				<EInput v-model="form.start_date" type="date" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Due Date</label>
-				<UInput v-model="form.due_date" type="date" />
+				<EInput v-model="form.due_date" type="date" />
 			</div>
 		</div>
 
@@ -88,11 +88,11 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Contract Value</label>
-				<UInput v-model="form.contract_value" type="number" placeholder="0.00" />
+				<EInput v-model="form.contract_value" type="number" placeholder="0.00" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">URL</label>
-				<UInput v-model="form.url" placeholder="https://..." />
+				<EInput v-model="form.url" placeholder="https://..." />
 			</div>
 		</div>
 
@@ -116,7 +116,7 @@
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Hours per Period</label>
-						<UInput v-model="form.retainer_hours_per_period" type="number" placeholder="20" step="0.5" />
+						<EInput v-model="form.retainer_hours_per_period" type="number" placeholder="20" step="0.5" />
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Period</label>
@@ -132,11 +132,11 @@
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Hourly Rate</label>
-						<UInput v-model="form.retainer_hourly_rate" type="number" placeholder="150.00" step="0.01" />
+						<EInput v-model="form.retainer_hourly_rate" type="number" placeholder="150.00" step="0.01" />
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Started</label>
-						<UInput v-model="form.retainer_started_at" type="date" />
+						<EInput v-model="form.retainer_started_at" type="date" />
 					</div>
 				</div>
 				<div class="flex items-start gap-2 pt-1">

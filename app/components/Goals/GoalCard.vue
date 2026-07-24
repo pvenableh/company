@@ -77,23 +77,23 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 		<div class="flex items-start justify-between gap-3 mb-3">
 			<div class="flex items-center gap-2.5 min-w-0">
 				<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" :class="categoryInfo.bg">
-					<UIcon :name="categoryInfo.icon" class="w-4 h-4" :class="categoryInfo.color" />
+					<EIcon :name="categoryInfo.icon" class="w-4 h-4" :class="categoryInfo.color" />
 				</div>
 				<div class="min-w-0">
 					<h3 class="text-sm font-semibold text-foreground truncate">{{ goal.title }}</h3>
 					<p v-if="goal.description" class="text-xs text-muted-foreground line-clamp-1 mt-0.5">{{ goal.description }}</p>
 				</div>
 			</div>
-			<UDropdown :items="[
+			<EDropdown :items="[
 				[{ label: 'Update Progress', icon: 'i-heroicons-arrow-trending-up', click: () => emit('update-progress', goal) }],
 				[{ label: 'Coach me', icon: 'i-heroicons-academic-cap', click: () => emit('coach', goal) }],
 				[{ label: 'Edit', icon: 'i-heroicons-pencil-square', click: () => emit('edit', goal) }],
 				[{ label: 'Delete', icon: 'i-heroicons-trash', click: () => emit('delete', goal) }],
 			]">
 				<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted">
-					<UIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4 text-muted-foreground" />
+					<EIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4 text-muted-foreground" />
 				</button>
-			</UDropdown>
+			</EDropdown>
 		</div>
 
 		<!-- Progress -->
@@ -116,13 +116,13 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 					class="inline-flex items-center gap-1 text-[10px] font-medium tracking-wider px-1.5 py-0.5 rounded-md"
 					:class="[categoryInfo.bg, categoryInfo.color]"
 				>
-					<UIcon :name="categoryInfo.icon" class="w-3 h-3" />
+					<EIcon :name="categoryInfo.icon" class="w-3 h-3" />
 					{{ categoryInfo.label }}
 				</span>
 				<span
 					class="inline-flex items-center gap-1 text-[10px] font-medium tracking-wider px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground"
 				>
-					<UIcon :name="scopeInfo.icon" class="w-3 h-3" />
+					<EIcon :name="scopeInfo.icon" class="w-3 h-3" />
 					{{ scopeInfo.label }}
 				</span>
 			</div>

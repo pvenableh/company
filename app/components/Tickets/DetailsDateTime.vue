@@ -1,11 +1,11 @@
 <template>
-	<UFormGroup label="Due Date">
-		<UInput
+	<EFormGroup label="Due Date">
+		<EInput
 			type="datetime-local"
 			:model-value="localValue"
 			@update:model-value="handleUpdate"
 		/>
-	</UFormGroup>
+	</EFormGroup>
 </template>
 
 <script setup>

@@ -88,7 +88,7 @@ function activityIcon(type: string) {
             <span
               class="absolute -bottom-0.5 -right-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full bg-background p-px ring-2 ring-background"
             >
-              <UIcon
+              <EIcon
                 :name="getSocialPlatformIcon(a.platform)"
                 class="h-full w-full"
               />

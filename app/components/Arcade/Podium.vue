@@ -7,7 +7,7 @@
 			:class="slot.rank === 1 ? 'w-24 sm:w-28' : 'w-20 sm:w-24'"
 		>
 			<!-- Crown for #1 -->
-			<UIcon
+			<EIcon
 				v-if="slot.rank === 1"
 				name="i-heroicons-trophy-solid"
 				class="w-5 h-5 text-warning mb-1 drop-shadow"

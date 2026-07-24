@@ -43,7 +43,7 @@ const explain = 'Uses AI — spends tokens from your balance';
     :aria-label="explain"
     role="img"
   >
-    <UIcon name="i-heroicons-bolt" :class="iconSize" />
+    <EIcon name="i-heroicons-bolt" :class="iconSize" />
     <span v-if="label" class="text-[10px] font-medium uppercase tracking-wider">{{ label }}</span>
   </span>
 </template>

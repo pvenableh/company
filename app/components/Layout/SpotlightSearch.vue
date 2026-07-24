@@ -5,7 +5,7 @@
 				<div class="spotlight-panel">
 					<!-- Search Input -->
 					<div class="spotlight-input-row">
-						<UIcon name="i-heroicons-magnifying-glass" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
+						<EIcon name="i-heroicons-magnifying-glass" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
 						<input
 							ref="inputRef"
 							v-model="query"
@@ -37,7 +37,7 @@
 								@click="navigate(link)"
 								@mouseenter="highlightIndex = i"
 							>
-								<UIcon
+								<EIcon
 									:name="link.icon"
 									class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground"
 								/>

@@ -88,7 +88,7 @@ function relTime(iso: string | null | undefined) {
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Clients</h3>
 			</div>
 			<UiViewLink to="/apps/clients" size="sm">All clients</UiViewLink>
@@ -102,7 +102,7 @@ function relTime(iso: string | null | undefined) {
 		<!-- Empty -->
 		<div v-else-if="!clients.length" class="flex items-center gap-3 py-1">
 			<div class="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
-				<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-muted-foreground/60" />
+				<EIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-muted-foreground/60" />
 			</div>
 			<div>
 				<p class="text-sm text-foreground/80 font-medium">No active clients yet</p>
@@ -127,7 +127,7 @@ function relTime(iso: string | null | undefined) {
 							:alt="client.name"
 							class="w-full h-full object-cover"
 						/>
-						<UIcon v-else name="i-heroicons-building-office" class="w-4 h-4 text-muted-foreground" />
+						<EIcon v-else name="i-heroicons-building-office" class="w-4 h-4 text-muted-foreground" />
 					</div>
 					<p class="text-sm font-medium text-foreground truncate flex-1">{{ client.name }}</p>
 					<ClientsClientRatingBadge :client-id="client.id" size="xs" />

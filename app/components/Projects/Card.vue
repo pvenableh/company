@@ -117,19 +117,19 @@ const clientLabel = computed(
 
 				<!-- Assignees -->
 				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1">
-					<UTooltip
+					<ETooltip
 						v-for="(u, i) in displayUsers"
 						:key="i"
 						:text="getUserFullName(u)"
 					>
-						<UAvatar
+						<EAvatar
 							:src="getAvatarUrl(u)"
 							:alt="getUserFullName(u)"
 							size="2xs"
 							:class="{ 'ring-1 ring-primary/40': isCurrentUser(u) }"
 						/>
-					</UTooltip>
-					<UTooltip
+					</ETooltip>
+					<ETooltip
 						v-if="additionalUsersCount > 0"
 						:text="getAdditionalUsersTooltip"
 					>
@@ -138,7 +138,7 @@ const clientLabel = computed(
 						>
 							+{{ additionalUsersCount }}
 						</div>
-					</UTooltip>
+					</ETooltip>
 				</div>
 			</div>
 
@@ -147,27 +147,27 @@ const clientLabel = computed(
 				v-if="hasCounts"
 				class="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground"
 			>
-				<UTooltip v-if="eventCount > 0" :text="eventCount + ' events'">
+				<ETooltip v-if="eventCount > 0" :text="eventCount + ' events'">
 					<span class="flex items-center gap-0.5">
-						<UIcon name="i-heroicons-clock" class="w-2.5 h-2.5" />
+						<EIcon name="i-heroicons-clock" class="w-2.5 h-2.5" />
 						{{ eventCount }}
 					</span>
-				</UTooltip>
-				<UTooltip v-if="ticketCount > 0" :text="ticketCount + ' tickets'">
+				</ETooltip>
+				<ETooltip v-if="ticketCount > 0" :text="ticketCount + ' tickets'">
 					<span class="flex items-center gap-0.5">
-						<UIcon name="i-heroicons-square-3-stack-3d" class="w-2.5 h-2.5" />
+						<EIcon name="i-heroicons-square-3-stack-3d" class="w-2.5 h-2.5" />
 						{{ ticketCount }}
 					</span>
-				</UTooltip>
-				<UTooltip
+				</ETooltip>
+				<ETooltip
 					v-if="commentCount > 0"
 					:text="commentCount + (commentCount === 1 ? ' Comment' : ' Comments')"
 				>
 					<span class="flex items-center gap-0.5">
-						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
+						<EIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
 						{{ commentCount }}
 					</span>
-				</UTooltip>
+				</ETooltip>
 			</div>
 		</div>
 	</nuxt-link>

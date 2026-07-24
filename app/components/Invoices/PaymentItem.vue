@@ -71,7 +71,7 @@ const methodLabel = computed(() => {
 		<div class="flex justify-between items-start mb-4">
 			<div>
 				<div class="flex items-center gap-2">
-					<UIcon :name="methodIcon" class="w-5 h-5" />
+					<EIcon :name="methodIcon" class="w-5 h-5" />
 					<span class="text-sm font-medium">
 						{{ isRefundRow ? 'Refund' : methodLabel }} on {{ formatDate(payment.date_received || payment.date_created) }}
 					</span>
@@ -79,27 +79,27 @@ const methodLabel = computed(() => {
 				<div v-if="payment.reference" class="text-xs text-gray-500 mt-1">Reference: {{ payment.reference }}</div>
 				<div v-if="isManual && payment.note" class="text-xs text-gray-500 mt-1 italic">{{ payment.note }}</div>
 			</div>
-			<UBadge
+			<EBadge
 				v-if="payment.stripe_status"
 				:color="getStatusColor(payment.stripe_status)"
 				:variant="payment.stripe_status === 'succeeded' ? 'solid' : 'soft'"
 			>
 				{{ statusLabel }}
-			</UBadge>
-			<UBadge
+			</EBadge>
+			<EBadge
 				v-else
 				:color="getStatusColor(payment.status)"
 				:variant="payment.status === 'paid' ? 'solid' : 'soft'"
 			>
 				{{ payment.status }}
-			</UBadge>
+			</EBadge>
 		</div>
 
 		<!-- Payment Amount + Receipt -->
 		<div class="flex justify-between items-center">
 			<div class="text-lg font-medium" :class="{ 'text-muted-foreground': isRefundRow }">{{ displayAmount }}</div>
 			<div class="flex gap-2">
-				<UButton
+				<EButton
 					v-if="payment.receipt_url"
 					icon="i-heroicons-receipt-percent-solid"
 					:to="payment.receipt_url"
@@ -111,7 +111,7 @@ const methodLabel = computed(() => {
 					:ui="{ rounded: 'rounded-full' }"
 				>
 					Receipt
-				</UButton>
+				</EButton>
 			</div>
 		</div>
 

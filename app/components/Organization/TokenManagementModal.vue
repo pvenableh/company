@@ -75,7 +75,7 @@ watch(open, (isOpen) => {
 					<span class="text-sm font-bold text-foreground">{{ pkg.name }}</span>
 					<span class="text-[10px] text-muted-foreground">tokens</span>
 					<span class="text-xs font-semibold text-primary">${{ pkg.price }}</span>
-					<UIcon
+					<EIcon
 						v-if="buyLoading === pkg.id"
 						name="i-heroicons-arrow-path"
 						class="w-3 h-3 text-primary animate-spin mt-0.5"
@@ -97,7 +97,7 @@ watch(open, (isOpen) => {
 			@click="viewDetailedUsage"
 		>
 			View detailed usage and history
-			<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+			<EIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
 		</button>
 	</AppsAppBottomSheet>
 </template>

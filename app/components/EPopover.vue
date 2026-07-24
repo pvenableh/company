@@ -36,7 +36,7 @@ const emit = defineEmits<{
 
 // Support both controlled (`:open`/`v-model:open`) and uncontrolled usage.
 // The previous wrapper bound a computed that always resolved to a boolean, which
-// forced reka-ui into controlled mode — so bare `<UPopover>` usages (e.g. the
+// forced reka-ui into controlled mode — so bare `<EPopover>` usages (e.g. the
 // member budget editor) could never open. Pass `props.open` straight through:
 // when it's `undefined`, reka-ui manages its own open state; we still surface the
 // open/close events for callers that want them.

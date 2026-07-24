@@ -183,7 +183,7 @@ definePageMeta({
 		<!-- View switcher — UTabs is the app-wide universal segmented pill
 		     control (same component the Tasks + CardDesk tabs use). -->
 		<ClientOnly>
-			<UTabs v-model="activeView" :items="projectViewOptions" class="mb-5 w-fit" />
+			<ETabs v-model="activeView" :items="projectViewOptions" class="mb-5 w-fit" />
 		</ClientOnly>
 
 		<!-- Filters -->
@@ -195,7 +195,7 @@ definePageMeta({
 				class="flex-1 min-w-48 rounded-full border bg-background px-3 py-2 text-sm"
 				@input="debouncedSearch"
 			/>
-			<UTabs
+			<ETabs
 				v-model="statusFilter"
 				:items="projectStatusItems"
 				class="w-fit"

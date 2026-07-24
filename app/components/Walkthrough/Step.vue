@@ -167,7 +167,7 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
       <div class="flex items-start justify-between gap-2 mb-2">
         <div class="flex items-center gap-2">
           <span class="w-5 h-5 rounded-md bg-[#00bfff]/15 flex items-center justify-center">
-            <UIcon name="i-heroicons-light-bulb" class="w-3 h-3 text-[#00bfff]" />
+            <EIcon name="i-heroicons-light-bulb" class="w-3 h-3 text-[#00bfff]" />
           </span>
           <h3 class="text-sm font-semibold text-foreground">{{ title }}</h3>
         </div>
@@ -175,7 +175,7 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
           class="p-0.5 rounded-md hover:bg-muted/60 text-muted-foreground shrink-0"
           @click="$emit('skip')"
         >
-          <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+          <EIcon name="i-heroicons-x-mark" class="w-4 h-4" />
         </button>
       </div>
       <p class="text-xs text-muted-foreground leading-relaxed mb-4">{{ description }}</p>
@@ -195,8 +195,8 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
             @click="$emit('next')"
           >
             {{ stepNumber === totalSteps ? 'Done' : 'Next' }}
-            <UIcon v-if="stepNumber < totalSteps" name="i-heroicons-arrow-right" class="w-3 h-3" />
-            <UIcon v-else name="i-heroicons-check" class="w-3 h-3" />
+            <EIcon v-if="stepNumber < totalSteps" name="i-heroicons-arrow-right" class="w-3 h-3" />
+            <EIcon v-else name="i-heroicons-check" class="w-3 h-3" />
           </button>
         </div>
       </div>

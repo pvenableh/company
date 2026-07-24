@@ -250,7 +250,7 @@ function syncScroll() {
 						<span class="mg-color-bar" :style="{ backgroundColor: row.color }" />
 
 						<!-- Type icon with tooltip -->
-						<UTooltip
+						<ETooltip
 							:text="row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : row.type === 'meeting' ? 'Meeting' : row.type === 'invoice' ? 'Invoice' : 'Task'"
 							:popper="{ placement: 'right', offsetDistance: 6 }"
 						>
@@ -274,7 +274,7 @@ function syncScroll() {
 									}"
 								/>
 							</span>
-						</UTooltip>
+						</ETooltip>
 
 						<!-- Label -->
 						<span
@@ -337,7 +337,7 @@ function syncScroll() {
 						:style="{ top: (i * ROW_HEIGHT) + 'px', height: ROW_HEIGHT + 'px' }"
 					>
 						<!-- Bar with tooltip -->
-						<UTooltip
+						<ETooltip
 							v-if="hasBar(row)"
 							:popper="{ placement: 'top', offsetDistance: 6 }"
 						>
@@ -375,7 +375,7 @@ function syncScroll() {
 									</span>
 								</div>
 							</template>
-						</UTooltip>
+						</ETooltip>
 
 						<!-- Due date diamond -->
 						<div
@@ -383,9 +383,9 @@ function syncScroll() {
 							class="absolute top-1/2 -translate-y-1/2"
 							:style="{ left: dateToX(row.dueDate) + 'px' }"
 						>
-							<UTooltip :text="`${row.label} · Due ${getFriendlyDateTwo(row.dueDate)}`">
+							<ETooltip :text="`${row.label} · Due ${getFriendlyDateTwo(row.dueDate)}`">
 								<div class="mg-diamond" :style="{ backgroundColor: row.color }" />
-							</UTooltip>
+							</ETooltip>
 						</div>
 					</div>
 				</div>

@@ -330,7 +330,7 @@ const viewTabs = [
 	<div>
 		<!-- Header -->
 		<div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
-			<UTabs
+			<ETabs
 				:model-value="view"
 				:items="viewTabs"
 				class="w-fit"
@@ -342,7 +342,7 @@ const viewTabs = [
 					:disabled="loadingSuggestions"
 					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-warning/30 text-warning dark:text-warning rounded-full hover:bg-warning/10 transition-colors"
 				>
-					<UIcon v-if="loadingSuggestions" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+					<EIcon v-if="loadingSuggestions" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 					<EarnestIcon v-else class="w-4 h-4" />
 					Earnest Suggest
 				</button>
@@ -350,7 +350,7 @@ const viewTabs = [
 					@click="openNewGoal"
 					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
 				>
-					<UIcon name="i-heroicons-plus" class="w-4 h-4" />
+					<EIcon name="i-heroicons-plus" class="w-4 h-4" />
 					New Goal
 				</button>
 			</div>
@@ -435,7 +435,7 @@ const viewTabs = [
 									@click="adoptSuggestion(suggestion)"
 									class="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-full opacity-80 group-hover:opacity-100 transition-opacity"
 								>
-									<UIcon name="i-heroicons-plus" class="w-3 h-3" />
+									<EIcon name="i-heroicons-plus" class="w-3 h-3" />
 									Add
 								</button>
 							</div>
@@ -480,7 +480,7 @@ const viewTabs = [
 				</AccentCard>
 
 				<!-- Scope filter — universal UTabs segmented control -->
-				<UTabs
+				<ETabs
 					:model-value="scopeFilter"
 					:items="scopeTabs"
 					class="w-fit mb-3"
@@ -518,13 +518,13 @@ const viewTabs = [
 
 			<!-- Loading -->
 			<div v-if="isLoading && !goals.length" class="flex items-center justify-center py-20">
-				<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
+				<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
 			</div>
 
 			<!-- Empty state -->
 			<div v-else-if="!goals.length" class="text-center py-20">
 				<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-flag" class="w-7 h-7 text-primary" />
+					<EIcon name="i-heroicons-flag" class="w-7 h-7 text-primary" />
 				</div>
 				<h3 class="text-base font-semibold mb-1">No goals yet</h3>
 				<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">Create your first goal to start tracking your progress. Goals help Earnest provide personalized suggestions.</p>
@@ -635,7 +635,7 @@ const viewTabs = [
 			<div v-if="coachGoal" class="space-y-4">
 				<!-- Loading -->
 				<div v-if="coachLoading" class="py-8 text-center">
-					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
+					<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
 					<p class="text-xs text-muted-foreground">Reading your data…</p>
 				</div>
 
@@ -662,7 +662,7 @@ const viewTabs = [
 
 					<div v-if="coachData.next_step" class="rounded-md border border-primary/20 bg-primary/5 p-3">
 						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary font-semibold mb-1">
-							<UIcon name="i-heroicons-arrow-right-circle" class="w-3 h-3" />
+							<EIcon name="i-heroicons-arrow-right-circle" class="w-3 h-3" />
 							Next step
 						</div>
 						<p class="text-sm leading-relaxed">{{ coachData.next_step }}</p>

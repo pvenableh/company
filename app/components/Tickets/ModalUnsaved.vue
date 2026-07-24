@@ -1,5 +1,5 @@
 <template>
-	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
+	<EModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
 		<template #header>
 			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-semibold">Unsaved Changes</h3>
@@ -10,11 +10,11 @@
 
 		<template #footer>
 			<div class="flex justify-end gap-2">
-				<UButton variant="soft" color="gray" @click="handleDiscard">Discard</UButton>
-				<UButton color="primary" :loading="isLoading" @click="handleSave">Save</UButton>
+				<EButton variant="soft" color="gray" @click="handleDiscard">Discard</EButton>
+				<EButton color="primary" :loading="isLoading" @click="handleSave">Save</EButton>
 			</div>
 		</template>
-	</UModal>
+	</EModal>
 </template>
 
 <script setup>

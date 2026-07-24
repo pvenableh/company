@@ -5,20 +5,20 @@
 		<form @submit.prevent="handleSubmit" class="space-y-4">
 			<div class="w-full flex flex-row">
 				<div class="w-1/2 pr-2">
-					<UFormGroup label="Date" required class="w-full">
-						<UPopover class="w-full">
-							<UInput :model-value="formatDate(form.start_time)" readonly placeholder="Select date" class="w-full" />
+					<EFormGroup label="Date" required class="w-full">
+						<EPopover class="w-full">
+							<EInput :model-value="formatDate(form.start_time)" readonly placeholder="Select date" class="w-full" />
 							<template #panel>
 								<Calendar
 									:model-value="calendarValue"
 									@update:model-value="handleCalendarSelect"
 								/>
 							</template>
-						</UPopover>
-					</UFormGroup>
+						</EPopover>
+					</EFormGroup>
 
-					<!-- <UFormGroup label="Status">
-					<USelect
+					<!-- <EFormGroup label="Status">
+					<ESelect
 						v-model="form.status"
 						:options="[
 							{ value: 'pending', label: 'Pending' },
@@ -27,39 +27,39 @@
 						]"
 						:disabled="isLoading"
 					/>
-				</UFormGroup> -->
+				</EFormGroup> -->
 				</div>
 				<div class="w-1/2 flex flex-row items-center justify-between">
-					<UFormGroup label="Start" required class="w-full pr-2">
-						<USelect
+					<EFormGroup label="Start" required class="w-full pr-2">
+						<ESelect
 							v-model="startTime"
 							:options="timeOptions"
 							placeholder="Select time"
 							@update:model-value="(time) => updateTime('start', time)"
 							class="w-full"
 						/>
-					</UFormGroup>
+					</EFormGroup>
 
-					<UFormGroup label="End" required class="w-full">
-						<USelect
+					<EFormGroup label="End" required class="w-full">
+						<ESelect
 							v-model="endTime"
 							:options="endTimeOptions"
 							placeholder="Select time"
 							@update:model-value="(time) => updateTime('end', time)"
 							class="w-full"
 						/>
-					</UFormGroup>
+					</EFormGroup>
 				</div>
 			</div>
-			<UFormGroup label="Title" required>
-				<UInput v-model="form.title" placeholder="Appointment title" :disabled="isLoading" />
-			</UFormGroup>
-			<UFormGroup label="Description">
+			<EFormGroup label="Title" required>
+				<EInput v-model="form.title" placeholder="Appointment title" :disabled="isLoading" />
+			</EFormGroup>
+			<EFormGroup label="Description">
 				<LazyFormTiptap v-model="form.description" placeholder="Add description" :disabled="isLoading" rows="3" />
-			</UFormGroup>
+			</EFormGroup>
 
-			<UFormGroup label="Attendees">
-				<USelectMenu
+			<EFormGroup label="Attendees">
+				<ESelectMenu
 					v-model="selectedAttendee"
 					:options="availableUsers"
 					placeholder="Select users..."
@@ -69,36 +69,36 @@
 				>
 					<template #label>
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
+							<EIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
 							<span class="text-gray-500">{{ selectedAttendee ? selectedAttendee.label : 'Add attendee...' }}</span>
 						</div>
 					</template>
 
 					<template #option="{ option: user }">
 						<div class="flex items-center gap-2 py-1">
-							<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
+							<EAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
 							<div class="flex flex-col">
 								<span class="font-medium">{{ user.label }}</span>
 								<span class="text-xs text-gray-500">{{ user.email }}</span>
 							</div>
 						</div>
 					</template>
-				</USelectMenu>
+				</ESelectMenu>
 
 				<div v-if="form.attendees.length" class="flex flex-wrap flex-row gap-2 mt-2">
-					<UBadge
+					<EBadge
 						v-for="attendee in form.attendees"
 						:key="attendee.directus_users_id.id"
 						:color="isCurrentUserBadge(attendee.directus_users_id.id) ? 'primary' : 'gray'"
 						class="flex items-center gap-2"
 					>
-						<UAvatar
+						<EAvatar
 							:src="getAvatarUrl(attendee.directus_users_id)"
 							:alt="getUserFullName(attendee.directus_users_id)"
 							size="2xs"
 						/>
 						{{ getUserFullName(attendee.directus_users_id) }}
-						<UButton
+						<EButton
 							color="white"
 							variant="ghost"
 							icon="i-heroicons-x-mark-20-solid"
@@ -107,15 +107,15 @@
 							:ui="{ rounded: 'rounded-full' }"
 							@click="removeAttendee(attendee.directus_users_id.id)"
 						/>
-					</UBadge>
+					</EBadge>
 				</div>
-			</UFormGroup>
+			</EFormGroup>
 
 			<div class="flex justify-end gap-2 pt-4">
-				<UButton color="gray" variant="soft" @click="$emit('cancelled')" :disabled="isLoading">Cancel</UButton>
-				<UButton type="submit" color="primary" :loading="isLoading">
+				<EButton color="gray" variant="soft" @click="$emit('cancelled')" :disabled="isLoading">Cancel</EButton>
+				<EButton type="submit" color="primary" :loading="isLoading">
 					{{ appointment ? 'Update' : 'Create' }}
-				</UButton>
+				</EButton>
 			</div>
 		</form>
 	</div>

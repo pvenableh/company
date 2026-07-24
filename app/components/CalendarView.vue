@@ -3,7 +3,7 @@
 		<!-- Calendar Header -->
 		<div class="flex items-center justify-between p-4 border-b border-border">
 			<button class="p-1.5 rounded-full hover:bg-muted transition-colors" @click="prevMonth">
-				<UIcon name="i-heroicons-chevron-left" class="w-5 h-5 text-muted-foreground" />
+				<EIcon name="i-heroicons-chevron-left" class="w-5 h-5 text-muted-foreground" />
 			</button>
 			<h2 class="text-sm font-semibold tracking-wide">
 				{{ monthLabel }}
@@ -16,7 +16,7 @@
 					Today
 				</button>
 				<button class="p-1.5 rounded-full hover:bg-muted transition-colors" @click="nextMonth">
-					<UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-muted-foreground" />
+					<EIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-muted-foreground" />
 				</button>
 			</div>
 		</div>

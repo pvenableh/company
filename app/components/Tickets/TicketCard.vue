@@ -80,29 +80,29 @@ if (props.ticket.category === 'Completed') {
 		:data-id="ticket.id"
 	>
 		<div v-if="alert" class="w-full bg-destructive p-2 text-white uppercase text-xs">
-			<UIcon name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
+			<EIcon name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
 			Due {{ getRelativeTime(ticket.due_date) }}
 		</div>
 		<div class="pt-4 relative w-full flex flex-col items-start justify-start px-4 bg-card">
 			<div class="absolute right-4 top-4">
-				<UIcon
+				<EIcon
 					v-if="!minimize && ticket.category === 'Completed'"
 					name="i-heroicons-arrows-pointing-in"
 					class="cursor-pointer mr-2"
 					@click.prevent="minimize = !minimize"
 				/>
-				<UIcon
+				<EIcon
 					v-else-if="minimize && ticket.category === 'Completed'"
 					name="i-heroicons-arrows-pointing-out"
 					class="cursor-pointer mr-2"
 					@click.prevent="minimize = !minimize"
 				/>
-				<UIcon v-if="editable" name="i-heroicons-lock-open" class="cursor-pointer mr-2" @click.prevent="updateticket" />
-				<UIcon v-else name="i-heroicons-lock-closed" class="cursor-pointer mr-2" @click.prevent="makeEditable" />
+				<EIcon v-if="editable" name="i-heroicons-lock-open" class="cursor-pointer mr-2" @click.prevent="updateticket" />
+				<EIcon v-else name="i-heroicons-lock-closed" class="cursor-pointer mr-2" @click.prevent="makeEditable" />
 
 				<!-- @click.prevent="openModal(ticket, 'update')" -->
-				<UPopover mode="hover" :popper="{ placement: 'bottom', arrow: true }" class="inline-block mr-[4px] -mb-[5px]">
-					<UIcon name="i-heroicons-information-circle" />
+				<EPopover mode="hover" :popper="{ placement: 'bottom', arrow: true }" class="inline-block mr-[4px] -mb-[5px]">
+					<EIcon name="i-heroicons-information-circle" />
 					<template #panel>
 						<div class="p-4 ticket-card__created">
 							<p v-if="ticket.date_updated" class="mb-1">
@@ -113,7 +113,7 @@ if (props.ticket.category === 'Completed') {
 							</p>
 						</div>
 					</template>
-				</UPopover>
+				</EPopover>
 			</div>
 
 			<div class="w-full flex flex-row items-center justify-between font-bold ticket-card__due">
@@ -122,15 +122,15 @@ if (props.ticket.category === 'Completed') {
 					class="uppercase leading-4"
 					:class="{ 'alert font-bold': alert }"
 				>
-					<UIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
+					<EIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
 					Due: {{ format(ticket.due_date, 'ddd MMM D @ h:mmA') }}
 					<!-- <span class="block italic font-bold"></span> -->
-					<UIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
+					<EIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
 				</h5>
 				<h5 v-if="ticket.category === 'Completed'" class="uppercase">
 					Completed on {{ getFriendlyDateThree(ticket.date_updated) }}
 				</h5>
-				<UAvatar
+				<EAvatar
 					v-if="ticket.category !== 'Completed' && !ticket.due_date"
 					icon="i-heroicons-calendar-days"
 					size="xs"
@@ -141,12 +141,12 @@ if (props.ticket.category === 'Completed') {
 				<p class="uppercase inline-block font-bold tracking-wide" :class="slugify(ticket.category)">
 					{{ ticket.category }}
 				</p>
-				<!-- <UIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" /> -->
+				<!-- <EIcon v-if="alert" name="i-heroicons-exclamation-triangle-solid" /> -->
 			</div>
 			<!-- <h3 class="uppercase relative flex items-center justify-center ticket-card__title">
 				{{ state.title }}
 			</h3> -->
-			<UInput
+			<EInput
 				v-model="state.title"
 				class="w-full uppercase relative flex items-center justify-center ticket-card__title p-0 border-none outline-0 shadow-none"
 				:disabled="!editable"
@@ -167,7 +167,7 @@ if (props.ticket.category === 'Completed') {
 			<CommentsContainer :item="ticket.id" collection="tickets" />
 		</div> -->
 		<ticketsticketCardFooter :item="ticket.id" collection="tickets" :comments-total="ticket.comments.length" />
-		<!-- <UModal v-model="isOpen">
+		<!-- <EModal v-model="isOpen">
 			<div class="p-4 rounded-none">
 				<img
 					:src="`https://admin.1033lenox.com/assets/${state.file}?key=large`"
@@ -176,7 +176,7 @@ if (props.ticket.category === 'Completed') {
 					class=""
 				/>
 			</div>
-		</UModal>-->
+		</EModal>-->
 	</div>
 </template>
 <style>

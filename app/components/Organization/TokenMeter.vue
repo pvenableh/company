@@ -75,7 +75,7 @@
 
 		<!-- Depleted state -->
 		<div v-if="usagePercent >= 100" class="flex items-center gap-2 p-3 rounded-lg bg-destructive/10">
-			<UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-destructive flex-shrink-0" />
+			<EIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-destructive flex-shrink-0" />
 			<p class="text-xs text-destructive">
 				Token balance depleted. <button class="underline font-medium" @click="$emit('topup')">Purchase more tokens</button> to continue using AI features.
 			</p>

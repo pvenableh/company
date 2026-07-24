@@ -23,7 +23,7 @@
 					class="flex items-center space-x-2 cursor-pointer"
 					@click="filterByAssignedTo = !filterByAssignedTo"
 				>
-					<UToggle :model-value="filterByAssignedTo" />
+					<EToggle :model-value="filterByAssignedTo" />
 					<span
 						class="text-[10px] uppercase select-none whitespace-nowrap"
 						:class="filterByAssignedTo ? 'text-foreground font-semibold' : 'text-muted-foreground'"
@@ -31,7 +31,7 @@
 						{{ filterByAssignedTo ? 'My Leads' : 'All Leads' }}
 					</span>
 				</button>
-				<UInput
+				<EInput
 					v-model="searchQuery"
 					icon="i-heroicons-magnifying-glass"
 					placeholder="Search..."
@@ -46,7 +46,7 @@
 					<option value="">All tags</option>
 					<option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
 				</select>
-				<UButton
+				<EButton
 					icon="i-heroicons-archive-box"
 					size="xs"
 					:color="showArchived ? 'primary' : 'gray'"
@@ -55,9 +55,9 @@
 					class="uppercase text-[10px] border border-border/60"
 				>
 					{{ showArchived ? 'View Board' : 'Archived' }}
-				</UButton>
+				</EButton>
 				<transition name="fade">
-					<UIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
+					<EIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
 				</transition>
 			</div>
 		</div>
@@ -67,7 +67,7 @@
 			<div class="bg-card border border-border rounded-2xl p-6">
 				<div class="flex items-center justify-between mb-6">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
-						<UIcon name="i-heroicons-archive-box" class="w-4 h-4" />
+						<EIcon name="i-heroicons-archive-box" class="w-4 h-4" />
 						Archived & Junk Leads
 						<span v-if="archivedLeads.length" class="text-xs font-normal text-muted-foreground">({{ archivedLeads.length }})</span>
 					</h3>
@@ -78,7 +78,7 @@
 				</div>
 
 				<div v-else-if="!archivedLeads.length" class="text-center py-12 text-muted-foreground">
-					<UIcon name="i-heroicons-archive-box" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+					<EIcon name="i-heroicons-archive-box" class="w-8 h-8 mx-auto mb-2 opacity-40" />
 					<p class="text-sm">No archived or junk leads</p>
 				</div>
 
@@ -105,21 +105,21 @@
 									Source: {{ lead.source }}
 								</span>
 								<span v-if="lead.date_updated" class="flex items-center gap-1">
-									<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+									<EIcon name="i-heroicons-clock" class="w-3 h-3" />
 									{{ new Date(lead.date_updated).toLocaleDateString() }}
 								</span>
 							</div>
 						</div>
 						<div class="flex items-center gap-1 ml-3">
-							<UTooltip text="Restore to Pipeline" :popper="{ arrow: true }">
-								<UButton
+							<ETooltip text="Restore to Pipeline" :popper="{ arrow: true }">
+								<EButton
 									icon="i-heroicons-arrow-uturn-left"
 									size="xs"
 									color="gray"
 									variant="soft"
 									@click="handleRestore(lead.id)"
 								/>
-							</UTooltip>
+							</ETooltip>
 						</div>
 					</div>
 				</div>
@@ -144,11 +144,11 @@
 			v-if="isMobile"
 			class="flex items-center justify-between mb-4 mx-4 rounded-xl bg-card border border-border px-4 gap-4 py-3 text-foreground shadow-sm"
 		>
-			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5 cursor-pointer" @click="previousColumn" />
+			<EIcon name="i-heroicons-chevron-left" class="w-5 h-5 cursor-pointer" @click="previousColumn" />
 			<h3 class="text-sm font-medium uppercase tracking-wide">
 				{{ columns.find(col => col.id === activeColumn)?.name }}
 			</h3>
-			<UIcon name="i-heroicons-chevron-right" class="w-5 h-5 cursor-pointer" @click="nextColumn" />
+			<EIcon name="i-heroicons-chevron-right" class="w-5 h-5 cursor-pointer" @click="nextColumn" />
 		</div>
 
 		<!-- Main Board -->
@@ -186,7 +186,7 @@
 					class="min-h-[90svh] p-2 bg-muted"
 				>
 					<div class="space-y-3">
-						<USkeleton v-for="n in 4" :key="n" class="h-28 mb-4 w-full" />
+						<ESkeleton v-for="n in 4" :key="n" class="h-28 mb-4 w-full" />
 					</div>
 				</div>
 
@@ -231,7 +231,7 @@
 		<!-- Empty state -->
 		<div v-if="!isLoading && hasNoLeads" class="flex items-center justify-center min-h-[60vh]">
 			<div class="text-center max-w-sm">
-				<UIcon name="i-heroicons-funnel" class="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
+				<EIcon name="i-heroicons-funnel" class="w-14 h-14 mx-auto mb-4 text-muted-foreground/30" />
 				<p class="text-base font-medium text-foreground">No leads in pipeline</p>
 				<p class="text-sm text-muted-foreground mt-1.5">Create your first lead to get started.</p>
 			</div>

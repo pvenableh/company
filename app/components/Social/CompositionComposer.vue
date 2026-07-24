@@ -512,7 +512,7 @@ async function save() {
         </button>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <UButton
+        <EButton
           @click="save"
           :loading="isSubmitting"
           :disabled="!canSubmit"
@@ -524,7 +524,7 @@ async function save() {
               ? isDraft ? 'Create Draft' : (socialPublishingEnabled ? 'Create & Schedule' : 'Create & Plan')
               : isDraft ? 'Save Draft' : (socialPublishingEnabled ? 'Save & Schedule' : 'Save & Plan')
           }}
-        </UButton>
+        </EButton>
       </div>
     </header>
 
@@ -536,7 +536,7 @@ async function save() {
     <div v-else-if="fetchErr" class="composer-surface__error">
       <Icon name="lucide:alert-circle" class="w-6 h-6 text-rose-500" />
       <p class="text-sm text-foreground">{{ fetchErr }}</p>
-      <UButton size="sm" variant="soft" @click="emit('close')">Close</UButton>
+      <EButton size="sm" variant="soft" @click="emit('close')">Close</EButton>
     </div>
 
     <div v-else class="composer-surface__body">
@@ -551,7 +551,7 @@ async function save() {
         @request-draft="handleRequestDraft"
       />
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-foreground">Media</h2>
@@ -607,15 +607,15 @@ async function save() {
         </div>
 
         <div class="flex gap-2">
-          <UButton variant="soft" icon="i-lucide-folder-open" @click="showFilePicker = true">
+          <EButton variant="soft" icon="i-lucide-folder-open" @click="showFilePicker = true">
             Choose from Files
-          </UButton>
-          <UInput v-model="mediaInput" placeholder="…or paste a media URL" class="flex-1" @keyup.enter="addMedia" />
-          <UButton variant="ghost" @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()" />
+          </EButton>
+          <EInput v-model="mediaInput" placeholder="…or paste a media URL" class="flex-1" @keyup.enter="addMedia" />
+          <EButton variant="ghost" @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()" />
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-foreground">Add a Link</h2>
@@ -623,12 +623,12 @@ async function save() {
           </div>
         </template>
         <div class="space-y-3">
-          <UInput v-model="ctaUrl" type="url" placeholder="https://example.com/landing-page" />
-          <UInput v-model="ctaLabel" placeholder='Short label (e.g. "Visit Website")' />
+          <EInput v-model="ctaUrl" type="url" placeholder="https://example.com/landing-page" />
+          <EInput v-model="ctaLabel" placeholder='Short label (e.g. "Visit Website")' />
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard v-if="linkedinSelected">
+      <ECard v-if="linkedinSelected">
         <template #header>
           <div class="flex items-center gap-2">
             <Icon name="logos:linkedin-icon" class="w-4 h-4 shrink-0" />
@@ -636,7 +636,7 @@ async function save() {
           </div>
         </template>
         <div class="flex gap-2">
-          <UButton
+          <EButton
             :variant="linkedInVisibility === 'PUBLIC' ? 'solid' : 'soft'"
             :color="linkedInVisibility === 'PUBLIC' ? 'primary' : 'gray'"
             size="sm"
@@ -644,8 +644,8 @@ async function save() {
             @click="linkedInVisibility = 'PUBLIC'"
           >
             Public
-          </UButton>
-          <UButton
+          </EButton>
+          <EButton
             :variant="linkedInVisibility === 'CONNECTIONS' ? 'solid' : 'soft'"
             :color="linkedInVisibility === 'CONNECTIONS' ? 'primary' : 'gray'"
             size="sm"
@@ -653,17 +653,17 @@ async function save() {
             @click="linkedInVisibility = 'CONNECTIONS'"
           >
             Connections Only
-          </UButton>
+          </EButton>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-foreground">Post To</h2>
-            <UBadge v-if="selectedAccounts.length > 0" color="primary" variant="subtle">
+            <EBadge v-if="selectedAccounts.length > 0" color="primary" variant="subtle">
               {{ selectedAccounts.length }} selected
-            </UBadge>
+            </EBadge>
           </div>
         </template>
         <div v-if="accounts.length === 0" class="text-center py-4">
@@ -685,11 +685,11 @@ async function save() {
                     : 'hover:bg-muted'
                 "
               >
-                <UCheckbox
+                <ECheckbox
                   :model-value="selectedAccounts.includes(account.id)"
                   @update:model-value="toggleAccount(account.id)"
                 />
-                <UAvatar
+                <EAvatar
                   :src="account.profile_picture_url || undefined"
                   :alt="account.account_name"
                   :icon="account.profile_picture_url ? undefined : getSocialPlatformIcon(account.platform)"
@@ -707,15 +707,15 @@ async function save() {
             </div>
           </div>
         </div>
-      </UCard>
+      </ECard>
 
-      <UCard>
+      <ECard>
         <template #header>
           <h2 class="font-semibold text-foreground">{{ socialPublishingEnabled ? 'Schedule' : 'Plan date' }}</h2>
         </template>
         <div class="space-y-3">
-          <UInput v-model="scheduledAt" type="datetime-local" />
-          <UCheckbox
+          <EInput v-model="scheduledAt" type="datetime-local" />
+          <ECheckbox
             v-model="isDraft"
             :label="socialPublishingEnabled ? 'Save as draft (won\'t auto-publish)' : 'Save as draft (keep off the calendar)'"
           />
@@ -723,7 +723,7 @@ async function save() {
             Live publishing is off — this date is an Earnest-only plan, not an auto-publish time.
           </p>
         </div>
-      </UCard>
+      </ECard>
 
       <div v-if="selectedAccountDetails.length > 0">
         <h2 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Preview</h2>

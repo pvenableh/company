@@ -156,26 +156,26 @@ const send = async () => {
 				@click="close"
 				class="p-0.5 rounded hover:bg-muted/40 transition-colors text-muted-foreground"
 			>
-				<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+				<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 			</button>
 		</div>
 
 		<div class="space-y-2.5">
-			<UFormGroup label="Name">
-				<UInput v-model="form.name" placeholder="Recipient name" size="sm" />
-			</UFormGroup>
-			<UFormGroup label="Email">
-				<UInput v-model="form.email" type="email" placeholder="guest@example.com" size="sm" />
-			</UFormGroup>
-			<UFormGroup label="Phone">
-				<UInput v-model="form.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
-			</UFormGroup>
-			<UFormGroup label="Send via">
-				<USelect v-model="form.method" :options="methodOptions" size="sm" />
-			</UFormGroup>
-			<UFormGroup label="Message (optional)">
-				<UTextarea v-model="form.customMessage" rows="2" size="sm" placeholder="Add a personal note..." />
-			</UFormGroup>
+			<EFormGroup label="Name">
+				<EInput v-model="form.name" placeholder="Recipient name" size="sm" />
+			</EFormGroup>
+			<EFormGroup label="Email">
+				<EInput v-model="form.email" type="email" placeholder="guest@example.com" size="sm" />
+			</EFormGroup>
+			<EFormGroup label="Phone">
+				<EInput v-model="form.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
+			</EFormGroup>
+			<EFormGroup label="Send via">
+				<ESelect v-model="form.method" :options="methodOptions" size="sm" />
+			</EFormGroup>
+			<EFormGroup label="Message (optional)">
+				<ETextarea v-model="form.customMessage" rows="2" size="sm" placeholder="Add a personal note..." />
+			</EFormGroup>
 		</div>
 
 		<div class="flex justify-end gap-2">
@@ -185,15 +185,15 @@ const send = async () => {
 				@click="send"
 				class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold transition-colors ios-press disabled:opacity-50"
 			>
-				<UIcon v-if="sending" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-				<UIcon v-else name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
+				<EIcon v-if="sending" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+				<EIcon v-else name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
 				{{ sending ? 'Sending…' : 'Send' }}
 			</button>
 		</div>
 	</div>
 
 	<!-- Popover mode: trigger via slot, content floats. Used by DayTimeline. -->
-	<UPopover
+	<EPopover
 		v-else
 		v-model:open="open"
 		:popper="{ placement: 'bottom-end', offsetDistance: 6 }"
@@ -207,21 +207,21 @@ const send = async () => {
 				</div>
 
 				<div class="space-y-2.5">
-					<UFormGroup label="Name">
-						<UInput v-model="form.name" placeholder="Recipient name" size="sm" />
-					</UFormGroup>
-					<UFormGroup label="Email">
-						<UInput v-model="form.email" type="email" placeholder="guest@example.com" size="sm" />
-					</UFormGroup>
-					<UFormGroup label="Phone">
-						<UInput v-model="form.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
-					</UFormGroup>
-					<UFormGroup label="Send via">
-						<USelect v-model="form.method" :options="methodOptions" size="sm" />
-					</UFormGroup>
-					<UFormGroup label="Message (optional)">
-						<UTextarea v-model="form.customMessage" rows="2" size="sm" placeholder="Add a personal note..." />
-					</UFormGroup>
+					<EFormGroup label="Name">
+						<EInput v-model="form.name" placeholder="Recipient name" size="sm" />
+					</EFormGroup>
+					<EFormGroup label="Email">
+						<EInput v-model="form.email" type="email" placeholder="guest@example.com" size="sm" />
+					</EFormGroup>
+					<EFormGroup label="Phone">
+						<EInput v-model="form.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
+					</EFormGroup>
+					<EFormGroup label="Send via">
+						<ESelect v-model="form.method" :options="methodOptions" size="sm" />
+					</EFormGroup>
+					<EFormGroup label="Message (optional)">
+						<ETextarea v-model="form.customMessage" rows="2" size="sm" placeholder="Add a personal note..." />
+					</EFormGroup>
 				</div>
 
 				<div class="flex justify-end gap-2 pt-1">
@@ -238,12 +238,12 @@ const send = async () => {
 						@click="send"
 						class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[12px] font-semibold transition-colors ios-press disabled:opacity-50"
 					>
-						<UIcon v-if="sending" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-						<UIcon v-else name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
+						<EIcon v-if="sending" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<EIcon v-else name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
 						{{ sending ? 'Sending…' : 'Send' }}
 					</button>
 				</div>
 			</div>
 		</template>
-	</UPopover>
+	</EPopover>
 </template>

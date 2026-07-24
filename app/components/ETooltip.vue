@@ -3,9 +3,9 @@
  * UTooltip - NuxtUI-compatible tooltip wrapper for shadcn-vue Tooltip
  *
  * Usage:
- *   <UTooltip text="Help text">
- *     <UButton>Hover me</UButton>
- *   </UTooltip>
+ *   <ETooltip text="Help text">
+ *     <EButton>Hover me</EButton>
+ *   </ETooltip>
  */
 
 import {

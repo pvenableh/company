@@ -89,7 +89,7 @@ function saveContact() {
 		<div class="bg-white dark:bg-gray-800 border-b border-border">
 			<div class="max-w-3xl mx-auto px-4 py-6">
 				<div class="flex items-center gap-4">
-					<UAvatar :src="avatarSrc" :alt="hostName || 'Host'" size="lg" />
+					<EAvatar :src="avatarSrc" :alt="hostName || 'Host'" size="lg" />
 					<div class="min-w-0 flex-1">
 						<template v-if="loading && !host">
 							<div class="h-3 w-32 rounded bg-muted animate-pulse mb-2" />
@@ -120,7 +120,7 @@ function saveContact() {
 							aria-label="View digital card"
 							class="size-10 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center justify-center"
 						>
-							<UIcon name="i-heroicons-identification" class="w-5 h-5" />
+							<EIcon name="i-heroicons-identification" class="w-5 h-5" />
 						</a>
 						<button
 							type="button"
@@ -129,7 +129,7 @@ function saveContact() {
 							class="size-10 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center"
 							@click="saveContact"
 						>
-							<UIcon name="i-heroicons-user-plus" class="w-5 h-5" />
+							<EIcon name="i-heroicons-user-plus" class="w-5 h-5" />
 						</button>
 					</div>
 				</div>

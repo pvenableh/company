@@ -88,7 +88,7 @@ function goToDemo() {
 </script>
 
 <template>
-	<UModal v-model="isOpen" :ui="{ width: 'max-w-md' }">
+	<EModal v-model="isOpen" :ui="{ width: 'max-w-md' }">
 		<div class="p-6">
 			<div class="flex items-center gap-3 mb-5">
 				<div
@@ -228,5 +228,5 @@ function goToDemo() {
 				Close
 			</button>
 		</div>
-	</UModal>
+	</EModal>
 </template>

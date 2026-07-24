@@ -172,7 +172,7 @@ function openCompose() {
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <USelectMenu
+      <ESelectMenu
         v-model="selectedClientId"
         :options="[
           { label: 'All clients', value: null },
@@ -184,7 +184,7 @@ function openCompose() {
         placeholder="Filter by contact"
         class="w-40"
       />
-      <USelectMenu
+      <ESelectMenu
         v-model="selectedPlatform"
         :options="[
           { label: 'All Platforms', value: null },
@@ -196,7 +196,7 @@ function openCompose() {
         placeholder="Platform"
         class="w-36"
       />
-      <USelectMenu
+      <ESelectMenu
         v-model="selectedStatus"
         :options="[
           { label: 'All Status', value: null },
@@ -229,17 +229,17 @@ function openCompose() {
       </div>
     </div>
 
-    <UCard class="overflow-hidden">
+    <ECard class="overflow-hidden">
       <template #header>
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <UButton variant="ghost" icon="i-lucide-chevron-left" size="sm" @click="previousMonth" />
+            <EButton variant="ghost" icon="i-lucide-chevron-left" size="sm" @click="previousMonth" />
             <h2 class="text-lg font-semibold text-foreground min-w-[180px] text-center">
               {{ df.format(currentMonth) }}
             </h2>
-            <UButton variant="ghost" icon="i-lucide-chevron-right" size="sm" @click="nextMonth" />
+            <EButton variant="ghost" icon="i-lucide-chevron-right" size="sm" @click="nextMonth" />
           </div>
-          <UButton variant="ghost" size="sm" @click="goToToday">Today</UButton>
+          <EButton variant="ghost" size="sm" @click="goToToday">Today</EButton>
         </div>
       </template>
 
@@ -285,7 +285,7 @@ function openCompose() {
                 :class="getStatusBadgeClasses(post.status)"
               >
                 <span class="flex items-center gap-1">
-                  <UIcon
+                  <EIcon
                     v-for="platform in [...new Set(post.platforms.map((p) => p.platform))]"
                     :key="platform"
                     :name="platformIcons(platform)"
@@ -298,14 +298,14 @@ function openCompose() {
           </template>
         </div>
       </div>
-    </UCard>
+    </ECard>
 
-    <UModal v-model="showPostModal" class="sm:max-w-xl">
+    <EModal v-model="showPostModal" class="sm:max-w-xl">
       <template v-if="selectedPost" #header>
         <div class="flex items-center gap-2">
-          <UBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
+          <EBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
             {{ selectedPost.status }}
-          </UBadge>
+          </EBadge>
           <span class="text-sm text-muted-foreground">
             {{ format(parseISO(selectedPost.scheduled_at), 'MMM d, yyyy • h:mm a') }}
           </span>
@@ -333,7 +333,7 @@ function openCompose() {
               :key="target.account_id"
               class="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-full text-xs"
             >
-              <UIcon :name="platformIcons(target.platform)" class="w-3 h-3" />
+              <EIcon :name="platformIcons(target.platform)" class="w-3 h-3" />
               {{ target.account_name }}
             </div>
           </div>
@@ -348,12 +348,12 @@ function openCompose() {
               class="flex items-center justify-between text-sm"
             >
               <span class="flex items-center gap-2">
-                <UIcon :name="platformIcons(result.platform)" class="w-4 h-4" />
+                <EIcon :name="platformIcons(result.platform)" class="w-4 h-4" />
                 {{ result.account_id }}
               </span>
-              <UBadge :color="result.success ? 'green' : 'red'" variant="subtle" size="xs">
+              <EBadge :color="result.success ? 'green' : 'red'" variant="subtle" size="xs">
                 {{ result.success ? 'Published' : 'Failed' }}
-              </UBadge>
+              </EBadge>
             </div>
           </div>
         </div>
@@ -361,7 +361,7 @@ function openCompose() {
 
       <template v-if="selectedPost" #footer>
         <div class="flex justify-between">
-          <UButton
+          <EButton
             v-if="['scheduled', 'draft', 'failed'].includes(selectedPost.status)"
             variant="soft"
             color="red"
@@ -371,20 +371,20 @@ function openCompose() {
             @click="deleteSelectedPost"
           >
             Delete
-          </UButton>
+          </EButton>
           <div class="flex gap-2">
-            <UButton
+            <EButton
               v-if="selectedPost.status === 'scheduled' || selectedPost.status === 'draft'"
               variant="soft"
               size="sm"
               :to="{ path: '/apps/marketing', query: { floor: 'studio', view: 'calendar', z: '3', id: selectedPost.id } }"
             >
               Edit
-            </UButton>
-            <UButton size="sm" @click="showPostModal = false">Close</UButton>
+            </EButton>
+            <EButton size="sm" @click="showPostModal = false">Close</EButton>
           </div>
         </div>
       </template>
-    </UModal>
+    </EModal>
   </div>
 </template>

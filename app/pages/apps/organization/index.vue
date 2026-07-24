@@ -1383,7 +1383,7 @@ function onClientInvited() {
                     : 'Goals are hidden across this organization — nav, cards, and dashboard widgets.' }}
                 </p>
               </div>
-              <UToggle
+              <EToggle
                 :model-value="goalsEnabled"
                 :disabled="savingGoals"
                 class="mt-0.5 shrink-0"
@@ -1431,7 +1431,7 @@ function onClientInvited() {
     />
 
     <!-- Add an existing Earnest user to this org -->
-    <UModal v-model="showAddMemberModal">
+    <EModal v-model="showAddMemberModal">
       <div class="p-5 space-y-4">
         <div>
           <h3 class="text-base font-semibold">Add existing user</h3>
@@ -1439,7 +1439,7 @@ function onClientInvited() {
             Search users already in Earnest and add them to this organization.
           </p>
         </div>
-        <UInput
+        <EInput
           v-model="searchEmail"
           placeholder="Search by name or email…"
           icon="i-heroicons-magnifying-glass"
@@ -1476,10 +1476,10 @@ function onClientInvited() {
           </div>
         </div>
       </div>
-    </UModal>
+    </EModal>
 
     <!-- Remove member confirmation -->
-    <UModal v-model="showRemoveMemberModal">
+    <EModal v-model="showRemoveMemberModal">
       <div class="p-5 space-y-4">
         <div>
           <h3 class="text-base font-semibold">Remove member</h3>
@@ -1497,7 +1497,7 @@ function onClientInvited() {
           </Button>
         </div>
       </div>
-    </UModal>
+    </EModal>
 
     <!-- Danger-zone archive / restore confirm sheet (Settings floor). -->
     <AppsOrganizationArchiveOrgSheet

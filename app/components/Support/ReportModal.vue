@@ -116,7 +116,7 @@ async function submit() {
 </script>
 
 <template>
-	<UModal v-model="isOpen" title="Send feedback to Earnest">
+	<EModal v-model="isOpen" title="Send feedback to Earnest">
 		<form class="space-y-4" @submit.prevent="submit">
 			<div>
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
@@ -135,7 +135,7 @@ async function submit() {
 						"
 						@click="form.type = opt.value"
 					>
-						<UIcon :name="opt.icon" class="w-4 h-4" />
+						<EIcon :name="opt.icon" class="w-4 h-4" />
 						<span class="font-medium">{{ opt.label }}</span>
 					</button>
 				</div>
@@ -144,31 +144,31 @@ async function submit() {
 				</p>
 			</div>
 
-			<UFormGroup label="Title" required>
-				<UInput
+			<EFormGroup label="Title" required>
+				<EInput
 					v-model="form.title"
 					:placeholder="placeholderByType[form.type].title"
 					maxlength="200"
 					autofocus
 				/>
-			</UFormGroup>
+			</EFormGroup>
 
-			<UFormGroup label="Details">
-				<UTextarea
+			<EFormGroup label="Details">
+				<ETextarea
 					v-model="form.description"
 					:placeholder="placeholderByType[form.type].body"
 					:rows="5"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 
-			<UFormGroup v-if="form.type === 'bug'" label="Severity">
-				<USelect
+			<EFormGroup v-if="form.type === 'bug'" label="Severity">
+				<ESelect
 					v-model="form.priority"
 					:options="PRIORITY_OPTIONS"
 					option-attribute="label"
 					value-attribute="value"
 				/>
-			</UFormGroup>
+			</EFormGroup>
 
 			<p class="text-[11px] text-muted-foreground border-t border-border/40 pt-3 leading-relaxed">
 				We attach your page URL, browser, and screen size so we can reproduce
@@ -189,5 +189,5 @@ async function submit() {
 				</UiActionButton>
 			</div>
 		</template>
-	</UModal>
+	</EModal>
 </template>

@@ -3,7 +3,7 @@
 		<!-- Label is optional: inside a labelled grid cell (task/ticket edit
 		     forms) pass `hide-label` and the cell owns the label (UFormGroup
 		     renders no label when `label` is undefined). -->
-		<UFormGroup :label="hideLabel ? undefined : label + ':'">
+		<EFormGroup :label="hideLabel ? undefined : label + ':'">
 			<!-- Interactive segmented control (status / priority pill). -->
 			<div class="relative">
 				<!-- Steps Bar -->
@@ -48,7 +48,7 @@
 					</div>
 				</div>
 			</div>
-		</UFormGroup>
+		</EFormGroup>
 	</div>
 </template>
 

@@ -72,7 +72,7 @@ function close() {
       :disabled="disabled"
       @click="toggle"
     >
-      <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3 h-3 animate-spin" />
+      <EIcon v-if="loading" name="i-lucide-loader-2" class="w-3 h-3 animate-spin" />
       <EarnestIcon v-else class="w-3 h-3" />
       {{ loading ? 'Suggesting…' : (label || 'Earnest Suggest') }}
       <AiSpendMark v-if="!loading" muted />
@@ -84,7 +84,7 @@ function close() {
       :disabled="disabled"
       @click="toggle"
     >
-      <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
+      <EIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
       <EarnestIcon v-else class="w-3.5 h-3.5" />
       {{ loading ? 'Drafting…' : (label || 'Quick draft') }}
       <AiSpendMark v-if="!loading" muted />
@@ -126,8 +126,8 @@ function close() {
             :disabled="(!brief.trim() && !allowEmpty) || loading"
             @click="submit"
           >
-            <UIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
-            <UIcon v-else name="i-lucide-sparkles" class="w-3.5 h-3.5" />
+            <EIcon v-if="loading" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
+            <EIcon v-else name="i-lucide-sparkles" class="w-3.5 h-3.5" />
             {{ variant === 'link' ? 'Suggest' : 'Draft' }}
           </button>
         </div>

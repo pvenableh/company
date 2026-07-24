@@ -104,7 +104,7 @@ const statusOptions = [
 				@click="openCreate"
 				class="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
 			>
-				<UIcon name="i-heroicons-plus" class="w-4 h-4" />
+				<EIcon name="i-heroicons-plus" class="w-4 h-4" />
 				Add Expense
 			</button>
 		</div>
@@ -179,12 +179,12 @@ const statusOptions = [
 
 		<!-- Loading -->
 		<div v-if="isLoading && !expenses.length" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+			<EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
 		</div>
 
 		<!-- Empty State -->
 		<div v-else-if="!filteredExpenses.length" class="text-center py-20">
-			<UIcon name="i-heroicons-receipt-percent" class="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+			<EIcon name="i-heroicons-receipt-percent" class="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
 			<p class="text-muted-foreground text-sm">{{ expenses.length ? 'No expenses match your filters' : 'No expenses yet' }}</p>
 			<button
 				v-if="!expenses.length"
@@ -223,7 +223,7 @@ const statusOptions = [
 							</td>
 							<td class="py-3 px-4">
 								<div class="flex items-center gap-1.5">
-									<UIcon
+									<EIcon
 										:name="getCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
 										class="w-3.5 h-3.5"
 										:class="getCategoryConfig(expense.category || 'other')?.color ?? 'text-muted-foreground'"
@@ -253,7 +253,7 @@ const statusOptions = [
 									@click="handleDelete(expense)"
 									class="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
 								>
-									<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
+									<EIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
 								</button>
 							</td>
 						</tr>
@@ -273,7 +273,7 @@ const statusOptions = [
 				<div class="flex items-start gap-3">
 					<!-- Category Icon -->
 					<div class="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
-						<UIcon
+						<EIcon
 							:name="getCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
 							class="w-4.5 h-4.5"
 							:class="getCategoryConfig(expense.category || 'other')?.color ?? 'text-muted-foreground'"
@@ -315,7 +315,7 @@ const statusOptions = [
 						<!-- Project tag -->
 						<div v-if="expense.project && typeof expense.project === 'object'" class="mt-2">
 							<span class="text-[10px] text-muted-foreground/70">
-								<UIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 inline" />
+								<EIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 inline" />
 								{{ (expense.project as any).title }}
 							</span>
 						</div>
@@ -327,7 +327,7 @@ const statusOptions = [
 					@click.stop="handleDelete(expense)"
 					class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-destructive transition-all"
 				>
-					<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
+					<EIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
 				</button>
 			</div>
 		</div>

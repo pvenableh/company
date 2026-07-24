@@ -128,7 +128,7 @@ const sheetSubtitle = computed(() => formatDate((note.value as any)?.date_create
         class="p-1.5 rounded-lg hover:bg-muted transition-colors"
         :title="note?.is_pinned ? 'Unpin' : 'Pin'"
       >
-        <UIcon
+        <EIcon
           :name="note?.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
           class="w-4 h-4"
           :class="note?.is_pinned ? 'text-warning' : 'text-muted-foreground'"
@@ -140,21 +140,21 @@ const sheetSubtitle = computed(() => formatDate((note.value as any)?.date_create
         class="p-1.5 rounded-lg hover:bg-muted transition-colors"
         title="Edit"
       >
-        <UIcon name="i-heroicons-pencil" class="w-4 h-4 text-muted-foreground" />
+        <EIcon name="i-heroicons-pencil" class="w-4 h-4 text-muted-foreground" />
       </button>
       <button
         @click="handleDelete"
         class="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
         title="Delete"
       >
-        <UIcon name="i-heroicons-trash" class="w-4 h-4 text-muted-foreground hover:text-destructive" />
+        <EIcon name="i-heroicons-trash" class="w-4 h-4 text-muted-foreground hover:text-destructive" />
       </button>
     </template>
 
     <!-- Title editor — folded into body when editing (drops the inline header-swap UX). -->
     <div v-if="isEditing" class="mb-4 space-y-1">
       <p class="text-xs font-medium text-muted-foreground">Title</p>
-      <UInput v-model="editTitle" size="sm" placeholder="Note title..." />
+      <EInput v-model="editTitle" size="sm" placeholder="Note title..." />
     </div>
 
     <!-- Tags -->
@@ -190,36 +190,36 @@ const sheetSubtitle = computed(() => formatDate((note.value as any)?.date_create
         @click="goToSession"
         class="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
       >
-        <UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
+        <EIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
         View source conversation
       </button>
       <span v-else />
 
       <div class="flex gap-2">
-        <UButton
+        <EButton
           v-if="isEditing"
           variant="ghost"
           size="sm"
           @click="isEditing = false"
         >
           Cancel
-        </UButton>
-        <UButton
+        </EButton>
+        <EButton
           v-if="isEditing"
           size="sm"
           :loading="saving"
           @click="saveEdits"
         >
           Save Changes
-        </UButton>
-        <UButton
+        </EButton>
+        <EButton
           v-else
           variant="ghost"
           size="sm"
           @click="emit('update:modelValue', false)"
         >
           Close
-        </UButton>
+        </EButton>
       </div>
     </template>
   </AppsAppBottomSheet>

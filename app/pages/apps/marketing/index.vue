@@ -1046,7 +1046,7 @@ const scopeLabel = computed(() => {
       <!-- ── Campaigns floor ──────────────────────────────────────────── -->
       <template v-else-if="floor === 'campaigns'">
         <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <UTabs
+          <ETabs
             v-model="campaignsStatusFilter"
             :items="campaignStatusItems"
             class="w-fit"
@@ -1362,7 +1362,7 @@ const scopeLabel = computed(() => {
           <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mr-1">
             Templates
           </h3>
-          <UTabs
+          <ETabs
             v-model="emailFilter"
             :items="emailFilterItems"
             class="w-fit"

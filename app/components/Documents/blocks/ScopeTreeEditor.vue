@@ -401,7 +401,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 
 		<!-- Empty state -->
 		<div v-if="payload.phases.length === 0" class="ios-card p-6 text-center border-2 border-dashed border-border">
-			<UIcon name="lucide:layout-template" class="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
+			<EIcon name="lucide:layout-template" class="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
 			<p class="text-sm text-muted-foreground mb-3">No phases yet. Add the first one to start mapping the scope.</p>
 			<div ref="addMenuRef" class="relative inline-block">
 				<button
@@ -409,14 +409,14 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 					@click="enableServiceImport ? toggleAddMenu() : addPhase()"
 				>
 					+ Add first phase
-					<UIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
+					<EIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
 				</button>
 				<div
 					v-if="enableServiceImport && addMenuOpen"
 					class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-20 text-left p-1"
 				>
 					<button class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted" @click="appendBlankPhase">
-						<span class="inline-flex items-center gap-2"><UIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
+						<span class="inline-flex items-center gap-2"><EIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
 					</button>
 					<div class="border-t border-border my-1"></div>
 					<p class="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">From service offering</p>
@@ -462,19 +462,19 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 				/>
 				<div class="flex items-center gap-0.5 text-muted-foreground">
 					<button class="p-1 rounded hover:bg-muted disabled:opacity-30" :disabled="pIdx === 0" title="Move up" @click="moveUp([pIdx])">
-						<UIcon name="lucide:chevron-up" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:chevron-up" class="w-3.5 h-3.5" />
 					</button>
 					<button class="p-1 rounded hover:bg-muted disabled:opacity-30" :disabled="pIdx === payload.phases.length - 1" title="Move down" @click="moveDown([pIdx])">
-						<UIcon name="lucide:chevron-down" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:chevron-down" class="w-3.5 h-3.5" />
 					</button>
 					<button class="p-1 rounded hover:bg-muted disabled:opacity-30" :disabled="pIdx === 0" title="Nest under previous phase" @click="demoteNode([pIdx])">
-						<UIcon name="lucide:chevron-right" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:chevron-right" class="w-3.5 h-3.5" />
 					</button>
 					<button class="p-1 rounded hover:bg-muted" title="Duplicate" @click="duplicateNode([pIdx])">
-						<UIcon name="lucide:copy" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:copy" class="w-3.5 h-3.5" />
 					</button>
 					<button class="p-1 rounded hover:bg-destructive/10 text-destructive" title="Delete" @click="removeNode([pIdx])">
-						<UIcon name="lucide:trash-2" class="w-3.5 h-3.5" />
+						<EIcon name="lucide:trash-2" class="w-3.5 h-3.5" />
 					</button>
 				</div>
 			</div>
@@ -510,7 +510,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 							title="Remove item"
 							@click="removeBullet([pIdx], bIdx)"
 						>
-							<UIcon name="lucide:x" class="w-3.5 h-3.5" />
+							<EIcon name="lucide:x" class="w-3.5 h-3.5" />
 						</button>
 					</li>
 				</ul>
@@ -519,7 +519,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 					class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
 					@click="addBullet([pIdx])"
 				>
-					<UIcon name="lucide:plus" class="w-3.5 h-3.5" /> Add item
+					<EIcon name="lucide:plus" class="w-3.5 h-3.5" /> Add item
 				</button>
 
 				<textarea
@@ -537,7 +537,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 						class="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
 						@click="toggleExpanded([pIdx])"
 					>
-						<UIcon :name="isExpanded([pIdx]) ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
+						<EIcon :name="isExpanded([pIdx]) ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
 						{{ isExpanded([pIdx]) ? 'Hide' : 'Estimate, deliverables, note' }}
 					</button>
 				</div>
@@ -599,12 +599,12 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 									@input="updateDeliverable([pIdx], dIdx, ($event.target as HTMLInputElement).value)"
 								/>
 								<button class="p-0.5 rounded hover:bg-destructive/10 text-destructive" @click="removeDeliverable([pIdx], dIdx)">
-									<UIcon name="lucide:x" class="w-3.5 h-3.5" />
+									<EIcon name="lucide:x" class="w-3.5 h-3.5" />
 								</button>
 							</li>
 						</ul>
 						<button class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mt-1" @click="addDeliverable([pIdx])">
-							<UIcon name="lucide:plus" class="w-3 h-3" /> Add deliverable
+							<EIcon name="lucide:plus" class="w-3 h-3" /> Add deliverable
 						</button>
 					</div>
 				</div>
@@ -639,13 +639,13 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 							/>
 							<div class="flex items-center gap-0.5 text-muted-foreground">
 								<button class="p-1 rounded hover:bg-muted" title="Promote to top level" @click="promoteNode([pIdx, cIdx])">
-									<UIcon name="lucide:chevron-left" class="w-3.5 h-3.5" />
+									<EIcon name="lucide:chevron-left" class="w-3.5 h-3.5" />
 								</button>
 								<button class="p-1 rounded hover:bg-muted" title="Duplicate" @click="duplicateNode([pIdx, cIdx])">
-									<UIcon name="lucide:copy" class="w-3.5 h-3.5" />
+									<EIcon name="lucide:copy" class="w-3.5 h-3.5" />
 								</button>
 								<button class="p-1 rounded hover:bg-destructive/10 text-destructive" title="Delete" @click="removeNode([pIdx, cIdx])">
-									<UIcon name="lucide:trash-2" class="w-3.5 h-3.5" />
+									<EIcon name="lucide:trash-2" class="w-3.5 h-3.5" />
 								</button>
 							</div>
 						</div>
@@ -676,12 +676,12 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 										class="p-0.5 rounded hover:bg-destructive/10 text-destructive opacity-0 group-hover/bullet:opacity-100"
 										@click="removeBullet([pIdx, cIdx], bIdx)"
 									>
-										<UIcon name="lucide:x" class="w-3.5 h-3.5" />
+										<EIcon name="lucide:x" class="w-3.5 h-3.5" />
 									</button>
 								</li>
 							</ul>
 							<button class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1" @click="addBullet([pIdx, cIdx])">
-								<UIcon name="lucide:plus" class="w-3.5 h-3.5" /> Add item
+								<EIcon name="lucide:plus" class="w-3.5 h-3.5" /> Add item
 							</button>
 						</div>
 					</div>
@@ -698,16 +698,16 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 				class="w-full ios-card p-2 border-dashed border-2 border-border bg-transparent text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5"
 				@click="enableServiceImport ? toggleAddMenu() : addPhase()"
 			>
-				<UIcon name="lucide:plus" class="w-3.5 h-3.5" />
+				<EIcon name="lucide:plus" class="w-3.5 h-3.5" />
 				Add phase
-				<UIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
+				<EIcon v-if="enableServiceImport" name="lucide:chevron-down" class="w-3.5 h-3.5" />
 			</button>
 			<div
 				v-if="enableServiceImport && addMenuOpen"
 				class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg z-20 text-left p-1"
 			>
 				<button class="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-muted" @click="appendBlankPhase">
-					<span class="inline-flex items-center gap-2"><UIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
+					<span class="inline-flex items-center gap-2"><EIcon name="lucide:square-plus" class="w-3.5 h-3.5" /> Blank phase</span>
 				</button>
 				<div class="border-t border-border my-1"></div>
 				<p class="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">From service offering</p>

@@ -22,7 +22,7 @@
 		<!-- Title -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Title *</label>
-			<UInput v-model="form.title" placeholder="Ticket title" />
+			<EInput v-model="form.title" placeholder="Ticket title" />
 		</div>
 
 		<!-- Client, Project & Team -->
@@ -63,7 +63,7 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div v-if="!isEditing" class="space-y-1">
 				<label class="t-label text-muted-foreground">Status</label>
-				<USelectMenu
+				<ESelectMenu
 					v-model="form.status"
 					:options="statusOptions"
 					option-attribute="label"
@@ -72,7 +72,7 @@
 			</div>
 			<div class="space-y-1 min-w-0">
 				<label class="t-label text-muted-foreground">Due Date</label>
-				<UInput v-model="form.due_date" type="datetime-local" />
+				<EInput v-model="form.due_date" type="datetime-local" />
 			</div>
 		</div>
 

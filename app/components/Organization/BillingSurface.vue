@@ -343,7 +343,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 
 <template>
 	<div class="space-y-6">
-		<UTabs v-model="activeSub" :items="subTabs">
+		<ETabs v-model="activeSub" :items="subTabs">
 			<template #transactions>
 				<div class="mt-4 space-y-4">
 					<div class="flex items-center justify-between">
@@ -362,7 +362,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 					</div>
 
 					<div v-if="transactionsLoading && !transactions.length" class="flex items-center justify-center py-10 text-muted-foreground">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
 						<span class="text-sm">Loading transactions…</span>
 					</div>
 
@@ -387,7 +387,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 								<tr v-for="txn in transactions" :key="txn.id" class="border-t border-border">
 									<td class="px-3 py-2 whitespace-nowrap">{{ formatDate(txn.created) }}</td>
 									<td class="px-3 py-2">
-										<UBadge :color="statusColor(txn.status)" variant="soft" size="xs">{{ txnTypeLabel(txn.type) }}</UBadge>
+										<EBadge :color="statusColor(txn.status)" variant="soft" size="xs">{{ txnTypeLabel(txn.type) }}</EBadge>
 									</td>
 									<td class="px-3 py-2">
 										<NuxtLink
@@ -412,9 +412,9 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 												class="text-xs text-muted-foreground hover:text-foreground"
 												title="Stripe receipt"
 											>
-												<UIcon name="i-heroicons-receipt-percent" class="w-4 h-4" />
+												<EIcon name="i-heroicons-receipt-percent" class="w-4 h-4" />
 											</a>
-											<UButton
+											<EButton
 												v-if="txn.type === 'charge' && txn.charge && !txn.charge.refunded"
 												size="xs"
 												color="gray"
@@ -422,7 +422,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 												@click="openRefund(txn)"
 											>
 												Refund
-											</UButton>
+											</EButton>
 										</div>
 									</td>
 								</tr>
@@ -459,7 +459,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 						</UiActionButton>
 					</div>
 					<div v-if="refundsLoading && !refunds.length" class="flex items-center justify-center py-10 text-muted-foreground">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
 						<span class="text-sm">Loading refunds…</span>
 					</div>
 					<div v-else-if="!refunds.length" class="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -493,7 +493,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 									<td class="px-3 py-2 text-muted-foreground">{{ r.reason || '—' }}</td>
 									<td class="px-3 py-2 text-right tabular-nums">{{ formatMoney(r.amount, r.currency) }}</td>
 									<td class="px-3 py-2">
-										<UBadge :color="statusColor(r.status)" variant="soft" size="xs">{{ r.status }}</UBadge>
+										<EBadge :color="statusColor(r.status)" variant="soft" size="xs">{{ r.status }}</EBadge>
 									</td>
 									<td class="px-3 py-2 text-right">
 										<a
@@ -504,7 +504,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 											class="text-xs text-muted-foreground hover:text-foreground"
 											title="Stripe receipt"
 										>
-											<UIcon name="i-heroicons-receipt-percent" class="w-4 h-4" />
+											<EIcon name="i-heroicons-receipt-percent" class="w-4 h-4" />
 										</a>
 									</td>
 								</tr>
@@ -542,7 +542,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 						</UiActionButton>
 					</div>
 					<div v-if="payoutsLoading && !payouts.length" class="flex items-center justify-center py-10 text-muted-foreground">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
 						<span class="text-sm">Loading payouts…</span>
 					</div>
 					<div v-else-if="!payouts.length" class="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -564,7 +564,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 									<td class="px-3 py-2 capitalize">{{ p.method.replace(/_/g, ' ') }}</td>
 									<td class="px-3 py-2 text-right tabular-nums font-medium">{{ formatMoney(p.amount, p.currency) }}</td>
 									<td class="px-3 py-2">
-										<UBadge :color="statusColor(p.status)" variant="soft" size="xs">{{ p.status }}</UBadge>
+										<EBadge :color="statusColor(p.status)" variant="soft" size="xs">{{ p.status }}</EBadge>
 										<span v-if="p.failureMessage" class="block text-[10px] text-destructive mt-1">{{ p.failureMessage }}</span>
 									</td>
 								</tr>
@@ -588,31 +588,31 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 			<template #balance>
 				<div class="mt-4">
 					<div v-if="balanceLoading" class="flex items-center justify-center py-10 text-muted-foreground">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
 						<span class="text-sm">Loading balance…</span>
 					</div>
 					<div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<UCard>
+						<ECard>
 							<div class="text-[10px] uppercase tracking-wider text-muted-foreground">Available</div>
 							<div class="mt-1 text-2xl font-semibold tabular-nums">
 								{{ formatMoney(balance?.available?.usd || 0) }}
 							</div>
 							<p class="text-xs text-muted-foreground mt-2">Settled funds ready to pay out.</p>
-						</UCard>
-						<UCard>
+						</ECard>
+						<ECard>
 							<div class="text-[10px] uppercase tracking-wider text-muted-foreground">Pending</div>
 							<div class="mt-1 text-2xl font-semibold tabular-nums">
 								{{ formatMoney(balance?.pending?.usd || 0) }}
 							</div>
 							<p class="text-xs text-muted-foreground mt-2">Charges still in Stripe's clearing window.</p>
-						</UCard>
-						<UCard>
+						</ECard>
+						<ECard>
 							<div class="text-[10px] uppercase tracking-wider text-muted-foreground">Instant Available</div>
 							<div class="mt-1 text-2xl font-semibold tabular-nums">
 								{{ formatMoney(balance?.instantAvailable?.usd || 0) }}
 							</div>
 							<p class="text-xs text-muted-foreground mt-2">Eligible for instant payout (where supported).</p>
-						</UCard>
+						</ECard>
 					</div>
 				</div>
 			</template>
@@ -620,7 +620,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 			<template #fees>
 				<div class="mt-4">
 					<div v-if="feeLoading" class="flex items-center justify-center py-10 text-muted-foreground">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+						<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
 						<span class="text-sm">Loading fee settings…</span>
 					</div>
 					<div v-else-if="feeSettings" class="space-y-4">
@@ -637,7 +637,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 									{{ feeSettings.passCardFee ? `A $1,000 invoice bills ${feeExample.cardTotal}; you net ${feeExample.net}.` : 'Off — you absorb the card fee.' }}
 								</p>
 							</div>
-							<UToggle
+							<EToggle
 								:model-value="feeSettings.passCardFee"
 								:disabled="feeSaving"
 								@update:model-value="(v) => saveFeeSetting('passCardFee', v)"
@@ -653,7 +653,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 									{{ feeSettings.passAchFee ? `A $1,000 invoice bills ${feeExample.achTotal}; you net ${feeExample.net}.` : 'Off — bank payments are free to your client (you absorb the ~0.8% fee).' }}
 								</p>
 							</div>
-							<UToggle
+							<EToggle
 								:model-value="feeSettings.passAchFee"
 								:disabled="feeSaving"
 								@update:model-value="(v) => saveFeeSetting('passAchFee', v)"
@@ -681,7 +681,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 					</div>
 				</div>
 			</template>
-		</UTabs>
+		</ETabs>
 
 		<!-- Refund modal -->
 		<ResponsiveModal v-model="refundOpen" title="Issue Refund" size="lg">
@@ -697,12 +697,12 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 					</div>
 				</div>
 
-				<UFormGroup label="Refund amount (cents)" hint="Defaults to full refund. Edit for a partial.">
-					<UInput v-model.number="refundAmount" type="number" :min="1" :max="refundTarget.amount" />
-				</UFormGroup>
+				<EFormGroup label="Refund amount (cents)" hint="Defaults to full refund. Edit for a partial.">
+					<EInput v-model.number="refundAmount" type="number" :min="1" :max="refundTarget.amount" />
+				</EFormGroup>
 
-				<UFormGroup label="Reason">
-					<USelect
+				<EFormGroup label="Reason">
+					<ESelect
 						v-model="refundReason"
 						:options="[
 							{ label: 'Requested by customer', value: 'requested_by_customer' },
@@ -710,11 +710,11 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 							{ label: 'Fraudulent', value: 'fraudulent' },
 						]"
 					/>
-				</UFormGroup>
+				</EFormGroup>
 
-				<UFormGroup label="Internal note (optional)">
-					<UTextarea v-model="refundNote" :rows="2" placeholder="Why this refund was issued — saved on the payment record." />
-				</UFormGroup>
+				<EFormGroup label="Internal note (optional)">
+					<ETextarea v-model="refundNote" :rows="2" placeholder="Why this refund was issued — saved on the payment record." />
+				</EFormGroup>
 			</div>
 			<template #footer>
 				<div class="flex justify-end gap-2">

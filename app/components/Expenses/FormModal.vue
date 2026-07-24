@@ -16,7 +16,7 @@
 		<!-- Name -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Name *</label>
-			<UInput v-model="form.name" placeholder="e.g., Adobe Creative Cloud subscription" />
+			<EInput v-model="form.name" placeholder="e.g., Adobe Creative Cloud subscription" />
 		</div>
 
 		<!-- Category + Amount -->
@@ -32,7 +32,7 @@
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Amount ($) *</label>
-				<UInput v-model.number="form.amount" type="number" step="0.01" min="0" placeholder="0.00" />
+				<EInput v-model.number="form.amount" type="number" step="0.01" min="0" placeholder="0.00" />
 			</div>
 		</div>
 
@@ -40,11 +40,11 @@
 		<div class="grid grid-cols-2 gap-3">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Date</label>
-				<UInput v-model="form.date" type="date" />
+				<EInput v-model="form.date" type="date" />
 			</div>
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Vendor</label>
-				<UInput v-model="form.vendor" placeholder="Company name" />
+				<EInput v-model="form.vendor" placeholder="Company name" />
 			</div>
 		</div>
 
@@ -85,7 +85,7 @@
 		<!-- Description -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Notes</label>
-			<UTextarea v-model="form.description" :rows="2" placeholder="Optional notes about this expense" />
+			<ETextarea v-model="form.description" :rows="2" placeholder="Optional notes about this expense" />
 		</div>
 	</FormModal>
 </template>

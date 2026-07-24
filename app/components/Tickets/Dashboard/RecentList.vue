@@ -1,11 +1,11 @@
 <template>
-	<UCard>
+	<ECard>
 		<template #header>
 			<div class="flex justify-between items-center">
 				<h2 class="font-bold uppercase tracking-wide text-sm">Recently Completed</h2>
-				<UButton size="xs" variant="ghost" @click="$emit('viewTicket', tickets[0]?.id)" v-if="tickets.length" icon="i-heroicons-chevron-right" :trailing="true" class="text-[10px] font-medium uppercase tracking-wide">
+				<EButton size="xs" variant="ghost" @click="$emit('viewTicket', tickets[0]?.id)" v-if="tickets.length" icon="i-heroicons-chevron-right" :trailing="true" class="text-[10px] font-medium uppercase tracking-wide">
 					View all
-				</UButton>
+				</EButton>
 			</div>
 		</template>
 		<div class="divide-y">
@@ -14,8 +14,8 @@
 					<div>
 						<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
 						<div class="flex gap-2 mt-1">
-							<UBadge size="xs" class="uppercase bg-[var(--green)]">Completed</UBadge>
-							<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
+							<EBadge size="xs" class="uppercase bg-[var(--green)]">Completed</EBadge>
+							<EBadge size="xs" color="gray">{{ ticket.priority }}</EBadge>
 						</div>
 					</div>
 					<div class="text-right">
@@ -27,15 +27,15 @@
 				</div>
 				<div class="flex justify-between mt-2">
 					<div class="flex items-center gap-1 text-xs text-muted-foreground">
-						<UIcon name="i-heroicons-user-circle" class="w-3 h-3" />
+						<EIcon name="i-heroicons-user-circle" class="w-3 h-3" />
 						<span>{{ formatAssignees(ticket.assigned_to) }}</span>
 					</div>
-					<UButton size="xs" variant="link" @click="$emit('viewTicket', ticket.id)">View</UButton>
+					<EButton size="xs" variant="link" @click="$emit('viewTicket', ticket.id)">View</EButton>
 				</div>
 			</div>
 			<div v-if="!tickets.length" class="py-4 text-center text-muted-foreground">No recently completed tickets found</div>
 		</div>
-	</UCard>
+	</ECard>
 </template>
 
 <script setup>

@@ -144,42 +144,42 @@ const previewUrl = computed(() => {
 				</p>
 
 				<div class="space-y-3">
-					<UFormGroup label="Reply-to address" help="Where replies to system emails go.">
-						<UInput
+					<EFormGroup label="Reply-to address" help="Where replies to system emails go.">
+						<EInput
 							v-model="form.email_reply_to"
 							type="email"
 							placeholder="hello@yourdomain.com"
 							:disabled="!canManage"
 						/>
-					</UFormGroup>
+					</EFormGroup>
 
-					<UFormGroup label="Footer mailing address" help="Shown in the email footer (CAN-SPAM).">
-						<UTextarea
+					<EFormGroup label="Footer mailing address" help="Shown in the email footer (CAN-SPAM).">
+						<ETextarea
 							v-model="form.mailing_address"
 							placeholder="123 Main St, Suite 100, City, ST 00000"
 							:rows="2"
 							autoresize
 							:disabled="!canManage"
 						/>
-					</UFormGroup>
+					</EFormGroup>
 
-					<UFormGroup label="Silent BCC" help="A blind copy of every outbound email, for your records.">
-						<UInput
+					<EFormGroup label="Silent BCC" help="A blind copy of every outbound email, for your records.">
+						<EInput
 							v-model="form.email_bcc"
 							type="email"
 							placeholder="archive@yourdomain.com"
 							:disabled="!canManage"
 						/>
-					</UFormGroup>
+					</EFormGroup>
 
-					<UFormGroup label="White-label">
+					<EFormGroup label="White-label">
 						<div class="flex items-center gap-3">
-							<UToggle v-model="form.whitelabel" :disabled="!canManage" />
+							<EToggle v-model="form.whitelabel" :disabled="!canManage" />
 							<span class="text-xs text-muted-foreground">
 								{{ form.whitelabel ? 'Earnest branding removed from emails' : 'Earnest branding shown in email footer' }}
 							</span>
 						</div>
-					</UFormGroup>
+					</EFormGroup>
 
 					<div v-if="canManage" class="flex justify-end pt-1">
 						<Button size="sm" :disabled="saving" @click="save">

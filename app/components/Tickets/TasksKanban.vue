@@ -121,7 +121,7 @@ function isTaskOverdue(task: any) {
 							</div>
 
 							<div class="flex items-start gap-2">
-								<UCheckbox
+								<ECheckbox
 									:model-value="task.status === 'completed'"
 									class="mt-0.5"
 									@update:model-value="emit('toggle', task.id)"

@@ -962,7 +962,7 @@ const sendInviteMeeting = computed(() => {
 		<form id="unified-event-form" @submit.prevent="handleSubmit" class="space-y-5">
 				<!-- Pinned project context (modal launched from a project page) -->
 				<div v-if="projectPinned && form.project" class="flex items-center gap-2 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
-					<UIcon name="i-heroicons-folder" class="w-4 h-4 text-info shrink-0" />
+					<EIcon name="i-heroicons-folder" class="w-4 h-4 text-info shrink-0" />
 					<span class="text-xs font-medium text-foreground">{{ form.project.title }}</span>
 					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Project</span>
 					<span v-if="form.project.client_name" class="ml-auto text-[9px] uppercase tracking-wider text-info/70">{{ form.project.client_name }}</span>
@@ -970,38 +970,38 @@ const sendInviteMeeting = computed(() => {
 
 				<!-- Pinned client context (modal launched from a client surface). -->
 				<div v-else-if="clientPinned && form.client" class="flex items-center gap-2 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
-					<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info shrink-0" />
+					<EIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info shrink-0" />
 					<span class="text-xs font-medium text-foreground">{{ form.client.name }}</span>
 					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Client</span>
 				</div>
 
 				<!-- Type + Video toggle -->
 				<div class="flex items-center gap-4">
-					<UFormGroup v-if="form.is_video" label="Type" class="flex-1">
-						<USelect v-model="form.meeting_type" :options="meetingTypeOptions" />
-					</UFormGroup>
+					<EFormGroup v-if="form.is_video" label="Type" class="flex-1">
+						<ESelect v-model="form.meeting_type" :options="meetingTypeOptions" />
+					</EFormGroup>
 					<div class="flex items-center gap-2.5 flex-shrink-0" :class="{ 'flex-1': !form.is_video }">
-						<UToggle v-model="form.is_video" />
+						<EToggle v-model="form.is_video" />
 						<span class="text-[12px] font-medium text-foreground whitespace-nowrap">Video Meeting</span>
 					</div>
 				</div>
 
 				<!-- Title -->
-				<UFormGroup label="Title" required>
-					<UInput v-model="form.title" placeholder="Meeting title" />
-				</UFormGroup>
+				<EFormGroup label="Title" required>
+					<EInput v-model="form.title" placeholder="Meeting title" />
+				</EFormGroup>
 
 				<!-- Date / Time / Duration -->
 				<div class="grid grid-cols-3 gap-3">
-					<UFormGroup label="Date" required>
-						<UInput v-model="form.date" type="date" />
-					</UFormGroup>
-					<UFormGroup label="Time" required>
-						<UInput v-model="form.time" type="time" />
-					</UFormGroup>
-					<UFormGroup label="Duration">
-						<USelect v-model="form.duration" :options="durationOptions" />
-					</UFormGroup>
+					<EFormGroup label="Date" required>
+						<EInput v-model="form.date" type="date" />
+					</EFormGroup>
+					<EFormGroup label="Time" required>
+						<EInput v-model="form.time" type="time" />
+					</EFormGroup>
+					<EFormGroup label="Duration">
+						<ESelect v-model="form.duration" :options="durationOptions" />
+					</EFormGroup>
 				</div>
 
 				<!-- Description — formatted via Tiptap. The host writes a brief
@@ -1018,7 +1018,7 @@ const sendInviteMeeting = computed(() => {
 							:title="!form.title.trim() ? 'Add a title first — Earnest uses it to steer the agenda.' : ''"
 							class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.06em] text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
 						>
-							<UIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+							<EIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
 							<EarnestIcon v-else class="w-3 h-3" />
 							{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
 						</button>
@@ -1074,15 +1074,15 @@ const sendInviteMeeting = computed(() => {
 							@click="showProjectField = true"
 							class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
 						>
-							<UIcon name="i-heroicons-folder" class="w-3 h-3" />
+							<EIcon name="i-heroicons-folder" class="w-3 h-3" />
 							Project
 						</button>
 						<div v-if="!projectPinned && form.project" class="flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-info/5 border border-info/20 rounded-full">
-							<UIcon name="i-heroicons-folder" class="w-3 h-3 text-info" />
+							<EIcon name="i-heroicons-folder" class="w-3 h-3 text-info" />
 							<span class="text-[11px] font-medium text-foreground truncate max-w-[150px]">{{ form.project.title }}</span>
 							<span v-if="form.project.client_name" class="text-[9px] uppercase tracking-wider text-info/70 truncate max-w-[100px]">{{ form.project.client_name }}</span>
 							<button type="button" class="text-muted-foreground hover:text-foreground" @click="clearProject">
-								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+								<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 							</button>
 						</div>
 
@@ -1094,33 +1094,33 @@ const sendInviteMeeting = computed(() => {
 							class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
 							title="Connects this meeting to a CRM pipeline lead — notes and outcomes auto-log to the lead timeline."
 						>
-							<UIcon name="i-heroicons-funnel" class="w-3 h-3" />
+							<EIcon name="i-heroicons-funnel" class="w-3 h-3" />
 							Lead
 						</button>
 						<div v-if="form.related_lead" class="flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-muted/20 rounded-full">
 							<span class="w-2 h-2 rounded-full" :style="{ backgroundColor: LEAD_STAGE_COLORS[form.related_lead.stage] || '#9CA3AF' }" />
 							<span class="text-[11px] font-medium text-foreground truncate max-w-[150px]">{{ getLeadContactName(form.related_lead) }}</span>
 							<button type="button" class="text-muted-foreground hover:text-foreground" @click="clearLead">
-								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+								<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 							</button>
 						</div>
 
 						<!-- Meeting Settings popover -->
-						<UPopover v-model:open="showSettings" :popper="{ placement: 'bottom-start', offsetDistance: 6 }">
+						<EPopover v-model:open="showSettings" :popper="{ placement: 'bottom-start', offsetDistance: 6 }">
 							<button
 								type="button"
 								class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
 								:class="{ '!border-solid !border-primary/30 !bg-primary/5 !text-primary': settingsCount > 0 }"
 							>
-								<UIcon name="i-heroicons-cog-6-tooth" class="w-3 h-3" />
+								<EIcon name="i-heroicons-cog-6-tooth" class="w-3 h-3" />
 								Settings
 								<span v-if="settingsCount > 0" class="ml-0.5 text-[9px] font-semibold">{{ settingsCount }}</span>
 							</button>
 							<template #content>
 								<div class="w-72 p-3 space-y-3">
-									<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+									<ECheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
 									<div>
-										<UCheckbox
+										<ECheckbox
 											v-model="form.recording_enabled"
 											:disabled="!meetingDefaults.recordingAvailable"
 											label="Cloud recording"
@@ -1128,13 +1128,13 @@ const sendInviteMeeting = computed(() => {
 										<p class="ml-6 text-[10px] text-muted-foreground">
 											<template v-if="meetingDefaults.recordingAvailable">{{ meetingDefaults.recordingCostNote }}</template>
 											<template v-else>
-												<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+												<EIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
 												Upgrade to a paid plan to record meetings
 											</template>
 										</p>
 									</div>
 									<div>
-										<UCheckbox
+										<ECheckbox
 											v-model="form.transcription_enabled"
 											:disabled="!meetingDefaults.transcriptionAvailable"
 											label="Live transcription + AI recap"
@@ -1142,19 +1142,19 @@ const sendInviteMeeting = computed(() => {
 										<p class="ml-6 text-[10px] text-muted-foreground">
 											<template v-if="meetingDefaults.transcriptionAvailable">{{ meetingDefaults.transcriptionCostNote }}</template>
 											<template v-else>
-												<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+												<EIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
 												Upgrade to a paid plan for live transcripts
 											</template>
 										</p>
 									</div>
 								</div>
 							</template>
-						</UPopover>
+						</EPopover>
 					</div>
 
 					<!-- Expanded project search (only when pill was clicked, no value yet) -->
 					<div v-if="!projectPinned && showProjectField && !form.project" class="relative" @click.stop>
-						<UInput
+						<EInput
 							v-model="projectSearch"
 							placeholder="Search projects..."
 							size="sm"
@@ -1174,7 +1174,7 @@ const sendInviteMeeting = computed(() => {
 								class="flex items-center gap-2 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors text-sm"
 								@click="selectProject(proj)"
 							>
-								<UIcon name="i-heroicons-folder" class="w-3.5 h-3.5 text-info shrink-0" />
+								<EIcon name="i-heroicons-folder" class="w-3.5 h-3.5 text-info shrink-0" />
 								<span class="font-medium text-foreground">{{ proj.title }}</span>
 								<span v-if="proj.client && proj.client.name" class="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">{{ proj.client.name }}</span>
 							</div>
@@ -1183,7 +1183,7 @@ const sendInviteMeeting = computed(() => {
 
 					<!-- Expanded lead search -->
 					<div v-if="showLeadField && !form.related_lead" class="relative" @click.stop>
-						<UInput
+						<EInput
 							v-model="leadSearch"
 							placeholder="Search leads..."
 							size="sm"
@@ -1218,7 +1218,7 @@ const sendInviteMeeting = computed(() => {
 				     create; in edit mode we show whoever the meeting is owned by. -->
 				<div class="flex items-center gap-2.5 px-2.5 py-1.5 bg-muted/15 rounded-lg">
 					<template v-if="hostDisplay.avatar">
-						<UAvatar :src="hostDisplay.avatar" :alt="hostDisplay.name" size="2xs" />
+						<EAvatar :src="hostDisplay.avatar" :alt="hostDisplay.name" size="2xs" />
 					</template>
 					<span v-else class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
 						{{ hostDisplay.initial }}
@@ -1232,7 +1232,7 @@ const sendInviteMeeting = computed(() => {
 
 				<!-- Team / Client Members + Contact search -->
 				<div class="relative" @click.stop>
-					<UInput
+					<EInput
 						v-model="memberSearch"
 						placeholder="Add teammate or contact..."
 						size="sm"
@@ -1251,7 +1251,7 @@ const sendInviteMeeting = computed(() => {
 								class="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
 								@click="addMember(member)"
 							>
-								<UAvatar :src="getAvatarUrl(member)" :alt="member.label" size="2xs" />
+								<EAvatar :src="getAvatarUrl(member)" :alt="member.label" size="2xs" />
 								<div class="flex-1 min-w-0">
 									<span class="text-[12px] font-medium text-foreground">{{ member.label }}</span>
 									<span class="text-[10px] text-muted-foreground ml-2">{{ member.email }}</span>
@@ -1297,10 +1297,10 @@ const sendInviteMeeting = computed(() => {
 						:key="`m-${member.id}`"
 						class="flex items-center gap-1.5 pl-1 pr-2 py-1 bg-muted/20 rounded-full"
 					>
-						<UAvatar :src="getAvatarUrl(member)" :alt="member.label" size="3xs" />
+						<EAvatar :src="getAvatarUrl(member)" :alt="member.label" size="3xs" />
 						<span class="text-[11px] font-medium text-foreground">{{ member.label }}</span>
 						<button type="button" @click="removeMember(member.id)" class="text-muted-foreground hover:text-foreground">
-							<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+							<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 						</button>
 					</div>
 					<div
@@ -1314,7 +1314,7 @@ const sendInviteMeeting = computed(() => {
 						</span>
 						<span class="text-[11px] font-medium text-foreground">{{ contact.label }}</span>
 						<button type="button" @click="removeContact(contact.id)" class="text-muted-foreground hover:text-foreground">
-							<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+							<EIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 						</button>
 					</div>
 				</div>
@@ -1331,23 +1331,23 @@ const sendInviteMeeting = computed(() => {
 							@click="removeGuest(index)"
 							class="absolute top-2 right-2 p-1 rounded-md hover:bg-muted/30 transition-colors"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground" />
+							<EIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground" />
 						</button>
 						<div class="grid grid-cols-2 gap-3 pr-6">
-							<UFormGroup label="Name">
-								<UInput v-model="guest.name" placeholder="Guest name" size="sm" />
-							</UFormGroup>
-							<UFormGroup label="Email">
-								<UInput v-model="guest.email" type="email" placeholder="guest@example.com" size="sm" />
-							</UFormGroup>
+							<EFormGroup label="Name">
+								<EInput v-model="guest.name" placeholder="Guest name" size="sm" />
+							</EFormGroup>
+							<EFormGroup label="Email">
+								<EInput v-model="guest.email" type="email" placeholder="guest@example.com" size="sm" />
+							</EFormGroup>
 						</div>
 						<div v-if="form.is_video" class="grid grid-cols-2 gap-3">
-							<UFormGroup label="Phone">
-								<UInput v-model="guest.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
-							</UFormGroup>
-							<UFormGroup label="Send Invite">
-								<USelect v-model="guest.invite_method" :options="inviteMethodOptions" size="sm" />
-							</UFormGroup>
+							<EFormGroup label="Phone">
+								<EInput v-model="guest.phone" type="tel" placeholder="+1 (555) 000-0000" size="sm" />
+							</EFormGroup>
+							<EFormGroup label="Send Invite">
+								<ESelect v-model="guest.invite_method" :options="inviteMethodOptions" size="sm" />
+							</EFormGroup>
 						</div>
 					</div>
 				</div>
@@ -1357,7 +1357,7 @@ const sendInviteMeeting = computed(() => {
 					@click="addGuest"
 					class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border/50 text-[12px] font-medium text-muted-foreground hover:bg-muted/20 hover:text-foreground transition-colors ios-press"
 				>
-					<UIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
+					<EIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
 					Add External Guest
 				</button>
 
@@ -1382,7 +1382,7 @@ const sendInviteMeeting = computed(() => {
 							? 'bg-primary/10 text-primary'
 							: 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'"
 					>
-						<UIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
 						{{ showSendInvite ? 'Hide invite' : 'Send invite' }}
 					</button>
 					<button
@@ -1391,8 +1391,8 @@ const sendInviteMeeting = computed(() => {
 						:disabled="deleting"
 						class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
 					>
-						<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-						<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+						<EIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<EIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
 						Delete
 					</button>
 				</template>
@@ -1404,8 +1404,8 @@ const sendInviteMeeting = computed(() => {
 						:disabled="deleting"
 						class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-destructive hover:bg-destructive/10 transition-colors ios-press disabled:opacity-50"
 					>
-						<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-						<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+						<EIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+						<EIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
 						Delete
 					</button>
 				</template>
@@ -1424,7 +1424,7 @@ const sendInviteMeeting = computed(() => {
 					:disabled="saving"
 					class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
 				>
-					<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+					<EIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 					{{ isEditing ? 'Save' : 'Create' }}
 				</button>
 			</div>

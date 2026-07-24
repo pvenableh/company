@@ -58,7 +58,7 @@
 			</span>
 			<span v-else class="text-[10px] text-muted-foreground/40">No value</span>
 
-			<UAvatar
+			<EAvatar
 				v-if="lead.assigned_to?.avatar"
 				:src="`${useRuntimeConfig().public.directusUrl}/assets/${lead.assigned_to.avatar}?key=small`"
 				size="2xs"

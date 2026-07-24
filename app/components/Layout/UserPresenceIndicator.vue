@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
 							:key="presence.user_id.id"
 							class="flex flex-row items-center justify-center my-1"
 						>
-							<UAvatar
+							<EAvatar
 								:src="getAvatarUrl(presence.user_id)"
 								:alt="`${presence.user_id.first_name} ${presence.user_id.last_name}`"
 								size="xs"

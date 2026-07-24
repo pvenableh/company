@@ -29,7 +29,7 @@ const navigateTo = (route: string) => {
 					:class="[app.color]"
 					class="w-12 h-12 sm:w-13 sm:h-13 rounded-[14px] sm:rounded-[16px] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-[1.04] transition-all duration-200"
 				>
-					<UIcon :name="app.icon" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+					<EIcon :name="app.icon" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
 				</div>
 				<span
 					v-if="badges?.[app.name.toLowerCase()]"

@@ -9,20 +9,20 @@
 			<div class="mb-4">
 				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Currently Assigned</h4>
 				<div class="flex flex-wrap gap-2" v-if="selectedUsers.length">
-					<UBadge
+					<EBadge
 						v-for="userId in selectedUsers"
 						:key="userId"
 						color="gray"
 						class="flex items-center gap-2"
 						:class="isCurrentUserBadge(userId) ? 'border border-info/30' : ''"
 					>
-						<UAvatar
+						<EAvatar
 							:src="getAvatarUrl(getUserById(userId))"
 							:alt="getUserFullName(getUserById(userId))"
 							size="2xs"
 						/>
 						{{ getUserFullName(getUserById(userId)) }}
-						<UButton
+						<EButton
 							color="white"
 							variant="ghost"
 							icon="i-heroicons-x-mark-20-solid"
@@ -31,7 +31,7 @@
 							:ui="{ rounded: 'rounded-full' }"
 							@click="removeUser(userId)"
 						/>
-					</UBadge>
+					</EBadge>
 				</div>
 				<div v-else class="text-sm text-muted-foreground italic">No users assigned</div>
 			</div>
@@ -39,7 +39,7 @@
 			<!-- User Selector -->
 			<div>
 				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign Users</h4>
-				<USelectMenu
+				<ESelectMenu
 					v-model="selectedUser"
 					:options="availableUsers"
 					placeholder="Select users to assign..."
@@ -49,22 +49,22 @@
 				>
 					<template #option="{ option: user }">
 						<div class="flex items-center gap-2 py-1">
-							<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
+							<EAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
 							<div class="flex flex-col">
 								<span class="font-medium">{{ user.label }}</span>
 								<span class="text-xs text-muted-foreground">{{ user.email }}</span>
 							</div>
 						</div>
 					</template>
-				</USelectMenu>
+				</ESelectMenu>
 			</div>
 		</div>
 
 		<template #footer>
 			<span />
 			<div class="flex items-center gap-2">
-				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
-				<UButton color="primary" @click="handleSave" :loading="isLoading">Save Assignments</UButton>
+				<EButton variant="soft" color="gray" @click="handleCancel">Cancel</EButton>
+				<EButton color="primary" @click="handleSave" :loading="isLoading">Save Assignments</EButton>
 			</div>
 		</template>
 	</AppsAppBottomSheet>

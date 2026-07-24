@@ -142,7 +142,7 @@ defineExpose({ refresh: fetchMeetings });
 		<!-- Search + recap filter -->
 		<div class="flex flex-wrap items-center gap-2 mb-4">
 			<div class="relative flex-1 min-w-[180px]">
-				<UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+				<EIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 				<input
 					v-model="search"
 					placeholder="Search meetings, projects, clients…"
@@ -172,7 +172,7 @@ defineExpose({ refresh: fetchMeetings });
 		<div v-if="loading" class="text-center py-12 text-sm text-muted-foreground">Loading meetings…</div>
 		<div v-else-if="filtered.length === 0" class="ios-card p-10 text-center">
 			<div class="w-14 h-14 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
-				<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-muted-foreground" />
+				<EIcon name="i-heroicons-video-camera" class="w-7 h-7 text-muted-foreground" />
 			</div>
 			<h2 class="text-base font-semibold text-foreground">No meetings yet</h2>
 			<p class="text-sm text-muted-foreground mt-1.5 max-w-sm mx-auto">
@@ -188,7 +188,7 @@ defineExpose({ refresh: fetchMeetings });
 			>
 				<div class="flex items-start gap-3">
 					<div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-						<UIcon name="i-heroicons-video-camera" class="w-5 h-5 text-success" />
+						<EIcon name="i-heroicons-video-camera" class="w-5 h-5 text-success" />
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="flex items-start justify-between gap-2">
@@ -204,27 +204,27 @@ defineExpose({ refresh: fetchMeetings });
 						</div>
 						<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-muted-foreground">
 							<span class="inline-flex items-center gap-1">
-								<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+								<EIcon name="i-heroicons-clock" class="w-3 h-3" />
 								{{ formatDate(m.actual_start || m.scheduled_start) }}
 							</span>
 							<span v-if="m.actual_duration_minutes" class="inline-flex items-center gap-1">
-								<UIcon name="i-heroicons-play" class="w-3 h-3" />
+								<EIcon name="i-heroicons-play" class="w-3 h-3" />
 								{{ m.actual_duration_minutes }}m
 							</span>
 							<span v-if="m.project_event?.project?.title || m.project?.title" class="inline-flex items-center gap-1">
-								<UIcon name="i-heroicons-folder" class="w-3 h-3" />
+								<EIcon name="i-heroicons-folder" class="w-3 h-3" />
 								{{ m.project_event?.project?.title || m.project?.title }}
 							</span>
 							<span v-if="m.project_event?.title" class="inline-flex items-center gap-1">
-								<UIcon name="i-heroicons-flag" class="w-3 h-3" />
+								<EIcon name="i-heroicons-flag" class="w-3 h-3" />
 								{{ m.project_event.title }}
 							</span>
 							<span v-if="rowClient(m)?.name" class="inline-flex items-center gap-1">
-								<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
+								<EIcon name="i-heroicons-building-office" class="w-3 h-3" />
 								{{ rowClient(m).name }}
 							</span>
 							<span v-if="m.recording_url" class="inline-flex items-center gap-1 text-success dark:text-success">
-								<UIcon name="i-heroicons-film" class="w-3 h-3" />
+								<EIcon name="i-heroicons-film" class="w-3 h-3" />
 								Recording
 							</span>
 						</div>

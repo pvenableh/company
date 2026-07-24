@@ -49,13 +49,13 @@ const DefaultCard = defineComponent({
       <h4 class="font-medium text-sm mb-1">{{ element.title }}</h4>
       <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>{{ new Date(element.date_created).toLocaleDateString() }}</span>
-        <UBadge
+        <EBadge
           v-if="element.priority"
           :color="element.priority === 'high' ? 'red' : element.priority === 'medium' ? 'yellow' : 'gray'"
           size="xs"
         >
           {{ element.priority }}
-        </UBadge>
+        </EBadge>
       </div>
     </div>
   `,

@@ -27,7 +27,7 @@
 		</div>
 
 		<div v-if="loading" class="text-center py-8">
-			<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
+			<EIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
 		</div>
 
 		<div v-else-if="scores.length === 0" class="text-center py-8 text-sm text-muted-foreground">

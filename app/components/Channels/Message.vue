@@ -404,7 +404,7 @@ const hideMessage = async () => {
 		</Transition>
 
 		<!-- Report Dialog -->
-		<UModal v-model="showReportDialog">
+		<EModal v-model="showReportDialog">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<Icon name="lucide:flag" class="w-4 h-4 text-destructive" />
@@ -434,7 +434,7 @@ const hideMessage = async () => {
 					</button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 	</div>
 </template>
 

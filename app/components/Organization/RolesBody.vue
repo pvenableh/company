@@ -14,7 +14,7 @@
 			</div>
 		</div>
 
-		<UAlert
+		<EAlert
 			v-if="!selectedOrg"
 			class="mb-6"
 			title="No Organization Selected"
@@ -23,15 +23,15 @@
 		/>
 
 		<div v-else-if="loading" class="flex justify-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+			<EIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 		</div>
 
-		<UCard v-else-if="!roles.length" class="mb-6 text-center py-8">
-			<UIcon name="i-heroicons-shield-check" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
+		<ECard v-else-if="!roles.length" class="mb-6 text-center py-8">
+			<EIcon name="i-heroicons-shield-check" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
 			<h3 class="text-lg font-medium mb-2">No Roles Found</h3>
 			<p class="text-muted-foreground mb-4">Seed the default roles for this organization to get started.</p>
-			<UButton color="primary" :loading="seeding" @click="seedRoles">Seed Default Roles</UButton>
-		</UCard>
+			<EButton color="primary" :loading="seeding" @click="seedRoles">Seed Default Roles</EButton>
+		</ECard>
 
 		<div v-else>
 			<!-- Role Cards -->
@@ -59,7 +59,7 @@
 			</div>
 
 			<!-- Permission Matrix for Selected Role -->
-			<UCard v-if="selectedRole" class="overflow-hidden">
+			<ECard v-if="selectedRole" class="overflow-hidden">
 				<template #header>
 					<div class="flex items-center justify-between">
 						<div class="flex items-center gap-3">
@@ -70,15 +70,15 @@
 							<h3 class="text-lg font-semibold">{{ selectedRole.name }} Permissions</h3>
 						</div>
 						<div class="flex items-center gap-2">
-							<UButton
+							<EButton
 								v-if="hasChanges"
 								variant="outline"
 								size="sm"
 								@click="resetChanges"
 							>
 								Reset
-							</UButton>
-							<UButton
+							</EButton>
+							<EButton
 								v-if="hasChanges"
 								color="primary"
 								size="sm"
@@ -86,7 +86,7 @@
 								@click="savePermissions"
 							>
 								Save Changes
-							</UButton>
+							</EButton>
 						</div>
 					</div>
 				</template>
@@ -120,7 +120,7 @@
 							>
 								<td class="py-3 px-4 font-medium">{{ featureLabels[feature] }}</td>
 								<td class="text-center py-3 px-2">
-									<UToggle
+									<EToggle
 										:model-value="getPermission(feature, 'access')"
 										:disabled="isReadOnly"
 										size="sm"
@@ -128,7 +128,7 @@
 									/>
 								</td>
 								<td class="text-center py-3 px-2">
-									<UToggle
+									<EToggle
 										:model-value="getPermission(feature, 'create')"
 										:disabled="isReadOnly || !getPermission(feature, 'access')"
 										size="sm"
@@ -136,7 +136,7 @@
 									/>
 								</td>
 								<td class="text-center py-3 px-2">
-									<UToggle
+									<EToggle
 										:model-value="getPermission(feature, 'read')"
 										:disabled="isReadOnly || !getPermission(feature, 'access')"
 										size="sm"
@@ -144,7 +144,7 @@
 									/>
 								</td>
 								<td class="text-center py-3 px-2">
-									<UToggle
+									<EToggle
 										:model-value="getPermission(feature, 'update')"
 										:disabled="isReadOnly || !getPermission(feature, 'access')"
 										size="sm"
@@ -152,7 +152,7 @@
 									/>
 								</td>
 								<td class="text-center py-3 px-2">
-									<UToggle
+									<EToggle
 										:model-value="getPermission(feature, 'delete')"
 										:disabled="isReadOnly || !getPermission(feature, 'access')"
 										size="sm"
@@ -163,7 +163,7 @@
 						</tbody>
 					</table>
 				</div>
-			</UCard>
+			</ECard>
 		</div>
 	</div>
 </template>

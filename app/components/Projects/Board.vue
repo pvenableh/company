@@ -2,11 +2,11 @@
 	<div class="w-full mx-auto relative projects-board">
 		<transition name="fade">
 			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 projects-board__connection">
-				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+				<EAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
-						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+						<EButton size="sm" color="yellow" @click="refresh">Retry Connection</EButton>
 					</template>
-				</UAlert>
+				</EAlert>
 			</div>
 		</transition>
 		<div
@@ -16,7 +16,7 @@
 				<!-- Service filter — agency only (services not exposed via portal proxy
 					 and clients almost always have a single service anyway) -->
 				<div v-if="!portal" class="flex items-center space-x-2">
-					<USelectMenu
+					<ESelectMenu
 						v-model="selectedService"
 						:options="serviceOptions"
 						option-attribute="name"
@@ -31,12 +31,12 @@
 								<span>{{ option.name }}</span>
 							</div>
 						</template>
-					</USelectMenu>
+					</ESelectMenu>
 				</div>
 
 				<!-- Assigned To Filter — useful in both modes -->
 				<div class="flex flex-row items-center justify-center space-x-2 ml-4">
-					<UToggle v-model="filterByAssignedTo" />
+					<EToggle v-model="filterByAssignedTo" />
 					<span class="t-label text-muted-foreground">
 						{{ filterByAssignedTo ? 'My Projects' : 'All Projects' }}
 					</span>
@@ -44,7 +44,7 @@
 
 				<!-- New Project Button — agency only; portal users can't create projects -->
 				<Button v-if="!portal" size="sm" variant="outline" class="ml-2 text-[11px]" @click="showNewProjectModal = true">
-					<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+					<EIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 					New Project
 				</Button>
 			</div>
@@ -90,7 +90,7 @@
 					class="min-h-[90svh] p-2 bg-muted/30"
 				>
 					<div class="space-y-3">
-						<USkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
+						<ESkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
 					</div>
 				</div>
 
@@ -117,7 +117,7 @@
 									v-if="updatingProjects.has(element.id)"
 									class="absolute inset-0 bg-card/50 rounded-lg flex items-center justify-center z-10"
 								>
-									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+									<EIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
 								<ProjectsCard
 									:project="element"
@@ -133,7 +133,7 @@
 		</div>
 
 		<!-- New Project Modal -->
-		<UModal v-model="showNewProjectModal" title="New Project">
+		<EModal v-model="showNewProjectModal" title="New Project">
 			<template #header>
 				<h3 class="text-sm font-bold uppercase tracking-wide">New Project</h3>
 			</template>
@@ -142,19 +142,19 @@
 				<!-- Title -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title *</label>
-					<UInput v-model="newProjectForm.title" placeholder="Project title" />
+					<EInput v-model="newProjectForm.title" placeholder="Project title" />
 				</div>
 
 				<!-- Description -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Description</label>
-					<UTextarea v-model="newProjectForm.description" placeholder="Project description..." :rows="3" />
+					<ETextarea v-model="newProjectForm.description" placeholder="Project description..." :rows="3" />
 				</div>
 
 				<!-- Status -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Status</label>
-					<USelectMenu
+					<ESelectMenu
 						v-model="newProjectForm.status"
 						:options="columns.map((c) => ({ label: c.name, value: c.id }))"
 						option-attribute="label"
@@ -166,7 +166,7 @@
 				<!-- Service -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Service</label>
-					<USelectMenu
+					<ESelectMenu
 						v-model="newProjectForm.service"
 						:options="serviceOptions.filter((s) => s.id !== null)"
 						option-attribute="name"
@@ -179,13 +179,13 @@
 								<span>{{ option.name }}</span>
 							</div>
 						</template>
-					</USelectMenu>
+					</ESelectMenu>
 				</div>
 
 				<!-- Start Date -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Start Date</label>
-					<UInput v-model="newProjectForm.start_date" type="date" />
+					<EInput v-model="newProjectForm.start_date" type="date" />
 				</div>
 			</form>
 
@@ -193,15 +193,15 @@
 				<div class="flex justify-end gap-3 w-full">
 					<Button variant="outline" size="sm" @click="showNewProjectModal = false">Cancel</Button>
 					<Button size="sm" :disabled="creatingProject || !newProjectForm.title.trim()" @click="handleCreateProject">
-						<UIcon v-if="creatingProject" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
+						<EIcon v-if="creatingProject" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
 						Create Project
 					</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Post-Creation Timeline Prompt -->
-		<UModal v-model="showTimelinePrompt" title="Generate Timeline?">
+		<EModal v-model="showTimelinePrompt" title="Generate Timeline?">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
@@ -233,7 +233,7 @@
 					</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Timeline Generator Wizard -->
 		<ProjectsAITimelineWizard

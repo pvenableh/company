@@ -6,7 +6,7 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
+				<EIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Marketing</h3>
 			</div>
 			<span
@@ -26,7 +26,7 @@
 		<!-- Empty -->
 		<div v-else-if="pendingCount === 0" class="flex items-center gap-3 py-1">
 			<div class="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center flex-shrink-0">
-				<UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-muted-foreground/60" />
+				<EIcon name="i-heroicons-check-circle" class="w-4 h-4 text-muted-foreground/60" />
 			</div>
 			<div>
 				<p class="text-sm text-foreground/80 font-medium">No marketing actions this week</p>
@@ -38,7 +38,7 @@
 		<div v-else class="space-y-3">
 			<div class="flex items-start gap-3">
 				<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-					<UIcon :name="cardTypeIcon(topRec?.card_type)" class="w-4 h-4 text-primary" />
+					<EIcon :name="cardTypeIcon(topRec?.card_type)" class="w-4 h-4 text-primary" />
 				</div>
 				<div class="flex-1 min-w-0">
 					<p class="text-sm font-medium text-foreground truncate">{{ topHeadline }}</p>
@@ -65,7 +65,7 @@
 				</span>
 				<span class="text-[11px] font-medium text-primary flex items-center gap-1 group-hover:gap-1.5 transition-all">
 					Open feed
-					<UIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
+					<EIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
 				</span>
 			</div>
 		</div>

@@ -573,7 +573,7 @@ onBeforeUnmount(() => {
 					:title="annotateMode ? 'Annotation on — click to pass clicks back to the screen share / video' : 'Enable annotation (blocks clicks on the screen share / video while on)'"
 					@click="annotateMode = !annotateMode"
 				>
-					<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
+					<EIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
 					{{ annotateMode ? 'Drawing' : 'Annotate' }}
 				</button>
 
@@ -592,7 +592,7 @@ onBeforeUnmount(() => {
 						:title="t.label"
 						@click="selectedTool = t.id"
 					>
-						<UIcon :name="t.icon" class="w-3.5 h-3.5" />
+						<EIcon :name="t.icon" class="w-3.5 h-3.5" />
 					</button>
 					<!-- Text tool (labelled glyph rather than an icon) -->
 					<button
@@ -648,7 +648,7 @@ onBeforeUnmount(() => {
 						title="Undo my last mark"
 						@click="onUndo"
 					>
-						<UIcon name="i-heroicons-arrow-uturn-left" class="w-3.5 h-3.5" />
+						<EIcon name="i-heroicons-arrow-uturn-left" class="w-3.5 h-3.5" />
 					</button>
 					<!-- Clear mine -->
 					<button
@@ -664,7 +664,7 @@ onBeforeUnmount(() => {
 						title="Clear everyone's marks (broadcasts to all)"
 						@click="onClearAll"
 					>
-						<UIcon name="i-heroicons-trash" class="w-3 h-3" />
+						<EIcon name="i-heroicons-trash" class="w-3 h-3" />
 						All
 					</button>
 				</template>

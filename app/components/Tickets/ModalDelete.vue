@@ -9,8 +9,8 @@
 		<template #footer>
 			<span />
 			<div class="flex items-center gap-2">
-				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
-				<UButton color="red" :loading="isLoading" @click="handleDelete">Delete</UButton>
+				<EButton variant="soft" color="gray" @click="handleCancel">Cancel</EButton>
+				<EButton color="red" :loading="isLoading" @click="handleDelete">Delete</EButton>
 			</div>
 		</template>
 	</AppsAppBottomSheet>

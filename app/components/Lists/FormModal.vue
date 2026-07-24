@@ -13,12 +13,12 @@
 	>
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Name *</label>
-			<UInput v-model="form.name" required placeholder="e.g. Monthly Newsletter" />
+			<EInput v-model="form.name" required placeholder="e.g. Monthly Newsletter" />
 		</div>
 
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Description</label>
-			<UInput v-model="form.description" placeholder="Optional description" />
+			<EInput v-model="form.description" placeholder="Optional description" />
 		</div>
 
 		<div class="flex items-center gap-4 pt-1">

@@ -318,7 +318,7 @@ const titleLine = computed(() => (aware.hasEntity.value
 
 // ── Chat ↔ Activity switch ────────────────────────────────────────────────────
 // The Activity tab surfaces the org-wide ai_actions audit log (<AiActivityList>).
-// A lightweight pill switcher (not <UTabs>) is used here because the chat body
+// A lightweight pill switcher (not <ETabs>) is used here because the chat body
 // has a pinned footer input; UTabs' <TabsContent> wrapping would break that
 // flex-col layout. The visual matches the pill design system.
 const activeTab = ref<'chat' | 'activity'>('chat');
@@ -468,7 +468,7 @@ function formatSessionTime(iso?: string): string {
 
 					<!-- Token strip -->
 					<div v-if="activeTab === 'chat' && !tokensUnlimited && usageSummary" class="flex items-center gap-2 px-4 py-1.5 border-t border-border/20">
-						<UIcon name="i-heroicons-bolt" class="w-3 h-3 text-muted-foreground shrink-0" />
+						<EIcon name="i-heroicons-bolt" class="w-3 h-3 text-muted-foreground shrink-0" />
 						<div class="flex-1 h-1 rounded-full bg-muted/40 overflow-hidden">
 							<div class="h-full rounded-full transition-all duration-500" :class="tokensBarClass" :style="{ width: `${tokensUsedPct}%` }" />
 						</div>

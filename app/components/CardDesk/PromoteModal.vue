@@ -1,6 +1,6 @@
 <template>
   <!-- not a sheet because: multi-step wizard (preview → choice → create/link → confirm), see [[feedback_ios_native_strategy]] -->
-  <UModal
+  <EModal
     v-model="isOpen"
     title="Promote to Earnest CRM"
     :ui="{ content: 'max-w-md' }"
@@ -265,7 +265,7 @@
         {{ error }}
       </div>
     </div>
-  </UModal>
+  </EModal>
 </template>
 
 <script setup lang="ts">

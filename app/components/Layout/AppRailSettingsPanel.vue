@@ -204,7 +204,7 @@ const isCompact = computed(() => props.density === 'compact');
         >
           <span class="rail-panel__palette-label">
             Your Brand
-            <UIcon name="lucide:lock" class="rail-panel__lock" aria-hidden="true" />
+            <EIcon name="lucide:lock" class="rail-panel__lock" aria-hidden="true" />
           </span>
           <span class="rail-panel__palette-swatches" aria-hidden="true">
             <span

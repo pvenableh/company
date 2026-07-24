@@ -469,11 +469,11 @@ function handleCloseDetail() {
 			</div>
 			<div class="flex items-center gap-1">
 				<Icon v-if="loading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin text-primary mr-1" />
-				<UTooltip :text="showSidebar ? 'Hide sidebar' : 'Show sidebar'" :popper="{ placement: 'bottom' }">
+				<ETooltip :text="showSidebar ? 'Hide sidebar' : 'Show sidebar'" :popper="{ placement: 'bottom' }">
 					<button @click="toggleSidebar" class="gantt-ctrl-btn" :class="showSidebar ? 'bg-primary/10 text-primary' : ''">
 						<Icon name="lucide:panel-left" class="w-3.5 h-3.5" />
 					</button>
-				</UTooltip>
+				</ETooltip>
 				<button @click="handleZoomOut" class="gantt-ctrl-btn" :disabled="zoom <= 1"><Icon name="lucide:minus" class="w-3.5 h-3.5" /></button>
 				<button @click="scrollToToday" class="px-2 h-7 rounded-full text-[10px] font-medium text-muted-foreground hover:bg-muted/50 transition-colors">Today</button>
 				<button @click="handleZoomIn" class="gantt-ctrl-btn" :disabled="zoom >= 5"><Icon name="lucide:plus" class="w-3.5 h-3.5" /></button>
@@ -566,7 +566,7 @@ function handleCloseDetail() {
 						<span v-else-if="row.type === 'project' && !row.hasChildren" class="w-4 shrink-0" />
 
 						<!-- Type icon with tooltip -->
-						<UTooltip
+						<ETooltip
 							:text="row.type === 'project' ? 'Project' : row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : 'Task'"
 							:popper="{ placement: 'right', offsetDistance: 6 }"
 						>
@@ -590,10 +590,10 @@ function handleCloseDetail() {
 									}"
 								/>
 							</span>
-						</UTooltip>
+						</ETooltip>
 
 						<!-- Service color dot with tooltip (projects only) -->
-						<UTooltip
+						<ETooltip
 							v-if="row.type === 'project' && row.id !== 'tasks-section'"
 							:text="getProjectServiceName(row.id)"
 							:popper="{ placement: 'right', offsetDistance: 6 }"
@@ -602,7 +602,7 @@ function handleCloseDetail() {
 								class="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-border/30"
 								:style="{ backgroundColor: row.color }"
 							/>
-						</UTooltip>
+						</ETooltip>
 
 						<!-- Label -->
 						<span
@@ -703,7 +703,7 @@ function handleCloseDetail() {
 						</span>
 
 						<!-- Bar -->
-						<UTooltip
+						<ETooltip
 							v-if="hasBar(row)"
 							:text="`${row.label}${row.status ? ' — ' + statusLabel(row.status) : ''}${row.startDate ? ' · ' + getFriendlyDateTwo(row.startDate) : ''}${row.endDate && row.endDate !== row.startDate ? ' → ' + getFriendlyDateTwo(row.endDate) : ''}`"
 							:popper="{ placement: 'top', offsetDistance: 4 }"
@@ -719,7 +719,7 @@ function handleCloseDetail() {
 							>
 								<span class="gantt-bar-label">{{ row.label }}</span>
 							</div>
-						</UTooltip>
+						</ETooltip>
 
 						<!-- Due date diamond for items with only a due date -->
 						<div
@@ -737,7 +737,7 @@ function handleCloseDetail() {
 		</div>
 
 		<!-- Event Detail Modal -->
-		<UModal v-model="showEventDetail" class="sm:max-w-xl">
+		<EModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<span v-if="selectedEventProject" class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: selectedEventProject.color }" />
@@ -753,7 +753,7 @@ function handleCloseDetail() {
 					@updated="fetchAllData"
 				/>
 			</div>
-		</UModal>
+		</EModal>
 	</div>
 </template>
 

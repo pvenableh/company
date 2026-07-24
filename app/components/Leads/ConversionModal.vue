@@ -8,13 +8,13 @@
 			<!-- Client Name -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Client Name *</label>
-				<UInput v-model="form.name" placeholder="Company or client name" />
+				<EInput v-model="form.name" placeholder="Company or client name" />
 			</div>
 
 			<!-- Contract Value -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Contract Value</label>
-				<UInput v-model="form.contract_value" type="number" placeholder="$0" />
+				<EInput v-model="form.contract_value" type="number" placeholder="$0" />
 			</div>
 
 			<!-- Primary Contact (read-only) -->
@@ -35,23 +35,23 @@
 					This lead has no contact yet. We&rsquo;ll create one and link it to the new client.
 				</p>
 				<div class="grid grid-cols-2 gap-2">
-					<UInput v-model="contactForm.first_name" placeholder="First name" size="sm" />
-					<UInput v-model="contactForm.last_name" placeholder="Last name" size="sm" />
+					<EInput v-model="contactForm.first_name" placeholder="First name" size="sm" />
+					<EInput v-model="contactForm.last_name" placeholder="Last name" size="sm" />
 				</div>
-				<UInput v-model="contactForm.email" type="email" placeholder="Email" size="sm" />
+				<EInput v-model="contactForm.email" type="email" placeholder="Email" size="sm" />
 			</div>
 
 			<!-- Create Project Toggle -->
 			<div class="space-y-3">
 				<div class="flex items-center gap-3">
-					<UToggle v-model="createProject" />
+					<EToggle v-model="createProject" />
 					<span class="text-xs font-medium text-foreground">Also create a project</span>
 				</div>
 
 				<template v-if="createProject">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Project Title</label>
-						<UInput v-model="projectForm.title" placeholder="Project title" />
+						<EInput v-model="projectForm.title" placeholder="Project title" />
 					</div>
 				</template>
 			</div>
@@ -59,7 +59,7 @@
 			<!-- Notes -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Conversion Notes</label>
-				<UTextarea v-model="form.notes" :rows="2" placeholder="Optional notes..." />
+				<ETextarea v-model="form.notes" :rows="2" placeholder="Optional notes..." />
 			</div>
 		</form>
 

@@ -97,7 +97,7 @@ const visible = computed(() => goalsEnabled.value && !isLoading.value && matchin
 				class="related-goals-card__row"
 				@click="router.push(seeAllHref)"
 			>
-				<UIcon
+				<EIcon
 					:name="categoryConfig[categoryOf(goal)]?.icon || categoryConfig.custom.icon"
 					class="w-3.5 h-3.5 shrink-0"
 					:class="categoryConfig[categoryOf(goal)]?.color || categoryConfig.custom.color"

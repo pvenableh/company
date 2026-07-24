@@ -2,18 +2,18 @@
 	<div class="teams-manager">
 		<div class="flex items-center justify-between mb-6">
 			<h2 class="text-2xl font-semibold">{{ embedded ? '' : 'Teams' }}</h2>
-			<UButton
+			<EButton
 				v-if="hasTeamManagementAccess"
 				color="primary"
 				@click="showCreateTeamModal = true"
 				icon="i-heroicons-user-group"
 			>
 				Create Team
-			</UButton>
+			</EButton>
 		</div>
 
 		<div v-if="isLoading" class="flex justify-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
+			<EIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 		</div>
 
 		<div v-else>
@@ -25,7 +25,7 @@
 			</div>
 
 			<!-- No Organization Selected -->
-			<UAlert
+			<EAlert
 				v-if="!effectiveOrgId"
 				class="mb-6"
 				title="No Organization Selected"
@@ -34,8 +34,8 @@
 			/>
 
 			<!-- No Teams Found -->
-			<UCard v-else-if="!displayTeams.length" class="mb-6 text-center py-8">
-				<UIcon name="i-heroicons-user-group" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
+			<ECard v-else-if="!displayTeams.length" class="mb-6 text-center py-8">
+				<EIcon name="i-heroicons-user-group" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
 				<h3 class="text-lg font-medium mb-2">No Teams Found</h3>
 				<p class="text-gray-500 mb-4">
 					{{
@@ -44,15 +44,15 @@
 							: 'You are not a member of any teams in this organization.'
 					}}
 				</p>
-				<UButton v-if="hasTeamManagementAccess" color="primary" @click="showCreateTeamModal = true">
+				<EButton v-if="hasTeamManagementAccess" color="primary" @click="showCreateTeamModal = true">
 					Create Team
-				</UButton>
-			</UCard>
+				</EButton>
+			</ECard>
 
 			<!-- Teams List -->
 			<div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 				<!-- Regular Team Cards -->
-				<UCard
+				<ECard
 					v-for="team in displayTeams"
 					:key="team.id"
 					:class="selectedTeam === team.id ? 'ring-2 ring-primary' : ''"
@@ -69,8 +69,8 @@
 								<h3 class="text-lg font-medium">{{ team.name }}</h3>
 							</div>
 							<div class="flex gap-1">
-								<UBadge v-if="isTeamManager(team.id)" color="green" class="text-[9px] uppercase">Manager</UBadge>
-								<UBadge v-if="isOnTeam(team)" color="blue" class="text-[9px] uppercase">Member</UBadge>
+								<EBadge v-if="isTeamManager(team.id)" color="green" class="text-[9px] uppercase">Manager</EBadge>
+								<EBadge v-if="isOnTeam(team)" color="blue" class="text-[9px] uppercase">Member</EBadge>
 							</div>
 						</div>
 					</template>
@@ -78,28 +78,28 @@
 					<div class="text-sm text-gray-500" v-html="team.description || 'No description provided'" />
 
 					<div v-if="team.focus" class="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-						<UIcon name="i-heroicons-light-bulb" class="w-3.5 h-3.5 shrink-0" />
+						<EIcon name="i-heroicons-light-bulb" class="w-3.5 h-3.5 shrink-0" />
 						<span>{{ team.focus }}</span>
 					</div>
 
 					<div class="mt-4 flex items-center justify-between">
 						<span class="text-xs font-medium text-gray-500">{{ getTeamMembers(team).length }} Members</span>
 
-						<UDropdown v-if="hasTeamManagementAccess && canManageTeam(team.id)" :items="dropdownItems(team)">
+						<EDropdown v-if="hasTeamManagementAccess && canManageTeam(team.id)" :items="dropdownItems(team)">
 							<button
 								type="button"
 								class="p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 								aria-label="Team options"
 							>
-								<UIcon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
+								<EIcon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
 							</button>
-						</UDropdown>
+						</EDropdown>
 					</div>
 
 					<template #footer>
 						<div class="flex justify-between items-center">
 							<div class="flex -space-x-2">
-								<UAvatar
+								<EAvatar
 									v-for="(user, index) in getTeamMembers(team).slice(0, 5)"
 									:key="index"
 									:src="getAvatarUrl(user.directus_users_id)"
@@ -115,7 +115,7 @@
 							</div>
 
 							<div class="flex gap-2">
-								<UButton
+								<EButton
 									v-if="canManageTeam(team.id)"
 									color="gray"
 									variant="ghost"
@@ -124,26 +124,26 @@
 									@click="manageTeamMembers(team)"
 								/>
 
-								<UButton
+								<EButton
 									:color="selectedTeam === team.id ? 'gray' : 'primary'"
 									:variant="selectedTeam === team.id ? 'solid' : 'outline'"
 									size="sm"
 									@click="setTeam(team.id)"
 								>
 									{{ selectedTeam === team.id ? 'Selected' : 'Select' }}
-								</UButton>
+								</EButton>
 							</div>
 						</div>
 					</template>
-				</UCard>
+				</ECard>
 			</div>
 		</div>
 
 		<!-- Team Management Modal -->
-		<UModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
+		<EModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-primary" />
+					<EIcon name="i-heroicons-user-plus" class="w-4 h-4 text-primary" />
 					<h3 class="text-sm font-semibold uppercase tracking-wide">
 						Manage Team: {{ currentEditTeam?.name }}
 					</h3>
@@ -157,13 +157,13 @@
 				:organization-id="effectiveOrgId"
 				@update="refreshTeams"
 			/>
-		</UModal>
+		</EModal>
 
 		<!-- Create/Edit Team Modal -->
-		<UModal v-model="showCreateTeamModal">
+		<EModal v-model="showCreateTeamModal">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<UIcon
+					<EIcon
 						:name="isEditing ? 'i-heroicons-pencil-square' : 'i-heroicons-user-group'"
 						class="w-4 h-4 text-primary"
 					/>
@@ -175,7 +175,7 @@
 
 			<form @submit.prevent="submitTeamForm" class="space-y-4">
 				<!-- Icon Upload -->
-				<UFormGroup label="Team Icon" hint="Optional">
+				<EFormGroup label="Team Icon" hint="Optional">
 					<div class="flex items-center gap-4">
 						<div
 							class="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors"
@@ -187,7 +187,7 @@
 								class="w-full h-full object-cover"
 								alt="Team icon"
 							/>
-							<UIcon v-else name="i-heroicons-camera" class="w-6 h-6 text-muted-foreground" />
+							<EIcon v-else name="i-heroicons-camera" class="w-6 h-6 text-muted-foreground" />
 						</div>
 						<div class="flex-1">
 							<input
@@ -198,12 +198,12 @@
 								@change="handleIconUpload"
 							/>
 							<div class="flex gap-2">
-								<UButton type="button" size="xs" variant="outline" @click="iconInput?.click()">
+								<EButton type="button" size="xs" variant="outline" @click="iconInput?.click()">
 									{{ teamForm.iconPreview ? 'Change' : 'Upload' }}
-								</UButton>
-								<UButton v-if="teamForm.iconPreview" type="button" size="xs" variant="ghost" color="red" @click="removeIcon">
+								</EButton>
+								<EButton v-if="teamForm.iconPreview" type="button" size="xs" variant="ghost" color="red" @click="removeIcon">
 									Remove
-								</UButton>
+								</EButton>
 							</div>
 							<p class="text-xs text-muted-foreground mt-1">Square image recommended. Max 2MB.</p>
 						</div>
@@ -213,49 +213,49 @@
 							<div class="h-full bg-primary transition-all duration-300 rounded-full" :style="{ width: iconProgress + '%' }" />
 						</div>
 					</div>
-				</UFormGroup>
+				</EFormGroup>
 
-				<UFormGroup label="Team Name" required>
-					<UInput v-model="teamForm.name" placeholder="Enter team name" autofocus />
-				</UFormGroup>
+				<EFormGroup label="Team Name" required>
+					<EInput v-model="teamForm.name" placeholder="Enter team name" autofocus />
+				</EFormGroup>
 
-				<UFormGroup label="Description">
+				<EFormGroup label="Description">
 					<LazyFormTiptap v-model="teamForm.description" placeholder="Describe the purpose of this team" />
-				</UFormGroup>
+				</EFormGroup>
 
-				<UFormGroup label="Focus" hint="What this team specializes in">
-					<UInput v-model="teamForm.focus" placeholder="e.g. Brand strategy, Web development, Social media" />
-				</UFormGroup>
+				<EFormGroup label="Focus" hint="What this team specializes in">
+					<EInput v-model="teamForm.focus" placeholder="e.g. Brand strategy, Web development, Social media" />
+				</EFormGroup>
 
-				<UFormGroup label="Goals" hint="Current objectives for this team">
-					<UTextarea v-model="teamForm.goals" placeholder="e.g. Launch 3 client websites by Q2, grow social accounts by 25%" :rows="2" />
-				</UFormGroup>
+				<EFormGroup label="Goals" hint="Current objectives for this team">
+					<ETextarea v-model="teamForm.goals" placeholder="e.g. Launch 3 client websites by Q2, grow social accounts by 25%" :rows="2" />
+				</EFormGroup>
 
-				<UFormGroup label="Active">
+				<EFormGroup label="Active">
 					<div class="flex items-center gap-3">
-						<UToggle v-model="teamForm.active" />
+						<EToggle v-model="teamForm.active" />
 						<span class="text-sm text-muted-foreground">
 							{{ teamForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
 						</span>
 					</div>
-				</UFormGroup>
+				</EFormGroup>
 			</form>
 
 			<template #footer>
 				<div class="flex justify-end gap-2 w-full">
-					<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
-					<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name || iconUploading" @click="submitTeamForm">
+					<EButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</EButton>
+					<EButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name || iconUploading" @click="submitTeamForm">
 						{{ isEditing ? 'Save Changes' : 'Create Team' }}
-					</UButton>
+					</EButton>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Delete Confirmation Modal -->
-		<UModal v-model="showDeleteTeamModal">
+		<EModal v-model="showDeleteTeamModal">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-destructive" />
+					<EIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-destructive" />
 					<h3 class="text-sm font-semibold uppercase tracking-wide text-destructive">Delete Team</h3>
 				</div>
 			</template>
@@ -271,11 +271,11 @@
 
 			<template #footer>
 				<div class="flex justify-end gap-2 w-full">
-					<UButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</UButton>
-					<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
+					<EButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</EButton>
+					<EButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</EButton>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 	</div>
 </template>
 

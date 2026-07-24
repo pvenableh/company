@@ -620,7 +620,7 @@ const formatCurrency = (amount) => {
 			</ClientOnly>
 
 			<!-- Tabs -->
-			<UTabs
+			<ETabs
 				:items="items"
 				class="w-full"
 			>
@@ -734,7 +734,7 @@ const formatCurrency = (amount) => {
 						<!-- Attach Existing button above time entries -->
 						<div class="flex justify-end px-1 mb-2">
 							<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachTimeEntry">
-								<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+								<EIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 								Attach Existing
 							</Button>
 						</div>
@@ -743,7 +743,7 @@ const formatCurrency = (amount) => {
 
 					<!-- Attach Existing Time Entry Modal -->
 					<ClientOnly>
-						<UModal v-model="showAttachTimeEntry">
+						<EModal v-model="showAttachTimeEntry">
 							<div class="p-6">
 								<h3 class="text-lg font-semibold mb-4">Attach Existing Time Entry</h3>
 
@@ -752,7 +752,7 @@ const formatCurrency = (amount) => {
 								</div>
 
 								<div v-else-if="unattachedTimeEntries.length === 0" class="text-center py-8 text-muted-foreground">
-									<UIcon name="i-heroicons-clock" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+									<EIcon name="i-heroicons-clock" class="w-8 h-8 mx-auto mb-2 opacity-40" />
 									<p class="text-sm">No unattached time entries found.</p>
 								</div>
 
@@ -774,7 +774,7 @@ const formatCurrency = (amount) => {
 												<span v-if="entry.client?.name"> &middot; {{ entry.client.name }}</span>
 											</p>
 										</div>
-										<UButton
+										<EButton
 											icon="i-heroicons-link"
 											size="xs"
 											color="primary"
@@ -783,15 +783,15 @@ const formatCurrency = (amount) => {
 											@click="attachTimeEntry(entry.id)"
 										>
 											Attach
-										</UButton>
+										</EButton>
 									</div>
 								</div>
 
 								<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
-									<UButton color="gray" variant="ghost" @click="showAttachTimeEntry = false">Close</UButton>
+									<EButton color="gray" variant="ghost" @click="showAttachTimeEntry = false">Close</EButton>
 								</div>
 							</div>
-						</UModal>
+						</EModal>
 					</ClientOnly>
 				</template>
 				<template #documents="{ item }">
@@ -800,12 +800,12 @@ const formatCurrency = (amount) => {
 							<h2 class="t-label text-muted-foreground">Documents</h2>
 							<div class="flex items-center gap-2">
 								<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachFile">
-									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+									<EIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 									Attach Existing
 								</Button>
 								<Button size="sm" variant="outline" class="text-[11px]" @click="triggerFileUpload" :disabled="uploadingDoc">
-									<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
-									<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
+									<EIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
+									<EIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
 									Upload
 								</Button>
 							</div>
@@ -825,7 +825,7 @@ const formatCurrency = (amount) => {
 								target="_blank"
 								class="ios-card p-4 flex items-center gap-3 ios-press block stagger-item"
 							>
-								<UIcon :name="getFileIcon(doc.directus_files_id?.type)" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
+								<EIcon :name="getFileIcon(doc.directus_files_id?.type)" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
 								<div class="flex-1 min-w-0">
 									<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
 									<div class="flex items-center gap-2 mt-0.5">
@@ -835,7 +835,7 @@ const formatCurrency = (amount) => {
 										</span>
 									</div>
 								</div>
-								<UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+								<EIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
 							</a>
 						</div>
 
@@ -846,7 +846,7 @@ const formatCurrency = (amount) => {
 							<p class="text-sm text-muted-foreground">No documents yet</p>
 							<p class="text-xs text-muted-foreground/60 mt-1">Upload files to keep everything organized.</p>
 							<Button size="sm" variant="outline" class="mt-4 text-[11px]" @click="triggerFileUpload">
-								<UIcon name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
+								<EIcon name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
 								Upload Files
 							</Button>
 						</div>
@@ -854,11 +854,11 @@ const formatCurrency = (amount) => {
 
 						<!-- Attach Existing File Modal -->
 						<ClientOnly>
-							<UModal v-model="showAttachFile">
+							<EModal v-model="showAttachFile">
 								<div class="p-6">
 									<h3 class="text-lg font-semibold mb-4">Attach Existing File</h3>
 
-									<UInput
+									<EInput
 										v-model="fileSearchQuery"
 										icon="i-heroicons-magnifying-glass"
 										placeholder="Search files..."
@@ -871,7 +871,7 @@ const formatCurrency = (amount) => {
 									</div>
 
 									<div v-else-if="filteredExistingFiles.length === 0" class="text-center py-8 text-muted-foreground">
-										<UIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+										<EIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
 										<p class="text-sm">{{ fileSearchQuery ? 'No matching files found.' : 'No files available to attach.' }}</p>
 									</div>
 
@@ -882,7 +882,7 @@ const formatCurrency = (amount) => {
 											class="ios-card p-3 flex items-center justify-between"
 										>
 											<div class="flex items-center gap-3 min-w-0">
-												<UIcon :name="getFileIcon(file.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+												<EIcon :name="getFileIcon(file.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 												<div class="min-w-0">
 													<p class="text-sm font-medium text-foreground truncate">{{ file.title || file.filename_download }}</p>
 													<p class="text-[10px] text-muted-foreground">
@@ -891,7 +891,7 @@ const formatCurrency = (amount) => {
 													</p>
 												</div>
 											</div>
-											<UButton
+											<EButton
 												icon="i-heroicons-link"
 												size="xs"
 												color="primary"
@@ -899,15 +899,15 @@ const formatCurrency = (amount) => {
 												@click="attachFile(file.id)"
 											>
 												Attach
-											</UButton>
+											</EButton>
 										</div>
 									</div>
 
 									<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
-										<UButton color="gray" variant="ghost" @click="showAttachFile = false">Close</UButton>
+										<EButton color="gray" variant="ghost" @click="showAttachFile = false">Close</EButton>
 									</div>
 								</div>
-							</UModal>
+							</EModal>
 						</ClientOnly>
 					</div>
 				</template>
@@ -917,11 +917,11 @@ const formatCurrency = (amount) => {
 							<h2 class="t-label text-muted-foreground">Invoices</h2>
 							<div class="flex items-center gap-2">
 								<Button size="sm" variant="outline" class="text-[11px]" @click="openAttachInvoice">
-									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+									<EIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
 									Attach Existing
 								</Button>
 								<Button size="sm" variant="outline" class="text-[11px]" @click="showQuickInvoice = true">
-									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+									<EIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 									New Invoice
 								</Button>
 							</div>
@@ -948,7 +948,7 @@ const formatCurrency = (amount) => {
 											'bg-muted/60': inv.status === 'archived',
 										}"
 									>
-										<UIcon name="i-heroicons-document-currency-dollar" class="w-4 h-4"
+										<EIcon name="i-heroicons-document-currency-dollar" class="w-4 h-4"
 											:class="{
 												'text-success': inv.status === 'paid',
 												'text-warning': inv.status === 'pending',
@@ -985,7 +985,7 @@ const formatCurrency = (amount) => {
 							</div>
 							<p class="text-sm text-muted-foreground">No invoices for this project.</p>
 							<Button size="sm" variant="outline" class="mt-4 text-[11px]" @click="showQuickInvoice = true">
-								<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+								<EIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 								Create Invoice
 							</Button>
 						</div>
@@ -994,7 +994,7 @@ const formatCurrency = (amount) => {
 
 					<!-- Invoice Create Modal -->
 					<ClientOnly>
-						<UModal v-model="showQuickInvoice" class="sm:max-w-2xl">
+						<EModal v-model="showQuickInvoice" class="sm:max-w-2xl">
 							<div class="p-6 max-h-[85vh] overflow-y-auto">
 								<h3 class="text-lg font-semibold mb-4">Create Invoice</h3>
 								<InvoicesInvoiceForm
@@ -1004,10 +1004,10 @@ const formatCurrency = (amount) => {
 									@cancel="showQuickInvoice = false"
 								/>
 							</div>
-						</UModal>
+						</EModal>
 
 						<!-- Attach Existing Invoice Modal -->
-						<UModal v-model="showAttachInvoice">
+						<EModal v-model="showAttachInvoice">
 							<div class="p-6">
 								<h3 class="text-lg font-semibold mb-4">Attach Existing Invoice</h3>
 
@@ -1016,7 +1016,7 @@ const formatCurrency = (amount) => {
 								</div>
 
 								<div v-else-if="unattachedInvoices.length === 0" class="text-center py-8 text-muted-foreground">
-									<UIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+									<EIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
 									<p class="text-sm">No unattached invoices found for this organization.</p>
 								</div>
 
@@ -1033,7 +1033,7 @@ const formatCurrency = (amount) => {
 												<span v-if="inv.total_amount"> &middot; {{ formatCurrency(parseFloat(inv.total_amount) || 0) }}</span>
 											</p>
 										</div>
-										<UButton
+										<EButton
 											icon="i-heroicons-link"
 											size="xs"
 											color="primary"
@@ -1041,18 +1041,18 @@ const formatCurrency = (amount) => {
 											@click="attachInvoice(inv.id)"
 										>
 											Attach
-										</UButton>
+										</EButton>
 									</div>
 								</div>
 
 								<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
-									<UButton color="gray" variant="ghost" @click="showAttachInvoice = false">Close</UButton>
+									<EButton color="gray" variant="ghost" @click="showAttachInvoice = false">Close</EButton>
 								</div>
 							</div>
-						</UModal>
+						</EModal>
 					</ClientOnly>
 				</template>
-			</UTabs>
+			</ETabs>
 
 		<!-- Contextual AI Sidebar -->
 	</LayoutPageContainer>

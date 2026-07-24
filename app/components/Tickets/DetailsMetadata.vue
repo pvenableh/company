@@ -1,7 +1,7 @@
 <template>
 	<div class="relative w-full">
 		<!-- Info Button - Always visible on mobile, hidden on desktop -->
-		<UButton
+		<EButton
 			icon="i-heroicons-information-circle"
 			size="sm"
 			color="gray"
@@ -24,7 +24,7 @@
 				>
 					<div class="bg-card p-4 w-full max-w-sm relative">
 						<div class="flex justify-between items-center absolute right-2 top-2">
-							<UButton icon="i-heroicons-x-mark" size="sm" color="gray" variant="ghost" @click="showMetadata = false" />
+							<EButton icon="i-heroicons-x-mark" size="sm" color="gray" variant="ghost" @click="showMetadata = false" />
 						</div>
 						<div class="flex flex-col">
 							<div class="metadata-content">

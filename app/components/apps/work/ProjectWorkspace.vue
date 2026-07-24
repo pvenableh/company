@@ -1329,7 +1329,7 @@ watch(() => props.projectId, () => {
 					<!-- Live pulse: recent activity/events + latest touchpoints. -->
 					<div class="grid gap-6 lg:grid-cols-2">
 						<div class="min-w-0">
-							<UTabs :items="overviewPulseTabs">
+							<ETabs :items="overviewPulseTabs">
 								<template #timeline>
 									<div class="max-h-[24rem] overflow-y-auto pr-1 -mr-1">
 										<AppsWorkProjectTimelineFeed :project-id="projectId" hide-header />
@@ -1340,7 +1340,7 @@ watch(() => props.projectId, () => {
 										<ProjectsActivityTimeline :project-id="projectId" hide-header />
 									</div>
 								</template>
-							</UTabs>
+							</ETabs>
 						</div>
 						<div class="min-w-0">
 							<div class="flex items-center gap-2 mb-4">
@@ -1552,8 +1552,8 @@ watch(() => props.projectId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="text-muted-foreground/40 text-sm shrink-0">#</span>
-							<USkeleton class="h-3.5 flex-1 max-w-[35%]" />
-							<USkeleton class="h-3.5 w-32 hidden md:block" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[35%]" />
+							<ESkeleton class="h-3.5 w-32 hidden md:block" />
 						</div>
 					</div>
 					<div v-else-if="!channels.length" class="text-sm text-muted-foreground text-center py-10">
@@ -1604,15 +1604,15 @@ watch(() => props.projectId, () => {
 							:key="`meet-skel-${i}`"
 							class="ios-card flex items-start gap-3 px-4 py-3"
 						>
-							<USkeleton class="w-9 h-9 rounded-xl shrink-0" />
+							<ESkeleton class="w-9 h-9 rounded-xl shrink-0" />
 							<div class="flex-1 space-y-2">
 								<div class="flex items-start justify-between gap-2">
-									<USkeleton class="h-3.5 flex-1 max-w-[60%]" />
-									<USkeleton class="h-4 w-20 rounded-full shrink-0" />
+									<ESkeleton class="h-3.5 flex-1 max-w-[60%]" />
+									<ESkeleton class="h-4 w-20 rounded-full shrink-0" />
 								</div>
 								<div class="flex gap-3">
-									<USkeleton class="h-3 w-28" />
-									<USkeleton class="h-3 w-12" />
+									<ESkeleton class="h-3 w-28" />
+									<ESkeleton class="h-3 w-12" />
 								</div>
 							</div>
 						</div>
@@ -1689,10 +1689,10 @@ watch(() => props.projectId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
-							<USkeleton class="h-3.5 w-24" />
-							<USkeleton class="h-3.5 flex-1 max-w-[20%]" />
-							<USkeleton class="h-4 w-16" />
-							<USkeleton class="h-4 w-14 rounded-full" />
+							<ESkeleton class="h-3.5 w-24" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[20%]" />
+							<ESkeleton class="h-4 w-16" />
+							<ESkeleton class="h-4 w-14 rounded-full" />
 						</div>
 					</div>
 					<div v-else-if="!invoices.length" class="text-sm text-muted-foreground text-center py-10">
@@ -1885,10 +1885,10 @@ watch(() => props.projectId, () => {
 						>
 							<div v-if="filesLoading && !files.length" class="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-busy="true" aria-label="Loading files">
 								<div v-for="i in skeletonRows(files.length, 4, 6)" :key="`file-skel-${i}`" class="ios-card p-3 flex items-center gap-3">
-									<USkeleton class="w-4 h-4 shrink-0" />
+									<ESkeleton class="w-4 h-4 shrink-0" />
 									<div class="flex-1 space-y-1.5">
-										<USkeleton class="h-3.5 w-3/4" />
-										<USkeleton class="h-2.5 w-20" />
+										<ESkeleton class="h-3.5 w-3/4" />
+										<ESkeleton class="h-2.5 w-20" />
 									</div>
 								</div>
 							</div>
@@ -1985,7 +1985,7 @@ watch(() => props.projectId, () => {
 							class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
 						>
 							<span class="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
-							<USkeleton class="h-3.5 flex-1 max-w-[40%]" />
+							<ESkeleton class="h-3.5 flex-1 max-w-[40%]" />
 						</div>
 					</div>
 
@@ -2103,37 +2103,37 @@ watch(() => props.projectId, () => {
 
 		<!-- New Event — manual project_event creation from the Timeline tab.
 		     UModal contract: v-model + DEFAULT slot (not v-model:open/#content). -->
-		<UModal v-if="project" v-model="showNewEventModal" title="New Event">
+		<EModal v-if="project" v-model="showNewEventModal" title="New Event">
 			<template #header>
 				<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
 			</template>
 			<form class="space-y-4" @submit.prevent="handleCreateEvent">
 				<div class="space-y-1">
 					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Title *</label>
-					<UInput v-model="newEventForm.title" placeholder="Event title" autofocus />
+					<EInput v-model="newEventForm.title" placeholder="Event title" autofocus />
 				</div>
 				<div class="space-y-1">
 					<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Description</label>
-					<UTextarea v-model="newEventForm.description" placeholder="What happens at this milestone?" :rows="3" />
+					<ETextarea v-model="newEventForm.description" placeholder="What happens at this milestone?" :rows="3" />
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Type</label>
-						<USelectMenu v-model="newEventForm.type" :options="EVENT_TYPE_OPTIONS" option-attribute="label" value-attribute="value" />
+						<ESelectMenu v-model="newEventForm.type" :options="EVENT_TYPE_OPTIONS" option-attribute="label" value-attribute="value" />
 					</div>
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</label>
-						<USelectMenu v-model="newEventForm.status" :options="EVENT_STATUS_OPTIONS" option-attribute="label" value-attribute="value" />
+						<ESelectMenu v-model="newEventForm.status" :options="EVENT_STATUS_OPTIONS" option-attribute="label" value-attribute="value" />
 					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">Date</label>
-						<UInput v-model="newEventForm.date" type="date" />
+						<EInput v-model="newEventForm.date" type="date" />
 					</div>
 					<div class="space-y-1">
 						<label class="text-[10px] uppercase tracking-wider text-muted-foreground">End date</label>
-						<UInput v-model="newEventForm.end_date" type="date" />
+						<EInput v-model="newEventForm.end_date" type="date" />
 					</div>
 				</div>
 				<label class="flex items-center gap-2 text-xs text-foreground/80 cursor-pointer select-none">
@@ -2150,12 +2150,12 @@ watch(() => props.projectId, () => {
 					</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Attach existing file — search the file library and link one to this
 		     project via the admin-token attach-file proxy. Search-driven so we
 		     never dump the whole asset library. -->
-		<UModal v-if="project" v-model="showAttachFileModal" title="Attach existing file">
+		<EModal v-if="project" v-model="showAttachFileModal" title="Attach existing file">
 			<template #header>
 				<h3 class="text-sm font-bold uppercase tracking-wide">Attach existing file</h3>
 			</template>
@@ -2199,7 +2199,7 @@ watch(() => props.projectId, () => {
 					<Button variant="outline" size="sm" @click="showAttachFileModal = false">Done</Button>
 				</div>
 			</template>
-		</UModal>
+		</EModal>
 
 		<!-- Create modals — UModal teleports to body, escapes the slide-over's
 		     transformed container. -->

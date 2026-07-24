@@ -1,24 +1,24 @@
 <template>
 	<div class="flex items-center justify-between pt-4 border-t border-border mt-6">
 		<div class="flex items-center gap-2">
-			<UTooltip text="Delete ticket">
-				<UButton
+			<ETooltip text="Delete ticket">
+				<EButton
 					color="red"
 					variant="ghost"
 					icon="i-heroicons-trash"
 					size="sm"
 					@click="emit('deleteClick')"
 				/>
-			</UTooltip>
-			<UTooltip text="Share ticket">
-				<UButton
+			</ETooltip>
+			<ETooltip text="Share ticket">
+				<EButton
 					color="gray"
 					variant="ghost"
 					icon="i-heroicons-share"
 					size="sm"
 					@click="emit('share', 'link')"
 				/>
-			</UTooltip>
+			</ETooltip>
 		</div>
 
 		<Button
@@ -26,7 +26,7 @@
 			size="sm"
 			:disabled="isLoading || !isDirty"
 		>
-			<UIcon v-if="isLoading" name="i-heroicons-arrow-path" class="animate-spin h-3.5 w-3.5 mr-1" />
+			<EIcon v-if="isLoading" name="i-heroicons-arrow-path" class="animate-spin h-3.5 w-3.5 mr-1" />
 			Save Changes
 		</Button>
 	</div>

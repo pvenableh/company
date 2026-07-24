@@ -20,7 +20,7 @@ const copy = computed(() => {
 		class="w-full flex items-center gap-2 px-3 py-2 rounded-full bg-warning/10 hover:bg-warning/20 ring-1 ring-warning/20 transition-colors text-left"
 		@click="emit('open')"
 	>
-		<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
+		<EIcon name="i-heroicons-clock" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
 		<span class="text-[11px] font-medium text-foreground/80 truncate">{{ copy }}</span>
 		<span class="ml-auto text-[10px] font-semibold text-warning whitespace-nowrap">Check in &rarr;</span>
 	</button>

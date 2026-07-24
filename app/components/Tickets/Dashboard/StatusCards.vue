@@ -1,92 +1,92 @@
 <template>
 	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-		<UCard class="relative overflow-hidden">
+		<ECard class="relative overflow-hidden">
 			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--cyan)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
 						<h3 class="text-xs uppercase font-bold text-muted-foreground">Pending</h3>
-						<UTooltip
+						<ETooltip
 							text="Tickets that have been created but not yet assigned or scheduled. The average age indicates how long these tickets have been waiting."
 						>
-							<UIcon
+							<EIcon
 								name="i-heroicons-information-circle"
 								class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 							/>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<p class="text-2xl font-bold">{{ ticketCounts.pending }}</p>
 				</div>
-				<UIcon name="i-heroicons-clock" class="w-10 h-10 text-muted-foreground" />
+				<EIcon name="i-heroicons-clock" class="w-10 h-10 text-muted-foreground" />
 			</div>
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.pending) }}</p>
-		</UCard>
+		</ECard>
 
-		<UCard class="relative overflow-hidden">
+		<ECard class="relative overflow-hidden">
 			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--cyan2)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
 						<h3 class="text-xs uppercase font-bold text-muted-foreground">Scheduled</h3>
-						<UTooltip
+						<ETooltip
 							text="Tickets that have been assigned and scheduled for future work. The average age measures time since ticket creation, not time until scheduled work begins."
 						>
-							<UIcon
+							<EIcon
 								name="i-heroicons-information-circle"
 								class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 							/>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<p class="text-2xl font-bold">{{ ticketCounts.scheduled }}</p>
 				</div>
-				<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground" />
+				<EIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground" />
 			</div>
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.scheduled) }}</p>
-		</UCard>
+		</ECard>
 
-		<UCard class="relative overflow-hidden">
+		<ECard class="relative overflow-hidden">
 			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--green2)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
 						<h3 class="text-xs uppercase font-bold text-muted-foreground">In Progress</h3>
-						<UTooltip
+						<ETooltip
 							text="Tickets currently being worked on. The average age indicates how long these tickets have been in the system total, not just in the 'In Progress' state."
 						>
-							<UIcon
+							<EIcon
 								name="i-heroicons-information-circle"
 								class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 							/>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<p class="text-2xl font-bold">{{ ticketCounts.inProgress }}</p>
 				</div>
-				<UIcon name="i-heroicons-arrow-path" class="w-10 h-10 text-muted-foreground" />
+				<EIcon name="i-heroicons-arrow-path" class="w-10 h-10 text-muted-foreground" />
 			</div>
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.inProgress) }}</p>
-		</UCard>
+		</ECard>
 
-		<UCard class="relative overflow-hidden">
+		<ECard class="relative overflow-hidden">
 			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--green)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
 						<h3 class="text-xs uppercase font-bold text-muted-foreground">Completed</h3>
-						<UTooltip
+						<ETooltip
 							text="Total number of tickets that have been resolved. 'Last 30 days' shows the count of tickets completed in the past month."
 						>
-							<UIcon
+							<EIcon
 								name="i-heroicons-information-circle"
 								class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 							/>
-						</UTooltip>
+						</ETooltip>
 					</div>
 					<p class="text-2xl font-bold">{{ ticketCounts.completed }}</p>
 				</div>
-				<UIcon name="i-heroicons-check-circle" class="w-10 h-10 text-muted-foreground" />
+				<EIcon name="i-heroicons-check-circle" class="w-10 h-10 text-muted-foreground" />
 			</div>
 			<p class="text-xs mt-2">Last 30 days: {{ ticketCounts.recentlyCompleted }}</p>
-		</UCard>
+		</ECard>
 	</div>
 </template>
 

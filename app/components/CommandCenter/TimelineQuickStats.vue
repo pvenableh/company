@@ -1,14 +1,14 @@
 <template>
 	<div class="ios-card p-5">
 		<div class="flex items-center gap-2 mb-4">
-			<UIcon name="i-heroicons-squares-2x2" class="w-5 h-5 text-primary" />
+			<EIcon name="i-heroicons-squares-2x2" class="w-5 h-5 text-primary" />
 			<h3 class="text-sm font-semibold text-foreground">Quick Stats</h3>
 		</div>
 
 		<div class="grid grid-cols-2 gap-3">
 			<div v-for="stat in stats" :key="stat.label" class="p-3 rounded-xl bg-muted/20">
 				<div class="flex items-center gap-2 mb-1">
-					<UIcon :name="stat.icon" class="w-4 h-4" :class="stat.color" />
+					<EIcon :name="stat.icon" class="w-4 h-4" :class="stat.color" />
 				</div>
 				<p class="text-xl font-bold text-foreground">{{ stat.value }}</p>
 				<p class="text-[10px] text-muted-foreground mt-0.5">{{ stat.label }}</p>

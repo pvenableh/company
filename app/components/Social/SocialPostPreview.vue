@@ -20,7 +20,7 @@
           : 'border-border bg-background hover:bg-muted'"
         @click="active = p"
       >
-        <UIcon :name="platformMeta[p].icon" class="w-4 h-4 shrink-0" />
+        <EIcon :name="platformMeta[p].icon" class="w-4 h-4 shrink-0" />
         {{ platformMeta[p].label }}
       </button>
     </div>
@@ -41,7 +41,7 @@
           v-else
           class="absolute inset-0 flex items-center justify-center text-white/60"
         >
-          <UIcon :name="firstMediaType === 'video' ? 'i-lucide-video' : 'i-lucide-image'" class="w-12 h-12" />
+          <EIcon :name="firstMediaType === 'video' ? 'i-lucide-video' : 'i-lucide-image'" class="w-12 h-12" />
         </div>
 
         <!-- Top bar: progress + avatar -->
@@ -69,8 +69,8 @@
           <div class="flex-1 px-3 py-1.5 rounded-full border border-white/40 text-white/70 text-xs">
             Send message
           </div>
-          <UIcon name="i-lucide-heart" class="w-5 h-5 text-white" />
-          <UIcon name="i-lucide-send" class="w-5 h-5 text-white" />
+          <EIcon name="i-lucide-heart" class="w-5 h-5 text-white" />
+          <EIcon name="i-lucide-send" class="w-5 h-5 text-white" />
         </div>
       </div>
 
@@ -88,20 +88,20 @@
           v-else
           class="absolute inset-0 flex items-center justify-center text-white/40"
         >
-          <UIcon name="i-lucide-clapperboard" class="w-12 h-12" />
+          <EIcon name="i-lucide-clapperboard" class="w-12 h-12" />
         </div>
 
         <!-- Reel chrome: top + bottom -->
         <div class="absolute top-3 left-3 text-white text-xs font-semibold drop-shadow-md flex items-center gap-1.5">
-          <UIcon name="i-lucide-clapperboard" class="w-3.5 h-3.5" />
+          <EIcon name="i-lucide-clapperboard" class="w-3.5 h-3.5" />
           {{ active === 'tiktok' ? 'TikTok' : 'Reels' }}
         </div>
 
         <div class="absolute right-2 bottom-24 flex flex-col items-center gap-3 text-white">
-          <UIcon name="i-lucide-heart" class="w-6 h-6 drop-shadow-md" />
-          <UIcon name="i-lucide-message-circle" class="w-6 h-6 drop-shadow-md" />
-          <UIcon name="i-lucide-send" class="w-6 h-6 drop-shadow-md" />
-          <UIcon name="i-lucide-bookmark" class="w-6 h-6 drop-shadow-md" />
+          <EIcon name="i-lucide-heart" class="w-6 h-6 drop-shadow-md" />
+          <EIcon name="i-lucide-message-circle" class="w-6 h-6 drop-shadow-md" />
+          <EIcon name="i-lucide-send" class="w-6 h-6 drop-shadow-md" />
+          <EIcon name="i-lucide-bookmark" class="w-6 h-6 drop-shadow-md" />
         </div>
 
         <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
@@ -132,11 +132,11 @@
         />
         <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full max-h-96 object-cover bg-gray-100" />
         <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black aspect-video flex items-center justify-center">
-          <UIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
+          <EIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
         </div>
         <div v-else-if="ctaUrl" class="mx-4 mb-3 mt-1 border rounded-md overflow-hidden">
           <div class="bg-gray-100 h-32 flex items-center justify-center">
-            <UIcon name="i-lucide-link-2" class="w-8 h-8 text-gray-400" />
+            <EIcon name="i-lucide-link-2" class="w-8 h-8 text-gray-400" />
           </div>
           <div class="px-3 py-2 bg-white">
             <p class="text-[11px] uppercase text-gray-500 truncate">{{ ctaHost }}</p>
@@ -144,10 +144,10 @@
           </div>
         </div>
         <div class="px-4 py-2 border-t flex items-center gap-4 text-xs text-gray-600">
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-thumbs-up" class="w-3.5 h-3.5" />Like</span>
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />Comment</span>
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-repeat-2" class="w-3.5 h-3.5" />Repost</span>
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-send" class="w-3.5 h-3.5" />Send</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-thumbs-up" class="w-3.5 h-3.5" />Like</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />Comment</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-repeat-2" class="w-3.5 h-3.5" />Repost</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-send" class="w-3.5 h-3.5" />Send</span>
         </div>
       </div>
 
@@ -171,11 +171,11 @@
         />
         <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full max-h-96 object-cover bg-gray-100" />
         <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black aspect-video flex items-center justify-center">
-          <UIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
+          <EIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
         </div>
         <div v-else-if="ctaUrl" class="mx-3 mb-3 border rounded-md overflow-hidden">
           <div class="bg-gradient-to-br from-blue-50 to-blue-100 h-32 flex items-center justify-center">
-            <UIcon name="i-lucide-link-2" class="w-8 h-8 text-blue-400" />
+            <EIcon name="i-lucide-link-2" class="w-8 h-8 text-blue-400" />
           </div>
           <div class="px-3 py-2 bg-gray-50">
             <p class="text-[11px] uppercase text-gray-500 truncate">{{ ctaHost }}</p>
@@ -183,9 +183,9 @@
           </div>
         </div>
         <div class="px-4 py-2 border-t flex items-center justify-between text-xs text-gray-600">
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-thumbs-up" class="w-3.5 h-3.5" />Like</span>
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />Comment</span>
-          <span class="flex items-center gap-1"><UIcon name="i-lucide-share-2" class="w-3.5 h-3.5" />Share</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-thumbs-up" class="w-3.5 h-3.5" />Like</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />Comment</span>
+          <span class="flex items-center gap-1"><EIcon name="i-lucide-share-2" class="w-3.5 h-3.5" />Share</span>
         </div>
       </div>
 
@@ -210,14 +210,14 @@
         />
         <div v-else class="aspect-square bg-gray-100 flex items-center justify-center">
           <img v-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full h-full object-cover" />
-          <UIcon v-else-if="firstMediaUrl && firstMediaType === 'video'" name="i-lucide-play-circle" class="w-16 h-16 text-gray-400" />
-          <UIcon v-else name="i-lucide-image" class="w-12 h-12 text-gray-300" />
+          <EIcon v-else-if="firstMediaUrl && firstMediaType === 'video'" name="i-lucide-play-circle" class="w-16 h-16 text-gray-400" />
+          <EIcon v-else name="i-lucide-image" class="w-12 h-12 text-gray-300" />
         </div>
         <div class="px-3 py-2 flex items-center gap-3 text-gray-900">
-          <UIcon name="i-lucide-heart" class="w-5 h-5" />
-          <UIcon name="i-lucide-message-circle" class="w-5 h-5" />
-          <UIcon name="i-lucide-send" class="w-5 h-5" />
-          <UIcon name="i-lucide-bookmark" class="w-5 h-5 ml-auto" />
+          <EIcon name="i-lucide-heart" class="w-5 h-5" />
+          <EIcon name="i-lucide-message-circle" class="w-5 h-5" />
+          <EIcon name="i-lucide-send" class="w-5 h-5" />
+          <EIcon name="i-lucide-bookmark" class="w-5 h-5 ml-auto" />
         </div>
         <div class="px-3 pb-3 text-sm text-gray-900">
           <span class="font-semibold mr-1">{{ activeAccount.account_handle || activeAccount.account_name }}</span>
@@ -250,15 +250,15 @@
             />
             <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full mt-2 rounded-lg max-h-80 object-cover" />
             <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black mt-2 rounded-lg aspect-video flex items-center justify-center">
-              <UIcon name="i-lucide-play-circle" class="w-10 h-10 text-white/80" />
+              <EIcon name="i-lucide-play-circle" class="w-10 h-10 text-white/80" />
             </div>
           </div>
         </div>
         <div class="px-4 pb-3 pl-14 flex items-center gap-4 text-gray-500">
-          <UIcon name="i-lucide-heart" class="w-4 h-4" />
-          <UIcon name="i-lucide-message-circle" class="w-4 h-4" />
-          <UIcon name="i-lucide-repeat-2" class="w-4 h-4" />
-          <UIcon name="i-lucide-send" class="w-4 h-4" />
+          <EIcon name="i-lucide-heart" class="w-4 h-4" />
+          <EIcon name="i-lucide-message-circle" class="w-4 h-4" />
+          <EIcon name="i-lucide-repeat-2" class="w-4 h-4" />
+          <EIcon name="i-lucide-send" class="w-4 h-4" />
         </div>
       </div>
 
@@ -268,7 +268,7 @@
       <div v-else-if="active === 'tiktok'" class="rounded-lg border border-gray-200 bg-black overflow-hidden max-w-[280px] aspect-[9/16] relative">
         <img v-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="absolute inset-0 w-full h-full object-cover" />
         <div v-else class="absolute inset-0 flex items-center justify-center text-white/40">
-          <UIcon name="i-lucide-video" class="w-12 h-12" />
+          <EIcon name="i-lucide-video" class="w-12 h-12" />
         </div>
         <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
           <p class="text-sm font-semibold">@{{ activeAccount.account_handle || activeAccount.account_name }}</p>
@@ -278,9 +278,9 @@
           </p>
         </div>
         <div class="absolute right-2 bottom-20 flex flex-col items-center gap-3 text-white">
-          <UIcon name="i-lucide-heart" class="w-6 h-6" />
-          <UIcon name="i-lucide-message-circle" class="w-6 h-6" />
-          <UIcon name="i-lucide-share-2" class="w-6 h-6" />
+          <EIcon name="i-lucide-heart" class="w-6 h-6" />
+          <EIcon name="i-lucide-message-circle" class="w-6 h-6" />
+          <EIcon name="i-lucide-share-2" class="w-6 h-6" />
         </div>
       </div>
 
@@ -295,7 +295,7 @@
             :key="a.id"
             class="flex items-center gap-2 text-xs text-muted-foreground"
           >
-            <UAvatar :src="a.profile_picture_url || undefined" :alt="a.account_name" size="2xs" />
+            <EAvatar :src="a.profile_picture_url || undefined" :alt="a.account_name" size="2xs" />
             <span class="truncate">{{ a.account_name }}</span>
           </div>
         </div>

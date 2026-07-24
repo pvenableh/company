@@ -1048,7 +1048,7 @@ const vReveal = {
                   <TooltipProvider :delay-duration="150">
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <span class="inline-flex cursor-help"><UIcon name="i-lucide-info" class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors shrink-0" /></span>
+                        <span class="inline-flex cursor-help"><EIcon name="i-lucide-info" class="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors shrink-0" /></span>
                       </TooltipTrigger>
                       <TooltipContent :side-offset="6" class="z-[95] max-w-xs">
                         Earnest convened the board on {{ scopeLabel }} and drafted the work below — you approve each step; nothing runs on its own.
@@ -1069,7 +1069,7 @@ const vReveal = {
                   :disabled="liveConnecting"
                   @click="openGoLive"
                 >
-                  <UIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-3.5 h-3.5" :class="liveConnecting ? 'animate-spin' : ''" />
+                  <EIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-3.5 h-3.5" :class="liveConnecting ? 'animate-spin' : ''" />
                   <span class="hidden sm:inline">Go live</span>
                 </button>
               </template>
@@ -1099,7 +1099,7 @@ const vReveal = {
                   title="Invite teammates to the table"
                   @click="showInvite = true"
                 >
-                  <UIcon name="i-lucide-user-plus" class="w-3.5 h-3.5" />
+                  <EIcon name="i-lucide-user-plus" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">Invite</span>
                 </button>
                 <button
@@ -1108,7 +1108,7 @@ const vReveal = {
                   :title="liveIsHost ? 'End the meeting for everyone' : 'Leave the meeting'"
                   @click="onLeaveMeeting"
                 >
-                  <UIcon :name="liveIsHost ? 'i-lucide-square' : 'i-lucide-log-out'" class="w-3.5 h-3.5" />
+                  <EIcon :name="liveIsHost ? 'i-lucide-square' : 'i-lucide-log-out'" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">{{ liveIsHost ? 'End' : 'Leave' }}</span>
                 </button>
               </template>
@@ -1118,7 +1118,7 @@ const vReveal = {
                 title="Past meetings — open the Boardroom history"
                 @click="onClose"
               >
-                <UIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Past meetings
+                <EIcon name="i-lucide-history" class="w-3.5 h-3.5" /> Past meetings
               </NuxtLink>
               <button
                 type="button"
@@ -1128,10 +1128,10 @@ const vReveal = {
                 :disabled="loadingAgenda"
                 @click="loadAgenda(true)"
               >
-                <UIcon name="i-lucide-refresh-cw" class="w-4 h-4" :class="loadingAgenda ? 'animate-spin' : ''" />
+                <EIcon name="i-lucide-refresh-cw" class="w-4 h-4" :class="loadingAgenda ? 'animate-spin' : ''" />
               </button>
               <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="onClose">
-                <UIcon name="i-lucide-x" class="w-5 h-5" />
+                <EIcon name="i-lucide-x" class="w-5 h-5" />
               </button>
             </div>
           </header>
@@ -1139,7 +1139,7 @@ const vReveal = {
           <div class="space-y-5 py-3">
             <!-- Live: who's at the table -->
             <div v-if="liveActive" class="flex items-center gap-2.5 flex-wrap rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5">
-              <UIcon name="i-lucide-users-round" class="w-4 h-4 text-primary shrink-0" />
+              <EIcon name="i-lucide-users-round" class="w-4 h-4 text-primary shrink-0" />
               <div class="flex items-center -space-x-1.5">
                 <img
                   v-for="p in liveAttendees"
@@ -1164,15 +1164,15 @@ const vReveal = {
                   :title="liveSession?.viewOnly ? 'View-only is on — only you (presenter) can approve. Click to unlock.' : 'Lock participation — only the presenter can approve'"
                   @click="setViewOnly(!liveSession?.viewOnly)"
                 >
-                  <UIcon :name="liveSession?.viewOnly ? 'i-lucide-lock' : 'i-lucide-lock-open'" class="w-3 h-3" />
+                  <EIcon :name="liveSession?.viewOnly ? 'i-lucide-lock' : 'i-lucide-lock-open'" class="w-3 h-3" />
                   {{ liveSession?.viewOnly ? 'View-only' : 'Open' }}
                 </button>
                 <span v-if="liveIsPresenter" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary font-medium">
-                  <UIcon name="i-lucide-presentation" class="w-3 h-3" /> You're presenting
+                  <EIcon name="i-lucide-presentation" class="w-3 h-3" /> You're presenting
                 </span>
                 <template v-else>
                   <span v-if="liveIsFollowing" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <UIcon name="i-lucide-eye" class="w-3 h-3" /> Following presenter
+                    <EIcon name="i-lucide-eye" class="w-3 h-3" /> Following presenter
                   </span>
                   <!-- Take the deck (blocked in view-only meetings) -->
                   <button
@@ -1182,7 +1182,7 @@ const vReveal = {
                     title="Take over presenting"
                     @click="takePresenter()"
                   >
-                    <UIcon name="i-lucide-presentation" class="w-3 h-3" /> Present
+                    <EIcon name="i-lucide-presentation" class="w-3 h-3" /> Present
                   </button>
                 </template>
               </div>
@@ -1197,7 +1197,7 @@ const vReveal = {
               <p class="text-sm text-muted-foreground">Convening the board — reviewing the business…</p>
             </div>
             <div v-else-if="agendaError" class="flex items-center gap-2 text-sm text-destructive py-4">
-              <UIcon name="i-lucide-alert-triangle" class="w-4 h-4 shrink-0" /> {{ agendaError }}
+              <EIcon name="i-lucide-alert-triangle" class="w-4 h-4 shrink-0" /> {{ agendaError }}
             </div>
 
             <template v-else-if="agenda">
@@ -1209,8 +1209,8 @@ const vReveal = {
                     <circle cx="32" cy="32" r="19" fill="currentColor" fill-opacity="0.12" />
                     <path d="M23 32.5l6 6 12-13" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
-                  <UIcon name="i-lucide-sparkles" class="absolute -top-1 -right-1 w-4 h-4 text-warning" />
-                  <UIcon name="i-lucide-sparkle" class="absolute bottom-0 -left-1 w-3 h-3 text-primary/60" />
+                  <EIcon name="i-lucide-sparkles" class="absolute -top-1 -right-1 w-4 h-4 text-warning" />
+                  <EIcon name="i-lucide-sparkle" class="absolute bottom-0 -left-1 w-3 h-3 text-primary/60" />
                 </div>
                 <p class="text-sm font-medium text-foreground">All clear — nothing pressing on the agenda.</p>
                 <p class="text-xs text-muted-foreground">Earnest found no open issues for {{ scopeLabel }} right now.</p>
@@ -1236,7 +1236,7 @@ const vReveal = {
                           class="inline-flex items-center gap-0.5 mb-3 text-[10px] uppercase tracking-wider font-medium leading-none text-muted-foreground hover:text-foreground transition-colors"
                           @click="backToBoard"
                         >
-                          <UIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
+                          <EIcon name="i-lucide-chevron-left" class="w-3 h-3" /> {{ backLabel }}
                         </button>
                       </div>
                     </div>
@@ -1248,10 +1248,10 @@ const vReveal = {
                   <div class="flex items-center gap-2 shrink-0">
                     <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
                       <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'arc' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'arc'">
-                        <UIcon name="i-lucide-users-round" class="w-3.5 h-3.5" /> Board
+                        <EIcon name="i-lucide-users-round" class="w-3.5 h-3.5" /> Board
                       </button>
                       <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'cards' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'cards'">
-                        <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Agenda
+                        <EIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Agenda
                       </button>
                     </div>
                   </div>
@@ -1266,7 +1266,7 @@ const vReveal = {
                   >
                     #{{ tag }}
                     <button type="button" class="hover:text-foreground" aria-label="Remove tag" @click="removeTag(tag)">
-                      <UIcon name="i-lucide-x" class="w-3 h-3" />
+                      <EIcon name="i-lucide-x" class="w-3 h-3" />
                     </button>
                   </span>
                   <TooltipProvider v-if="!tagOpen" :delay-duration="150">
@@ -1277,7 +1277,7 @@ const vReveal = {
                           class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
                           @click="openTag"
                         >
-                          <UIcon name="i-lucide-tag" class="w-3 h-3" /> Add tag
+                          <EIcon name="i-lucide-tag" class="w-3 h-3" /> Add tag
                         </button>
                       </TooltipTrigger>
                       <TooltipContent :side-offset="6" class="z-[95] max-w-xs">
@@ -1323,7 +1323,7 @@ const vReveal = {
                     @click="draftPlan(s.g.subject)"
                   >
                     <span class="do-seat__chip">
-                      <UIcon :name="iconForSubject(s.g)" class="w-6 h-6" />
+                      <EIcon :name="iconForSubject(s.g)" class="w-6 h-6" />
                       <span v-if="s.g.notices.length" class="do-seat__badge">{{ s.g.notices.length }}</span>
                       <img v-if="presentingSubject === s.g.subject && presenterAvatar" :src="presenterAvatar.src" :alt="presenterAvatar.name" :title="`${presenterAvatar.name} is presenting`" class="do-seat__presenter" />
                     </span>
@@ -1392,7 +1392,7 @@ const vReveal = {
                     </span>
                     <!-- Hover: subject icon + label + count -->
                     <span class="opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-6 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-medium px-2 py-0.5 rounded-full bg-card border border-border shadow-sm">
-                      <UIcon :name="iconForSubject(seat.g)" class="w-3 h-3" />
+                      <EIcon :name="iconForSubject(seat.g)" class="w-3 h-3" />
                       {{ seat.g.label }} · {{ seat.g.notices.length }}
                     </span>
                   </button>
@@ -1415,7 +1415,7 @@ const vReveal = {
                           :class="String(p.userId) === String(liveSession?.presenterId) ? 'ring-primary' : 'ring-card'"
                         />
                         <span v-if="String(p.userId) === String(liveSession?.presenterId)" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                          <UIcon name="i-lucide-presentation" class="w-2 h-2" />
+                          <EIcon name="i-lucide-presentation" class="w-2 h-2" />
                         </span>
                       </span>
                     </div>
@@ -1441,7 +1441,7 @@ const vReveal = {
                           :class="String(p.userId) === String(liveSession?.presenterId) ? 'ring-primary' : 'ring-card'"
                         />
                         <span v-if="String(p.userId) === String(liveSession?.presenterId)" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                          <UIcon name="i-lucide-presentation" class="w-2 h-2" />
+                          <EIcon name="i-lucide-presentation" class="w-2 h-2" />
                         </span>
                       </span>
                     </div>
@@ -1464,7 +1464,7 @@ const vReveal = {
                         class="mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
                         :class="activeSubject === g.subject ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'"
                       >
-                        <UIcon :name="iconForSubject(g)" class="w-4 h-4" />
+                        <EIcon :name="iconForSubject(g)" class="w-4 h-4" />
                       </span>
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2 mb-0.5">
@@ -1495,7 +1495,7 @@ const vReveal = {
                     class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
                     @click="openTopic"
                   >
-                    <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
+                    <EIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
                     Raise a topic
                   </button>
                   <Transition name="topic-expand">
@@ -1515,7 +1515,7 @@ const vReveal = {
                         :disabled="!topicInput.trim() || planning"
                         @click="raiseTopic"
                       >
-                        <UIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
+                        <EIcon name="i-lucide-message-circle" class="w-3.5 h-3.5" />
                         Discuss
                         <AiSpendMark muted />
                       </button>
@@ -1525,7 +1525,7 @@ const vReveal = {
                         aria-label="Collapse"
                         @click="topicOpen = false"
                       >
-                        <UIcon name="i-lucide-x" class="w-4 h-4" />
+                        <EIcon name="i-lucide-x" class="w-4 h-4" />
                       </button>
                     </div>
                   </Transition>
@@ -1541,11 +1541,11 @@ const vReveal = {
                   <EarnestIcon class="w-4 h-4 text-primary" />
                   <span class="text-sm font-medium">{{ clientRating ? 'Client rating review' : finance ? 'Financial briefing' : 'Proposed plan' }}</span>
                   <span v-if="planning" class="text-xs text-muted-foreground flex items-center gap-1">
-                    <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ (finance || clientRating) ? 'analyzing…' : 'drafting…' }}
+                    <EIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> {{ (finance || clientRating) ? 'analyzing…' : 'drafting…' }}
                   </span>
                   <div v-else-if="activeSubject !== null" class="ml-auto flex items-center gap-2 shrink-0">
                     <span v-if="briefingSavedAt" class="text-[11px] text-muted-foreground inline-flex items-center gap-1" :title="`Earnest saved this briefing ${savedAgo}`">
-                      <UIcon name="i-lucide-bookmark-check" class="w-3 h-3" /> Saved {{ savedAgo }}
+                      <EIcon name="i-lucide-bookmark-check" class="w-3 h-3" /> Saved {{ savedAgo }}
                     </span>
                     <button
                       type="button"
@@ -1553,7 +1553,7 @@ const vReveal = {
                       title="Draft a fresh plan for this section — asks Earnest anew, so it spends tokens"
                       @click="draftPlan(activeSubject || '', true)"
                     >
-                      <UIcon name="i-lucide-refresh-cw" class="w-3 h-3" /> Re-draft
+                      <EIcon name="i-lucide-refresh-cw" class="w-3 h-3" /> Re-draft
                       <AiSpendMark muted />
                     </button>
                   </div>
@@ -1568,7 +1568,7 @@ const vReveal = {
                       :class="viewMode === 'outline' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
                       @click="viewMode = 'outline'"
                     >
-                      <UIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
+                      <EIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
                     </button>
                     <button
                       type="button"
@@ -1576,7 +1576,7 @@ const vReveal = {
                       :class="viewMode === 'slides' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
                       @click="viewMode = 'slides'"
                     >
-                      <UIcon name="i-lucide-gallery-horizontal-end" class="w-3.5 h-3.5" /> Slides
+                      <EIcon name="i-lucide-gallery-horizontal-end" class="w-3.5 h-3.5" /> Slides
                     </button>
                   </div>
                 </div>
@@ -1665,7 +1665,7 @@ const vReveal = {
 
                 <!-- Money mode: opportunity strip (where the best money is) -->
                 <div v-if="opportunity && (opportunity.topClients.length || opportunity.pipeline.openCount)" class="rounded-xl border border-border p-2.5 space-y-1.5">
-                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><UIcon name="i-lucide-trending-up" class="w-3 h-3" /> Where the money is</p>
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><EIcon name="i-lucide-trending-up" class="w-3 h-3" /> Where the money is</p>
                   <p v-if="opportunity.topClients.length" class="text-xs">
                     <span class="text-muted-foreground">Top clients:</span>
                     {{ opportunity.topClients.slice(0, 3).map((c: any) => `${c.name} ${fmtMoney(c.revenue)}`).join(' · ') }}
@@ -1696,15 +1696,15 @@ const vReveal = {
                         class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0"
                         :class="step.status === 'executed' ? 'bg-success/15 text-success' : step.status === 'failed' ? 'bg-destructive/15 text-destructive' : 'bg-primary/10 text-primary'"
                       >
-                        <UIcon v-if="step.status === 'executed'" name="i-lucide-check" class="w-3 h-3" />
-                        <UIcon v-else-if="step.status === 'failed'" name="i-lucide-x" class="w-3 h-3" />
+                        <EIcon v-if="step.status === 'executed'" name="i-lucide-check" class="w-3 h-3" />
+                        <EIcon v-else-if="step.status === 'failed'" name="i-lucide-x" class="w-3 h-3" />
                         <template v-else>{{ i + 1 }}</template>
                       </span>
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
                           <span class="text-sm font-medium" :class="step.status === 'rejected' ? 'line-through text-muted-foreground' : ''">{{ step.title }}</span>
                           <span class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                            <UIcon :name="iconForType(step.action_type)" class="w-3 h-3" />
+                            <EIcon :name="iconForType(step.action_type)" class="w-3 h-3" />
                             {{ labelForType(step.action_type) }}
                           </span>
                         </div>
@@ -1717,7 +1717,7 @@ const vReveal = {
 
                         <!-- Task assignment preview before approving -->
                         <p v-if="step.action_type === 'create_tasks' && step.preview?.assignees?.length" class="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
-                          <UIcon name="i-lucide-user-check" class="w-3.5 h-3.5" /> Assigns to {{ step.preview.assignees.join(', ') }}
+                          <EIcon name="i-lucide-user-check" class="w-3.5 h-3.5" /> Assigns to {{ step.preview.assignees.join(', ') }}
                         </p>
 
                         <!-- Status line -->
@@ -1733,8 +1733,8 @@ const vReveal = {
                             :disabled="step.status === 'executing'"
                             @click="approveStep(step)"
                           >
-                            <UIcon v-if="step.status === 'executing'" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
-                            <UIcon v-else name="i-lucide-check" class="w-3.5 h-3.5" />
+                            <EIcon v-if="step.status === 'executing'" name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" />
+                            <EIcon v-else name="i-lucide-check" class="w-3.5 h-3.5" />
                             Approve
                           </button>
                           <button
@@ -1747,7 +1747,7 @@ const vReveal = {
                           </button>
                         </div>
                         <p v-else class="mt-2 text-xs text-muted-foreground inline-flex items-center gap-1">
-                          <UIcon name="i-lucide-eye" class="w-3.5 h-3.5" /> Awaiting the presenter's decision
+                          <EIcon name="i-lucide-eye" class="w-3.5 h-3.5" /> Awaiting the presenter's decision
                         </p>
                       </div>
                     </div>
@@ -1772,7 +1772,7 @@ const vReveal = {
                       class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
                       title="Open the saved recap"
                     >
-                      <UIcon name="i-lucide-external-link" class="w-3.5 h-3.5" /> View recap
+                      <EIcon name="i-lucide-external-link" class="w-3.5 h-3.5" /> View recap
                     </NuxtLink>
                     <button
                       type="button"
@@ -1781,7 +1781,7 @@ const vReveal = {
                       :title="savedMinutesId ? 'Share the recap with teammates for review' : 'Save these minutes and share for review'"
                       @click="recordAndShare"
                     >
-                      <UIcon :name="recordingMinutes ? 'i-lucide-loader-2' : 'i-lucide-gavel'" class="w-3.5 h-3.5" :class="recordingMinutes ? 'animate-spin' : ''" />
+                      <EIcon :name="recordingMinutes ? 'i-lucide-loader-2' : 'i-lucide-gavel'" class="w-3.5 h-3.5" :class="recordingMinutes ? 'animate-spin' : ''" />
                       {{ savedMinutesId ? 'Share for review' : 'Record & share minutes' }}
                     </button>
                   </div>
@@ -1804,7 +1804,7 @@ const vReveal = {
                     </div>
                     <div v-if="qaLoading" class="flex justify-start">
                       <div class="rounded-2xl px-3 py-2 bg-muted text-muted-foreground text-sm inline-flex items-center gap-1.5">
-                        <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> thinking…
+                        <EIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin" /> thinking…
                       </div>
                     </div>
                   </div>
@@ -1836,7 +1836,7 @@ const vReveal = {
                       :disabled="!qaInput.trim() || qaLoading"
                       @click="askEarnest()"
                     >
-                      <UIcon name="i-lucide-send" class="w-3.5 h-3.5" /> Ask
+                      <EIcon name="i-lucide-send" class="w-3.5 h-3.5" /> Ask
                     </button>
                   </div>
                 </div>
@@ -1852,7 +1852,7 @@ const vReveal = {
               <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
                 <div class="flex items-center gap-2.5 min-w-0">
                   <span class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <UIcon name="i-lucide-radio" class="w-4.5 h-4.5" />
+                    <EIcon name="i-lucide-radio" class="w-4.5 h-4.5" />
                   </span>
                   <div class="min-w-0">
                     <h3 class="text-sm font-semibold leading-tight">Go live with the team</h3>
@@ -1860,7 +1860,7 @@ const vReveal = {
                   </div>
                 </div>
                 <button type="button" class="text-muted-foreground hover:text-foreground p-1" aria-label="Close" @click="showGoLive = false">
-                  <UIcon name="i-lucide-x" class="w-5 h-5" />
+                  <EIcon name="i-lucide-x" class="w-5 h-5" />
                 </button>
               </header>
 
@@ -1878,11 +1878,11 @@ const vReveal = {
                       @click="toggleGoLiveSubject(a.subject)"
                     >
                       <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :class="goLiveSubjects.includes(a.subject) ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'">
-                        <UIcon :name="a.icon" class="w-3.5 h-3.5" />
+                        <EIcon :name="a.icon" class="w-3.5 h-3.5" />
                       </span>
                       <span class="text-sm font-medium truncate flex-1">{{ a.label }}</span>
                       <span class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0" :class="goLiveSubjects.includes(a.subject) ? 'bg-primary border-primary text-primary-foreground' : 'border-border'">
-                        <UIcon v-if="goLiveSubjects.includes(a.subject)" name="i-lucide-check" class="w-2.5 h-2.5" />
+                        <EIcon v-if="goLiveSubjects.includes(a.subject)" name="i-lucide-check" class="w-2.5 h-2.5" />
                       </span>
                     </button>
                   </div>
@@ -1909,7 +1909,7 @@ const vReveal = {
                   :disabled="liveConnecting || (scope?.mode !== 'entity' && !goLiveSubjects.length)"
                   @click="confirmGoLive"
                 >
-                  <UIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-4 h-4" :class="liveConnecting ? 'animate-spin' : ''" />
+                  <EIcon :name="liveConnecting ? 'i-lucide-loader-2' : 'i-lucide-radio'" class="w-4 h-4" :class="liveConnecting ? 'animate-spin' : ''" />
                   Go live
                 </button>
               </footer>

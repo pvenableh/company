@@ -2,18 +2,18 @@
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Title *</label>
-      <UInput v-model="formData.title" required placeholder="Goal title" />
+      <EInput v-model="formData.title" required placeholder="Goal title" />
     </div>
 
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Description</label>
-      <UTextarea v-model="formData.description" :rows="2" placeholder="What does this goal aim to achieve?" />
+      <ETextarea v-model="formData.description" :rows="2" placeholder="What does this goal aim to achieve?" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Target Date</label>
-        <UInput v-model="formData.target_date" type="date" />
+        <EInput v-model="formData.target_date" type="date" />
       </div>
       <div class="space-y-1">
         <label class="t-label text-muted-foreground">Progress ({{ formData.progress }}%)</label>

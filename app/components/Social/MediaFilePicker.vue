@@ -172,15 +172,15 @@
             </template>
           </span>
           <div class="flex gap-2">
-            <UButton variant="ghost" size="sm" @click="$emit('close')">Cancel</UButton>
-            <UButton
+            <EButton variant="ghost" size="sm" @click="$emit('close')">Cancel</EButton>
+            <EButton
               size="sm"
               :disabled="selected.length === 0"
               icon="i-lucide-check"
               @click="confirmPick"
             >
               Add {{ selected.length || '' }}
-            </UButton>
+            </EButton>
           </div>
         </div>
       </div>
