@@ -187,6 +187,9 @@ onBeforeUnmount(() => {
 				<p class="text-sm whitespace-pre-wrap">{{ contact.notes }}</p>
 			</div>
 
+			<!-- Pursuit money — everything ever pitched involving this person. -->
+			<AppsPursuitMoney :contact-id="String(props.id)" class="mb-2" />
+
 			<!-- Touchpoints — this person's communication log (scoped to the
 			     contact via the m2m; new touches tag them + their client). -->
 			<div class="space-y-2 pt-3 border-t border-border/30">

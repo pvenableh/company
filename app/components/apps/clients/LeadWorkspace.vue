@@ -659,6 +659,8 @@ function openContactPivot() {
 
 				<!-- Overview body -->
 				<div v-else :class="compact ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-3 gap-6'">
+					<!-- Pursuit money — what's still out there on this deal. -->
+					<AppsPursuitMoney :lead-id="Number(leadId)" class="lg:col-span-3" />
 					<!-- Left: Lead info -->
 					<div :class="compact ? 'space-y-4' : 'lg:col-span-1 space-y-4'">
 						<!-- Editable Details -->

@@ -1082,6 +1082,9 @@ watch(() => props.clientId, () => {
 						<MoneyHuntList :rows="huntRows" @open="openInvoiceFromHunt" />
 					</div>
 
+					<!-- Pursuit money — what is still out there (proposals), beside the owed money. -->
+					<AppsPursuitMoney :client-id="clientId" />
+
 					<!-- Pursuit — the whole courtship (touchpoints + proposals merged)
 					     and the client's proposal pipeline. Lazy-mounted disclosure so
 					     it never fetches unless opened. -->
