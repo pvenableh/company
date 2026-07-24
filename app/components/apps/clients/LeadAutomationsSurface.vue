@@ -16,6 +16,7 @@ import { LEAD_STAGE_LABELS } from '~~/shared/leads';
 import type { LeadStageListRule } from '~~/shared/directus';
 import type { MailingList } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
+import { subscribeToCollection } from '~/composables/useEntityStore';
 
 const props = defineProps<{
 	compact?: boolean;
@@ -35,8 +36,10 @@ const rulesItems = useDirectusItems<LeadStageListRule>('lead_stage_list_rules');
 const loading = ref(true);
 const rules = ref<LeadStageListRule[]>([]);
 const mailingLists = ref<MailingList[]>([]);
-const showModal = ref(false);
-const editingRule = ref<LeadStageListRule | null>(null);
+
+// The rule create/edit form is now a stacked child panel (pushed on top of
+// this surface's panel with a back chevron) rather than a bottom sheet.
+const ruleSlide = useAppSlideOver('lead-automation-rule');
 
 async function fetchRules() {
 	if (!selectedOrg.value) {
@@ -109,13 +112,11 @@ const groupedRules = computed(() => {
 const stageOrder: LeadStage[] = ['new', 'contacted', 'qualified', 'proposal_sent', 'negotiating', 'won', 'lost'];
 
 function openNew() {
-	editingRule.value = null;
-	showModal.value = true;
+	ruleSlide.open('new');
 }
 
 function openEdit(rule: LeadStageListRule) {
-	editingRule.value = rule;
-	showModal.value = true;
+	ruleSlide.open(String(rule.id));
 }
 
 async function handleToggle(rule: LeadStageListRule, nextValue: boolean) {
@@ -130,20 +131,10 @@ async function handleToggle(rule: LeadStageListRule, nextValue: boolean) {
 	}
 }
 
-function handleCreated(rule: LeadStageListRule) {
-	rules.value = [...rules.value, rule];
-	fetchRules();
-}
-
-function handleUpdated(rule: LeadStageListRule) {
-	const idx = rules.value.findIndex((r) => r.id === rule.id);
-	if (idx !== -1) rules.value[idx] = rule;
-	fetchRules();
-}
-
-function handleDeleted(id: number) {
-	rules.value = rules.value.filter((r) => r.id !== id);
-}
+// The rule panel writes directly + notifies the entity bus; re-fetch so the
+// list repaints after a create/update/delete in the pushed panel.
+const unsubscribeRules = subscribeToCollection('lead_stage_list_rules', () => fetchRules());
+onBeforeUnmount(() => unsubscribeRules());
 
 function stageLabel(stage: LeadStage | null | undefined): string {
 	if (!stage) return 'Any stage';
@@ -282,15 +273,7 @@ defineExpose({ openNew });
 			</template>
 		</div>
 
-		<!-- Modal — bottom sheet, teleported to body (renders correctly even
-		     when this surface lives inside a transformed slide-over panel). -->
-		<LeadsAutomationFormModal
-			v-model="showModal"
-			:rule="editingRule"
-			:mailing-lists="mailingLists"
-			@created="handleCreated"
-			@updated="handleUpdated"
-			@deleted="handleDeleted"
-		/>
+		<!-- Rule create/edit is a stacked child panel (lead-automation-rule),
+		     pushed on top of this surface with a back chevron. -->
 	</div>
 </template>

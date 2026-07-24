@@ -43,6 +43,7 @@ const REGISTRY: Record<string, PanelLoader> = {
 	'social-accounts': () => import('./SocialAccountsPanel.vue'),
 	lead: () => import('./LeadPanel.vue'),
 	'lead-automations': () => import('./LeadAutomationsPanel.vue'),
+	'lead-automation-rule': () => import('./LeadAutomationRulePanel.vue'),
 	'campaign-planner': () => import('./CampaignPlannerPanel.vue'),
 	'import-contacts': () => import('./ImportContactsPanel.vue'),
 	'account-subscription': () => import('./AccountSubscriptionPanel.vue'),
