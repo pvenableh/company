@@ -267,7 +267,18 @@ export const useDirectusItems = <T = any>(
 
   // On the server, the current request's H3 event — used to scope an inflight
   // read-dedup map per request (see dedupedFetch). Undefined on the client.
-  const reqEvent = import.meta.server ? useRequestEvent() : undefined;
+  // useRequestEvent() must run inside a setup/context; useDirectusItems is also
+  // called from async handlers (e.g. a fetchX() method), where it would throw
+  // "outside setup". Guard it so the SSR read-dedup silently no-ops there rather
+  // than crashing the render.
+  let reqEvent: any;
+  if (import.meta.server) {
+    try {
+      reqEvent = useRequestEvent();
+    } catch {
+      reqEvent = undefined;
+    }
+  }
 
   /**
    * List items from collection
