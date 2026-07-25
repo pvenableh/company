@@ -40,7 +40,11 @@ export default defineEventHandler(async (event) => {
     const tokenRejected = status === 401 || status === 403;
 
     if (tokenRejected) {
-      await clearUserSession(event);
+      // Do NOT clearUserSession here. Under a cross-instance race a losing
+      // refresh could clear a cookie a sibling just rotated ("loser clears
+      // winner"). The client owns teardown: on a 401 it re-reads the cookie
+      // (tolerate-the-race) and only then runs handleFatalAuthFailure, which
+      // clears the session cleanly. Reporting 401 is enough.
       throw createError({
         statusCode: 401,
         message: "Session expired - please log in again",
