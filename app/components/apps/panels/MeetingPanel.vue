@@ -12,16 +12,25 @@ import AppSlideOverShell from '../AppSlideOverShell.vue';
 const props = defineProps<{ id: string; mode?: string; flipFrom?: FlipFromPayload | null }>();
 defineEmits<{ (e: 'close'): void }>();
 
-// Create mode — host <SchedulerUnifiedEventModal embedded>. Its form init is
+// Create / edit — host <SchedulerUnifiedEventModal embedded>. Its form init is
 // gated on an isOpen false→true transition, so we mount closed and flip open
-// after mount. On success the form emits created + calls close() (isOpen→false);
-// we notify surfaces on created and pop the panel on the close.
+// after mount. On create/save/delete the form calls close() (isOpen→false); we
+// notify surfaces (created/saved) and pop the panel on that close (single pop).
+// Create context comes from useCreatePanel; edit context (the appointment /
+// video_meeting objects the calendar is editing) rides a dedicated useState.
 const isCreate = computed(() => props.mode === 'create');
+const isEdit = computed(() => props.mode === 'edit');
+const isForm = computed(() => isCreate.value || isEdit.value);
 const { createContext, emitCreated } = useCreatePanel<any, any>('work-meeting');
+const meetingEditCtx = useState<any>('work-meeting-edit-ctx', () => null);
+const formCtx = computed<any>(() => (isEdit.value ? meetingEditCtx.value || {} : createContext.value || {}));
 const { pop } = useAppSlideOverStack();
 const meetingOpen = ref(false);
-onMounted(() => { if (isCreate.value) meetingOpen.value = true; });
-function onMeetingCreated(data: any) {
+// Flip open on a macrotask (setTimeout, not rAF per the motion policy) so the
+// <ClientOnly>-wrapped modal has mounted first — otherwise it mounts already
+// "open" and its non-immediate isOpen watch never fires the form init/pre-fill.
+onMounted(() => { if (isForm.value) setTimeout(() => { meetingOpen.value = true; }, 0); });
+function onMeetingChanged(data: any) {
   emitCreated(data, { pop: false });
 }
 function onMeetingOpenChange(v: boolean) {
@@ -37,7 +46,7 @@ function onLoaded(m: any) {
   if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
 }
 
-const title = computed(() => (isCreate.value ? 'New Meeting' : meeting.value?.title || 'Meeting'));
+const title = computed(() => (isCreate.value ? 'New Meeting' : isEdit.value ? 'Edit Meeting' : meeting.value?.title || 'Meeting'));
 const subtitle = computed(() => {
   const m = meeting.value;
   if (!m) return null;
@@ -67,7 +76,7 @@ onBeforeUnmount(() => {
     :flip-from="flipFrom"
     @close="$emit('close')"
   >
-    <template v-if="!isCreate" #hero>
+    <template v-if="!isForm" #hero>
       <div class="flex items-center justify-between gap-3 px-1 py-1.5">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-foreground truncate">
@@ -85,7 +94,7 @@ onBeforeUnmount(() => {
         </span>
       </div>
     </template>
-    <template v-if="!isCreate" #actions>
+    <template v-if="!isForm" #actions>
       <NuxtLink
         :to="`/meetings/${id}`"
         class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
@@ -96,20 +105,24 @@ onBeforeUnmount(() => {
       </NuxtLink>
     </template>
 
-    <ClientOnly v-if="isCreate">
+    <ClientOnly v-if="isForm">
       <SchedulerUnifiedEventModal
         :model-value="meetingOpen"
         embedded
-        :default-video="createContext?.defaultVideo ?? true"
-        :project-id="createContext?.projectId ?? null"
-        :project-data="createContext?.projectData ?? null"
-        :client-id="createContext?.clientId ?? null"
-        :client-data="createContext?.clientData ?? null"
-        :lead-id="createContext?.leadId ?? null"
-        :lead-data="createContext?.leadData ?? null"
+        :selected-date="formCtx.selectedDate ?? undefined"
+        :default-video="formCtx.defaultVideo ?? true"
+        :project-id="formCtx.projectId ?? null"
+        :project-data="formCtx.projectData ?? null"
+        :client-id="formCtx.clientId ?? null"
+        :client-data="formCtx.clientData ?? null"
+        :lead-id="formCtx.leadId ?? null"
+        :lead-data="formCtx.leadData ?? null"
+        :appointment="formCtx.appointment ?? null"
+        :meeting="formCtx.meeting ?? null"
         @update:model-value="onMeetingOpenChange"
-        @created="onMeetingCreated"
-        @saved="onMeetingCreated"
+        @created="onMeetingChanged"
+        @saved="onMeetingChanged"
+        @deleted="onMeetingChanged"
       />
     </ClientOnly>
 

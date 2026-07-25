@@ -294,16 +294,6 @@
 				</div>
 			</div>
 
-			<!-- Unified Event/Meeting Modal -->
-			<SchedulerUnifiedEventModal
-				v-model="showEventModal"
-				:selected-date="eventModalDate"
-				:default-video="eventModalDefaultVideo"
-				:appointment="eventModalAppointment"
-				:meeting="eventModalMeeting"
-				@created="handleEventCreated"
-				@saved="handleEventCreated"
-			/>
 
 			<!-- Requests Modal -->
 			<EModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
@@ -460,22 +450,9 @@ const stats = computed(() => {
 });
 
 // ── Unified Event Modal ──
-const showEventModal = ref(false);
-const eventModalDate = ref<Date | undefined>(undefined);
-const eventModalDefaultVideo = ref(true);
-const eventModalAppointment = ref<any>(null);
-const eventModalMeeting = ref<any>(null);
-
-const resetEventModalEditState = () => {
-	eventModalAppointment.value = null;
-	eventModalMeeting.value = null;
-};
-
-// Drop edit context whenever the modal closes so the next "+ New event" click
-// opens a clean form (not a stale edit).
-watch(showEventModal, (open) => {
-	if (!open) resetEventModalEditState();
-});
+// Meeting create/edit now opens as a stacked slide-over (`work-meeting` panel)
+// instead of a standalone modal. See useMeetingPanel.
+const { openCreate: openMeetingCreate, openEdit: openMeetingEdit, onChanged: onMeetingChanged } = useMeetingPanel();
 
 // ── Event handlers ──
 const handleDateSelect = (dateStr: string) => {
@@ -483,17 +460,11 @@ const handleDateSelect = (dateStr: string) => {
 };
 
 const handleNewEvent = (dateStr: string) => {
-	resetEventModalEditState();
-	eventModalDate.value = parseISO(dateStr);
-	eventModalDefaultVideo.value = false;
-	showEventModal.value = true;
+	openMeetingCreate({ selectedDate: parseISO(dateStr), defaultVideo: false });
 };
 
 const handleNewVideoMeeting = (dateStr: string) => {
-	resetEventModalEditState();
-	eventModalDate.value = parseISO(dateStr);
-	eventModalDefaultVideo.value = true;
-	showEventModal.value = true;
+	openMeetingCreate({ selectedDate: parseISO(dateStr), defaultVideo: true });
 };
 
 const handleEditEvent = (event: CalendarEvent) => {
@@ -505,13 +476,12 @@ const handleEditEvent = (event: CalendarEvent) => {
 	// the video meeting we want to edit. Pass both so the modal can pre-fill
 	// off whichever has the field populated.
 	const apt = event.source_record;
-	eventModalAppointment.value = apt;
-	eventModalMeeting.value = apt?.video_meeting && typeof apt.video_meeting === 'object'
-		? apt.video_meeting
-		: null;
-	eventModalDate.value = event.start_time ? parseISO(event.start_time) : undefined;
-	eventModalDefaultVideo.value = event.type === 'video_meeting';
-	showEventModal.value = true;
+	openMeetingEdit({
+		appointment: apt,
+		meeting: apt?.video_meeting && typeof apt.video_meeting === 'object' ? apt.video_meeting : null,
+		selectedDate: event.start_time ? parseISO(event.start_time) : null,
+		defaultVideo: event.type === 'video_meeting',
+	});
 };
 
 const handleJoinMeeting = (event: CalendarEvent) => {
@@ -532,7 +502,6 @@ const joinRequestMeeting = (request: any) => {
 };
 
 const handleEventCreated = () => {
-	resetEventModalEditState();
 	calendarEvents.refresh();
 	fetchVideoMeetings();
 };
@@ -541,6 +510,8 @@ const handleMeetingCreated = () => {
 	calendarEvents.refresh();
 	fetchVideoMeetings();
 };
+// Refresh whenever the stacked meeting panel creates / saves / deletes.
+onMeetingChanged(() => handleMeetingCreated());
 
 // ── Data fetching ──
 const fetchVideoMeetings = async () => {
