@@ -202,14 +202,27 @@ export function consumeOptimisticEvent(
 async function dedupedFetch<R>(
   cacheKey: string,
   fetchFn: () => Promise<R>,
-  ttl: number = DEFAULT_CACHE_TTL
+  ttl: number = DEFAULT_CACHE_TTL,
+  reqEvent?: any
 ): Promise<R> {
-  // SSR: bypass the module-level cache entirely.
-  // The Node process serves all SSR requests, so sharing a cache across them
-  // would leak one user's scoped data to another. Always fetch fresh during
-  // hydration; the client takes over immediately after and gets its own
-  // cache there.
-  if (import.meta.server) return fetchFn();
+  // SSR: never use the module-level cache (shared across all users on the Node
+  // process → would leak scoped data). But DO collapse identical concurrent
+  // reads WITHIN a single request: many components fetching the same
+  // collection/query during one render would otherwise each hit Directus. The
+  // inflight map lives on the request's H3 context, so it's isolated per
+  // request and garbage-collected with it.
+  if (import.meta.server) {
+    const ctx = reqEvent?.context;
+    if (ctx) {
+      const map: Map<string, Promise<any>> = (ctx._diInflight ??= new Map());
+      const existing = map.get(cacheKey);
+      if (existing) return existing as Promise<R>;
+      const p = fetchFn().finally(() => map.delete(cacheKey));
+      map.set(cacheKey, p);
+      return p as Promise<R>;
+    }
+    return fetchFn();
+  }
 
   // 1. Return from cache if fresh
   const cached = getCached(cacheKey);
@@ -252,6 +265,10 @@ export const useDirectusItems = <T = any>(
   // resolves to plain $fetch, so behavior is unchanged there.
   const fetchWithCookies = useRequestFetch();
 
+  // On the server, the current request's H3 event — used to scope an inflight
+  // read-dedup map per request (see dedupedFetch). Undefined on the client.
+  const reqEvent = import.meta.server ? useRequestEvent() : undefined;
+
   /**
    * List items from collection
    */
@@ -271,7 +288,8 @@ export const useDirectusItems = <T = any>(
           query,
         },
       }),
-      ttl
+      ttl,
+      reqEvent
     ) as Promise<T[]>;
   };
 
@@ -298,7 +316,8 @@ export const useDirectusItems = <T = any>(
           query,
         },
       }),
-      ttl
+      ttl,
+      reqEvent
     ) as Promise<T>;
   };
 
@@ -403,7 +422,8 @@ export const useDirectusItems = <T = any>(
           query,
         },
       }),
-      ttl
+      ttl,
+      reqEvent
     );
   };
 
