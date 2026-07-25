@@ -168,6 +168,35 @@ function getMemberRole(memberId: string) {
   return m?.role || null;
 }
 
+// The membership row for a user regardless of status (active OR pending) — so
+// pending invitees can be resent / cancelled from the members list.
+function getMemberMembership(memberId: string) {
+  return orgMemberships.value.find(
+    (x: any) => (typeof x.user === 'object' ? x.user?.id : x.user) === memberId,
+  ) || null;
+}
+function isMemberPending(memberId: string) {
+  return getMemberMembership(memberId)?.status === 'pending';
+}
+
+const resendingMember = ref<string | null>(null);
+async function resendMemberInvite(member: any) {
+  const m = getMemberMembership(member.id);
+  if (!m || !selectedOrg.value) return;
+  resendingMember.value = member.id;
+  try {
+    const res: any = await $fetch('/api/org/resend-member-invite', {
+      method: 'POST',
+      body: { membershipId: m.id, organizationId: selectedOrg.value },
+    });
+    toast.add({ title: 'Invitation resent', description: res?.message || `Sent to ${member.email}.`, color: 'green' });
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to resend invitation', color: 'red' });
+  } finally {
+    resendingMember.value = null;
+  }
+}
+
 function getRoleBadgeClasses(slug: string) {
   if (slug === 'owner') return 'bg-purple-500/15 text-purple-700 dark:text-purple-300';
   if (slug === 'admin') return 'bg-destructive/15 text-destructive dark:text-destructive';
@@ -341,7 +370,11 @@ async function removeMember() {
   if (!memberToRemove.value || !selectedOrg.value) return;
   removingMember.value = true;
   try {
-    // Remove from the legacy junction, then suspend the org_membership.
+    // Cancelling a PENDING invite deletes the membership outright (a clean
+    // revoke that lets the same person be re-invited later). Removing an ACTIVE
+    // member is a soft-remove → suspend.
+    const wasPending = isMemberPending(memberToRemove.value.id);
+    // Remove from the legacy junction first.
     const junctions = await orgUserJunction.list({
       filter: {
         organizations_id: { _eq: selectedOrg.value },
@@ -357,9 +390,14 @@ async function removeMember() {
       fields: ['id'],
     });
     for (const m of memberships) {
-      await membershipItems.update(m.id, { status: 'suspended' });
+      if (wasPending) await membershipItems.remove(m.id);
+      else await membershipItems.update(m.id, { status: 'suspended' });
     }
-    toast.add({ title: 'Removed', description: 'Member removed from organization', color: 'green' });
+    toast.add({
+      title: wasPending ? 'Invitation cancelled' : 'Removed',
+      description: wasPending ? 'The pending invitation was cancelled.' : 'Member removed from organization',
+      color: 'green',
+    });
     showRemoveMemberModal.value = false;
     memberToRemove.value = null;
     await fetchMembers();
@@ -1023,14 +1061,29 @@ function onClientInvited() {
                     <p class="text-sm font-medium truncate">{{ member.first_name }} {{ member.last_name }}</p>
                     <p class="text-xs text-muted-foreground truncate">{{ member.email }}</p>
                   </div>
+                  <!-- Pending invite: state chip + resend -->
+                  <span
+                    v-if="isMemberPending(member.id)"
+                    class="shrink-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/15 text-warning"
+                  >Invited</span>
+                  <button
+                    v-if="canManageOrg && isMemberPending(member.id)"
+                    type="button"
+                    class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-info hover:bg-info/10 transition-colors disabled:opacity-50"
+                    :disabled="resendingMember === member.id"
+                    :title="`Resend invitation to ${member.first_name || member.email}`"
+                    @click="resendMemberInvite(member)"
+                  >
+                    <Icon name="lucide:send" class="w-3.5 h-3.5" />
+                  </button>
                   <button
                     v-if="canManageOrg && member.id !== currentUserId && getMemberRole(member.id)?.slug !== 'owner'"
                     type="button"
                     class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    :title="`Remove ${member.first_name}`"
+                    :title="isMemberPending(member.id) ? `Cancel invitation for ${member.first_name || member.email}` : `Remove ${member.first_name}`"
                     @click="confirmRemoveMember(member)"
                   >
-                    <Icon name="lucide:user-minus" class="w-3.5 h-3.5" />
+                    <Icon :name="isMemberPending(member.id) ? 'lucide:x' : 'lucide:user-minus'" class="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -1482,18 +1535,23 @@ function onClientInvited() {
     <EModal v-model="showRemoveMemberModal">
       <div class="p-5 space-y-4">
         <div>
-          <h3 class="text-base font-semibold">Remove member</h3>
-          <p class="text-sm text-muted-foreground mt-1">
+          <h3 class="text-base font-semibold">{{ isMemberPending(memberToRemove?.id) ? 'Cancel invitation' : 'Remove member' }}</h3>
+          <p v-if="isMemberPending(memberToRemove?.id)" class="text-sm text-muted-foreground mt-1">
+            Cancel the pending invitation for
+            <span class="font-medium text-foreground">{{ memberToRemove?.email || `${memberToRemove?.first_name} ${memberToRemove?.last_name}` }}</span>?
+            Their invite link stops working. You can invite them again anytime.
+          </p>
+          <p v-else class="text-sm text-muted-foreground mt-1">
             Remove
             <span class="font-medium text-foreground">{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</span>
             from this organization? They lose access immediately. This does not delete their user account.
           </p>
         </div>
         <div class="flex justify-end gap-2">
-          <Button variant="ghost" :disabled="removingMember" @click="showRemoveMemberModal = false">Cancel</Button>
+          <Button variant="ghost" :disabled="removingMember" @click="showRemoveMemberModal = false">Keep</Button>
           <Button variant="destructive" :disabled="removingMember" @click="removeMember">
-            <Icon :name="removingMember ? 'lucide:loader-2' : 'lucide:user-minus'" class="w-4 h-4 mr-1" :class="removingMember && 'animate-spin'" />
-            Remove
+            <Icon :name="removingMember ? 'lucide:loader-2' : (isMemberPending(memberToRemove?.id) ? 'lucide:x' : 'lucide:user-minus')" class="w-4 h-4 mr-1" :class="removingMember && 'animate-spin'" />
+            {{ isMemberPending(memberToRemove?.id) ? 'Cancel invitation' : 'Remove' }}
           </Button>
         </div>
       </div>
