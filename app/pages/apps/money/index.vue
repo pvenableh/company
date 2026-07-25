@@ -370,7 +370,7 @@ watch(floor, (next) => {
 watch(selectedOrg, () => { if (depositsLoaded) fetchStripeConnect(); });
 
 const { selectedClient, getClientFilter } = useClients();
-const { canAccess } = useOrgRole();
+const { canAccess, canCreate, canEdit, canDelete } = useOrgRole();
 const { getStatusBadgeClasses } = useStatusStyle();
 const isAdmin = computed(() => canAccess('invoices'));
 
@@ -909,7 +909,7 @@ const headerAction = computed(() => {
   if (floor.value === 'invoices' && isAdmin.value) {
     return { label: 'New Invoice', icon: 'lucide:plus', onClick: () => openInvoiceCreate() };
   }
-  if (floor.value === 'expenses') {
+  if (floor.value === 'expenses' && canCreate('expenses')) {
     return { label: 'Add Expense', icon: 'lucide:plus', onClick: openExpenseCreate };
   }
   if (floor.value === 'documents') {
@@ -1679,7 +1679,7 @@ const headerAction = computed(() => {
             <p class="text-sm text-muted-foreground">
               {{ expenses.length ? 'No expenses match your filters.' : 'No expenses yet.' }}
             </p>
-            <Button v-if="!expenses.length" size="sm" @click="openExpenseCreate">
+            <Button v-if="!expenses.length && canCreate('expenses')" size="sm" @click="openExpenseCreate">
               <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
               Add expense
             </Button>
@@ -1702,8 +1702,9 @@ const headerAction = computed(() => {
                 <tr
                   v-for="expense in filteredExpenses"
                   :key="expense.id"
-                  class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-                  @click="openExpenseEdit(expense)"
+                  class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+                  :class="canEdit('expenses') ? 'cursor-pointer' : ''"
+                  @click="canEdit('expenses') && openExpenseEdit(expense)"
                 >
                   <td class="py-3 px-4 font-medium">{{ expense.name }}</td>
                   <td class="py-3 px-4">
@@ -1731,6 +1732,7 @@ const headerAction = computed(() => {
                   <td class="py-3 px-4 text-right font-medium tabular-nums">{{ fmtMoney(expense.amount) }}</td>
                   <td class="py-3 px-4 text-right" @click.stop>
                     <button
+                      v-if="canDelete('expenses')"
                       type="button"
                       class="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
                       @click="handleExpenseDelete(expense)"

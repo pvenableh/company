@@ -53,7 +53,7 @@ const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntellige
 // Lifted from the standalone /leads page so the Leads tab here is the
 // canonical home. /leads now redirects in.
 const { getLeads, getLeadStats } = useLeads();
-const { isOrgManagerOrAbove } = useOrgRole();
+const { isOrgManagerOrAbove, canCreate, canDelete } = useOrgRole();
 
 const leadViewCookie = useCookie('leadView', { default: () => 'board' });
 const leadActiveView = ref(leadViewCookie.value || 'board');
@@ -544,7 +544,7 @@ watch(view, (next) => {
   <div class="apps-page">
     <AppHeader title="People" app-id="clients">
       <template #actions>
-        <Button v-if="view === 'clients'" size="sm" @click="showCreateClientModal = true">
+        <Button v-if="view === 'clients' && canCreate('clients')" size="sm" @click="showCreateClientModal = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Client
         </Button>
@@ -678,7 +678,7 @@ watch(view, (next) => {
               {{ clientSearch ? 'Try adjusting your search.' : 'No clients with this status yet.' }}
             </p>
           </div>
-          <Button v-if="!clientSearch && activeClientTab === 'active'" size="sm" @click="showCreateClientModal = true">
+          <Button v-if="!clientSearch && activeClientTab === 'active' && canCreate('clients')" size="sm" @click="showCreateClientModal = true">
             <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
             Add Client
           </Button>
@@ -794,6 +794,7 @@ watch(view, (next) => {
                   <td class="py-3 px-4 text-right" @click.stop>
                     <div class="flex items-center justify-end gap-1">
                       <button
+                        v-if="canDelete('clients')"
                         class="p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
                         title="Delete client"
                         @click="deleteTarget = client"

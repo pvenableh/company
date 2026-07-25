@@ -47,6 +47,7 @@ function openEmailTemplate(id: string) {
 const route = useRoute();
 const toast = useToast();
 const { socialPublishingEnabled } = useSocialPublishing();
+const { canCreate } = useOrgRole();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
 type FloorKey = 'pulse' | 'campaigns' | 'email' | 'accounts' | 'studio' | 'audience';
@@ -1597,6 +1598,7 @@ const scopeLabel = computed(() => {
                 <span v-if="audienceLists.length" class="text-foreground ml-1">({{ audienceLists.length }})</span>
               </h3>
               <button
+                v-if="canCreate('mailing_lists')"
                 type="button"
                 class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
                 @click="showNewListModal = true"
@@ -1610,7 +1612,7 @@ const scopeLabel = computed(() => {
               <Icon name="lucide:list" class="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
               <p class="text-xs text-foreground font-medium mb-1">No mailing lists yet</p>
               <p class="text-[10px] text-muted-foreground mb-3">Build a list from your contacts to start sending.</p>
-              <Button size="sm" variant="outline" @click="showNewListModal = true">
+              <Button v-if="canCreate('mailing_lists')" size="sm" variant="outline" @click="showNewListModal = true">
                 <Icon name="lucide:plus" class="w-3.5 h-3.5 mr-1" />
                 New List
               </Button>

@@ -109,7 +109,7 @@ export function useContacts() {
       email_subscribed: true,
       unsubscribe_token: crypto.randomUUID(),
       source: payload.source || 'manual',
-    } as any);
+    } as any, {}, { orgContext: selectedOrg.value || undefined });
 
     // Auto-link to current org via junction
     if (selectedOrg.value && contact?.id) {

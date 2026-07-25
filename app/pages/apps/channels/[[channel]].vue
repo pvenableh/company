@@ -22,7 +22,7 @@ definePageMeta({ middleware: ['auth'], layout: 'apps' });
 const route = useRoute();
 const { selectedOrg, organizationOptions } = useOrganization();
 const { selectedClient, clientList } = useClients();
-const { canAccess, isOrgAdminOrAbove } = useOrgRole();
+const { canAccess, canCreate, isOrgAdminOrAbove } = useOrgRole();
 const { setEntity, clearEntity, sidebarOpen } = useEntityPageContext();
 const { user } = useUserSession();
 const toast = useToast();
@@ -761,7 +761,7 @@ const fmtModDate = (d) => {
 			<div class="px-4 pt-4 pb-2 shrink-0">
 				<div class="flex items-center justify-between mb-3">
 					<h1 class="text-lg font-semibold text-foreground">Channels</h1>
-					<Button v-if="isAdmin" size="sm" class="h-8 gap-1.5" @click="showCreate = true">
+					<Button v-if="canCreate('channels')" size="sm" class="h-8 gap-1.5" @click="showCreate = true">
 						<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 						New
 					</Button>
@@ -873,7 +873,7 @@ const fmtModDate = (d) => {
 				<div v-else-if="!isSearching" class="flex flex-col items-center justify-center text-center py-12 px-4">
 					<Icon name="lucide:hash" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 					<p class="text-sm text-muted-foreground">No channels yet</p>
-					<Button v-if="isAdmin" size="sm" variant="outline" class="mt-3 gap-1.5" @click="showCreate = true">
+					<Button v-if="canCreate('channels')" size="sm" variant="outline" class="mt-3 gap-1.5" @click="showCreate = true">
 						<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 						New Channel
 					</Button>

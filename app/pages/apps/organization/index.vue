@@ -58,7 +58,7 @@ watch(floor, (next) => {
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { selectedOrg, currentOrg, fetchOrganizationDetails } = useOrganization();
 const organizationItems = useDirectusItems('organizations');
-const { canAccess, isOrgOwner } = useOrgRole();
+const { canAccess, canView, canCreate, isOrgOwner } = useOrgRole();
 const { visibleTeams, loading: teamsLoading, fetchTeams } = useTeams();
 // Org-level Teams kill-switch — when off, drop the Teams floor from the strip
 // and bounce anyone deep-linked to `?floor=teams` back to Overview.
@@ -1181,7 +1181,7 @@ function onClientInvited() {
                 Each team has its own roster of members and shared client visibility.
               </p>
             </div>
-            <Button size="sm" variant="outline" @click="teamsSlide.open('_')">
+            <Button v-if="canView('team_management')" size="sm" variant="outline" @click="teamsSlide.open('_')">
               <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
               Manage teams
             </Button>
@@ -1196,7 +1196,7 @@ function onClientInvited() {
             <p class="text-xs text-muted-foreground mt-1 mb-3">
               Group members so the Work app and calendar can be filtered by team.
             </p>
-            <Button size="sm" @click="teamsSlide.open('_')">
+            <Button v-if="canCreate('team_management')" size="sm" @click="teamsSlide.open('_')">
               <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
               Create team
             </Button>

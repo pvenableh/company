@@ -20,6 +20,7 @@ import {
   createComment,
   readFiles,
 } from "@directus/sdk";
+import type { RegistryEntry } from "~~/server/utils/tenant-write-registry";
 
 /**
  * Execute a Directus operation with automatic token refresh on expiration
@@ -240,6 +241,89 @@ function enforceQueryLimits(query: any): any {
   return enforced;
 }
 
+/**
+ * Gated tenant WRITE path (create/update/delete on registry collections).
+ *
+ * Unlike executeOperation (user token → Directus enforces collection perms),
+ * this resolves the row's owning org, gates on the app-level org_roles matrix
+ * via requireOrgPermission (owner/admin bypass + matrix), and then executes on
+ * the SERVICE token. The permission check here IS the tenant isolation, so it
+ * must run before every service-token write. See server/utils/tenant-write-registry.ts.
+ */
+async function executeGatedWrite(
+  event: any,
+  entry: RegistryEntry,
+  collection: string,
+  operation: 'create' | 'update' | 'delete',
+  id: string | number | (string | number)[] | undefined,
+  data: Record<string, any> | undefined,
+  query: any,
+  orgContext: string | undefined,
+): Promise<any> {
+  const session = await getUserSession(event);
+  const userId = (session as any)?.user?.id as string | undefined;
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Authentication required for write operations' });
+  }
+
+  const admin = getServerDirectus();
+
+  // Active org memberships — fallback org for context-less creates + the
+  // membership set used to disambiguate M2M/junction org resolution.
+  const memberships = (await admin.request(
+    readItems('org_memberships', {
+      filter: { _and: [{ user: { _eq: userId } }, { status: { _eq: 'active' } }] },
+      fields: ['organization'],
+      limit: 100,
+    }),
+  )) as any[];
+  const userOrgIds = memberships
+    .map((m) => (typeof m.organization === 'object' ? m.organization?.id : m.organization))
+    .filter(Boolean) as string[];
+
+  // Gate + execute a single-target write against a resolved org.
+  const gateOne = async (targetId?: string | number) => {
+    const orgId = await resolveWriteOrg({ entry, collection, operation, id: targetId, data, orgContext, userOrgIds });
+    if (!orgId) {
+      throw createError({
+        statusCode: 400,
+        message: `Could not determine organization for ${operation} on ${collection}`,
+      });
+    }
+    await requireOrgPermission(event, orgId, entry.feature, operation);
+    await requireActiveOrg(orgId);
+    return orgId;
+  };
+
+  if (operation === 'create') {
+    const orgId = await gateOne();
+    const payload = stampOrgOnCreate(entry, data || {}, orgId);
+    return await admin.request(createItem(collection, payload, query));
+  }
+
+  if (operation === 'update') {
+    if (id == null || Array.isArray(id)) {
+      throw createError({ statusCode: 400, message: 'A single id is required for update' });
+    }
+    await gateOne(id);
+    return await admin.request(updateItem(collection, id, data as any, query));
+  }
+
+  // delete — gate EACH id independently so a batch can't span orgs the user
+  // isn't in.
+  if (Array.isArray(id)) {
+    for (const one of id) await gateOne(one);
+    await admin.request(deleteItems(collection, id));
+    return { deleted: id.length };
+  }
+  if (id == null) {
+    throw createError({ statusCode: 400, message: 'ID required for delete operation' });
+  }
+  await gateOne(id);
+  await admin.request(deleteItem(collection, id));
+  return { deleted: 1 };
+}
+
 export default defineEventHandler(async (event) => {
   let collection: string | undefined;
   let operation: string | undefined;
@@ -248,7 +332,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     collection = body.collection;
     operation = body.operation;
-    let { id, data, query } = body;
+    let { id, data, query, orgContext } = body;
 
     if (!collection || !operation) {
       throw createError({
@@ -260,6 +344,14 @@ export default defineEventHandler(async (event) => {
     // Enforce query limits on read operations
     if (operation === 'list') {
       query = enforceQueryLimits(query);
+    }
+
+    // Unified gated write path: tenant-scoped create/update/delete run through
+    // the app-level org_roles matrix on the service token. Collections not in
+    // the registry fall through to the legacy user-token proxy below.
+    const registryEntry = getRegistryEntry(collection);
+    if (registryEntry && (operation === 'create' || operation === 'update' || operation === 'delete')) {
+      return await executeGatedWrite(event, registryEntry, collection, operation, id, data, query, orgContext);
     }
 
     return await executeOperation(event, collection, operation, id, data, query);

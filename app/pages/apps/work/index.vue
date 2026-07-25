@@ -32,6 +32,7 @@ useHead({ title: 'Work | Earnest' });
 const router = useRouter();
 const route = useRoute();
 const config = useRuntimeConfig();
+const { canCreate } = useOrgRole();
 
 // New Project — create inline via the shared modal so the flow stays in the
 // apps layout instead of hopping to the legacy /projects?new=1 page.
@@ -442,15 +443,15 @@ function openMeetingSlideOver(meeting: any, ev?: MouseEvent) {
         </EDropdown>
         <!-- Primary create CTA — Tier 1, universal position (page header),
              floor-aware. Mirrors the Money app's per-floor headerAction. -->
-        <Button v-if="floor === 'projects'" size="sm" @click="showNewProject = true">
+        <Button v-if="floor === 'projects' && canCreate('projects')" size="sm" @click="showNewProject = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Project
         </Button>
-        <Button v-else-if="floor === 'tickets'" size="sm" @click="openTicketCreate({})">
+        <Button v-else-if="floor === 'tickets' && canCreate('tickets')" size="sm" @click="openTicketCreate({})">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Ticket
         </Button>
-        <Button v-else-if="floor === 'tasks'" size="sm" @click="taskCreateRef?.open()">
+        <Button v-else-if="floor === 'tasks' && canCreate('tasks')" size="sm" @click="taskCreateRef?.open()">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           New Task
         </Button>

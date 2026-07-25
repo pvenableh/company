@@ -52,6 +52,7 @@ const emit = defineEmits<{
 // One inline Earnest opener — the docked panel surfaces the entity-scoped
 // "things Earnest can do here" prompts (what the old Create menu offered).
 const { openEarnestPanel } = useEarnestPanel();
+const { canCreate } = useOrgRole();
 // Director's Office — convene a focused meeting scoped to just this project.
 const { open: openBoardroom } = useBoardroom();
 function conveneMeeting() {
@@ -1321,6 +1322,7 @@ watch(() => props.projectId, () => {
 							Events, milestones, tickets, and tasks for this project on one timeline.
 						</p>
 						<button
+							v-if="canCreate('projects')"
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
 							@click="pushPanel('project-event', props.projectId, 'create')"
@@ -1412,6 +1414,7 @@ watch(() => props.projectId, () => {
 								Attach Existing
 							</button>
 							<button
+								v-if="canCreate('tickets')"
 								type="button"
 								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
 								@click="openTicketCreate({ projectId, organizationId: organizationId || null })"
@@ -1451,6 +1454,7 @@ watch(() => props.projectId, () => {
 							Attach Existing
 						</button>
 						<button
+							v-if="canCreate('channels')"
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
 							@click="pushPanel('channel', props.projectId, 'create')"

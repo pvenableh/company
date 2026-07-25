@@ -307,7 +307,8 @@ export const useDirectusItems = <T = any>(
    */
   const create = async (
     data: Partial<T>,
-    query: Pick<ItemsQuery, "fields"> = {}
+    query: Pick<ItemsQuery, "fields"> = {},
+    opts: { orgContext?: string } = {}
   ): Promise<T> => {
     if (!loggedIn.value) {
       throw new Error("Authentication required");
@@ -320,6 +321,10 @@ export const useDirectusItems = <T = any>(
         operation: "create",
         data,
         query,
+        // Explicit org for collections that don't carry org on the row itself
+        // (e.g. contacts, scoped via the contacts_organizations M2M). The
+        // server gate validates it's an org the user actually belongs to.
+        ...(opts.orgContext ? { orgContext: opts.orgContext } : {}),
       },
     });
 

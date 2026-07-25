@@ -69,7 +69,7 @@ const emit = defineEmits<{
 }>();
 
 const { getClient } = useClients();
-const { isOrgAdminOrAbove } = useOrgRole();
+const { isOrgAdminOrAbove, canCreate } = useOrgRole();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { push: pushPanel } = useAppSlideOverStack();
 
@@ -1433,6 +1433,7 @@ watch(() => props.clientId, () => {
 							Attach Existing
 						</button>
 						<button
+							v-if="canCreate('projects')"
 							type="button"
 							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
 							@click="showCreateProjectModal = true"
@@ -1738,6 +1739,7 @@ watch(() => props.clientId, () => {
 								Attach Existing
 							</button>
 							<button
+								v-if="canCreate('tickets')"
 								type="button"
 								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
 								@click="showCreateTicketModal = true"
