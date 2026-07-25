@@ -149,7 +149,7 @@ async function fetchMembers() {
   try {
     orgMemberships.value = await membershipItems.list({
       filter: { organization: { _eq: selectedOrg.value } },
-      fields: ['id', 'status', 'user', 'user.email', 'user.first_name', 'user.last_name', 'role.id', 'role.name', 'role.slug'],
+      fields: ['id', 'status', 'user', 'user.id', 'user.email', 'user.first_name', 'user.last_name', 'role.id', 'role.name', 'role.slug'],
       limit: -1,
     });
   } catch {
