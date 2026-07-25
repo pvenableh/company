@@ -297,7 +297,7 @@ function clientInviteSample(): Record<string, any> {
 		preheader: 'Northwind Studio invited you to Earnest.',
 		heading: "You're invited to Acme Co's portal",
 		introHtml: '<strong>Jordan Lee</strong> (jordan@example.com) invited you to the <strong>Acme Co</strong> client portal on <strong>Northwind Studio</strong>. Click below to set your password and finish creating your account.',
-		roleLabel: 'Client Portal',
+		roleLabel: 'Client Portal', isClientInvite: true,
 		ctaUrl: 'https://app.earnest.guru/auth/accept-org-invite?membership=sample',
 	};
 }
@@ -342,7 +342,10 @@ export default defineEventHandler(async (event) => {
 		const org = await fetchOrgBrand(String(query.org));
 		brand = { org };
 	} else if (brandMode === 'org') {
-		brand = { org: SAMPLE_ORG };
+		// `?whitelabel=1` renders the sample org as whitelabel, so QA can preview
+		// the brand-safe variants (Earnest imagery suppressed, "Powered by Earnest"
+		// footer hidden) without needing a real whitelabel org.
+		brand = { org: query.whitelabel ? { ...SAMPLE_ORG, whitelabel: true } : SAMPLE_ORG };
 	}
 
 	// The glass background is app-hosted (public/email), so it resolves to an

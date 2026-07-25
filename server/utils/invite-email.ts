@@ -76,11 +76,16 @@ export async function sendOrgInviteEmail(params: InviteEmailParams): Promise<{ s
 	// picks the org-branded chrome (logo + brand_color); null → Earnest.
 	const { html, text } = await renderBrandedTemplate('invite', {
 		subject,
-		preheader: `${params.orgName} invited you to Earnest.`,
+		preheader: params.clientName
+			? `Your ${params.clientName} portal — follow the work, approve, and pay.`
+			: `${params.orgName} invited you to Earnest.`,
 		heading,
 		introHtml: intro,
 		roleLabel: params.roleLabel,
 		ctaUrl: acceptUrl,
+		// Branches the template: client-portal invites stay agency-branded +
+		// brand-safe (no Earnest product imagery), team invites get the hero + chips.
+		isClientInvite: !!params.clientName,
 		text: `${plainIntro}\n${acceptUrl}\n\nRole: ${params.roleLabel}`,
 	}, { org: brand });
 

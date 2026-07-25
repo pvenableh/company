@@ -1,16 +1,130 @@
-<mj-section padding="8px 32px 8px 32px">
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  INVITE  ·  team-member + client-portal, one template (branches on isClientInvite)
+  ══════════════════════════════════════════════════════════════════════════
+  Injected between the branded header (org logo/wordmark) and footer
+  (_layout.mjml). Body sections only — no <mjml>/<mj-head>/<mj-body>.
+
+  Two audiences:
+   • TEAM  — a new colleague joining the org on Earnest. Gets the "what Earnest
+     is" line + the Command-Center hero + the app chip strip. Earnest product
+     imagery is gated on the org whitelabel flag so whitelabel orgs stay clean.
+   • CLIENT — an external client getting portal access. Kept agency-branded and
+     brand-safe: NO Earnest product imagery ever (a whitelabel agency's client
+     must not see Earnest), just the org's brand color + portal benefit bullets.
+
+  Voice mirrors the marketing sell sheets (earnest-marketing): honest, concrete,
+  no hype. Assets (eaHeroUrl, eaIcon*) are Directus-hosted, wired in
+  email-templates.ts::brandVars — render everywhere with no app deploy.
+
+  Vars: {{heading}} {{{introHtml}}} {{roleLabel}} {{ctaUrl}} {{orgName}}
+        {{brandColor}} {{whitelabel}} {{isClientInvite}}
+        {{eaHeroUrl}} {{eaIconHome}} {{eaIconPeople}} {{eaIconWork}}
+        {{eaIconChannels}} {{eaIconMoney}} {{eaIconMarketing}} {{eaIconAi}}
+  ══════════════════════════════════════════════════════════════════════════
+-->
+
+<!-- ─── Heading + intro (dynamic) ─────────────────────────────────────────── -->
+<mj-section padding="8px 32px 4px 32px">
   <mj-column>
-    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 16px 0">
+    <mj-text font-size="24px" line-height="1.3" font-weight="600" color="#141210" padding="16px 0 12px 0">
       {{heading}}
     </mj-text>
-    <mj-text padding="0 0 12px 0">
+    <mj-text padding="0 0 4px 0">
       {{{introHtml}}}
     </mj-text>
-    <mj-text font-size="13px" color="#666666" padding="0 0 12px 0">
+  </mj-column>
+</mj-section>
+
+{{#if isClientInvite}}
+<!-- ─── CLIENT — agency-branded, brand-safe (no Earnest imagery) ───────────── -->
+<mj-section padding="8px 32px 0 32px">
+  <mj-column>
+    <mj-text font-size="15px" line-height="1.6" color="#4a5568" padding="0 0 14px 0">
+      This is your private portal for working with {{orgName}} — one place to
+      follow the work, weigh in, and pay.
+    </mj-text>
+  </mj-column>
+</mj-section>
+<mj-section padding="0 32px 6px 44px">
+  <mj-column border-left="3px solid {{brandColor}}" padding="0 0 0 18px">
+    <mj-text font-size="15px" line-height="1.5" color="#3f4d5c" padding="0 0 11px 0">
+      <strong style="color:#141210;">Everything in one place</strong> — your projects, invoices, and proposals.
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.5" color="#3f4d5c" padding="0 0 11px 0">
+      <strong style="color:#141210;">Review &amp; approve</strong> work, and comment right inline.
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.5" color="#3f4d5c" padding="0 0 11px 0">
+      <strong style="color:#141210;">Pay invoices</strong> in one click.
+    </mj-text>
+    <mj-text font-size="15px" line-height="1.5" color="#3f4d5c" padding="0">
+      <strong style="color:#141210;">Sign</strong> proposals &amp; contracts online.
+    </mj-text>
+  </mj-column>
+</mj-section>
+{{else}}
+<!-- ─── TEAM — Earnest product enrichment, entirely gated on whitelabel so a
+         whitelabel org's staff invite carries ZERO Earnest references ──────── -->
+{{#unless whitelabel}}
+<mj-section padding="4px 32px 0 32px">
+  <mj-column>
+    <mj-text font-size="15px" line-height="1.6" color="#4a5568" padding="0 0 6px 0">
+      Earnest is the AI-powered workspace {{orgName}} runs on — it reads the
+      whole business, shows you what needs you today, and drafts the day in your
+      voice.
+    </mj-text>
+  </mj-column>
+</mj-section>
+<mj-section padding="16px 32px 4px 32px">
+  <mj-column>
+    <mj-image src="{{eaHeroUrl}}" href="{{ctaUrl}}" alt="Earnest — what needs you today, already triaged" width="536px" padding="0" />
+  </mj-column>
+</mj-section>
+<mj-section padding="14px 32px 6px 32px">
+  <mj-group vertical-align="top">
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconHome}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Home</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconPeople}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">People</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconWork}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Work</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconChannels}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Chat</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconMoney}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Money</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconMarketing}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Mktg</mj-text>
+    </mj-column>
+    <mj-column width="76px" padding="0">
+      <mj-image src="{{eaIconAi}}" alt="" width="40px" align="center" padding="0" />
+      <mj-text align="center" font-size="9px" font-weight="700" letter-spacing="0.05em" color="#7c8ba1" text-transform="uppercase" padding="7px 0 0 0">Earnest AI</mj-text>
+    </mj-column>
+  </mj-group>
+</mj-section>
+{{/unless}}
+{{/if}}
+
+<!-- ─── Role + CTA + disclaimer (dynamic) ─────────────────────────────────── -->
+<mj-section padding="14px 32px 8px 32px">
+  <mj-column>
+    {{#unless isClientInvite}}
+    <mj-text font-size="13px" color="#666666" padding="4px 0 12px 0">
       Role: <strong>{{roleLabel}}</strong>
     </mj-text>
-    <mj-button href="{{ctaUrl}}" padding="16px 0 8px 0">
-      Accept invitation
+    {{/unless}}
+    <mj-button href="{{ctaUrl}}" padding="8px 0 8px 0">
+      {{#if isClientInvite}}Open your portal{{else}}Accept invitation{{/if}}
     </mj-button>
     <mj-text font-size="13px" color="#888888" padding="16px 0 0 0">
       Didn't expect this invitation? You can ignore the email — nothing happens until you click the button.

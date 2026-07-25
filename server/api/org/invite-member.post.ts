@@ -126,6 +126,27 @@ export default defineEventHandler(async (event) => {
     if (existingUsers.length > 0) {
       targetUserId = existingUsers[0].id;
 
+      // A person can't be BOTH a client and a staff member in the SAME org.
+      // (Across different orgs any combination is fine — this only blocks the
+      // same-org overlap.) Block if this email already holds portal access here.
+      const clientRow = await directus.request(
+        readItems('client_portal_users', {
+          filter: {
+            organization: { _eq: organizationId },
+            user: { _eq: targetUserId },
+            status: { _in: ['active', 'pending'] },
+          },
+          fields: ['id'],
+          limit: 1,
+        } as any)
+      ) as any[];
+      if (clientRow.length > 0) {
+        throw createError({
+          statusCode: 409,
+          message: 'This email already has client portal access in this organization. A person can’t be both a client and a staff member of the same organization.',
+        });
+      }
+
       // Check if they already have a membership in this org
       const existingMembership = await directus.request(
         readItems('org_memberships', {

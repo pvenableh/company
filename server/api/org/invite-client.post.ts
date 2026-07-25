@@ -91,6 +91,27 @@ export default defineEventHandler(async (event) => {
     if (existingUsers.length > 0) {
       targetUserId = existingUsers[0].id;
 
+      // A person can't be BOTH a staff member and a client in the SAME org.
+      // (Cross-org combinations are fine.) Block if this email is already a
+      // team member here before granting external portal access.
+      const staffMembership = await directus.request(
+        readItems('org_memberships', {
+          filter: {
+            organization: { _eq: organizationId },
+            user: { _eq: targetUserId },
+            status: { _in: ['active', 'pending'] },
+          },
+          fields: ['id'],
+          limit: 1,
+        })
+      ) as any[];
+      if (staffMembership.length > 0) {
+        throw createError({
+          statusCode: 409,
+          message: 'This email already belongs to a team member of this organization. A person can’t be both a staff member and a client of the same organization.',
+        });
+      }
+
       // Check for existing portal-user row scoped to THIS client. A user can
       // legitimately hold portal rows for multiple clients in the same org, so
       // existence must be checked at (org, user, client) — not just (org, user)
