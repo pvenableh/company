@@ -66,9 +66,16 @@ export default defineEventHandler(async (event) => {
 
     // 2. Create organization + seed roles + owner membership
     try {
+      // `slug` is required by the schema (unique). Derive it from the name with
+      // a short random suffix — mirrors register.post.ts. Omitting it (as this
+      // path used to) made createItem throw, and the swallowing catch below left
+      // every Google-signup owner in an org-less account.
+      const slugBase = organization_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'org';
+      const slugSuffix = Math.random().toString(36).slice(2, 8);
       const org = await directus.request(
         createItem('organizations', {
           name: organization_name.trim(),
+          slug: `${slugBase}-${slugSuffix}`,
           status: 'published',
           active: true,
           plan: 'free',

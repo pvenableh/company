@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
 
   // Only owner/admin of the target org may purchase tokens for it.
   await requireOrgPermission(event, organizationId, 'org_settings', 'update');
+  await requireNotDemoSession(event);
 
   const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
   if (!pkg) {

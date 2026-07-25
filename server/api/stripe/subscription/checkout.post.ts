@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
 	} else {
 		await requireOrgRole(event, ['owner', 'admin']);
 	}
+	await requireNotDemoSession(event);
 
 	// Default email to the authenticated user when client omits it (the wizard
 	// flow doesn't have it client-side and shouldn't need to send it).

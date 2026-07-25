@@ -37,6 +37,8 @@ export default defineEventHandler(async (event) => {
 	} else {
 		await requireOrgRole(event, ['owner', 'admin']);
 	}
+	// Demo accounts (agency demo is Admin) must never create real subscriptions.
+	await requireNotDemoSession(event);
 
 	const planDef = EARNEST_PLANS[plan];
 	if (!planDef) {

@@ -40,14 +40,14 @@ export async function enforceTokenLimits(event: H3Event, organizationId?: string
 
   // 1. Check if member has AI access enabled (via ai_preferences)
   try {
+    // ai_preferences rows are keyed by `user` only — `organization` is left
+    // null by every writer (member-budget, member-toggle, ai/preferences), and
+    // members.get.ts already reads them user-scoped. Filtering by organization
+    // here (as this used to) matched nothing, so per-member budgets and the AI
+    // disable toggle were silent no-ops. Match by user only.
     const prefs = await directus.request(
       readItems('ai_preferences', {
-        filter: {
-          _and: [
-            { user: { _eq: userId } },
-            ...(organizationId ? [{ organization: { _eq: organizationId } }] : []),
-          ],
-        },
+        filter: { user: { _eq: userId } },
         fields: ['ai_enabled', 'token_budget_monthly', 'low_usage_mode'],
         limit: 1,
       }),

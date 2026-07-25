@@ -32,6 +32,13 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'orgId is required' });
 	}
 
+	// Authorization: the caller must be an owner/admin (org_settings:update) of
+	// the org being billed. Without this, any authenticated user could add a
+	// paid recurring add-on to any org's card. Mirrors tokens/checkout and
+	// subscription/create. Demo accounts can never move money.
+	await requireNotDemoSession(event);
+	await requireOrgPermission(event, body.orgId, 'org_settings', 'update');
+
 	const addon = EARNEST_ADDONS[body.addonId];
 	if (!addon.stripePriceId) {
 		throw createError({ statusCode: 500, message: `Stripe price not configured for add-on: ${body.addonId}` });

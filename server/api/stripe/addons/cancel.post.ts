@@ -26,6 +26,12 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'orgId is required' });
 	}
 
+	// Authorization: only an owner/admin of this org may cancel its add-ons.
+	// Without this, any authenticated user could disable another org's paid
+	// add-on (e.g. their phone/SMS service).
+	await requireNotDemoSession(event);
+	await requireOrgPermission(event, body.orgId, 'org_settings', 'update');
+
 	try {
 		const stripe = useStripe();
 		const directus = getTypedDirectus();
