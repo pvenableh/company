@@ -27,6 +27,7 @@ let _authenticated = false;
 let _authenticating = false;
 let _reconnectAttempts = 0;
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let _idleTeardownTimer: ReturnType<typeof setTimeout> | null = null;
 
 const _subscriptions = new Map<string, SubscriptionEntry>();
 const _connected = ref(false);
@@ -34,6 +35,10 @@ const _connected = ref(false);
 const MAX_RECONNECT = 5;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 16000;
+// Keep the socket alive briefly after the last subscriber leaves, so SPA
+// navigation (unmount page A → mount page B) doesn't churn a full
+// disconnect+reconnect+token-fetch cycle every time.
+const IDLE_TEARDOWN_MS = 30_000;
 
 // ─── Initialization (called once from setup context) ─────────────────────────
 
@@ -52,6 +57,38 @@ function _init() {
 			_teardown();
 		}
 	});
+
+	// Revive realtime after a network return or tab wake. Without this, once
+	// the backoff exhausts MAX_RECONNECT (or the socket dies while the laptop
+	// slept), the connection stays dead until logout/login. Resetting the
+	// attempt counter here lets a visible/online event recover it.
+	const _revive = () => {
+		if (!_loggedIn?.value || _subscriptions.size === 0) return;
+		if (_ws && _ws.readyState < 2) return; // already connecting/open
+		_reconnectAttempts = 0;
+		_ensureConnection();
+	};
+	window.addEventListener('online', _revive);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') _revive();
+	});
+}
+
+// ─── Idle teardown (debounced) ───────────────────────────────────────────────
+
+function _scheduleIdleTeardown() {
+	if (_idleTeardownTimer) clearTimeout(_idleTeardownTimer);
+	_idleTeardownTimer = setTimeout(() => {
+		_idleTeardownTimer = null;
+		if (_subscriptions.size === 0) _teardown();
+	}, IDLE_TEARDOWN_MS);
+}
+
+function _cancelIdleTeardown() {
+	if (_idleTeardownTimer) {
+		clearTimeout(_idleTeardownTimer);
+		_idleTeardownTimer = null;
+	}
 }
 
 // ─── Connection lifecycle ────────────────────────────────────────────────────
@@ -106,6 +143,10 @@ function _teardown() {
 	if (_reconnectTimer) {
 		clearTimeout(_reconnectTimer);
 		_reconnectTimer = null;
+	}
+	if (_idleTeardownTimer) {
+		clearTimeout(_idleTeardownTimer);
+		_idleTeardownTimer = null;
 	}
 
 	if (_ws) {
@@ -270,6 +311,10 @@ export function useWebSocketManager() {
 		query: SubscriptionQuery,
 		handler: (event: string, data: any[]) => void,
 	): { uid: string; unsubscribe: () => void } {
+		// A new subscriber means we're active again — cancel any pending
+		// idle-teardown so navigation reuses the live connection.
+		_cancelIdleTeardown();
+
 		const subKey = _makeSubKey(collection, query);
 		const existing = _sharedSubs.get(subKey);
 
@@ -289,7 +334,7 @@ export function useWebSocketManager() {
 						_subscriptions.delete(existing.uid);
 
 						if (_subscriptions.size === 0) {
-							_teardown();
+							_scheduleIdleTeardown();
 						}
 					}
 				},
@@ -340,7 +385,7 @@ export function useWebSocketManager() {
 				_subscriptions.delete(uid);
 
 				if (_subscriptions.size === 0) {
-					_teardown();
+					_scheduleIdleTeardown();
 				}
 			}
 		};
