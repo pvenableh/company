@@ -22,7 +22,7 @@ import {
   type AuthenticationClient,
 } from "@directus/sdk";
 import type { H3Event } from "h3";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { getRedisConnection } from "./queue";
 
 // Type for authenticated client
@@ -288,10 +288,33 @@ const REDIS_OP_TIMEOUT_MS = 1_500;
 // 403). Waiters that read it fail fast with a 401 instead of polling the full
 // budget and then each stampeding Directus with the same dead token.
 const DEAD_TOKEN_SENTINEL = "__dead__";
-type CachedRefresh = AuthenticationData | { [DEAD_TOKEN_SENTINEL]: true };
 
 function isDeadSentinel(v: any): boolean {
   return !!v && v[DEAD_TOKEN_SENTINEL] === true;
+}
+
+// Stable per-process id so production logs can tell one Vercel lambda instance
+// from another — that's how we SEE the cross-instance dedup working (many
+// instances, one `rotated`, the rest `l2_*`/`waiter`). Randomised at module
+// load; lives for the instance's lifetime. randomUUID is fine in the server
+// runtime (the Math.random/Date.now restriction only applies to workflow scripts).
+export const INSTANCE_ID = randomUUID().slice(0, 8);
+const REFRESH_LOG = process.env.AUTH_REFRESH_LOG !== "off";
+
+/**
+ * Emit a single structured line per refresh outcome. NEVER logs the token — only
+ * a hash prefix — so logs are safe to keep. Grep Vercel logs for `[auth-refresh]`.
+ * Tags: rotated | l2_prehit | l2_doublecheck | waiter | tombstone | dead |
+ *       transient | redis_down | fallback | l1_hit
+ */
+function logRefresh(tag: string, hash?: string): void {
+  if (!REFRESH_LOG) return;
+  try {
+    console.log(
+      "[auth-refresh]",
+      JSON.stringify({ tag, inst: INSTANCE_ID, k: hash ? hash.slice(0, 8) : undefined })
+    );
+  } catch {}
 }
 
 /** Hash the refresh token for use as a Redis key (avoid raw tokens in keyspace). */
@@ -318,66 +341,73 @@ async function redisGetJson<T>(redis: any, key: string): Promise<T | null> {
   }
 }
 
-/** Interpret a cached L2 value: dead sentinel throws 401; tokens are returned. */
-function resolveCached(v: CachedRefresh): AuthenticationData {
-  if (isDeadSentinel(v)) {
-    throw createError({ statusCode: 401, message: "Session expired - please log in again" });
-  }
-  return v as AuthenticationData;
-}
-
 /**
- * Cross-instance rotation. Returns the rotated tokens, ensuring at most one
- * instance actually calls Directus for a given refresh token within the window.
- * A confirmed-dead token is published as a tombstone so waiters fail fast; a
- * transient failure (timeout, Redis hiccup, 5xx) is NOT cached and propagates
- * so callers treat it as retryable (503), never as a logout.
+ * Reusable cross-instance coordination: at most ONE caller runs `rotate()` for a
+ * given key within the window; everyone else reuses the published result. A
+ * confirmed-dead outcome (per `isDead`) is tombstoned so waiters fail fast; a
+ * transient failure is NOT cached and propagates so callers can retry.
+ *
+ * Shared by the real refresh path (`crossInstanceRefresh`) and the production
+ * self-test (`runDedupProbe`) so the diagnostic exercises the exact same
+ * distributed logic that guards auth. `onRole` reports which branch served this
+ * caller — that's what the instrumentation and the probe read.
  */
-async function crossInstanceRefresh(
-  refreshToken: string
-): Promise<AuthenticationData> {
-  const redis = getRedisConnection();
-  if (!redis) return directusRefresh(refreshToken); // L1-only fallback
+async function coordinatedRotate<T extends object>(opts: {
+  redis: any;
+  resultKey: string;
+  lockKey: string;
+  rotate: () => Promise<T>;
+  isDead?: (err: any) => boolean;
+  onRole?: (role: string) => void;
+}): Promise<T> {
+  const { redis, resultKey, lockKey, rotate, isDead, onRole } = opts;
 
-  const hash = refreshKeyHash(refreshToken);
-  const resultKey = `authrt:${hash}`;
-  const lockKey = `authrtlock:${hash}`;
+  // Read the shared cache; a dead sentinel throws 401 (fast-fail for waiters).
+  const readCached = async (role: string): Promise<T | null> => {
+    const v = await redisGetJson<any>(redis, resultKey);
+    if (!v) return null;
+    if (isDeadSentinel(v)) {
+      onRole?.("tombstone");
+      throw createError({ statusCode: 401, message: "Session expired - please log in again" });
+    }
+    onRole?.(role);
+    return v as T;
+  };
 
-  // A sibling on another instance may have already rotated (or tombstoned) it.
-  const preHit = await redisGetJson<CachedRefresh>(redis, resultKey);
-  if (preHit) return resolveCached(preHit);
+  const preHit = await readCached("l2_prehit");
+  if (preHit) return preHit;
 
-  // Try to become the sole rotator. SET NX PX = atomic "acquire if free".
+  // Become the sole rotator. SET NX PX = atomic "acquire if free".
   let gotLock = false;
   try {
     const res = await redisOp(redis.set(lockKey, "1", "PX", REDIS_LOCK_TTL_MS, "NX"));
     gotLock = res === "OK";
   } catch {
-    // Redis hiccup/timeout — degrade to a direct refresh rather than block auth.
-    return directusRefresh(refreshToken);
+    onRole?.("redis_down");
+    return rotate(); // Redis hiccup — degrade rather than block.
   }
 
   if (gotLock) {
     try {
       // Double-checked locking: a prior holder may have published between our
       // preHit miss and acquiring the lock. Avoid a redundant rotation.
-      const afterLock = await redisGetJson<CachedRefresh>(redis, resultKey);
-      if (afterLock) return resolveCached(afterLock);
+      const afterLock = await readCached("l2_doublecheck");
+      if (afterLock) return afterLock;
 
       try {
-        const data = await directusRefresh(refreshToken);
-        // Publish success for waiters (bounded, non-fatal on publish failure).
+        const data = await rotate();
         try {
           await redisOp(
             redis.set(resultKey, JSON.stringify(data), "PX", REDIS_RESULT_TTL_MS)
           );
         } catch {}
+        onRole?.("rotated");
         return data;
       } catch (err: any) {
-        // Only a DEFINITIVE rejection tombstones the token. Transient failures
-        // (timeout / network / 5xx) must not be cached — the token may still be
-        // alive, and callers should get a retryable error, not a logout.
-        if (isTokenRejected(err)) {
+        // Only a DEFINITIVE rejection tombstones. Transient failures (timeout /
+        // network / 5xx) must not be cached — the resource may still be alive.
+        if (isDead?.(err)) {
+          onRole?.("dead");
           try {
             await redisOp(
               redis.set(
@@ -388,6 +418,8 @@ async function crossInstanceRefresh(
               )
             );
           } catch {}
+        } else {
+          onRole?.("transient");
         }
         throw err;
       }
@@ -400,14 +432,79 @@ async function crossInstanceRefresh(
   const deadline = Date.now() + REDIS_POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, REDIS_POLL_INTERVAL_MS));
-    const hit = await redisGetJson<CachedRefresh>(redis, resultKey);
-    if (hit) return resolveCached(hit);
+    const hit = await readCached("waiter");
+    if (hit) return hit;
   }
 
-  // Holder never published (crashed, or Directus was slow past our budget).
-  // Last resort: attempt the rotation ourselves. If the token is genuinely
-  // dead this 401s and the caller treats the session as expired.
-  return directusRefresh(refreshToken);
+  // Holder never published (crashed, or the rotate ran past our budget).
+  // Last resort: rotate ourselves. If genuinely dead this throws and the caller
+  // treats the session as expired.
+  onRole?.("fallback");
+  return rotate();
+}
+
+/**
+ * Cross-instance rotation for the real refresh token. Ensures at most one
+ * instance calls Directus for a given token within the window.
+ */
+async function crossInstanceRefresh(
+  refreshToken: string
+): Promise<AuthenticationData> {
+  const redis = getRedisConnection();
+  const hash = refreshKeyHash(refreshToken);
+  if (!redis) {
+    logRefresh("redis_down", hash);
+    return directusRefresh(refreshToken); // L1-only fallback
+  }
+
+  return coordinatedRotate<AuthenticationData>({
+    redis,
+    resultKey: `authrt:${hash}`,
+    lockKey: `authrtlock:${hash}`,
+    rotate: () => directusRefresh(refreshToken),
+    isDead: isTokenRejected,
+    onRole: (role) => logRefresh(role, hash),
+  });
+}
+
+/**
+ * Production self-test for the distributed dedup — WITHOUT touching real auth.
+ *
+ * Runs the exact `coordinatedRotate` machinery against the real Redis under an
+ * isolated `authprobe:` namespace, where "rotate" just bumps a per-run counter.
+ * Fire this endpoint concurrently from an external client: Vercel spreads the
+ * requests across lambda instances, and if the lock works, exactly ONE reports
+ * role `rotated` and every response sees `count === 1`. A second `rotated` or a
+ * `count > 1` means two instances rotated — the bug. Keys carry a 30s TTL.
+ */
+export async function runDedupProbe(
+  key: string
+): Promise<{ role: string; count: number; instanceId: string; redis: boolean }> {
+  const redis = getRedisConnection();
+  if (!redis) return { role: "redis_down", count: -1, instanceId: INSTANCE_ID, redis: false };
+
+  const hash = refreshKeyHash(`probe:${key}`);
+  const counterKey = `authprobe:count:${hash}`;
+  let role = "unknown";
+
+  const result = await coordinatedRotate<{ count: number }>({
+    redis,
+    resultKey: `authprobe:res:${hash}`,
+    lockKey: `authprobe:lock:${hash}`,
+    rotate: async () => {
+      // Synthetic "rotation": exactly one INCR per real rotation. A short delay
+      // widens the race window so concurrent callers genuinely contend.
+      const n = Number(await redisOp(redis.incr(counterKey)));
+      redisOp(redis.pexpire(counterKey, 30_000)).catch(() => {});
+      await new Promise((r) => setTimeout(r, 60));
+      return { count: n };
+    },
+    onRole: (r) => {
+      role = r;
+    },
+  });
+
+  return { role, count: result.count, instanceId: INSTANCE_ID, redis: true };
 }
 
 export async function dedupedDirectusRefresh(
@@ -415,6 +512,7 @@ export async function dedupedDirectusRefresh(
 ): Promise<AuthenticationData> {
   const cached = recentRefreshes.get(refreshToken);
   if (cached && Date.now() - cached.at < RECENT_REFRESH_TTL_MS) {
+    logRefresh("l1_hit", refreshKeyHash(refreshToken));
     return cached.data;
   }
 
