@@ -21,6 +21,9 @@ const { fetchSession } = useDirectusAuth();
 
 const membershipId = ref(route.query.membership || '');
 const directusToken = ref(route.query.token || '');
+// Signed, expiring invite token (server verifies it before returning details
+// or accepting). Distinct from `token` above, which is a Directus token.
+const inviteToken = ref(route.query.invite_token || '');
 
 const membership = ref(null);
 const loading = ref(true);
@@ -72,7 +75,7 @@ onMounted(async () => {
 	try {
 		const data = await $fetch('/api/org/invite-details', {
 			method: 'POST',
-			body: { membershipId: membershipId.value },
+			body: { membershipId: membershipId.value, inviteToken: inviteToken.value },
 		});
 
 		if (!data.success) {
@@ -122,6 +125,7 @@ async function acceptInvite() {
 				membershipId: membershipId.value,
 				password: isNewUser.value ? password.value : undefined,
 				directusToken: directusToken.value || undefined,
+				inviteToken: inviteToken.value || undefined,
 			},
 		});
 

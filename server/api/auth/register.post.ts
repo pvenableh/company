@@ -9,7 +9,7 @@
  * Then auto-logs the user in and returns a session.
  */
 
-import { createUser, createItem, readItems } from '@directus/sdk';
+import { createUser, createItem, readItems, deleteItem, deleteItems, deleteUser } from '@directus/sdk';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/shared/permissions';
 import type { RoleSlug } from '~~/shared/permissions';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
@@ -142,8 +142,38 @@ export default defineEventHandler(async (event) => {
           console.error('[Registration] Team-member contact creation failed (non-fatal):', contactError?.message);
         }
       } catch (orgError: any) {
-        // Log but don't fail registration if org setup fails
-        console.error('Org setup error (user was still created):', orgError);
+        // Previously this was swallowed and registration returned success:true
+        // with a broken org — if the role-seeding loop threw before the owner
+        // membership was written, the "owner" had an org but NO membership and
+        // was silently locked out of every requireOrgPermission-gated feature
+        // with no error and no retry path. Instead, roll the whole bootstrap
+        // back (best-effort) so the state is clean, then fail loudly so the
+        // client can surface the error and the user can retry from scratch.
+        console.error('[Registration] Org setup failed — rolling back:', orgError?.message);
+        try {
+          if (organizationId) {
+            for (const coll of ['org_memberships', 'org_roles'] as const) {
+              const rows = (await directus.request(readItems(coll, {
+                filter: { organization: { _eq: organizationId } }, fields: ['id'], limit: -1,
+              })).catch(() => [])) as Array<{ id: string }>;
+              if (rows.length) await directus.request(deleteItems(coll, rows.map((r) => r.id))).catch(() => {});
+            }
+            const junctions = (await directus.request(readItems('organizations_directus_users', {
+              filter: { organizations_id: { _eq: organizationId } }, fields: ['id'], limit: -1,
+            })).catch(() => [])) as Array<{ id: number | string }>;
+            if (junctions.length) await directus.request(deleteItems('organizations_directus_users', junctions.map((r) => r.id))).catch(() => {});
+            await directus.request(deleteItem('organizations', organizationId)).catch(() => {});
+          }
+          // Delete the just-created user last, so a retry with the same email
+          // isn't blocked by the unique-email guard on an orphaned account.
+          await directus.request(deleteUser(newUser.id)).catch(() => {});
+        } catch (rollbackErr: any) {
+          console.error('[Registration] Rollback incomplete:', rollbackErr?.message);
+        }
+        throw createError({
+          statusCode: 500,
+          message: 'We could not finish setting up your account. Please try again.',
+        });
       }
     }
 

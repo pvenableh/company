@@ -38,7 +38,10 @@ interface InviteEmailParams {
 export async function sendOrgInviteEmail(params: InviteEmailParams): Promise<{ sent: boolean; reason?: string }> {
 	const config = useRuntimeConfig() as any;
 	const appUrl = config.public?.appUrl || config.public?.siteUrl || 'https://app.earnest.guru';
-	const acceptUrl = `${appUrl}/auth/accept-org-invite?membership=${encodeURIComponent(params.membershipId)}`;
+	// Signed, expiring token bound to this membership id — invite-details and
+	// accept-invite reject links without a valid, unexpired token.
+	const inviteToken = signInviteToken(params.membershipId);
+	const acceptUrl = `${appUrl}/auth/accept-org-invite?membership=${encodeURIComponent(params.membershipId)}&invite_token=${encodeURIComponent(inviteToken)}`;
 
 	const brand = params.orgBrand ?? (await fetchOrgBrand(params.orgId));
 	const inviterLine = params.inviterName

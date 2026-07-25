@@ -7,7 +7,7 @@
 // On successful confirmation the existing webhook chain
 // (customer.subscription.created / .updated → handleSubscriptionChange)
 // syncs the org's plan, token allotment, scan credits, and addons.
-import { readUsers, updateUser } from '@directus/sdk';
+import { readUsers, updateUser, readItem } from '@directus/sdk';
 import Stripe from 'stripe';
 import { EARNEST_PLANS } from '~~/server/utils/stripe';
 import type { EarnestPlanId } from '~~/server/utils/stripe';
@@ -97,6 +97,26 @@ export default defineEventHandler(async (event) => {
 				);
 			} catch (e: any) {
 				console.warn('[stripe/subscription/create] terms_accepted_at update failed (non-fatal):', e?.message);
+			}
+		}
+
+		// Idempotency guard: if the org already has a live subscription, don't
+		// create a second one. Re-running the wizard or a double submit would
+		// otherwise bill the org for two plans and orphan the first (the webhook
+		// only stores the latest subscription id).
+		if (organizationId) {
+			const orgRow = await directus.request(
+				readItem('organizations', organizationId, { fields: ['stripe_subscription_id'] }),
+			).catch(() => null) as any;
+			const existingSub = orgRow?.stripe_subscription_id;
+			if (existingSub) {
+				const sub = await stripe.subscriptions.retrieve(existingSub).catch(() => null);
+				if (sub && ['active', 'trialing', 'past_due', 'incomplete'].includes(sub.status)) {
+					throw createError({
+						statusCode: 409,
+						message: 'This organization already has an active subscription.',
+					});
+				}
 			}
 		}
 

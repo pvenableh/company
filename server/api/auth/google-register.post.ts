@@ -12,11 +12,13 @@
  * (since ALLOW_PUBLIC_REGISTRATION=false, the user must already exist).
  * The SSO callback page then creates the session as usual.
  *
- * If the user abandons the Google sign-in, we have an orphaned user record
- * with status 'draft'. A cron job can clean these up periodically.
+ * The placeholder user is created with status 'active' (NOT 'draft'): Directus
+ * blocks non-active users from completing OAuth login, so a draft shell could
+ * never finish Google sign-in. Abandoned shells therefore stay 'active' — the
+ * user can simply sign in with Google later (the account + org already exist).
  */
 
-import { createUser, createItem, updateUser } from '@directus/sdk';
+import { createUser, createItem, updateUser, readItems, deleteItem, deleteItems, deleteUser } from '@directus/sdk';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/shared/permissions';
 import type { RoleSlug } from '~~/shared/permissions';
 
@@ -119,7 +121,32 @@ export default defineEventHandler(async (event) => {
         })
       );
     } catch (orgError: any) {
-      console.error('[Google Register] Org setup error (user was still created):', orgError);
+      // Roll the bootstrap back rather than swallow it — a partial failure used
+      // to leave the Google owner in an org-less (or membership-less) account
+      // with success reported. Clean up so a retry starts fresh, then fail loud.
+      console.error('[Google Register] Org setup failed — rolling back:', orgError?.message);
+      try {
+        if (organizationId) {
+          for (const coll of ['org_memberships', 'org_roles'] as const) {
+            const rows = (await directus.request(readItems(coll, {
+              filter: { organization: { _eq: organizationId } }, fields: ['id'], limit: -1,
+            })).catch(() => [])) as Array<{ id: string }>;
+            if (rows.length) await directus.request(deleteItems(coll, rows.map((r) => r.id))).catch(() => {});
+          }
+          const junctions = (await directus.request(readItems('organizations_directus_users', {
+            filter: { organizations_id: { _eq: organizationId } }, fields: ['id'], limit: -1,
+          })).catch(() => [])) as Array<{ id: number | string }>;
+          if (junctions.length) await directus.request(deleteItems('organizations_directus_users', junctions.map((r) => r.id))).catch(() => {});
+          await directus.request(deleteItem('organizations', organizationId)).catch(() => {});
+        }
+        await directus.request(deleteUser(newUser.id)).catch(() => {});
+      } catch (rollbackErr: any) {
+        console.error('[Google Register] Rollback incomplete:', rollbackErr?.message);
+      }
+      throw createError({
+        statusCode: 500,
+        message: 'We could not finish setting up your account. Please try again.',
+      });
     }
 
     // 3. Create Stripe customer

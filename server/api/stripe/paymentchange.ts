@@ -209,6 +209,33 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 			return;
 		}
 
+		// Idempotency: skip if a row for this PI already exists (webhook retry, or
+		// the Connect handler / manual route beat us to it). Mirrors
+		// connect-webhook.post.ts — without it a redelivered payment_intent.succeeded
+		// wrote a second full-amount row, inflating "Total Received".
+		const existing = (await directus.request(
+			readItems('payments_received', {
+				filter: { payment_intent: { _eq: paymentIntent.id } },
+				fields: ['id'],
+				limit: 1,
+			}),
+		)) as Array<{ id: string }>;
+		if (existing?.length) {
+			console.log(`[Stripe] PI ${paymentIntent.id} already recorded — skipping duplicate payments_received.`);
+			return;
+		}
+
+		// Resolve the owning org from the invoice so the row isn't org-less (which
+		// would leak across orgs in reporting). bill_to is the owning agency org.
+		let organizationId: string | null = null;
+		try {
+			const inv = await directus.request(
+				readItem('invoices', invoiceId, { fields: ['bill_to'] }),
+			) as any;
+			const billTo = inv?.bill_to;
+			organizationId = typeof billTo === 'object' ? billTo?.id ?? null : billTo ?? null;
+		} catch { /* leave null; reporting still keys on invoice_id */ }
+
 		// Record the payment FIRST. Stripe amounts are minor units (cents); the
 		// column stores dollars as a 2-decimal string.
 		await directus.request(
@@ -218,6 +245,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 				amount: (paymentIntent.amount / 100).toFixed(2),
 				email: paymentIntent.receipt_email,
 				invoice_id: invoiceId,
+				...(organizationId ? { organization: organizationId } : {}),
 				status: 'paid',
 				date_received: new Date().toISOString(),
 				// Stripe test-mode payments (dev keys) are excluded from Money reporting.

@@ -42,12 +42,21 @@ const USER_FIELDS = [
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { membershipId } = body;
+    const { membershipId, inviteToken } = body;
 
     if (!membershipId) {
       throw createError({
         statusCode: 400,
         message: 'membershipId is required',
+      });
+    }
+
+    // Reject forged or expired invite links. The signed token binds this
+    // membership id and carries an expiry (see server/utils/invite-token.ts).
+    if (!verifyInviteToken(inviteToken, membershipId)) {
+      throw createError({
+        statusCode: 403,
+        message: 'This invitation link is invalid or has expired. Ask your admin to resend it.',
       });
     }
 

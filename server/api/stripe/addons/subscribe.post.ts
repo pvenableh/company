@@ -95,6 +95,20 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
+		// Idempotency: if this add-on's price is already an item on the
+		// subscription, return it instead of creating a duplicate. A double-click
+		// or retry would otherwise add a second line item for the same add-on,
+		// double-billing the org (and active_addons, keyed by addonId, would only
+		// ever track/cancel one of them).
+		const existingItems = await stripe.subscriptionItems.list({ subscription: subscriptionId, limit: 100 });
+		const already = existingItems.data.find((it) => it.price?.id === addon.stripePriceId);
+		if (already) {
+			return {
+				success: true,
+				data: { addonId: body.addonId, subscriptionItemId: already.id, alreadyPresent: true },
+			};
+		}
+
 		// Add the add-on as a new line item on the existing subscription
 		const subscriptionItem = await stripe.subscriptionItems.create({
 			subscription: subscriptionId,

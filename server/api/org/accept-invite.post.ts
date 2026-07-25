@@ -21,12 +21,22 @@ import { readItems, updateItem, updateUser } from '@directus/sdk';
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { membershipId, password, directusToken } = body;
+    const { membershipId, password, directusToken, inviteToken } = body;
 
     if (!membershipId) {
       throw createError({
         statusCode: 400,
         message: 'membershipId is required',
+      });
+    }
+
+    // Reject forged or expired invite links before doing anything (esp. before
+    // setting a new user's password). The signed token binds this membership id
+    // and carries an expiry (server/utils/invite-token.ts).
+    if (!verifyInviteToken(inviteToken, membershipId)) {
+      throw createError({
+        statusCode: 403,
+        message: 'This invitation link is invalid or has expired. Ask your admin to resend it.',
       });
     }
 

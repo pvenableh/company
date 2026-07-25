@@ -53,6 +53,8 @@
 			</div>
 			<p class="text-xs text-muted-foreground mb-4">
 				Add more AI tokens to your organization when your monthly allotment runs low.
+				Purchased tokens are used within the current billing period — any unused
+				balance resets when your plan renews.
 			</p>
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 				<div
