@@ -68,14 +68,20 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const currentStaffRole = currentOrg?.membership?.role?.slug || null;
   const isPortalUserHere = !!currentOrg?.clientPortal;
 
-  // Admin "preview as client" path — any /portal route with ?previewAs=<id>
-  // is permitted for admin/owner users. The server-side scope endpoint
-  // verifies the actual permission against client_portal_users + memberships.
+  // Staff "preview as client" path — any /portal route is permitted for an
+  // owner/admin/manager while a preview is active: either `?previewAs=<id>` on
+  // entry, or the `portal_preview_as` cookie for subsequent in-portal
+  // navigation (internal NuxtLinks drop the query). The cookie is non-httpOnly
+  // so this client-side check can read it; the server (requirePortalContext)
+  // re-verifies the membership on every call, so a tampered cookie is harmless.
+  let previewCookie: string | null = null;
+  try { previewCookie = useCookie('portal_preview_as').value ?? null; } catch { /* ignore */ }
+  const previewActive =
+    (typeof to.query?.previewAs === 'string' && !!to.query.previewAs) || !!previewCookie;
   if (
     path.startsWith('/portal') &&
-    typeof to.query?.previewAs === 'string' &&
-    to.query.previewAs &&
-    (currentStaffRole === 'admin' || currentStaffRole === 'owner')
+    previewActive &&
+    (currentStaffRole === 'admin' || currentStaffRole === 'owner' || currentStaffRole === 'manager')
   ) {
     return;
   }

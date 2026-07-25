@@ -14,10 +14,11 @@
  * Body: { text: string (HTML from the TipTap composer), channel: string }
  */
 import { readItem, createItem } from '@directus/sdk';
-import { requirePortalContext } from '~~/server/utils/portal-auth';
+import { requirePortalContext, assertNotPreview } from '~~/server/utils/portal-auth';
 
 export default defineEventHandler(async (event) => {
   const ctx = await requirePortalContext(event);
+  assertNotPreview(ctx);
   const body = await readBody(event);
 
   const text = (body?.text ?? '').toString().trim();

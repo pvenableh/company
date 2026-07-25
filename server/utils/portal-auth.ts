@@ -35,6 +35,21 @@ export interface PortalContext {
   isPreview?: boolean;
 }
 
+/**
+ * Reject a write when the caller is a staff member previewing the portal as a
+ * client. Preview is strictly read-only — a preview must never create or mutate
+ * data on the real client's behalf. Call this at the top of every portal
+ * `.post`/write endpoint after resolving the context.
+ */
+export function assertNotPreview(ctx: PortalContext): void {
+  if (ctx.isPreview) {
+    throw createError({
+      statusCode: 403,
+      message: 'This is a read-only portal preview. Exit preview to act as yourself.',
+    });
+  }
+}
+
 export async function requirePortalContext(event: any): Promise<PortalContext> {
   const session = await getUserSession(event);
   const userId = session?.user?.id;
@@ -156,7 +171,9 @@ async function tryResolvePreviewContext(
     }),
   ) as any[];
   const role = memberships?.[0]?.role?.slug;
-  if (role !== 'admin' && role !== 'owner') return null;
+  // Owner/admin/manager may preview a client's portal (read-only). Members and
+  // custom lower roles cannot — preview reveals all of a client's data.
+  if (role !== 'admin' && role !== 'owner' && role !== 'manager') return null;
 
   const scopedClientIds = await collectDescendantClients(directus, previewClientId, organizationId);
   return {

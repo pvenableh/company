@@ -11,10 +11,11 @@
  *         displayName?: string, displayCompany?: string }
  */
 import { createItem } from '@directus/sdk';
-import { requirePortalContext } from '~~/server/utils/portal-auth';
+import { requirePortalContext, assertNotPreview } from '~~/server/utils/portal-auth';
 
 export default defineEventHandler(async (event) => {
   const ctx = await requirePortalContext(event);
+  assertNotPreview(ctx);
   const body = await readBody(event);
 
   const rating = Number(body?.rating);

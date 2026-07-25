@@ -21,7 +21,7 @@ import {
   readItem,
   aggregate as directusAggregate,
 } from '@directus/sdk';
-import { requirePortalContext, type PortalContext } from '~~/server/utils/portal-auth';
+import { requirePortalContext, assertNotPreview, type PortalContext } from '~~/server/utils/portal-auth';
 
 type Operation = 'list' | 'get' | 'aggregate' | 'count';
 
@@ -156,6 +156,12 @@ export default defineEventHandler(async (event) => {
 
   if (!collection || !operation) {
     throw createError({ statusCode: 400, message: 'collection and operation are required' });
+  }
+
+  // Reads are fine in preview; block writes so a staff preview never mutates
+  // the real client's data.
+  if (operation === 'create' || operation === 'update' || operation === 'delete') {
+    assertNotPreview(ctx);
   }
 
   const scope = COLLECTION_SCOPES[collection];

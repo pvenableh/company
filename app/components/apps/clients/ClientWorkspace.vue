@@ -46,6 +46,25 @@ function conveneMeeting() {
 	});
 }
 
+// Staff read-only "preview as client": enter preview mode (sets the
+// portal_preview_as cookie server-side after verifying membership), then open
+// the portal scoped to this client. Owner/admin/manager only — the button is
+// gated on isOrgManagerOrAbove and the server re-checks.
+async function previewPortal() {
+	try {
+		await $fetch('/api/portal/enter-preview', { method: 'POST', body: { clientId: props.clientId } });
+		// allow-legacy-link — intentional cross-shell nav: the client portal is a
+		// separate shell (/portal), not an apps-layout slide-over.
+		await navigateTo(`/portal?previewAs=${props.clientId}`);
+	} catch (err: any) {
+		toast.add({
+			title: 'Could not open portal preview',
+			description: err?.data?.message || err?.message || 'Please try again.',
+			color: 'red',
+		});
+	}
+}
+
 const props = defineProps<{
 	clientId: string;
 	/**
@@ -69,7 +88,7 @@ const emit = defineEmits<{
 }>();
 
 const { getClient } = useClients();
-const { isOrgAdminOrAbove, canCreate } = useOrgRole();
+const { isOrgAdminOrAbove, isOrgManagerOrAbove, canCreate } = useOrgRole();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { push: pushPanel } = useAppSlideOverStack();
 
@@ -1088,6 +1107,20 @@ watch(() => props.clientId, () => {
 						<!-- Icon-only (a perfect circle) inside the narrow slide-over;
 						     labelled on the full page. Title tooltip covers icon-only. -->
 						<span v-if="!compact" class="hidden sm:inline">Convene</span>
+					</button>
+					<!-- Staff read-only "Preview as client" — see the portal exactly as
+					     this client does. Owner/admin/manager only. -->
+					<button
+						v-if="isOrgManagerOrAbove"
+						type="button"
+						class="inline-flex items-center justify-center h-8 rounded-full border border-border text-xs font-medium ios-press shrink-0 hover:bg-muted"
+						:class="compact ? 'w-8 p-0' : 'gap-1.5 px-3'"
+						title="Preview this client's portal (read-only)"
+						aria-label="Preview client portal"
+						@click="previewPortal"
+					>
+						<Icon name="lucide:eye" class="w-4 h-4 shrink-0" />
+						<span v-if="!compact" class="hidden sm:inline">Preview portal</span>
 					</button>
 					<!-- Slide-over only: the full page already has an "Ask Earnest" in
 					     its AppHeader. One opener per surface. Icon-only circle + tooltip

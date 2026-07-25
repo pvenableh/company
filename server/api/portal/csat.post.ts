@@ -11,7 +11,7 @@
  * Body: { collection: 'tickets' | 'projects', itemId: string, rating: 1..5, comment?: string }
  */
 import { readItem, updateItem } from '@directus/sdk';
-import { requirePortalContext } from '~~/server/utils/portal-auth';
+import { requirePortalContext, assertNotPreview } from '~~/server/utils/portal-auth';
 import { notifyEvent } from '~~/server/utils/notify-event';
 import { writeClientTimeline } from '~~/server/utils/write-timeline';
 
@@ -24,6 +24,7 @@ const DELIVERED_STATUS: Record<'tickets' | 'projects', string> = {
 
 export default defineEventHandler(async (event) => {
 	const ctx = await requirePortalContext(event);
+	assertNotPreview(ctx);
 	const body = await readBody(event);
 
 	const collection = body?.collection as 'tickets' | 'projects';
