@@ -17,6 +17,9 @@ import {
 
 const { updateMe, readMe } = useDirectusUsers();
 const { user, fetchSession } = useDirectusAuth();
+// Portal clients lack directus_files create, so their avatar upload is proxied
+// server-side (into the org's Avatars folder) rather than hitting /files direct.
+const { isPortalUserHere } = useClientPortalUser();
 
 // The auth session only carries a handful of fields (id/email/name/avatar/role
 // — see server/api/auth/login.post.ts), so profile-only fields like title,
@@ -51,6 +54,18 @@ async function handleAvatarSelect(event) {
 
 	uploadingAvatar.value = true;
 	try {
+		// Portal clients: proxy the upload (they can't POST to /files directly).
+		if (isPortalUserHere.value) {
+			const fd = new FormData();
+			fd.append('file', files[0], files[0].name);
+			const res = await $fetch('/api/portal/avatar', { method: 'POST', body: fd });
+			if (res?.fileId) {
+				await fetchSession();
+				toast.add({ icon: 'i-heroicons-check-circle-solid', title: 'Avatar updated!' });
+			}
+			return;
+		}
+
 		const result = await processUpload(files, { compressImages: true });
 		if (!result.success) {
 			toast.add({ icon: 'i-heroicons-exclamation-circle', title: 'Error', description: result.errors[0], color: 'red' });
