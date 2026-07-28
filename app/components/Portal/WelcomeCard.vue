@@ -11,6 +11,8 @@
  * by user + org, so it doesn't nag on every visit but does reappear if the
  * same person is later given portal access to a different agency.
  */
+import { Button } from '~/components/ui/button';
+
 const { user } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { orgName, brandStyle } = useOrgBrand();
@@ -103,13 +105,13 @@ function takeTour() {
 			</div>
 
 			<div class="welcome-actions">
-				<button type="button" class="welcome-tour" @click="takeTour">
+				<Button size="sm" class="welcome-tour-cta" @click="takeTour">
 					<Icon name="lucide:compass" class="w-4 h-4" />
 					Take a quick tour
-				</button>
-				<button type="button" class="welcome-skip" @click="dismiss">
+				</Button>
+				<Button variant="ghost" size="sm" @click="dismiss">
 					I'll explore on my own
-				</button>
+				</Button>
 			</div>
 		</div>
 	</div>
@@ -246,35 +248,17 @@ function takeTour() {
 	margin-top: 18px;
 }
 
-.welcome-tour {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	height: 38px;
-	padding: 0 16px;
-	border-radius: 10px;
-	font-size: 13px;
-	font-weight: 600;
+/* Brand-accent the primary CTA while keeping the Button primitive (shape, size,
+   focus ring). Scoped selector + Vue's data-v attribute outrank the utility
+   `bg-primary`, so the org brand color drives the fill on white-label portals. */
+.welcome-tour-cta {
+	background-color: var(--org-brand);
 	color: #fff;
-	background: var(--org-brand);
 	box-shadow: 0 2px 10px var(--org-brand-ring);
-	transition: opacity 0.15s;
 }
 
-.welcome-tour:hover {
+.welcome-tour-cta:hover {
+	background-color: var(--org-brand);
 	opacity: 0.92;
-}
-
-.welcome-skip {
-	height: 38px;
-	padding: 0 12px;
-	font-size: 13px;
-	font-weight: 500;
-	color: hsl(var(--muted-foreground));
-	transition: color 0.15s;
-}
-
-.welcome-skip:hover {
-	color: hsl(var(--foreground));
 }
 </style>
