@@ -1108,6 +1108,26 @@ async function main() {
 	console.log('\n--- leads ---');
 	const leadIds = await seedLeads(org.id, contactIds, clientIds);
 
+	// Idempotent day helper for the Director/Boardroom threshold nudges below —
+	// these give each subject at least one grounding notice so the planner drafts
+	// concrete steps (otherwise every subject returns "Nothing to propose"). Each
+	// PATCHes an already-seeded row (findOrCreate never updates) on every run.
+	const isoDay = (offset: number) => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + offset);
+		return d.toISOString().slice(0, 10);
+	};
+
+	// Director → LEADS step: mark the active, unassigned Atlas lead (leadIds[0])
+	// high-score so generateLeadNotices fires "High-score lead unassigned".
+	// (Date-independent, so it can't clash with Atlas's seeded intro-call apptmt.)
+	if (leadIds[0] != null) {
+		const res = await directusRequest(`/items/leads/${leadIds[0]}`, 'PATCH', { lead_score: 75 });
+		if (res.ok) console.log(`  [ok]   lead ${leadIds[0]} → high-score, unassigned`);
+		else console.warn(`  [warn] lead ${leadIds[0]} score patch: ${res.error}`);
+	}
+
 	console.log('\n--- services (color palette for Project Timeline) ---');
 	const serviceIds = await seedDemoServices();
 
@@ -1118,6 +1138,15 @@ async function main() {
 		serviceIds,
 	});
 	const projectId = projectIds['helios-launch'] ?? null;
+
+	// Director → PROJECTS step: give the active Helios launch a near-term due date
+	// so generateProjectNotices fires "Deadline in 5 days" (medium — deliberately
+	// NOT overdue, to avoid a red "behind schedule" banner on the demo).
+	if (projectId) {
+		const res = await directusRequest(`/items/projects/${projectId}`, 'PATCH', { due_date: isoDay(5) });
+		if (res.ok) console.log(`  [ok]   project ${projectId} → deadline in 5 days`);
+		else console.warn(`  [warn] project ${projectId} due_date patch: ${res.error}`);
+	}
 
 	console.log('\n--- product + invoice ---');
 	const productId = await seedProduct();
@@ -1171,6 +1200,20 @@ async function main() {
 		},
 	});
 
+	// Director → PROPOSALS step: age the seeded Atlas proposal so
+	// generateProposalNotices fires "No response in 20 days". Also sets a fresh
+	// future valid_until so an old row's stale date can't surface an unintended
+	// "expired" urgent. (seedDemoProposal is findOrCreate — PATCH on every run.)
+	if (proposalId) {
+		const res = await directusRequest(`/items/proposals/${proposalId}`, 'PATCH', {
+			proposal_status: 'sent',
+			date_sent: isoDay(-20),
+			valid_until: isoDay(21),
+		});
+		if (res.ok) console.log(`  [ok]   proposal ${proposalId} → sent 20d ago, no response`);
+		else console.warn(`  [warn] proposal ${proposalId} aging patch: ${res.error}`);
+	}
+
 	console.log('\n--- contracts ---');
 	// Signed contract on the won lead (Helios) — narrative matches "Contracts
 	// signed." in the lead notes.
@@ -1215,6 +1258,36 @@ async function main() {
 
 	console.log('\n--- ticket assignees (so /tasks "Assigned to Me" tab fills) ---');
 	await assignTicketsToUser(org.id, user.id);
+
+	// Director → TICKETS step: one HIGH-priority, UNASSIGNED, active ticket so
+	// generateTicketNotices fires "High-priority ticket unassigned" — a trigger
+	// independent of due_date (which reanchorOrgTicketDueDates rewrites). Created
+	// AFTER assignTicketsToUser and with no tickets_directus_users row, so it
+	// stays unowned. PATCH re-forces priority + status each run.
+	{
+		const unownedTitle = 'Helios — launch-day on-call owner';
+		const row = await findOrCreate<any>(
+			'tickets',
+			{ _and: [{ organization: { _eq: org.id } }, { title: { _eq: unownedTitle } }] },
+			{
+				title: unownedTitle,
+				description:
+					'Opening day needs one on-call owner for any launch issues. Unassigned — needs a name before go-live.',
+				organization: org.id,
+				project: projectIds['helios-launch'] ?? null,
+				client: clientIds['helios-studio'] ?? null,
+				status: 'Pending',
+				priority: 'high',
+				due_date: isoDay(10),
+			},
+			`ticket "${unownedTitle}" (high, unassigned)`,
+		);
+		if (row) {
+			const res = await directusRequest(`/items/tickets/${row.id}`, 'PATCH', { priority: 'high', status: 'Pending' });
+			if (res.ok) console.log(`  [ok]   ticket ${row.id} → high-priority + unassigned`);
+			else console.warn(`  [warn] ticket ${row.id} priority patch: ${res.error}`);
+		}
+	}
 
 	await seedSocial({
 		orgId: org.id,

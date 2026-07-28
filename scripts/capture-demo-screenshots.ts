@@ -68,7 +68,7 @@ const LATEST_DIR = resolve(MARKETING_REPO, 'public/screenshots/latest');
 // animations a beat to settle before the shutter fires. 8s covers heavy
 // dashboards (command-center gantt + priority actions) on cold contexts
 // where Vite serves modules without warm cache.
-const SETTLE_MS = 8000;
+const SETTLE_MS = Number(process.env.SETTLE_MS) || 8000;
 
 /** CSS we inject on every page to hide overlays that shouldn't appear in
  *  marketing shots (floating dock with the AI launcher, presence pills,
@@ -130,6 +130,18 @@ interface CaptureContext {
 const SHOTS: Shot[] = [
 	// ── Solo (Member role) ──
 	{
+		// Presence Home — the AI-first, chat-first landing at the root ("What's
+		// next on the list?"). The signature marketing surface. Give the greeting
+		// engine a beat to render its opening line before the shutter.
+		slug: 'presence-home',
+		viewport: 'hero',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/`,
+		waitFor: async (page) => {
+			await page.waitForTimeout(2000);
+		},
+	},
+	{
 		// The Director's Office slide presentation — convene the board, pick a
 		// subject (Earnest drafts a plan via AI), switch to the Slides deck, and
 		// advance past the cover so a content slide is in frame. Best-effort:
@@ -138,13 +150,32 @@ const SHOTS: Shot[] = [
 		slug: 'director-presentation',
 		viewport: 'hero',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/director`,
+		// The Director's Office is now served at /boardroom (the /director route was
+		// retired). Convene → focus a subject seat so its plan drafts and fills the
+		// "Proposed plan" panel below → flip to Slides. The demo seed now plants a
+		// grounding notice per subject (see setup-demo-org.ts), so a subject drafts
+		// concrete steps instead of "Nothing to propose". Loops in richness order
+		// and stops at the first subject that yields a deck; falls back to the
+		// populated constellation if none draft.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/boardroom`,
 		waitFor: async (page) => {
 			try {
-				await page.locator('button:has-text("Convene")').first().click({ timeout: 8000 });
-				// Wait for the boardroom "table" of advisors (agenda board packet,
-				// loaded from notices — no plan-AI needed) to settle.
-				await page.waitForSelector('button[class*="-translate-x-1/2"]', { timeout: 20000 });
+				await page
+					.locator('button:has-text("Convene"), button:has-text("Go live")')
+					.first()
+					.click({ timeout: 8000 })
+					.catch(() => {});
+				await page.getByText('Money', { exact: true }).first().waitFor({ timeout: 20000 });
+				// Let the rest of the advisor seats animate in before the shot — the
+				// seed plants a grounding notice per subject so the board reads as a
+				// live, prioritised "whole-org briefing" (Money URGENT, Leads/Tickets/
+				// Proposals HIGH, Projects MEDIUM). We capture the constellation, not a
+				// subject's plan panel: the planner returns a conversational outline
+				// (no structured tool-call steps), so the Slides deck stays empty —
+				// an app-side planner behavior, not a data gap.
+				for (const label of ['Leads', 'Tickets', 'Proposals', 'Projects']) {
+					await page.getByText(label, { exact: true }).first().waitFor({ timeout: 8000 }).catch(() => {});
+				}
 				await page.waitForTimeout(2500);
 			} catch (err) {
 				console.warn(`    director-presentation: ${(err as Error).message} — capturing current state`);
@@ -160,7 +191,9 @@ const SHOTS: Shot[] = [
 		slug: 'director-slides',
 		viewport: 'hero',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/director`,
+		// The Director's Office is now served at /boardroom (the /director route was
+		// retired). Same surface + "Convene" flow.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/boardroom`,
 		waitFor: async (page) => {
 			try {
 				await page.locator('button:has-text("Convene")').first().click({ timeout: 8000 });
@@ -441,22 +474,29 @@ const SHOTS: Shot[] = [
 	},
 	{
 		slug: 'ai-actions',
-		viewport: 'inline',
+		viewport: 'hero',
 		persona: 'solo',
-		// AI Actions is the same contextual sidebar surface as ai-sidebar, but
-		// scoped to a project so the marketing copy ("Reschedule a project —
-		// every linked event and task shifts automatically") matches the shot.
-		// Target the earliest project (the seeded "Helios West Hotel Launch") —
-		// the unsorted-first project can be a stale row whose workspace 500s.
+		// Earnest no longer opens as a docked sidebar — "Ask Earnest" now launches
+		// the full-screen FOCUS takeover, scoped to the project. Open it, then click
+		// a prompt chip so Earnest produces a grounded read (not a blank greeting).
+		// Target the earliest project (the seeded "Helios West Hotel Launch").
 		resolveUrl: async (ctx) =>
 			`${ctx.baseUrl}/apps/work/projects/${await firstItemId(ctx.page, 'projects', ctx.baseUrl, undefined, ['date_created'])}`,
 		waitFor: async (page) => {
-			const trigger = page.getByRole('button', { name: /ask earnest/i });
 			try {
-				await trigger.click({ timeout: 3000 });
-				await page.waitForTimeout(1500);
+				await page.getByRole('button', { name: /ask earnest/i }).click({ timeout: 4000 }).catch(() => {});
+				await page.waitForTimeout(1800);
+				// Nudge a grounded response so the takeover shows Earnest working.
+				await page
+					.locator(
+						'button:has-text("Help me find the next true step"), button:has-text("Draft my next move"), button:has-text("What matters most here?")',
+					)
+					.first()
+					.click({ timeout: 4000 })
+					.catch(() => {});
+				await page.waitForTimeout(7000);
 			} catch {
-				/* fall through */
+				/* fall through — capture whatever rendered */
 			}
 		},
 	},
@@ -541,6 +581,36 @@ const SHOTS: Shot[] = [
 	},
 
 	// ── Agency (Admin role) — shots that Member role would render empty or 403 ──
+	{
+		// The branded, white-label CLIENT PORTAL — what a client sees. Staff can
+		// only view it in "preview as client" mode, which is owner/admin/manager
+		// only → the agency (Admin) persona. `enter-preview` verifies membership
+		// and sets the `portal_preview_as` cookie; the `?previewAs=<clientId>`
+		// query carries the intent on first load. Best-effort: on any failure the
+		// existing client-portal.png is left untouched.
+		slug: 'client-portal',
+		viewport: 'hero',
+		persona: 'agency',
+		resolveUrl: async (ctx) => {
+			const clientId = await firstItemId(ctx.page, 'clients', ctx.baseUrl);
+			await ctx.page.evaluate(async (id) => {
+				try {
+					await fetch('/api/portal/enter-preview', {
+						method: 'POST',
+						credentials: 'include',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ clientId: id }),
+					});
+				} catch {
+					/* query param still carries the preview intent */
+				}
+			}, clientId);
+			return `${ctx.baseUrl}/portal?previewAs=${clientId}`;
+		},
+		waitFor: async (page) => {
+			await page.waitForTimeout(1800);
+		},
+	},
 	{
 		slug: 'marketing-overview',
 		viewport: 'inline',
@@ -900,6 +970,10 @@ async function main(): Promise<void> {
 				try {
 					localStorage.setItem('earnest.appGlassChrome', 'true');
 					localStorage.setItem('earnest.appPaletteTint', 'true');
+					// Force DARK mode (@nuxtjs/color-mode, default key/no suffix) so
+					// captures match the marketing landing's dark-default look. Set
+					// before app scripts run, so color-mode picks it up on hydration.
+					localStorage.setItem('nuxt-color-mode', 'dark');
 				} catch {
 					/* storage blocked — palette (app_palette) alone still applies */
 				}
