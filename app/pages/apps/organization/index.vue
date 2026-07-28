@@ -104,6 +104,10 @@ const orgLogoUrl = computed(() => {
 // ── Members floor ───────────────────────────────────────────────────────────
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 const membershipItems = useDirectusItems('org_memberships');
+// Hoisted to setup: useDirectusItems() reads the Nuxt instance (useUserSession),
+// so it must NOT be called after an `await` inside fetchMembers — during SSR that
+// throws "composable called outside setup" and blanks the page.
+const roleItems = useDirectusItems('org_roles');
 const orgRoles = ref<any[]>([]);
 const orgMemberships = ref<any[]>([]);
 const showInviteMemberModal = ref(false);
@@ -129,7 +133,6 @@ async function fetchMembers() {
     /* fetchFilteredUsers handles its own errors */
   }
 
-  const roleItems = useDirectusItems('org_roles');
   try {
     const roles = await roleItems.list({
       filter: { organization: { _eq: selectedOrg.value } },
