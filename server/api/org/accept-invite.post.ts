@@ -23,6 +23,14 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const { membershipId, password, directusToken, inviteToken } = body;
 
+    // Optional profile captured on the accept form (new users): name is required
+    // client-side, title/phone optional. Only trusted, whitelisted fields.
+    const profileFields: Record<string, any> = {};
+    for (const k of ['first_name', 'last_name', 'title', 'phone'] as const) {
+      const v = body?.[k];
+      if (typeof v === 'string' && v.trim()) profileFields[k] = v.trim();
+    }
+
     if (!membershipId) {
       throw createError({
         statusCode: 400,
@@ -43,8 +51,12 @@ export default defineEventHandler(async (event) => {
     const directus = getServerDirectus();
 
     // Look up the row in both tables. The id only lives in one of them.
+    // org_memberships.id is a UUID; client_portal_users.id is an integer — so
+    // querying the UUID column with an integer id throws a Postgres type error.
+    // Only probe org_memberships for UUID-shaped ids.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(membershipId));
     let collection: 'org_memberships' | 'client_portal_users' = 'org_memberships';
-    let rows = await directus.request(
+    let rows = isUuid ? (await directus.request(
       readItems('org_memberships', {
         filter: { id: { _eq: membershipId } },
         fields: [
@@ -63,7 +75,7 @@ export default defineEventHandler(async (event) => {
         ],
         limit: 1,
       })
-    ) as any[];
+    ) as any[]) : [];
 
     if (!rows.length) {
       collection = 'client_portal_users';
@@ -121,7 +133,7 @@ export default defineEventHandler(async (event) => {
         // carry the flag, so set it on the now-active user.
         const invitedUserId = membership.user?.id;
         if (invitedUserId) {
-          await directus.request(updateUser(invitedUserId, { email_notifications: false } as any)).catch(() => {});
+          await directus.request(updateUser(invitedUserId, { email_notifications: false, ...profileFields } as any)).catch(() => {});
         }
       } catch (acceptErr: any) {
         console.error('Directus invite accept error:', acceptErr);
@@ -141,7 +153,7 @@ export default defineEventHandler(async (event) => {
         await directus.request(
           // email_notifications off — branded app emails already cover this
           // recipient; Directus's native one would be a raw duplicate.
-          updateUser(userId, { password, status: 'active', email_notifications: false } as any),
+          updateUser(userId, { password, status: 'active', email_notifications: false, ...profileFields } as any),
         );
       } catch (setPwErr: any) {
         console.error('Admin-set password failed:', setPwErr);

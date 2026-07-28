@@ -64,8 +64,14 @@ export default defineEventHandler(async (event) => {
 
     const directus = getServerDirectus();
 
+    // org_memberships.id is a UUID; client_portal_users.id is an integer.
+    // Querying the UUID column with an integer id throws a Postgres type error
+    // ("invalid input syntax for type uuid"), so only hit org_memberships when
+    // the id is UUID-shaped — otherwise it's a client portal invite.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(membershipId));
+
     // 1. Staff invite — org_memberships (carries a real role relation).
-    const memberships = (await directus.request(
+    const memberships = isUuid ? ((await directus.request(
       readItems('org_memberships', {
         filter: { id: { _eq: membershipId } },
         fields: [
@@ -82,7 +88,7 @@ export default defineEventHandler(async (event) => {
         ],
         limit: 1,
       }),
-    )) as any[];
+    )) as any[]) : [];
 
     if (memberships.length) {
       return { success: true, kind: 'member', membership: memberships[0] };

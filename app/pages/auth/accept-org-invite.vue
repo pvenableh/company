@@ -31,6 +31,12 @@ const loading = ref(true);
 const accepting = ref(false);
 const password = ref('');
 const confirmPassword = ref('');
+// New-user profile: name required, title/phone optional ("just get in").
+const firstName = ref('');
+const lastName = ref('');
+const jobTitle = ref('');
+const phone = ref('');
+const showMore = ref(false);
 const passwordError = ref('');
 const showPassword = ref(false);
 const error = ref('');
@@ -116,7 +122,14 @@ function validatePassword() {
 }
 
 async function acceptInvite() {
-	if (isNewUser.value && !validatePassword()) return;
+	if (isNewUser.value) {
+		if (!firstName.value.trim() || !lastName.value.trim()) {
+			error.value = 'Please enter your first and last name.';
+			return;
+		}
+		error.value = '';
+		if (!validatePassword()) return;
+	}
 
 	accepting.value = true;
 	try {
@@ -125,6 +138,10 @@ async function acceptInvite() {
 			body: {
 				membershipId: membershipId.value,
 				password: isNewUser.value ? password.value : undefined,
+				first_name: isNewUser.value ? firstName.value.trim() : undefined,
+				last_name: isNewUser.value ? lastName.value.trim() : undefined,
+				title: isNewUser.value && jobTitle.value.trim() ? jobTitle.value.trim() : undefined,
+				phone: isNewUser.value && phone.value.trim() ? phone.value.trim() : undefined,
 				directusToken: directusToken.value || undefined,
 				inviteToken: inviteToken.value || undefined,
 			},
@@ -224,7 +241,16 @@ async function acceptInvite() {
 
 						<!-- New user: password fields -->
 						<template v-if="isNewUser">
-							<p class="text-sm text-muted-foreground">Set a password to create your account.</p>
+							<p class="text-sm text-muted-foreground">Tell us who you are and set a password.</p>
+
+							<div class="grid grid-cols-2 gap-3">
+								<EFormGroup label="First name" required>
+									<EInput v-model="firstName" placeholder="First name" autocomplete="given-name" />
+								</EFormGroup>
+								<EFormGroup label="Last name" required>
+									<EInput v-model="lastName" placeholder="Last name" autocomplete="family-name" />
+								</EFormGroup>
+							</div>
 
 							<EFormGroup label="Password" required :error="passwordError">
 								<div class="relative">
@@ -250,6 +276,23 @@ async function acceptInvite() {
 									placeholder="Confirm your password"
 								/>
 							</EFormGroup>
+
+							<!-- Optional extras — clients can "just get in"; add later in Account. -->
+							<button
+								type="button"
+								class="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors self-start"
+								@click="showMore = !showMore"
+							>
+								{{ showMore ? '− Hide extras' : '+ Add your title & phone (optional)' }}
+							</button>
+							<template v-if="showMore">
+								<EFormGroup label="Title">
+									<EInput v-model="jobTitle" placeholder="e.g. Marketing Director" autocomplete="organization-title" />
+								</EFormGroup>
+								<EFormGroup label="Phone">
+									<EInput v-model="phone" type="tel" placeholder="e.g. (305) 555-0184" autocomplete="tel" />
+								</EFormGroup>
+							</template>
 						</template>
 
 						<!-- Existing user: just confirm -->
@@ -346,7 +389,7 @@ async function acceptInvite() {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	border-radius: 12px;
+	border-radius: 9999px;
 	font-size: 14px;
 	font-weight: 600;
 	color: #fff;
