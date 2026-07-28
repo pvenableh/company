@@ -1,4 +1,5 @@
 // server/utils/email-shell.ts
+import { isEarnestBrandingHidden } from '~~/shared/branding';
 /**
  * Branded transactional email shells.
  *
@@ -38,6 +39,9 @@ export interface OrgBrandRef {
 	logo?: string | null;
 	brand_color?: string | null;
 	whitelabel?: boolean | null;
+	/** Plan + add-ons — needed to evaluate the white-label entitlement. */
+	plan?: string | null;
+	active_addons?: Record<string, unknown> | null;
 	website?: string | null;
 	mailing_address?: string | null;
 	/** Optional per-org monitoring BCC — added to every branded send for this org. */
@@ -198,7 +202,7 @@ function orgFooterBlock(
 	physicalAddress?: string | null,
 ): string {
 	const orgName = (org?.name && String(org.name).trim()) || 'this team';
-	const whitelabel = org?.whitelabel === true;
+	const whitelabel = isEarnestBrandingHidden(org);
 	const tag = whitelabel
 		? `This is an automated message from ${escapeHtml(orgName)}.`
 		: `This is an automated message from ${escapeHtml(orgName)}. <span style="color:#aaaaaa;">Powered by <a href="${EARNEST_HOME}" style="color:#aaaaaa;text-decoration:underline;">Earnest</a>.</span>`;
@@ -325,7 +329,7 @@ export function injectMarketingFooter(
 	},
 ): string {
 	const orgName = (args.org?.name && String(args.org.name).trim()) || 'this team';
-	const whitelabel = args.org?.whitelabel === true;
+	const whitelabel = isEarnestBrandingHidden(args.org);
 	const unsubUrl = safeUrl(args.unsubscribeUrl);
 	const addr = (args.physicalAddress && String(args.physicalAddress).trim()) || '';
 	const addrHtml = addr ? escapeHtml(addr).replace(/\n/g, '<br />') : '';

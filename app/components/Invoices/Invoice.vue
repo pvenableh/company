@@ -13,7 +13,7 @@ const safeHtml = sanitizeInvoiceHtml;
 
 const hideFooter = computed(() => {
 	const seller = props.invoice?.bill_to;
-	return shouldHideEarnestFooter({ whitelabel: seller?.whitelabel, plan: seller?.plan });
+	return shouldHideEarnestFooter({ whitelabel: seller?.whitelabel, plan: seller?.plan, active_addons: seller?.active_addons });
 });
 
 const formatNumber = (value) => {

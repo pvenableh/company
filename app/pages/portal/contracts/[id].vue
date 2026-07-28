@@ -25,7 +25,7 @@ onMounted(async () => {
 				'signed_at', 'signed_by_name', 'signed_by_email',
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
-				'organization.plan', 'organization.whitelabel',
+				'organization.plan', 'organization.whitelabel', 'organization.active_addons',
 				'organization.document_theme', 'organization.document_accent',
 				'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
@@ -75,6 +75,7 @@ const hasBlocks = computed(() => Array.isArray(contract.value?.blocks) && contra
 const hideFooter = computed(() => shouldHideEarnestFooter({
 	whitelabel: contract.value?.organization?.whitelabel,
 	plan: contract.value?.organization?.plan,
+	active_addons: contract.value?.organization?.active_addons,
 }));
 
 const coverContext = computed(() => {

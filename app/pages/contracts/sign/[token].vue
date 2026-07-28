@@ -60,6 +60,7 @@ const hasBlocks = computed(() => Array.isArray(contract.value?.blocks) && contra
 const hideFooter = computed(() => shouldHideEarnestFooter({
 	whitelabel: contract.value?.organization?.whitelabel,
 	plan: contract.value?.organization?.plan,
+	active_addons: contract.value?.organization?.active_addons,
 }));
 
 const coverContext = computed(() => {

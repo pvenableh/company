@@ -52,7 +52,7 @@ interface SendResult {
 	reason?: string;
 }
 
-const ORG_BRAND_FIELDS = ['id', 'name', 'logo', 'brand_color', 'whitelabel', 'website', 'email_reply_to', 'mailing_address', 'email_bcc'] as const;
+const ORG_BRAND_FIELDS = ['id', 'name', 'logo', 'brand_color', 'whitelabel', 'plan', 'active_addons', 'website', 'email_reply_to', 'mailing_address', 'email_bcc'] as const;
 
 /**
  * Fetches the minimum brand+reply-to context for an org. Returns null on
@@ -76,6 +76,8 @@ export async function fetchOrgBrand(orgId: string | null | undefined): Promise<(
 			logo: typeof row.logo === 'object' ? row.logo?.id ?? null : row.logo ?? null,
 			brand_color: row.brand_color ?? null,
 			whitelabel: row.whitelabel ?? null,
+			plan: row.plan ?? null,
+			active_addons: row.active_addons ?? null,
 			website: row.website ?? null,
 			email_reply_to: row.email_reply_to ?? null,
 			mailing_address: row.mailing_address ?? null,

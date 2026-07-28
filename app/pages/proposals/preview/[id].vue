@@ -17,7 +17,7 @@ onMounted(async () => {
 				'id', 'title', 'date_sent', 'valid_until', 'total_value', 'proposal_status', 'notes', 'blocks',
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
-				'organization.plan', 'organization.whitelabel',
+				'organization.plan', 'organization.whitelabel', 'organization.active_addons',
 				'organization.document_theme', 'organization.document_accent',
 				'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
@@ -30,6 +30,7 @@ onMounted(async () => {
 const hideFooter = computed(() => shouldHideEarnestFooter({
 	whitelabel: proposal.value?.organization?.whitelabel,
 	plan: proposal.value?.organization?.plan,
+	active_addons: proposal.value?.organization?.active_addons,
 }));
 
 const config = useRuntimeConfig();

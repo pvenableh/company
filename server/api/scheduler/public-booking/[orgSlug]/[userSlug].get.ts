@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
 		//    means a known UUID can't be branded under another org's URL.
 		const orgs = await client.request(
 			readItems('organizations', {
-				fields: ['id', 'name', 'slug', 'logo', 'brand_color', 'whitelabel', 'website'],
+				fields: ['id', 'name', 'slug', 'logo', 'brand_color', 'whitelabel', 'plan', 'active_addons', 'website'],
 				filter: {
 					slug: { _eq: orgSlug },
 					users: { directus_users_id: { _eq: userId } },
@@ -184,6 +184,8 @@ export default defineEventHandler(async (event) => {
 				logo: organization.logo,
 				brand_color: organization.brand_color,
 				whitelabel: !!organization.whitelabel,
+				plan: (organization as any).plan,
+				active_addons: (organization as any).active_addons,
 				website: organization.website,
 			},
 			user: { id: user.id, first_name: user.first_name, last_name: user.last_name, avatar: user.avatar, title: (user as any).title },

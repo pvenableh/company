@@ -190,6 +190,7 @@ const coverContext = computed(() => {
 const hideFooter = computed(() => shouldHideEarnestFooter({
   whitelabel: proposal.value?.organization?.whitelabel,
   plan: proposal.value?.organization?.plan,
+  active_addons: proposal.value?.organization?.active_addons,
 }));
 
 function formatTotal(n: number | null | undefined) {

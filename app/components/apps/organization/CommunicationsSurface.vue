@@ -17,6 +17,8 @@
 	repaints.
 -->
 <script setup lang="ts">
+import { orgEntitledToWhitelabel } from '~~/shared/branding';
+
 const toast = useToast();
 const organizationItems = useDirectusItems('organizations');
 const { selectedOrg, fetchOrganizationDetails } = useOrganization();
@@ -29,10 +31,15 @@ const emit = defineEmits<{
 	(e: 'saved'): void;
 }>();
 
-const ORG_FIELDS = ['id', 'name', 'email_reply_to', 'mailing_address', 'email_bcc', 'whitelabel'];
+const ORG_FIELDS = ['id', 'name', 'email_reply_to', 'mailing_address', 'email_bcc', 'whitelabel', 'plan', 'active_addons'];
 
 const org = ref<any>(null);
 const loading = ref(false);
+
+// White-label is an entitlement (enterprise plan or the `white_label` add-on),
+// not a free toggle. When the org isn't entitled, the toggle is locked so an
+// admin can't half-enable a paid feature and land in a split-brand state.
+const whitelabelEntitled = computed(() => orgEntitledToWhitelabel(org.value));
 
 async function fetchOrg() {
 	if (!selectedOrg.value) return;
@@ -174,9 +181,14 @@ const previewUrl = computed(() => {
 
 					<EFormGroup label="White-label">
 						<div class="flex items-center gap-3">
-							<EToggle v-model="form.whitelabel" :disabled="!canManage" />
+							<EToggle v-model="form.whitelabel" :disabled="!canManage || !whitelabelEntitled" />
 							<span class="text-xs text-muted-foreground">
-								{{ form.whitelabel ? 'Earnest branding removed from emails' : 'Earnest branding shown in email footer' }}
+								<template v-if="!whitelabelEntitled">
+									Available on the Agency plan with the White-Label add-on (included on Enterprise). Removes Earnest branding across the client portal, documents & emails.
+								</template>
+								<template v-else>
+									{{ form.whitelabel ? 'Earnest branding removed across the client portal, documents & emails' : 'Earnest branding shown to your clients' }}
+								</template>
 							</span>
 						</div>
 					</EFormGroup>

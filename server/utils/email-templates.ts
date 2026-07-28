@@ -22,6 +22,7 @@
 
 import { compileMjml } from './mjml-compiler';
 import { EARNEST_LOGO_URL, type OrgBrandRef } from './email-shell';
+import { isEarnestBrandingHidden } from '~~/shared/branding';
 
 // Templates are imported as strings (the raw-mjml rollup plugin in
 // nuxt.config.ts turns each `.mjml` into `export default "<contents>"`), so
@@ -262,7 +263,7 @@ async function brandVars(brand: BrandContext): Promise<Record<string, any>> {
 		eaIconMarketing: 'https://admin.earnest.guru/assets/5916955d-7638-493a-94aa-7be1252a191e',
 		eaIconAi: 'https://admin.earnest.guru/assets/b6b77a9e-c3ce-41ed-b870-89459b11f767',
 		orgWebsite: safeUrl(org?.website),
-		whitelabel: org?.whitelabel === true,
+		whitelabel: isEarnestBrandingHidden(org),
 		unsubscribeUrl: safeUrl(brand.unsubscribeUrl),
 		physicalAddress: (brand.physicalAddress && String(brand.physicalAddress).trim()) || null,
 	};

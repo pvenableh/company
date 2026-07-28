@@ -8,6 +8,7 @@
 -->
 <script setup>
 import { userAvatar } from '~/utils/user-name';
+import { isEarnestBrandingHidden } from '~~/shared/branding';
 
 const props = defineProps({
 	data: { type: Object, default: null },
@@ -159,7 +160,7 @@ function saveContact() {
 
 		<!-- Footer -->
 		<div class="text-center py-8 text-sm text-muted-foreground">
-			<template v-if="org?.whitelabel">{{ org?.name }}</template>
+			<template v-if="isEarnestBrandingHidden(org)">{{ org?.name }}</template>
 			<template v-else>Powered by <a href="https://earnest.guru" class="hover:text-foreground">Earnest</a></template>
 		</div>
 	</div>

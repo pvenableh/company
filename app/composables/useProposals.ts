@@ -60,6 +60,7 @@ export function useProposals() {
         'organization.website',
         'organization.plan',
         'organization.whitelabel',
+        'organization.active_addons',
         'organization.document_theme',
         'organization.document_accent',
         'organization.document_theme_config',

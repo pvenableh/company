@@ -29,6 +29,8 @@ const ORG_FIELDS = [
   'organization.logo',
   'organization.brand_color',
   'organization.whitelabel',
+  'organization.plan',
+  'organization.active_addons',
 ];
 
 const USER_FIELDS = [

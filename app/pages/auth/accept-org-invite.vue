@@ -1,4 +1,5 @@
 <script setup>
+import { isEarnestBrandingHidden } from '~~/shared/branding';
 // Branded org/portal invite acceptance.
 //
 // The invite link (`?membership=<id>`) points at either an org_memberships row
@@ -54,8 +55,8 @@ const logoUrl = computed(() => {
 	if (!id) return null;
 	return `${config.public.directusUrl}/assets/${id}?width=320&quality=90`;
 });
-// Whitelabel (on a supporting plan) suppresses the "Powered by Earnest" mark.
-const showEarnestMark = computed(() => !org.value?.whitelabel);
+// White-label (toggle ON + entitled) suppresses the "Powered by Earnest" mark.
+const showEarnestMark = computed(() => !isEarnestBrandingHidden(org.value));
 
 // CSS vars scoped to this page so brand color drives the accents without
 // touching global theme tokens.

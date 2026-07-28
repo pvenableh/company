@@ -15,6 +15,8 @@
  * palette system (useAppPalette) is the owner of the base theme. Brand color is
  * an accent layered on top, not a theme takeover.
  */
+import { isEarnestBrandingHidden } from '~~/shared/branding';
+
 export function useOrgBrand() {
 	const { currentOrg } = useOrganization();
 	const config = useRuntimeConfig();
@@ -30,8 +32,12 @@ export function useOrgBrand() {
 		return `${config.public.directusUrl}/assets/${id}?width=320&quality=90`;
 	});
 
-	// Whitelabel (gated by plan elsewhere) hides the "Powered by Earnest" mark.
-	const whitelabel = computed<boolean>(() => !!(currentOrg.value as any)?.whitelabel);
+	// Whitelabel — hides the "Powered by Earnest" mark. Gated on the single
+	// source of truth (toggle ON *and* entitled: enterprise or white_label
+	// add-on), so the portal agrees with documents/emails/invite/booking.
+	const whitelabel = computed<boolean>(() =>
+		isEarnestBrandingHidden(currentOrg.value as any),
+	);
 
 	// True when there's something org-specific to show — otherwise callers fall
 	// back to Earnest chrome.

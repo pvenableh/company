@@ -344,8 +344,13 @@ export default defineEventHandler(async (event) => {
 	} else if (brandMode === 'org') {
 		// `?whitelabel=1` renders the sample org as whitelabel, so QA can preview
 		// the brand-safe variants (Earnest imagery suppressed, "Powered by Earnest"
-		// footer hidden) without needing a real whitelabel org.
-		brand = { org: query.whitelabel ? { ...SAMPLE_ORG, whitelabel: true } : SAMPLE_ORG };
+		// footer hidden) without needing a real whitelabel org. Grant the
+		// white_label add-on too so it clears the entitlement gate.
+		brand = {
+			org: query.whitelabel
+				? { ...SAMPLE_ORG, whitelabel: true, active_addons: { white_label: true } }
+				: SAMPLE_ORG,
+		};
 	}
 
 	// The glass background is app-hosted (public/email), so it resolves to an

@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 				'signed_at', 'signed_by_name', 'signed_by_email',
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
-				'organization.plan', 'organization.whitelabel',
+				'organization.plan', 'organization.whitelabel', 'organization.active_addons',
 				'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
 			filter: { signing_token: { _eq: token } },
