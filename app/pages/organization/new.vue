@@ -32,10 +32,10 @@ const termsReaffirmed = ref(false)
 const paymentFormRef = ref<any>(null)
 const submittingPayment = ref(false)
 
-const totalSteps = computed(() => paidCheckoutCompleted.value ? 6 : 5)
+const totalSteps = computed(() => paidCheckoutCompleted.value ? 7 : 6)
 const displayedStep = computed(() => {
   // On the free path, step 6 (invite) is shown as "step 5 of 5".
-  if (!paidCheckoutCompleted.value && currentStep.value === 6) return 5
+  if (!paidCheckoutCompleted.value && currentStep.value === 7) return 6
   return currentStep.value
 })
 
@@ -47,6 +47,14 @@ const selectedInterval = ref<'monthly' | 'annual'>('monthly')
 const orgLocation = ref('')
 const orgWebsite = ref('')
 const orgBrandColor = ref('')
+// Brand voice (step 4) — feeds getBrandContext() into every future AI action.
+const brandDirection = ref('')
+const targetAudience = ref('')
+const brandIdealClient = ref('')
+const brandDifferentiator = ref('')
+const brandDrafting = ref(false)
+const brandDrafted = ref(false)
+const brandDraftNote = ref('')
 const invites = ref<{ email: string; role: string }[]>([])
 const newInviteEmail = ref('')
 const newInviteRole = ref('member')
@@ -75,6 +83,11 @@ function loadState() {
     orgLocation.value = data.orgLocation || ''
     orgWebsite.value = data.orgWebsite || ''
     orgBrandColor.value = data.orgBrandColor || ''
+    brandDirection.value = data.brandDirection || ''
+    targetAudience.value = data.targetAudience || ''
+    brandIdealClient.value = data.brandIdealClient || ''
+    brandDifferentiator.value = data.brandDifferentiator || ''
+    brandDrafted.value = !!(data.brandDirection || data.targetAudience)
     invites.value = Array.isArray(data.invites) ? data.invites : []
     createdOrgId.value = data.createdOrgId || null
     paidCheckoutCompleted.value = !!data.paidCheckoutCompleted
@@ -95,6 +108,10 @@ function saveState() {
       orgLocation: orgLocation.value,
       orgWebsite: orgWebsite.value,
       orgBrandColor: orgBrandColor.value,
+      brandDirection: brandDirection.value,
+      targetAudience: targetAudience.value,
+      brandIdealClient: brandIdealClient.value,
+      brandDifferentiator: brandDifferentiator.value,
       invites: invites.value,
       createdOrgId: createdOrgId.value,
       paidCheckoutCompleted: paidCheckoutCompleted.value,
@@ -132,7 +149,7 @@ onMounted(async () => {
     if (sessionIdParam) stripeSessionId.value = sessionIdParam
     paidCheckoutCompleted.value = true
     toast.success('Payment received — pick any add-ons to round it out')
-    currentStep.value = 5  // Add-ons step (paid path)
+    currentStep.value = 6  // Add-ons step (paid path)
     saveState()
     router.replace({ path: '/organization/new' })
   } else if (stepParam === 'plan' && checkoutFlag === 'cancel') {
@@ -150,7 +167,7 @@ onMounted(async () => {
 
 // Persist on every relevant change. Cheap and lossless across reloads.
 watch(
-  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, subscriptionId, selectedAddons],
+  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, brandDirection, targetAudience, brandIdealClient, brandDifferentiator, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, subscriptionId, selectedAddons],
   () => saveState(),
   { deep: true },
 )
@@ -229,7 +246,7 @@ const canProceed = computed(() => {
 function nextStep() {
   // Steps 1-3 advance normally. Step 4 is handled by Skip-Free /
   // Continue-to-Payment buttons. Steps 5-6 use their own handlers.
-  if (currentStep.value < 4 && canProceed.value) {
+  if (currentStep.value < 5 && canProceed.value) {
     currentStep.value++
   }
 }
@@ -237,8 +254,43 @@ function nextStep() {
 function prevStep() {
   // Once the org is committed (step 5+), there is no rewind. Free path users
   // never visit step 5.
-  if (currentStep.value > 1 && currentStep.value <= 4) {
+  if (currentStep.value > 1 && currentStep.value <= 5) {
     currentStep.value--
+  }
+}
+
+// ── Brand voice (step 4) ──
+const industryName = computed(() =>
+  industries.value.find(i => i.id === selectedIndustry.value)?.name || '',
+)
+
+async function draftBrandVoice() {
+  if (brandDrafting.value) return
+  brandDrafting.value = true
+  brandDraftNote.value = ''
+  try {
+    const res = await $fetch('/api/ai/onboarding-brand', {
+      method: 'POST',
+      body: {
+        name: orgName.value.trim(),
+        industry: industryName.value,
+        website: orgWebsite.value.trim() || undefined,
+        answers: {
+          idealClient: brandIdealClient.value.trim() || undefined,
+          differentiator: brandDifferentiator.value.trim() || undefined,
+        },
+      },
+    }) as { brand_direction: string; target_audience: string; readWebsite: boolean }
+    if (res.brand_direction) brandDirection.value = res.brand_direction
+    if (res.target_audience) targetAudience.value = res.target_audience
+    brandDrafted.value = true
+    brandDraftNote.value = res.readWebsite
+      ? 'Drafted from your website — edit anything that feels off.'
+      : 'Drafted from your industry — add your website above for a sharper read.'
+  } catch (err: any) {
+    toast.error(err?.data?.message || 'Could not draft your brand voice. You can write it yourself.')
+  } finally {
+    brandDrafting.value = false
   }
 }
 
@@ -269,6 +321,8 @@ async function ensureOrgCreated(plan: string): Promise<string> {
       location: orgLocation.value.trim() || undefined,
       website: orgWebsite.value.trim() || undefined,
       brand_color: orgBrandColor.value.trim() || undefined,
+      brand_direction: brandDirection.value.trim() || undefined,
+      target_audience: targetAudience.value.trim() || undefined,
     },
   }) as any
 
@@ -287,7 +341,7 @@ async function handleSkipFree() {
   try {
     await ensureOrgCreated('free')
     // Free tier has no Stripe sub, so the Add-ons step (5) is skipped.
-    currentStep.value = 6
+    currentStep.value = 7
   } catch (err: any) {
     toast.error(err?.data?.message || 'Failed to create organization')
   } finally {
@@ -302,7 +356,7 @@ async function handleSubscribeAddons() {
 
   // Nothing selected: just advance.
   if (picks.length === 0) {
-    currentStep.value = 6
+    currentStep.value = 7
     return
   }
 
@@ -344,11 +398,11 @@ async function handleSubscribeAddons() {
     toast.success(`Added ${picks.length} add-on${picks.length > 1 ? 's' : ''}`)
   }
 
-  currentStep.value = 6
+  currentStep.value = 7
 }
 
 function handleSkipAddons() {
-  currentStep.value = 6
+  currentStep.value = 7
 }
 
 async function handleContinueToPayment() {
@@ -412,7 +466,7 @@ function handlePaymentSuccess() {
   paidCheckoutCompleted.value = true
   submittingPayment.value = false
   toast.success('Payment received — pick any add-ons to round it out')
-  currentStep.value = 5
+  currentStep.value = 6
 }
 
 function handlePaymentError(message: string) {
@@ -645,8 +699,67 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 4: Payment ═══ -->
+        <!-- ═══ STEP 4: Brand voice ═══ -->
         <div v-if="currentStep === 4">
+          <div class="text-center mb-8">
+            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <Icon name="lucide:sparkles" class="w-6 h-6 text-gray-500" />
+            </div>
+            <h1 class="text-xl font-semibold">Your brand voice</h1>
+            <p class="text-sm text-muted-foreground mt-1">Earnest writes in your voice everywhere — proposals, emails, marketing. Let it draft a starting point from what you've told us, then make it yours.</p>
+          </div>
+
+          <div class="space-y-4">
+            <button
+              type="button"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium bg-[var(--cyan)]/10 text-[var(--cyan)] hover:bg-[var(--cyan)]/15 transition-colors disabled:opacity-50"
+              :disabled="brandDrafting"
+              @click="draftBrandVoice"
+            >
+              <Icon :name="brandDrafting ? 'lucide:loader-2' : 'lucide:sparkles'" class="w-4 h-4" :class="brandDrafting && 'animate-spin'" />
+              {{ brandDrafting ? 'Reading your business…' : (brandDrafted ? 'Regenerate with Earnest' : 'Draft with Earnest') }}
+            </button>
+            <p v-if="brandDraftNote" class="text-[11px] text-center text-muted-foreground -mt-2">{{ brandDraftNote }}</p>
+
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Brand direction</label>
+              <textarea
+                v-model="brandDirection"
+                rows="4"
+                placeholder="Your positioning, voice, and tone — how your brand should come across."
+                class="w-full rounded-2xl glass-field px-3 py-2.5 text-sm focus:outline-none resize-none"
+              />
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Target audience</label>
+              <textarea
+                v-model="targetAudience"
+                rows="4"
+                placeholder="Who you serve, what they care about, and the problems you solve for them."
+                class="w-full rounded-2xl glass-field px-3 py-2.5 text-sm focus:outline-none resize-none"
+              />
+            </div>
+
+            <details class="rounded-2xl bg-muted/30 px-4 py-3">
+              <summary class="text-xs font-medium text-muted-foreground cursor-pointer select-none">Sharpen the draft (optional)</summary>
+              <div class="space-y-3 mt-3">
+                <div>
+                  <label class="text-xs font-medium mb-1 block">Who's your ideal client?</label>
+                  <input v-model="brandIdealClient" type="text" placeholder="e.g. boutique hotels in the Southeast" class="w-full rounded-full glass-field px-3 py-2 text-sm focus:outline-none" />
+                </div>
+                <div>
+                  <label class="text-xs font-medium mb-1 block">What makes you different?</label>
+                  <input v-model="brandDifferentiator" type="text" placeholder="e.g. a senior team, not a content factory" class="w-full rounded-full glass-field px-3 py-2 text-sm focus:outline-none" />
+                </div>
+                <p class="text-[11px] text-muted-foreground">Answer these, then hit "Regenerate with Earnest" for a sharper draft.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- ═══ STEP 5: Payment ═══ -->
+        <div v-if="currentStep === 5">
           <div class="text-center mb-8">
             <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <CreditCard class="w-6 h-6 text-gray-500" />
@@ -724,7 +837,7 @@ async function handleFinish() {
         </div>
 
         <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
-        <div v-if="currentStep === 5">
+        <div v-if="currentStep === 6">
           <div class="text-center mb-8">
             <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <PackagePlus class="w-6 h-6 text-gray-500" />
@@ -773,7 +886,7 @@ async function handleFinish() {
         </div>
 
         <!-- ═══ STEP 6: Invite Team (Optional) ═══ -->
-        <div v-if="currentStep === 6">
+        <div v-if="currentStep === 7">
           <div class="text-center mb-8">
             <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Icon name="lucide:users" class="w-6 h-6 text-gray-500" />
@@ -844,7 +957,7 @@ async function handleFinish() {
         <div class="flex items-center gap-3 mt-8 pt-6 border-t border-border/30">
           <!-- Back / Cancel (only for steps 2-4 pre-payment; step 5+ is post-commit) -->
           <button
-            v-if="currentStep > 1 && currentStep <= 4 && !subscriptionClientSecret"
+            v-if="currentStep > 1 && currentStep <= 5 && !subscriptionClientSecret"
             class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
@@ -861,9 +974,9 @@ async function handleFinish() {
 
           <div class="flex-1" />
 
-          <!-- Skip (step 3 only — details are optional) -->
+          <!-- Skip (steps 3 & 4 — details and brand voice are optional) -->
           <button
-            v-if="currentStep === 3"
+            v-if="currentStep === 3 || currentStep === 4"
             class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             @click="nextStep"
           >
@@ -872,7 +985,7 @@ async function handleFinish() {
 
           <!-- Steps 1-3: Continue -->
           <button
-            v-if="currentStep < 4"
+            v-if="currentStep < 5"
             class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="!canProceed"
             @click="nextStep"
@@ -882,7 +995,7 @@ async function handleFinish() {
           </button>
 
           <!-- Step 4: pre-payment OR Elements view -->
-          <template v-else-if="currentStep === 4 && !subscriptionClientSecret">
+          <template v-else-if="currentStep === 5 && !subscriptionClientSecret">
             <button
               class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="creating || checkingOut"
@@ -903,7 +1016,7 @@ async function handleFinish() {
           </template>
 
           <!-- Step 4: Elements form — Pay button -->
-          <template v-else-if="currentStep === 4 && subscriptionClientSecret">
+          <template v-else-if="currentStep === 5 && subscriptionClientSecret">
             <button
               class="flex items-center justify-center gap-1 w-full px-6 py-3 rounded-full text-sm font-semibold bg-[var(--cyan)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="submittingPayment"
@@ -916,7 +1029,7 @@ async function handleFinish() {
           </template>
 
           <!-- Step 5: Add-ons (skip / subscribe) -->
-          <template v-else-if="currentStep === 5">
+          <template v-else-if="currentStep === 6">
             <button
               class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="subscribingAddons"
@@ -937,7 +1050,7 @@ async function handleFinish() {
 
           <!-- Step 6: Finish -->
           <button
-            v-else-if="currentStep === 6"
+            v-else-if="currentStep === 7"
             class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="creating"
             @click="handleFinish"

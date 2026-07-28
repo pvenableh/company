@@ -39,7 +39,6 @@ async function registerWithGoogle() {
   const email = values.email;
   const firstName = values.firstName;
   const lastName = values.lastName;
-  const orgName = values.organizationName;
 
   if (!email || !firstName || !lastName) {
     googleRegError.value = 'Please fill in your name and email first.';
@@ -56,7 +55,7 @@ async function registerWithGoogle() {
         email,
         first_name: firstName,
         last_name: lastName,
-        organization_name: orgName || `${firstName}'s Organization`,
+        organization_name: `${firstName}'s Organization`,
       },
     });
 
@@ -75,7 +74,6 @@ const formSchema = toTypedSchema(
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
       email: z.string().email("Please enter a valid email address"),
-      organizationName: z.string().min(1, "Organization name is required"),
       password: z
         .string()
         .min(8, "Password must be at least 8 characters")
@@ -99,7 +97,6 @@ const { handleSubmit, isSubmitting, values } = useForm({
     firstName: "",
     lastName: "",
     email: "",
-    organizationName: "",
     password: "",
     confirmPassword: "",
     termsAccepted: false,
@@ -127,7 +124,6 @@ const onSubmit = handleSubmit(async (values) => {
     lastName: values.lastName!,
     email: values.email!,
     password: values.password!,
-    organizationName: values.organizationName || undefined,
     termsAccepted: values.termsAccepted!,
   });
 });
@@ -188,24 +184,6 @@ const inputClass = "w-full rounded-full glass-field px-3 py-2.5 text-sm focus:ou
               :aria-invalid="errors.length > 0"
             />
             <UiFieldMessage :message="errors[0]" />
-          </div>
-        </VeeField>
-
-        <VeeField v-slot="{ field, errors }" name="organizationName">
-          <div class="space-y-1.5">
-            <label for="organizationName" class="text-sm font-medium">Organization Name</label>
-            <input
-              id="organizationName"
-              type="text"
-              placeholder="Your company or team name"
-              v-bind="field"
-              :class="inputClass"
-              :aria-invalid="errors.length > 0"
-            />
-            <UiFieldMessage :message="errors[0]" />
-            <!-- Was `v-else` paired with the old inline error <p>; UiFieldMessage
-                 replaced that sibling, so this needs its own condition. -->
-            <p v-if="!errors.length" class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
           </div>
         </VeeField>
 

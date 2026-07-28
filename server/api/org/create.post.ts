@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { name, plan, industry, location, website, brand_color } = body;
+  const { name, plan, industry, location, website, brand_color, brand_direction, target_audience, goals } = body;
 
   if (!name?.trim()) {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
@@ -50,6 +50,12 @@ export default defineEventHandler(async (event) => {
     if (location) orgData.location = location.trim();
     if (website) orgData.website = website.trim();
     if (brand_color) orgData.brand_color = brand_color.trim();
+    // Brand-voice fields from the onboarding "Brand voice" step. These feed
+    // getBrandContext() into every future AI action, so capturing them at
+    // signup materially improves the whole system's intelligence.
+    if (brand_direction?.trim()) orgData.brand_direction = brand_direction.trim();
+    if (target_audience?.trim()) orgData.target_audience = target_audience.trim();
+    if (goals?.trim()) orgData.goals = goals.trim();
 
     const org = await directus.request(
       createItem('organizations', orgData)
