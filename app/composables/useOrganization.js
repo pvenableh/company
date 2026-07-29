@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'trial_ends_at', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'trial_ends_at', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched
@@ -210,6 +210,8 @@ export function useOrganization() {
 					active_addons: org.active_addons ?? null,
 					stripe_customer_id: org.stripe_customer_id ?? null,
 					stripe_subscription_id: org.stripe_subscription_id ?? null,
+					subscription_status: org.subscription_status ?? null,
+					trial_ends_at: org.trial_ends_at ?? null,
 					default_hourly_rate: org.default_hourly_rate ?? null,
 					email: org.email ?? null,
 					phone: org.phone ?? null,

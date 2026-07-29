@@ -9,6 +9,22 @@
 import { readItems, readItem, updateItem } from '@directus/sdk';
 import type { H3Event } from 'h3';
 
+/**
+ * Org subscription statuses that LOCK the app (no AI spend, redirect to the
+ * upgrade screen). Shared with the client gate app/middleware/subscription.global.ts.
+ *   - incomplete          → signed up, never picked a plan / started a trial
+ *   - paused              → 14-day trial ended with no card (missing_payment_method:'pause')
+ *   - canceled / unpaid / incomplete_expired → subscription lapsed
+ * 'active' and 'trialing' are allowed; a null status (legacy orgs) is not gated.
+ */
+export const LOCKED_SUBSCRIPTION_STATUSES = new Set([
+  'incomplete',
+  'incomplete_expired',
+  'paused',
+  'unpaid',
+  'canceled',
+]);
+
 export interface TokenEnforcementResult {
   allowed: boolean;
   reason?: string;
@@ -103,9 +119,24 @@ export async function enforceTokenLimits(event: H3Event, organizationId?: string
     try {
       const org = await directus.request(
         readItem('organizations', organizationId, {
-          fields: ['ai_token_balance', 'ai_token_limit_monthly', 'ai_tokens_used_this_period'],
+          fields: ['plan', 'subscription_status', 'ai_token_balance', 'ai_token_limit_monthly', 'ai_tokens_used_this_period'],
         }),
       ) as any;
+
+      // Trial-expiry / paused-subscription lock (defense in depth — the client
+      // gate in app/middleware/subscription.global.ts also redirects). An org
+      // whose subscription has lapsed must not spend AI tokens even if it still
+      // carries a plan-level limit. `enterprise` is internal/unlimited and never
+      // gated; a null status (legacy orgs) is left to the token math below.
+      if (org.plan !== 'enterprise' && LOCKED_SUBSCRIPTION_STATUSES.has(org.subscription_status)) {
+        return {
+          allowed: false,
+          statusCode: 402,
+          reason: org.subscription_status === 'incomplete'
+            ? 'Pick a plan to start your free trial and use Earnest AI.'
+            : 'Your trial has ended — add a card to keep using Earnest.',
+        };
+      }
 
       // Check hard balance (prepaid tokens)
       if (org.ai_token_balance != null && org.ai_token_balance <= 0) {

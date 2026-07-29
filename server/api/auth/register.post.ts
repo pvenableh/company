@@ -75,6 +75,13 @@ export default defineEventHandler(async (event) => {
         // matching names don't collide on the unique index.
         const slugBase = organization_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'org';
         const slugSuffix = Math.random().toString(36).slice(2, 8);
+        // Public signup no longer lands on a usable free tier. The org is created
+        // capped (zero AI/scan limits — no unmetered-token leak) and flagged
+        // `subscription_status: 'incomplete'`, the sentinel the onboarding gate
+        // (app/middleware/subscription.global.ts) routes to /organization/new so
+        // the owner must pick a plan and start the 14-day trial. `free` stays the
+        // transient pre-plan tier (internal-only for public selection); the trial
+        // webhook raises plan + limits once a plan is chosen.
         const org = await directus.request(
           createItem('organizations', {
             name: organization_name.trim(),
@@ -82,6 +89,9 @@ export default defineEventHandler(async (event) => {
             status: 'published',
             active: true,
             plan: 'free',
+            subscription_status: 'incomplete',
+            ai_token_limit_monthly: 0,
+            scan_credits_limit_monthly: 0,
           })
         ) as any;
 

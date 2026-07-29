@@ -3292,6 +3292,10 @@ export interface Organization {
 	archived_at?: string | null;
 	/** @description Org-level mirror of the active Stripe Subscription id. */
 	stripe_subscription_id?: string | null;
+	/** @description Org-level mirror of the Stripe subscription status (written by the Stripe webhook). Drives the trial-expiry gate. 'incomplete' = signed up but no plan chosen yet. */
+	subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
+	/** @description When the org's free trial ends (Stripe trial_end). Null when not on a trial. */
+	trial_ends_at?: string | null;
 	/** @description When true (and plan supports whitelabel), hides "Powered by Earnest." on client-facing documents. */
 	whitelabel?: boolean;
 	/** @description Applied across invoices, proposals, and contracts sent from this organization. */

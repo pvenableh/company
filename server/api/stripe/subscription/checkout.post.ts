@@ -66,14 +66,21 @@ export default defineEventHandler(async (event) => {
 				(await stripe.customers.create({ email, metadata: { source: 'earnest_subscription' } })).id;
 		}
 
+		// Legacy Checkout path (no active UI caller). Mirror the in-page flow's
+		// 14-day no-card trial: `payment_method_collection: 'if_required'` lets the
+		// session complete without a card during the trial, and the trial pauses
+		// at day 14 if none is added.
 		const session = await stripe.checkout.sessions.create({
 			customer,
 			mode: 'subscription',
 			payment_method_types: ['card'],
+			payment_method_collection: 'if_required',
 			line_items: [{ price: priceId, quantity: 1 }],
 			success_url: successUrl || `${getAppBaseUrl(event)}/apps/organization?floor=billing&session_id={CHECKOUT_SESSION_ID}`,
 			cancel_url: cancelUrl || `${getAppBaseUrl(event)}/apps/organization?floor=billing`,
 			subscription_data: {
+				trial_period_days: 14,
+				trial_settings: { end_behavior: { missing_payment_method: 'pause' } },
 				metadata: {
 					earnest_email: email,
 					// Authoritative org link for the webhook (no customer→user walk).

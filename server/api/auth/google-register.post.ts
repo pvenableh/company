@@ -74,6 +74,9 @@ export default defineEventHandler(async (event) => {
       // every Google-signup owner in an org-less account.
       const slugBase = organization_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'org';
       const slugSuffix = Math.random().toString(36).slice(2, 8);
+      // Public signup no longer lands on a usable free tier — see the matching
+      // note in register.post.ts. Capped + `subscription_status:'incomplete'` so
+      // the onboarding gate routes the owner to pick a plan + start the trial.
       const org = await directus.request(
         createItem('organizations', {
           name: organization_name.trim(),
@@ -81,6 +84,9 @@ export default defineEventHandler(async (event) => {
           status: 'published',
           active: true,
           plan: 'free',
+          subscription_status: 'incomplete',
+          ai_token_limit_monthly: 0,
+          scan_credits_limit_monthly: 0,
         })
       ) as any;
 

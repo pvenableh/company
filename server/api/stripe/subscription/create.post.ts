@@ -1,14 +1,19 @@
 // POST /api/stripe/subscription/create
 // In-page subscription creation for the org-signup wizard.
-// Creates a Stripe Subscription with `payment_behavior: 'default_incomplete'`
-// and returns the embedded PaymentIntent's `clientSecret` so the client can
-// confirm the first invoice via Stripe Elements (no redirect to Checkout).
 //
-// On successful confirmation the existing webhook chain
-// (customer.subscription.created / .updated → handleSubscriptionChange)
-// syncs the org's plan, token allotment, scan credits, and addons.
-import { readUsers, updateUser, readItem } from '@directus/sdk';
-import Stripe from 'stripe';
+// Starts a 14-day, NO-CARD free trial: the Stripe Subscription is created in
+// `trialing` status with `trial_period_days: 14` and NO up-front payment
+// method. `trial_settings.end_behavior.missing_payment_method: 'pause'` means
+// that if the org never adds a card, Stripe transitions the subscription to
+// `paused` at day 14 (rather than charging or cancelling) — the app then locks
+// to the upgrade screen until a card is added (see convert-trial.post.ts).
+//
+// Because a trialing sub has no first invoice, there is NO PaymentIntent /
+// clientSecret to confirm — the wizard skips the Stripe Elements step entirely.
+// The existing webhook chain (customer.subscription.created / .updated →
+// handleSubscriptionChange) syncs the org's plan, token allotment, scan
+// credits, addons, and mirrors subscription_status + trial_ends_at onto the org.
+import { readUsers, updateUser, readItem, updateItem } from '@directus/sdk';
 import { EARNEST_PLANS } from '~~/server/utils/stripe';
 import type { EarnestPlanId } from '~~/server/utils/stripe';
 
@@ -120,17 +125,22 @@ export default defineEventHandler(async (event) => {
 			}
 		}
 
-		// Create the subscription with default_incomplete so the first invoice's
-		// PaymentIntent is exposed for client-side confirmation.
+		// Create a NO-CARD 14-day trial. With `trial_period_days` and no default
+		// payment method, Stripe requires `trial_settings.end_behavior.
+		// missing_payment_method` — 'pause' transitions the sub to `paused` at
+		// trial end instead of charging/cancelling, so the app can lock to the
+		// upgrade screen and the same subscription resumes once a card is added.
+		// `save_default_payment_method: 'on_subscription'` means the card added
+		// later (via convert-trial) becomes the default for real billing.
 		const subscription = await stripe.subscriptions.create({
 			customer: customerId,
 			items: [{ price: priceId, quantity: 1 }],
-			payment_behavior: 'default_incomplete',
+			trial_period_days: 14,
+			trial_settings: { end_behavior: { missing_payment_method: 'pause' } },
 			payment_settings: {
 				save_default_payment_method: 'on_subscription',
 				payment_method_types: ['card'],
 			},
-			expand: ['latest_invoice.payment_intent'],
 			metadata: {
 				earnest_email: email,
 				directus_user_id: userId,
@@ -139,23 +149,37 @@ export default defineEventHandler(async (event) => {
 			},
 		});
 
-		const latestInvoice = subscription.latest_invoice as Stripe.Invoice | null;
-		const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent | null;
-		const clientSecret = paymentIntent?.client_secret;
-
-		if (!clientSecret) {
-			// Should not happen with default_incomplete + a priced plan, but
-			// surface clearly rather than handing the client an empty secret.
-			throw createError({
-				statusCode: 500,
-				message: 'Stripe did not return a client secret for the subscription invoice',
+		// Optimistically mirror status + trial end onto the org so the trial-expiry
+		// gate clears immediately — the authoritative `customer.subscription.created`
+		// webhook (which also raises plan + token limits) can lag a few seconds, and
+		// without this the org still reads `subscription_status: 'incomplete'` and
+		// bounces the just-subscribed owner back to the wizard.
+		if (organizationId) {
+			await directus.request(
+				updateItem('organizations', organizationId, {
+					plan,
+					subscription_status: subscription.status,
+					trial_ends_at: subscription.trial_end
+						? new Date(subscription.trial_end * 1000).toISOString()
+						: null,
+					// Grant the plan's allotment now so trial AI works immediately
+					// (org/create seeds these at 0). The webhook re-affirms the same
+					// values authoritatively.
+					ai_token_limit_monthly: planDef.aiTokens.monthlyAllotment,
+					scan_credits_limit_monthly: planDef.scanCredits,
+				}),
+			).catch((e: any) => {
+				console.warn('[stripe/subscription/create] optimistic org status update failed (non-fatal):', e?.message);
 			});
 		}
 
 		return {
 			subscriptionId: subscription.id,
-			clientSecret,
 			customerId,
+			status: subscription.status, // 'trialing'
+			trialEnd: subscription.trial_end
+				? new Date(subscription.trial_end * 1000).toISOString()
+				: null,
 		};
 	} catch (error: any) {
 		if (error?.statusCode) throw error;

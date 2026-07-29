@@ -27,7 +27,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
   }
 
-  const validPlans = ['free', 'solo', 'studio', 'agency', 'enterprise'];
+  // Public org creation may only pick a purchasable tier. `free` and
+  // `enterprise` are internal-only (set via the admin plan endpoint), so they
+  // are NOT accepted here — a request for either falls back to `solo`.
+  const validPlans = ['solo', 'studio', 'agency'];
   const orgPlan = validPlans.includes(plan) ? plan : 'solo';
 
   const directus = getServerDirectus();
@@ -45,6 +48,13 @@ export default defineEventHandler(async (event) => {
       status: 'published',
       active: true,
       plan: orgPlan,
+      // Start capped (not null = unlimited). The org is entitled only once the
+      // trial subscription is created and the Stripe webhook raises these to the
+      // plan's allotment — this closes the free-token leak for the pre-trial
+      // window and for any org that abandons signup before subscribing.
+      ai_token_limit_monthly: 0,
+      scan_credits_limit_monthly: 0,
+      subscription_status: 'incomplete',
     };
     if (industry) orgData.industry = industry;
     if (location) orgData.location = location.trim();

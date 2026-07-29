@@ -5,7 +5,7 @@ import { Building2, ChevronLeft, ChevronRight, Plus, X, Check, Sparkles, CreditC
 definePageMeta({ middleware: ['auth'] })
 useHead({ title: 'New Organization | Earnest' })
 
-const { setOrganization } = useOrganization()
+const { setOrganization, organizations, isInitialized, initializeOrganizations } = useOrganization()
 const router = useRouter()
 const route = useRoute()
 
@@ -22,15 +22,9 @@ const subscribingAddons = ref(false)
 const paidCheckoutCompleted = ref(false)
 const stripeSessionId = ref<string | null>(null)
 
-// In-page Elements state for the paid path.
-//   step=4 enters with `clientSecret` null → user sees order summary +
-//   "Continue to payment". Clicking it creates the org + subscription, returns
-//   a clientSecret, and the Elements card form swaps in below the summary.
-const subscriptionClientSecret = ref<string | null>(null)
+// The Stripe subscription id returned when the no-card trial is started.
 const subscriptionId = ref<string | null>(null)
 const termsReaffirmed = ref(false)
-const paymentFormRef = ref<any>(null)
-const submittingPayment = ref(false)
 
 const totalSteps = computed(() => paidCheckoutCompleted.value ? 7 : 6)
 const displayedStep = computed(() => {
@@ -154,7 +148,7 @@ onMounted(async () => {
     router.replace({ path: '/organization/new' })
   } else if (stepParam === 'plan' && checkoutFlag === 'cancel') {
     currentStep.value = 2
-    toast.info('Checkout canceled — you can try again or start with Free')
+    toast.info('No problem — pick a plan when you’re ready to start your free trial.')
     router.replace({ path: '/organization/new' })
   }
 
@@ -195,7 +189,7 @@ const plans = [
     key: 'agency',
     name: 'Agency',
     monthly: 299,
-    annual: 2491,
+    annual: 2988,
     desc: 'For the business that has grown into something real.',
     features: ['15 team seats', 'Priority support', '1M Earnest tokens/month', 'Unlimited client portals'],
   },
@@ -312,6 +306,21 @@ function removeInvite(index: number) {
 async function ensureOrgCreated(plan: string): Promise<string> {
   if (createdOrgId.value) return createdOrgId.value
 
+  // A public signup that registered WITH an org name already has a capped,
+  // pre-plan org (subscription_status:'incomplete') and was routed here by the
+  // trial-expiry gate. Reuse it instead of creating a duplicate — the trial
+  // subscription then activates THIS org. (Orgless signups have no such row and
+  // fall through to creation below.)
+  if (!isInitialized.value) await initializeOrganizations().catch(() => {})
+  const existing = (organizations.value || []).find(
+    (o: any) => o?.subscription_status === 'incomplete' && o?.plan !== 'enterprise',
+  ) as any
+  if (existing?.id) {
+    createdOrgId.value = existing.id
+    setOrganization(existing.id)
+    return existing.id
+  }
+
   const result = await $fetch('/api/org/create', {
     method: 'POST',
     body: {
@@ -334,20 +343,8 @@ async function ensureOrgCreated(plan: string): Promise<string> {
   return id
 }
 
-// ── Payment step actions ──
-async function handleSkipFree() {
-  if (creating.value || checkingOut.value) return
-  creating.value = true
-  try {
-    await ensureOrgCreated('free')
-    // Free tier has no Stripe sub, so the Add-ons step (5) is skipped.
-    currentStep.value = 7
-  } catch (err: any) {
-    toast.error(err?.data?.message || 'Failed to create organization')
-  } finally {
-    creating.value = false
-  }
-}
+// ── Trial start (step 5) ──
+// (The public "Start Free" path is retired — `free` is internal-only now.)
 
 // ── Add-ons step actions ──
 async function handleSubscribeAddons() {
@@ -405,7 +402,7 @@ function handleSkipAddons() {
   currentStep.value = 7
 }
 
-async function handleContinueToPayment() {
+async function handleStartTrial() {
   if (creating.value || checkingOut.value) return
   if (!termsReaffirmed.value) {
     toast.error('Please agree to the Terms of Service and Privacy Policy')
@@ -415,9 +412,11 @@ async function handleContinueToPayment() {
   try {
     await ensureOrgCreated(selectedPlan.value)
 
-    // Create the subscription server-side with default_incomplete; the
-    // returned clientSecret is what Stripe Elements confirms below. No redirect.
-    const data = await $fetch<{ subscriptionId: string; clientSecret: string }>(
+    // Start a 14-day NO-CARD trial. The server creates a `trialing` Stripe
+    // subscription with no payment method — there's no clientSecret to confirm,
+    // so we skip Stripe Elements entirely. The webhook raises the org's plan +
+    // token limits and mirrors subscription_status:'trialing' onto the org.
+    const data = await $fetch<{ subscriptionId: string; status: string; trialEnd: string | null }>(
       '/api/stripe/subscription/create',
       {
         method: 'POST',
@@ -431,47 +430,15 @@ async function handleContinueToPayment() {
     )
 
     subscriptionId.value = data.subscriptionId
-    subscriptionClientSecret.value = data.clientSecret
+    toast.success('Your 14-day free trial has started — no card needed. We’ll ask for one at day 14.')
+    // Add-ons require a card, so the trial signup skips straight to inviting the
+    // team. The owner can add add-ons from Billing after adding a card.
+    currentStep.value = 7
   } catch (err: any) {
-    toast.error(err?.data?.message || err?.message || 'Failed to start payment')
+    toast.error(err?.data?.message || err?.message || 'Failed to start your free trial')
   } finally {
     checkingOut.value = false
   }
-}
-
-function handleEditOrderBack() {
-  // From the Elements form back to the order summary. The clientSecret is
-  // tied to a draft invoice on the just-created subscription; clearing it
-  // un-mounts the form. The subscription itself stays in `incomplete`
-  // status until the user pays — Stripe auto-cancels stale incompletes.
-  subscriptionClientSecret.value = null
-}
-
-async function handleSubmitPayment() {
-  if (submittingPayment.value) return
-  if (!termsReaffirmed.value) {
-    toast.error('Please agree to the Terms of Service and Privacy Policy')
-    return
-  }
-  if (!paymentFormRef.value) return
-  submittingPayment.value = true
-  try {
-    await paymentFormRef.value.submit()
-  } catch {
-    submittingPayment.value = false
-  }
-}
-
-function handlePaymentSuccess() {
-  paidCheckoutCompleted.value = true
-  submittingPayment.value = false
-  toast.success('Payment received — pick any add-ons to round it out')
-  currentStep.value = 6
-}
-
-function handlePaymentError(message: string) {
-  submittingPayment.value = false
-  toast.error(message || 'Payment failed')
 }
 
 // ── Final step: send invites & finish ──
@@ -789,51 +756,29 @@ async function handleFinish() {
             </div>
           </div>
 
-          <!-- Pre-payment view: free-tier offer + terms re-affirmation -->
-          <template v-if="!subscriptionClientSecret">
-            <!-- Terms re-affirmation -->
-            <label class="flex items-start gap-2 cursor-pointer select-none mb-4 p-3 rounded-lg border border-gray-200 bg-muted/10 hover:bg-muted/20 transition-colors">
-              <input
-                v-model="termsReaffirmed"
-                type="checkbox"
-                class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
-              />
-              <span class="text-[12px] text-muted-foreground leading-relaxed">
-                I agree to the
-                <NuxtLink to="/terms-of-service" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Terms of Service</NuxtLink>
-                and
-                <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>,
-                and authorize recurring billing of ${{ currentPrice }}{{ intervalLabel }}.
-              </span>
-            </label>
+          <!-- 14-day no-card trial notice -->
+          <div class="rounded-lg border border-[var(--cyan)]/40 bg-info/10 p-3 mb-4 text-center">
+            <p class="text-xs font-medium text-foreground">14-day free trial — no credit card required</p>
+            <p class="text-[11px] text-muted-foreground mt-0.5">
+              You won’t be charged today. We’ll ask for a card at day 14 to keep your plan.
+            </p>
+          </div>
 
-            <!-- Free tier offer -->
-            <div class="rounded-lg border border-dashed border-gray-200 bg-muted/20 p-3 text-center">
-              <p class="text-xs text-muted-foreground">
-                Not ready to commit? Start with the free tier — limited features, but you can upgrade anytime.
-              </p>
-            </div>
-          </template>
-
-          <!-- Payment view: in-page Stripe Elements -->
-          <template v-else>
-            <OrganizationSubscriptionPaymentForm
-              ref="paymentFormRef"
-              :client-secret="subscriptionClientSecret"
-              :email="''"
-              :price-label="`$${currentPrice}${intervalLabel}`"
-              @success="handlePaymentSuccess"
-              @error="handlePaymentError"
+          <!-- Terms re-affirmation -->
+          <label class="flex items-start gap-2 cursor-pointer select-none mb-4 p-3 rounded-lg border border-gray-200 bg-muted/10 hover:bg-muted/20 transition-colors">
+            <input
+              v-model="termsReaffirmed"
+              type="checkbox"
+              class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
             />
-
-            <button
-              class="mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              :disabled="submittingPayment"
-              @click="handleEditOrderBack"
-            >
-              ← Edit order
-            </button>
-          </template>
+            <span class="text-[12px] text-muted-foreground leading-relaxed">
+              I agree to the
+              <NuxtLink to="/terms-of-service" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Terms of Service</NuxtLink>
+              and
+              <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>.
+              My {{ currentPlan.name }} plan starts a 14-day free trial, then bills ${{ currentPrice }}{{ intervalLabel }} unless I cancel.
+            </span>
+          </label>
         </div>
 
         <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
@@ -957,7 +902,7 @@ async function handleFinish() {
         <div class="flex items-center gap-3 mt-8 pt-6 border-t border-border/30">
           <!-- Back / Cancel (only for steps 2-4 pre-payment; step 5+ is post-commit) -->
           <button
-            v-if="currentStep > 1 && currentStep <= 5 && !subscriptionClientSecret"
+            v-if="currentStep > 1 && currentStep <= 5"
             class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
@@ -994,37 +939,16 @@ async function handleFinish() {
             <ChevronRight class="w-4 h-4" />
           </button>
 
-          <!-- Step 4: pre-payment OR Elements view -->
-          <template v-else-if="currentStep === 5 && !subscriptionClientSecret">
-            <button
-              class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-              :disabled="creating || checkingOut"
-              @click="handleSkipFree"
-            >
-              <Icon v-if="creating" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin inline" />
-              Skip — Start Free
-            </button>
+          <!-- Step 5: start the 14-day free trial (no card) -->
+          <template v-else-if="currentStep === 5">
             <button
               class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="creating || checkingOut || !termsReaffirmed"
-              @click="handleContinueToPayment"
+              @click="handleStartTrial"
             >
               <Icon v-if="checkingOut" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-              {{ checkingOut ? 'Setting up...' : 'Continue to payment' }}
+              {{ checkingOut ? 'Starting trial…' : 'Start free trial' }}
               <ChevronRight v-if="!checkingOut" class="w-4 h-4" />
-            </button>
-          </template>
-
-          <!-- Step 4: Elements form — Pay button -->
-          <template v-else-if="currentStep === 5 && subscriptionClientSecret">
-            <button
-              class="flex items-center justify-center gap-1 w-full px-6 py-3 rounded-full text-sm font-semibold bg-[var(--cyan)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
-              :disabled="submittingPayment"
-              @click="handleSubmitPayment"
-            >
-              <Icon v-if="submittingPayment" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
-              <Icon v-else name="lucide:lock" class="w-4 h-4" />
-              {{ submittingPayment ? 'Processing...' : `Pay $${currentPrice}${intervalLabel}` }}
             </button>
           </template>
 

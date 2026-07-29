@@ -419,6 +419,8 @@ async function handleSubscriptionChange(
 				await directus.request(
 					updateItem('organizations', orgId, {
 						plan: 'free',
+						subscription_status: 'canceled',
+						trial_ends_at: null,
 						ai_token_limit_monthly: 0,
 						ai_token_balance: 0,
 						scan_credits_limit_monthly: 0,
@@ -433,6 +435,14 @@ async function handleSubscriptionChange(
 					stripe_subscription_id: subscription.id,
 					// Keep the org's billing customer authoritative.
 					stripe_customer_id: customerId,
+					// Org-level mirror of the live Stripe status + trial end so the
+					// trial-expiry gate + AI enforcement can read them cheaply from
+					// the already-loaded org (no per-request Stripe call). `paused` /
+					// `unpaid` / `canceled` here lock the app to the upgrade screen.
+					subscription_status: subscription.status,
+					trial_ends_at: subscription.trial_end
+						? new Date(subscription.trial_end * 1000).toISOString()
+						: null,
 				};
 
 				if (planId && plan) {
