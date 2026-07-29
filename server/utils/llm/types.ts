@@ -45,6 +45,14 @@ export interface LLMOptions {
   systemPrompt?: string;
   /** Tools available for this request */
   tools?: ToolDefinition[];
+  /**
+   * How the model may use `tools`. Maps to Anthropic's `tool_choice`:
+   *   - `{ type: 'auto' }`  — model decides (the API default; may reply in prose).
+   *   - `{ type: 'any' }`   — model MUST call one of the tools (no plain-text turn).
+   *   - `{ type: 'tool', name }` — force a specific tool.
+   * Omit to leave it at the provider default. Ignored when `tools` is empty.
+   */
+  toolChoice?: { type: 'auto' } | { type: 'any' } | { type: 'tool'; name: string };
 }
 
 export interface LLMResponse {

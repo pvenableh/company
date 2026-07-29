@@ -123,6 +123,13 @@ export class ClaudeProvider implements LLMProvider {
       system: options?.systemPrompt || undefined,
       messages: anthropicMessages,
       tools: anthropicTools.length > 0 ? anthropicTools : undefined,
+      // `tool_choice` only applies when tools are present. `{ type: 'any' }`
+      // forces the model to emit a tool call instead of a prose-only turn — the
+      // Director planner relies on this to guarantee concrete plan steps.
+      tool_choice:
+        anthropicTools.length > 0 && options?.toolChoice
+          ? (options.toolChoice as Anthropic.ToolChoice)
+          : undefined,
     });
 
     const text = response.content

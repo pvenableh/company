@@ -73,6 +73,17 @@ export async function buildFinancialSnapshot(
     .toISOString().split('T')[0]!;
   const ri = readItems as any;
 
+  // Never throw — a failed sub-query degrades to zeros so the meeting still
+  // opens. But DON'T swallow silently: an all-$0 snapshot is almost always a
+  // read-permission or scoping failure (e.g. the server token's role missing
+  // read on invoices/expenses, or the org filter matching nothing), and a bare
+  // `catch(() => [])` hides exactly the error that would explain it. Log the
+  // label + message so a starved MONEY briefing is diagnosable in the server log.
+  const swallow = (label: string) => (err: any): any[] => {
+    console.error(`[financial-snapshot] ${label} query failed (org=${organizationId}):`, err?.errors?.[0]?.message || err?.message || err);
+    return [];
+  };
+
   const [paidInvoices, outstandingInvoices, expenses, retainers, goalRows] = await Promise.all([
     // Realized income — paid invoices in the window, by invoice_date.
     directus.request(ri('invoices', {
@@ -85,7 +96,7 @@ export async function buildFinancialSnapshot(
       },
       fields: ['id', 'total_amount', 'invoice_date'],
       limit: 1000,
-    })).catch(() => []) as Promise<any[]>,
+    })).catch(swallow('paidInvoices')) as Promise<any[]>,
 
     // Outstanding AR — all unpaid, regardless of date.
     directus.request(ri('invoices', {
@@ -97,14 +108,14 @@ export async function buildFinancialSnapshot(
       },
       fields: ['id', 'total_amount', 'due_date'],
       limit: 1000,
-    })).catch(() => []) as Promise<any[]>,
+    })).catch(swallow('outstandingInvoices')) as Promise<any[]>,
 
     // Expenses in the window (direct org scope).
     directus.request(ri('expenses', {
       filter: { _and: [{ organization: { _eq: organizationId } }, { date: { _gte: windowStartIso } }] },
       fields: ['id', 'amount', 'date', 'category'],
       limit: 2000,
-    })).catch(() => []) as Promise<any[]>,
+    })).catch(swallow('expenses')) as Promise<any[]>,
 
     // Active retainer projects → rough recurring floor.
     directus.request(ri('projects', {
@@ -117,7 +128,7 @@ export async function buildFinancialSnapshot(
       },
       fields: ['id', 'billing_type', 'contract_value', 'retainer_period', 'retainer_hours_per_period', 'retainer_hourly_rate'],
       limit: 200,
-    })).catch(() => []) as Promise<any[]>,
+    })).catch(swallow('retainers')) as Promise<any[]>,
 
     // Active org revenue goals/targets — so the model can measure "on track"
     // against a real target, or tell the user none exists.
@@ -133,8 +144,14 @@ export async function buildFinancialSnapshot(
       fields: ['id', 'title', 'target_value', 'current_value', 'timeframe', 'end_date'],
       sort: ['end_date'],
       limit: 12,
-    })).catch(() => []) as Promise<any[]>,
+    })).catch(swallow('goals')) as Promise<any[]>,
   ]);
+
+  // Summary line so an all-$0 snapshot is obvious in the log even when no
+  // sub-query threw (i.e. the filters simply matched nothing for this org).
+  if (paidInvoices.length === 0 && expenses.length === 0 && outstandingInvoices.length === 0) {
+    console.warn(`[financial-snapshot] org=${organizationId}: no paid invoices, expenses, or outstanding AR matched (window from ${windowStartIso}). MONEY briefing will read as all-$0 — check seed data + server-token read perms on invoices/expenses.`);
+  }
 
   // Bin income + expenses by month.
   for (const inv of paidInvoices) {

@@ -32,6 +32,99 @@ const CHAT_REPLIES = [
   "Here's my take: you're in a solid spot, so this is about sequencing, not scrambling. Group the reactive items (replies, approvals) into one block, then guard a longer stretch for the deep work that actually moves a project forward. Small structure, big payoff. I can sketch the day if you'd like.",
 ];
 
+// Canned Director's Office / Boardroom plans, keyed by agenda subject. Each is a
+// short, on-voice briefing (the "TL;DR:" line drives the deck's takeaways slide;
+// the "Label:" lines split into per-slide thoughts) plus a couple of concrete,
+// reversible `add_task` proposals so the demo Slides deck renders a real plan.
+// Deliberately qualitative — no invented dollar figures — so the prose never
+// contradicts the real financial snapshot the money deck renders alongside it.
+interface MockDirectorPlan {
+  text: string;
+  tasks: Array<{ title: string; priority: 'low' | 'medium' | 'high' | 'urgent' }>;
+}
+
+const DIRECTOR_PLANS: Record<string, MockDirectorPlan> = {
+  money: {
+    text: [
+      'Income: Revenue is steady, carried by retainer work and a couple of one-off builds — a healthy base, but concentrated in a handful of accounts.',
+      'Expenses: Spend is tracking in line with income; software and contractor costs are the two levers worth watching.',
+      'Prediction: On the current run-rate the next quarter stays net-positive, though unbilled work and overdue receivables are the real swing factor.',
+      'Verdict: Solid footing. Collect what is owed, keep the pipeline warm, and the trajectory holds.',
+      'TL;DR: Healthy base, concentrated in a few accounts | Watch software + contractor spend | Chase overdue AR to lock the quarter',
+    ].join('\n'),
+    tasks: [
+      { title: 'Chase the overdue invoices flagged this week', priority: 'high' },
+      { title: 'Review the two largest expense lines for savings', priority: 'medium' },
+    ],
+  },
+  leads: {
+    text: [
+      'Pipeline: A few active leads have real momentum, but the highest-scoring one is still unclaimed — that is money left waiting on the table.',
+      'Risk: Without a clear owner the hottest lead goes cold; speed of first response is the single biggest lever on close rate.',
+      'TL;DR: Hottest lead is unassigned | Assign an owner today | Follow up before momentum fades',
+    ].join('\n'),
+    tasks: [
+      { title: 'Assign the unclaimed high-score lead an owner', priority: 'high' },
+      { title: 'Send a follow-up to the top open lead', priority: 'medium' },
+    ],
+  },
+  proposals: {
+    text: [
+      'Outlook: One sizeable proposal has been out for three weeks with no reply — the interest was real, so silence is a nudge problem, not a fit problem.',
+      'Move: A light, specific check-in beats another full resend; give the client an easy decision point and a deadline.',
+      'TL;DR: Atlas proposal has gone quiet | Send a warm check-in | Set a clear decision date',
+    ].join('\n'),
+    tasks: [
+      { title: 'Follow up on the proposal with no reply in 3 weeks', priority: 'high' },
+      { title: 'Set a decision deadline with the client', priority: 'medium' },
+    ],
+  },
+  projects: {
+    text: [
+      'Delivery: The active launch is on schedule but its deadline is close — the next few days decide whether it stays green.',
+      'Focus: Clear the blocking work first; everything else can wait until go-live is locked.',
+      'TL;DR: Launch deadline is near | Confirm it is on track | Clear the blockers before go-live',
+    ].join('\n'),
+    tasks: [
+      { title: 'Confirm the launch is on track for its deadline', priority: 'high' },
+      { title: 'Clear the blocking tasks before go-live', priority: 'medium' },
+    ],
+  },
+  clients: {
+    text: [
+      'Relationships: The active accounts are healthy, but one has gone quiet and another is missing its brand profile — both are cheap to fix and easy to lose.',
+      'Play: A short check-in and a completed profile keep the account warm and make every future touch sharper.',
+      'TL;DR: One account has gone quiet | Book a check-in | Complete the missing brand profile',
+    ].join('\n'),
+    tasks: [
+      { title: 'Book a check-in with the quietest active account', priority: 'medium' },
+      { title: 'Complete the missing brand profile on the client', priority: 'low' },
+    ],
+  },
+  tickets: {
+    text: [
+      'Support: The queue is under control, but one high-priority ticket has no owner — an unowned urgent item is how things slip.',
+      'Fix: Put a name on it now and triage the oldest open items so nothing ages out silently.',
+      'TL;DR: A high-priority ticket is unassigned | Assign an owner | Triage the aging tickets',
+    ].join('\n'),
+    tasks: [
+      { title: 'Assign an owner to the unassigned high-priority ticket', priority: 'high' },
+      { title: 'Triage the oldest open tickets', priority: 'medium' },
+    ],
+  },
+  default: {
+    text: [
+      'Read: The business is in good shape overall — this is about sequencing the next few moves, not scrambling.',
+      'Play: Close the loop on what is already in flight before opening anything new; momentum compounds.',
+      'TL;DR: Solid footing | Finish what is in flight | Line up the next clear move',
+    ].join('\n'),
+    tasks: [
+      { title: 'Close out the highest-leverage item already in flight', priority: 'high' },
+      { title: 'Line up the next concrete step for the week', priority: 'medium' },
+    ],
+  },
+};
+
 export class MockClaudeProvider implements LLMProvider {
   readonly name = 'mock';
 
@@ -69,9 +162,19 @@ export class MockClaudeProvider implements LLMProvider {
 
   /**
    * Tool-aware path (used by the chat mutation flow + director endpoints).
-   * The mock never requests a tool call — it just returns on-voice text — so
-   * demo sessions never trigger real mutations. Shape matches
-   * ClaudeProvider.chatWithTools so chat.post.ts can treat it identically.
+   *
+   * For ordinary chat mutations the mock never requests a tool call — it just
+   * returns on-voice text — so demo sessions never trigger real mutations.
+   *
+   * The ONE exception is the Director's Office / Boardroom planner
+   * (server/api/ai/director/plan.post.ts): that surface is *propose-only* — every
+   * tool call becomes a `pending` ai_actions row a human still has to approve, so
+   * nothing executes on its own. Without at least one tool call the planner
+   * returns stepCount 0 and the Slides deck renders empty, which also blocks the
+   * marketing `director-slides` screenshot. So when we recognise a Director plan
+   * prompt we emit a small, safe set of `add_task` proposals (reversible; a task
+   * only needs a title) plus an on-voice briefing, letting the demo deck render a
+   * genuine plan. Shape matches ClaudeProvider.chatWithTools throughout.
    */
   async chatWithTools(
     anthropicMessages: Anthropic.MessageParam[],
@@ -87,6 +190,24 @@ export class MockClaudeProvider implements LLMProvider {
       options?.systemPrompt || '',
       ...anthropicMessages.map((m) => (typeof m.content === 'string' ? m.content : '')),
     ].join('\n');
+
+    const director = this.directorPlan(promptText, options);
+    if (director) {
+      const rawContent: Anthropic.ContentBlock[] = [
+        { type: 'text', text: director.text, citations: [] } as unknown as Anthropic.ContentBlock,
+        ...director.toolCalls.map(
+          (tc) => ({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input } as unknown as Anthropic.ContentBlock),
+        ),
+      ];
+      return {
+        text: director.text,
+        toolCalls: director.toolCalls,
+        stopReason: 'tool_use',
+        rawContent,
+        usage: this.usage(promptText, director.text),
+      };
+    }
+
     const text = this.render(promptText);
     return {
       text,
@@ -109,6 +230,40 @@ export class MockClaudeProvider implements LLMProvider {
   }
 
   // ── internals ──────────────────────────────────────────────────────────────
+
+  /**
+   * Recognise a Director's Office / Boardroom plan request and synthesise a
+   * small, on-voice briefing + a couple of `add_task` proposals grounded to the
+   * meeting's subject. Returns null for every other tool-aware call (ordinary
+   * chat mutations) so those keep the "prose, never a tool call" behaviour.
+   *
+   * Detection keys off the planner's system-prompt signature (stable literal
+   * strings from plan.post.ts) AND the presence of the `add_task` tool, so a
+   * stray chat prompt can't trip it.
+   */
+  private directorPlan(
+    promptText: string,
+    options?: LLMOptions,
+  ): { text: string; toolCalls: ToolCall[] } | null {
+    const hasAddTask = (options?.tools || []).some((t) => t.name === 'add_task');
+    const isDirector =
+      /Director reporting to the user/i.test(promptText) &&
+      /(as tool calls|Emit each step as a tool call|Draft the plan now)/i.test(promptText);
+    if (!hasAddTask || !isDirector) return null;
+
+    // Subject from the scope line: `the "money" area of the business`.
+    const subject = (promptText.match(/the\s+"(\w+)"\s+area of the business/i)?.[1] || '').toLowerCase();
+
+    const plan = DIRECTOR_PLANS[subject] || DIRECTOR_PLANS.default!;
+    // Deterministic ids (no Math.random — this may run in a workflow context).
+    const seed = promptText.length;
+    const toolCalls: ToolCall[] = plan.tasks.map((task, i) => ({
+      id: `mock_dir_${seed}_${i}`,
+      name: 'add_task',
+      input: { title: task.title, priority: task.priority },
+    }));
+    return { text: plan.text, toolCalls };
+  }
 
   private promptText(messages: ChatMessage[], options?: LLMOptions): string {
     return [options?.systemPrompt || '', ...messages.map((m) => m.content)].join('\n');

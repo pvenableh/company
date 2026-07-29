@@ -169,10 +169,10 @@ const SHOTS: Shot[] = [
 				// Let the rest of the advisor seats animate in before the shot — the
 				// seed plants a grounding notice per subject so the board reads as a
 				// live, prioritised "whole-org briefing" (Money URGENT, Leads/Tickets/
-				// Proposals HIGH, Projects MEDIUM). We capture the constellation, not a
-				// subject's plan panel: the planner returns a conversational outline
-				// (no structured tool-call steps), so the Slides deck stays empty —
-				// an app-side planner behavior, not a data gap.
+				// Proposals HIGH, Projects MEDIUM). This shot captures the board
+				// constellation itself (the node-graph); the subject plan deck is
+				// captured separately by `director-slides` below (the planner now emits
+				// concrete tool-call steps, so that deck is no longer empty).
 				for (const label of ['Leads', 'Tickets', 'Proposals', 'Projects']) {
 					await page.getByText(label, { exact: true }).first().waitFor({ timeout: 8000 }).catch(() => {});
 				}
@@ -185,9 +185,11 @@ const SHOTS: Shot[] = [
 	{
 		// The Director's Office AI slide deck — convene, draft a plan for a
 		// subject that has concrete proposed steps, flip to the Slides deck,
-		// advance past the cover. Needs the demo user to have AI-token budget
-		// (both demo orgs were exhausted 2026-07-09 → "Could not draft a plan").
-		// Agency (org-wide) has the richest data → the most concrete plan.
+		// advance past the cover. In demo mode the planner runs on the mock LLM
+		// (server/utils/llm/mock-claude.ts), which emits a couple of grounded
+		// `add_task` proposals per subject + a "TL;DR" briefing, so every subject
+		// drafts a real deck (no real tokens spent, no exhaustion). MONEY is tried
+		// first and also carries the "By the numbers" metrics slide.
 		slug: 'director-slides',
 		viewport: 'hero',
 		persona: 'solo',

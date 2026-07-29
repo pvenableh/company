@@ -226,10 +226,43 @@ export default defineEventHandler(async (event) => {
   const planId = randomUUID();
   let round: Awaited<ReturnType<ClaudeProvider['chatWithTools']>>;
   try {
+    // First pass: `auto` so briefing-heavy modes (money/client review) can lead
+    // with their prose analysis AND still emit steps in the same turn.
     round = await provider.chatWithTools(
       [{ role: 'user', content: userMessage }],
-      { systemPrompt, maxTokens: (isMoney || isClientReview) ? 3500 : 2048, tools: DIRECTOR_TOOLS },
+      {
+        systemPrompt,
+        maxTokens: (isMoney || isClientReview) ? 3500 : 2048,
+        tools: DIRECTOR_TOOLS,
+        toolChoice: { type: 'auto' },
+      },
     );
+
+    // The model sometimes answers with a conversational outline and no tool
+    // calls — which leaves the plan with zero steps and the Slides deck empty.
+    // When that happens, force a second pass (`any` = must call a tool) so we
+    // still get concrete, approvable steps. Keep the first pass's prose as the
+    // intro/briefing since the forced pass emits tool calls only.
+    if (round.toolCalls.length === 0) {
+      console.warn('[ai/director/plan] first pass emitted no tool calls — forcing tool use');
+      const forced = await provider.chatWithTools(
+        [
+          { role: 'user' as const, content: userMessage },
+          ...(round.text ? [{ role: 'assistant' as const, content: round.text }] : []),
+          { role: 'user' as const, content: 'Now emit each concrete next step as a tool call (add_task / update_field / send_email / reschedule_project). Do not reply with prose — tool calls only.' },
+        ],
+        { systemPrompt, maxTokens: 2048, tools: DIRECTOR_TOOLS, toolChoice: { type: 'any' } },
+      );
+      // Merge: keep the original briefing text, take the forced pass's steps.
+      round = {
+        ...forced,
+        text: round.text || forced.text,
+        usage: {
+          inputTokens: (round.usage?.inputTokens || 0) + (forced.usage?.inputTokens || 0),
+          outputTokens: (round.usage?.outputTokens || 0) + (forced.usage?.outputTokens || 0),
+        },
+      };
+    }
   } catch (err: any) {
     console.error('[ai/director/plan] LLM error:', err?.message);
     throw createError({ statusCode: 502, message: 'Earnest could not draft a plan right now. Please try again.' });
