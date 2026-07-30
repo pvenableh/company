@@ -97,6 +97,7 @@ async function loadProjectEvents(projectId: string) {
 				'id', 'title', 'type', 'status', 'approval', 'approved_at',
 				'event_date', 'end_date', 'description',
 				'prototype_link',
+				'category_id.id', 'category_id.name', 'category_id.color', 'category_id.text_color',
 				'files.directus_files_id.id',
 				'files.directus_files_id.type',
 				'files.directus_files_id.title',
@@ -329,9 +330,14 @@ watch(() => selectedOrg.value, async () => {
 										<div class="flex items-start justify-between gap-2">
 											<div class="min-w-0">
 												<p class="text-sm font-medium truncate">{{ evt.title }}</p>
-												<p class="text-[10px] text-muted-foreground mt-0.5">
-													{{ evt.type }}
-													<span v-if="evt.event_date"> &middot; {{ getFriendlyDateTwo(evt.event_date) }}</span>
+												<p class="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+													<span
+														v-if="evt.category_id && typeof evt.category_id === 'object' && evt.category_id.name"
+														class="font-semibold px-1.5 py-0.5 rounded-full leading-none"
+														:style="{ backgroundColor: evt.category_id.color || undefined, color: evt.category_id.text_color || undefined }"
+													>{{ evt.category_id.name }}</span>
+													<span v-else-if="evt.type">{{ evt.type }}</span>
+													<span v-if="evt.event_date">&middot; {{ getFriendlyDateTwo(evt.event_date) }}</span>
 												</p>
 												<p v-if="evt.description" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ evt.description }}</p>
 											</div>
@@ -398,6 +404,12 @@ watch(() => selectedOrg.value, async () => {
 												}"
 											/>
 											<span class="text-xs truncate">{{ evt.title }}</span>
+											<!-- Colored category label — parity with the internal event surface. -->
+											<span
+												v-if="evt.category_id && typeof evt.category_id === 'object' && evt.category_id.name"
+												class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 leading-none"
+												:style="{ backgroundColor: evt.category_id.color || undefined, color: evt.category_id.text_color || undefined }"
+											>{{ evt.category_id.name }}</span>
 										</div>
 										<span
 											v-if="evt.approval === 'Approved'"
