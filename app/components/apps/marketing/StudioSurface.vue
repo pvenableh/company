@@ -953,7 +953,7 @@ onMounted(() => {
           role="tab"
           :aria-selected="stateFilter === f.key"
           class="studio-tabs__item"
-          :class="{ 'studio-tabs__item--active': stateFilter === f.key }"
+          :class="{ 'studio-tabs__item--active glass-active-thumb': stateFilter === f.key }"
           @click="stateFilter = f.key"
         >
           <span class="studio-tabs__label">{{ f.label }}</span>
@@ -1586,6 +1586,7 @@ onMounted(() => {
 }
 
 .studio-tabs__item {
+  position: relative;
   @apply inline-flex items-center gap-1.5 rounded-full
     px-3 py-1 text-xs font-medium whitespace-nowrap
     text-muted-foreground transition-all duration-200
@@ -1607,29 +1608,13 @@ onMounted(() => {
     text-muted-foreground;
 }
 
+/* Frosted glass fill + rim come from `.glass-active-thumb`. */
 .studio-tabs__item--active {
-  color: white;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
-  );
-  box-shadow:
-    0 1px 0 0 hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 14%) / 0.5) inset,
-    0 4px 10px -6px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+  color: hsl(var(--foreground));
 }
 
 .studio-tabs__item--active .studio-tabs__count {
-  @apply bg-white/20 text-white;
-}
-
-:global(html[data-chip-mode='neutral'] .studio-tabs__item--active),
-:global(html[data-surface='glass'] .studio-tabs__item--active) {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary) / 0.92),
-    hsl(var(--primary))
-  );
+  @apply bg-foreground/10 text-foreground;
 }
 
 /* .studio-card* — styles live in StudioPostCard.vue (the unattached-posts

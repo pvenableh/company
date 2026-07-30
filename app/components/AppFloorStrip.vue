@@ -103,7 +103,7 @@ watch(() => props.modelValue, () => nextTick(measure));
 		:aria-label="ariaLabel"
 	>
 		<div ref="scrollerEl" class="app-floor-strip__scroller">
-			<div class="app-floor-strip__thumb" aria-hidden="true" :style="thumbStyle" />
+			<div class="app-floor-strip__thumb glass-active-thumb" aria-hidden="true" :style="thumbStyle" />
 			<button
 				v-for="(seg, idx) in items"
 				:key="seg.key"
@@ -162,20 +162,14 @@ watch(() => props.modelValue, () => nextTick(measure));
 	left: 0;
 	width: 0;
 	border-radius: 9999px;
-	background: linear-gradient(
-		135deg,
-		hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
-		hsl(var(--accent-h) var(--accent-s) var(--accent-l))
-	);
-	box-shadow:
-		0 1px 0 0 hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 14%) / 0.5) inset,
-		0 4px 12px -6px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+	/* Elastic "liquid bubble" — see ProjectTabsBar. */
 	transition:
-		left 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
-		width 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		left 460ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		width 560ms cubic-bezier(0.5, 1.6, 0.5, 1),
 		opacity 200ms ease;
 	pointer-events: none;
 	z-index: 0;
+	will-change: left, width;
 }
 @media (prefers-reduced-motion: reduce) {
 	.app-floor-strip__thumb { transition: opacity 120ms ease; }
@@ -211,29 +205,14 @@ watch(() => props.modelValue, () => nextTick(measure));
  * flips to near-WHITE under the Mono palette — a hardcoded `white` text then
  * vanished (white-on-white). `--primary-foreground` is the correct on-primary
  * colour in every theme: white on cyan (Default), dark ink on white (Mono). */
+/* Active label sits on the frosted glass thumb — `--foreground` reads on the
+ * light translucent fill in every palette (the glass tint desaturates itself
+ * under Mono via `--app-accent-s`). */
 .app-floor-strip__item--active {
-	color: hsl(var(--primary-foreground));
+	color: hsl(var(--foreground));
 }
 
 .app-floor-strip__item--active:hover {
-	color: hsl(var(--primary-foreground));
-}
-
-/* Neutral palette + Glass-toggle override — per-app accent vars are flat
- * grey for the Neutral palette (since its sourceColors are all grey), so
- * the default gradient would render as white-on-grey gradient → invisible.
- * Force the thumb onto `--primary` for those modes.
- *
- * `html[…]` prefix lifts specificity above the scoped style attribute. */
-html[data-chip-mode='neutral'] .app-floor-strip__thumb,
-html[data-surface='glass'] .app-floor-strip__thumb {
-	background: linear-gradient(
-		135deg,
-		hsl(var(--primary) / 0.92),
-		hsl(var(--primary))
-	);
-	box-shadow:
-		0 1px 0 0 hsl(var(--primary) / 0.4) inset,
-		0 4px 12px -6px hsl(var(--primary) / 0.55);
+	color: hsl(var(--foreground));
 }
 </style>

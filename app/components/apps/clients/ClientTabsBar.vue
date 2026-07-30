@@ -107,7 +107,7 @@ onUnmounted(() => {
 	<!-- One horizontal, swipeable row that scrolls instead of wrapping into
 	     stacked rows on narrow screens. The thumb slides between tabs. -->
 	<div ref="scrollerEl" class="client-tabs relative flex flex-nowrap items-center gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide">
-		<div class="client-tabs__thumb" aria-hidden="true" :style="thumbStyle" />
+		<div class="client-tabs__thumb glass-active-thumb" aria-hidden="true" :style="thumbStyle" />
 		<button
 			v-for="(tab, idx) in tabs"
 			:key="tab.key"
@@ -144,7 +144,7 @@ onUnmounted(() => {
 }
 .client-tabs__item--active,
 .client-tabs__item--active:hover {
-	color: hsl(var(--primary-foreground));
+	color: hsl(var(--foreground));
 }
 
 .client-tabs__thumb {
@@ -154,14 +154,14 @@ onUnmounted(() => {
 	left: 0;
 	width: 0;
 	border-radius: 9999px;
-	background: hsl(var(--primary));
-	box-shadow: 0 4px 12px -6px hsl(var(--primary) / 0.5);
+	/* Elastic "liquid bubble" — see ProjectTabsBar. */
 	transition:
-		left 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
-		width 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		left 460ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		width 560ms cubic-bezier(0.5, 1.6, 0.5, 1),
 		opacity 200ms ease;
 	pointer-events: none;
 	z-index: 0;
+	will-change: left, width;
 }
 @media (prefers-reduced-motion: reduce) {
 	.client-tabs__thumb {

@@ -114,7 +114,7 @@ const trackStyle = computed(() => ({
     :aria-label="ariaLabel"
     :style="trackStyle"
   >
-    <div class="apps-segmented__thumb" aria-hidden="true" :style="thumbStyle" />
+    <div class="apps-segmented__thumb glass-active-thumb" aria-hidden="true" :style="thumbStyle" />
     <button
       v-for="(tab, idx) in tabs"
       :key="tab.key"
@@ -171,11 +171,7 @@ const trackStyle = computed(() => ({
   left: 3px;
   width: calc((100% - 6px) / var(--tab-count, 5));
   border-radius: 7px;
-  background: hsl(var(--background));
-  box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.04),
-    0 1px 2px rgb(0 0 0 / 0.08),
-    0 2px 4px -1px rgb(0 0 0 / 0.04);
+  /* Frosted fill + refract rim come from `.glass-active-thumb`. */
   transform: translate3d(calc(var(--active-index, 0) * 100%), 0, 0);
   transition:
     transform 400ms cubic-bezier(0.36, 0.66, 0.04, 1),

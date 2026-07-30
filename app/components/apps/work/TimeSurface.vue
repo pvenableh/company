@@ -281,7 +281,7 @@ watch(() => selectedClient.value, () => {
           role="tab"
           :aria-selected="activeTab === tab.key"
           class="time-tabs__item"
-          :class="{ 'time-tabs__item--active': activeTab === tab.key }"
+          :class="{ 'time-tabs__item--active glass-active-thumb': activeTab === tab.key }"
           @click="switchTab(tab.key)"
         >
           <Icon :name="tab.icon" class="time-tabs__icon" />
@@ -470,6 +470,7 @@ watch(() => selectedClient.value, () => {
 }
 
 .time-tabs__item {
+  position: relative;
   @apply inline-flex items-center gap-1.5 rounded-full
     px-3 py-1 text-xs font-medium whitespace-nowrap
     text-muted-foreground transition-all duration-200
@@ -496,28 +497,22 @@ watch(() => selectedClient.value, () => {
     text-muted-foreground;
 }
 
+/* Frosted glass fill + rim come from `.glass-active-thumb`; keep only the
+ * legible-on-glass foreground text + count treatment here. */
 .time-tabs__item--active {
-  color: white;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 8%)),
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
-  );
-  box-shadow:
-    0 1px 0 0 hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 14%) / 0.5) inset,
-    0 4px 10px -6px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+  color: hsl(var(--foreground));
 }
 
 .time-tabs__item--active:hover {
-  color: white;
+  color: hsl(var(--foreground));
 }
 
 .time-tabs__item--active .time-tabs__count {
-  @apply bg-white/20 text-white;
+  @apply bg-foreground/10 text-foreground;
 }
 
-:global(html[data-chip-mode='neutral'] .time-tabs__item--active),
-:global(html[data-surface='glass'] .time-tabs__item--active) {
+:global(html[data-chip-mode='neutral'] .time-tabs__item--active-legacy),
+:global(html[data-surface='glass'] .time-tabs__item--active-legacy) {
   background: linear-gradient(
     135deg,
     hsl(var(--primary) / 0.92),

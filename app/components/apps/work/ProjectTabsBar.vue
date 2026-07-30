@@ -110,8 +110,8 @@ onUnmounted(() => {
 	<!-- One horizontal, swipeable row that scrolls instead of wrapping into
 	     stacked rows on narrow screens. The thumb slides between tabs. -->
 	<div ref="scrollerEl" class="project-tabs relative flex flex-nowrap items-center gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide">
-		<!-- Sliding thumb — one pill morphs between tabs on the iOS spring. -->
-		<div class="project-tabs__thumb" aria-hidden="true" :style="thumbStyle" />
+		<!-- Sliding thumb — one liquid-glass pill morphs between tabs on the iOS spring. -->
+		<div class="project-tabs__thumb glass-active-thumb" aria-hidden="true" :style="thumbStyle" />
 		<button
 			v-for="(tab, idx) in tabs"
 			:key="tab.key"
@@ -147,15 +147,15 @@ onUnmounted(() => {
 	@apply text-foreground;
 }
 .project-tabs__item--active {
-	color: hsl(var(--primary-foreground));
+	color: hsl(var(--foreground));
 }
 .project-tabs__item--active:hover {
-	color: hsl(var(--primary-foreground));
+	color: hsl(var(--foreground));
 }
 
-/* Sliding thumb — a single primary pill that slides + resizes between tabs
- * on the universal iOS spring (matches AppFloorStrip). Buttons are
- * transparent; only the thumb carries the fill. */
+/* Sliding thumb — a single liquid-glass pill that slides + resizes between
+ * tabs on the universal iOS spring (matches AppFloorStrip). Buttons are
+ * transparent; the frosted fill + rim come from `.glass-active-thumb`. */
 .project-tabs__thumb {
 	position: absolute;
 	top: 0;
@@ -163,14 +163,16 @@ onUnmounted(() => {
 	left: 0;
 	width: 0;
 	border-radius: 9999px;
-	background: hsl(var(--primary));
-	box-shadow: 0 4px 12px -6px hsl(var(--primary) / 0.5);
+	/* Elastic "liquid bubble": position lands with a spring overshoot while the
+	 * width settles a beat later on a springier curve, so the pill stretches in
+	 * the direction of travel and snaps in — the way iOS 26 nav pills move. */
 	transition:
-		left 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
-		width 400ms cubic-bezier(0.36, 0.66, 0.04, 1),
+		left 460ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		width 560ms cubic-bezier(0.5, 1.6, 0.5, 1),
 		opacity 200ms ease;
 	pointer-events: none;
 	z-index: 0;
+	will-change: left, width;
 }
 @media (prefers-reduced-motion: reduce) {
 	.project-tabs__thumb {

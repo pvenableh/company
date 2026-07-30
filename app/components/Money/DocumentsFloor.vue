@@ -59,7 +59,7 @@ defineExpose({ refresh, tab });
 				type="button"
 				class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
 				:class="tab === 'proposals'
-					? 'bg-primary text-primary-foreground border-primary'
+					? 'glass-active-thumb relative text-foreground border-transparent'
 					: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
 				@click="tab = 'proposals'"
 			>
@@ -71,7 +71,7 @@ defineExpose({ refresh, tab });
 				type="button"
 				class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
 				:class="tab === 'contracts'
-					? 'bg-primary text-primary-foreground border-primary'
+					? 'glass-active-thumb relative text-foreground border-transparent'
 					: 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
 				@click="tab = 'contracts'"
 			>

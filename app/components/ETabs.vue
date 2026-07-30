@@ -122,9 +122,9 @@ if (import.meta.client) {
   <Tabs v-model="activeTab" :class="cn(props.class)" :orientation="orientation">
     <div :class="cn(orientation !== 'vertical' ? 'overflow-x-auto -mx-1 px-1 scrollbar-hide' : '')">
     <TabsList ref="tabsListRef" :class="listClass">
-      <!-- Floating pill indicator -->
+      <!-- Floating liquid-glass pill — elastic overshoot on move/resize. -->
       <div
-        class="absolute top-0.5 h-[calc(100%-4px)] rounded-full bg-card shadow-sm border border-border/50 transition-all duration-300 ease-out pointer-events-none"
+        class="glass-active-thumb absolute top-0.5 h-[calc(100%-4px)] rounded-full transition-[left,width] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none"
         :style="pillStyle"
       />
       <TabsTrigger
