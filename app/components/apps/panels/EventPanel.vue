@@ -104,17 +104,9 @@ onBeforeUnmount(() => {
         </span>
       </div>
     </template>
-    <template v-if="!showForm" #actions>
-      <NuxtLink
-        v-if="projectId && viewEventId"
-        :to="`/projects/${projectId}/events/${viewEventId}`"
-        class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
-        title="Open the event as a full page"
-      >
-        <Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5" />
-        Open Event
-      </NuxtLink>
-    </template>
+    <!-- The event's full detail already renders in-stack below, so there's no
+         "open full page" action — the standalone /projects/[id]/events/[event]
+         route stays only for direct URL / email deep-links. -->
 
     <!-- Create mode — the rich new-event form. -->
     <AppsPanelsEventCreateForm

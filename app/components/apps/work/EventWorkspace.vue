@@ -189,7 +189,7 @@ const eventCategoryKind = computed(() => {
 // Inline "Details" editor — autosaving scalar fields. Category replaces the old
 // `type` dropdown; enum values match the project_events interface verbatim.
 const detailFields = computed(() => [
-	{ key: 'title', label: 'Title', type: 'text', placeholder: 'Event title…' },
+	{ key: 'title', label: 'Title', type: 'text', placeholder: 'Event title…', full: true },
 	{ key: 'category_id', label: 'Category', type: 'select', options: categoryOptions.value },
 	{
 		key: 'status', label: 'Status', type: 'select', options: [
@@ -202,7 +202,7 @@ const detailFields = computed(() => [
 	},
 	{ key: 'event_date', label: 'Event Date', type: 'date' },
 	{ key: 'end_date', label: 'End Date', type: 'date' },
-	{ key: 'description', label: 'Description', type: 'textarea', rows: 4 },
+	{ key: 'description', label: 'Description', type: 'textarea', rows: 4, full: true },
 ]);
 
 const detailValues = computed(() => ({
@@ -288,7 +288,6 @@ function openProject() {
 						<EarnestIcon class="w-3.5 h-3.5" />
 						<span class="hidden sm:inline">Ask Earnest</span>
 					</button>
-					<ReactionsBar :item-id="String(event.id)" collection="project_events" />
 					<ProjectsCompletedButton
 						v-if="canEditEvent"
 						:initial-status="event.status"
@@ -314,7 +313,6 @@ function openProject() {
 					{{ projectInfo.title }}
 				</button>
 				<div class="flex items-center gap-2">
-					<ReactionsBar :item-id="String(event.id)" collection="project_events" />
 					<ProjectsCompletedButton
 						v-if="canEditEvent"
 						:initial-status="event.status"
@@ -323,17 +321,22 @@ function openProject() {
 					/>
 				</div>
 			</div>
-			<!-- Details (inline autosaving editor) -->
+			<!-- Details (inline autosaving editor) — two-column card so short
+			     fields (category, status, dates) pair up and title/description
+			     span the full width. -->
 			<div :class="compact ? 'px-4 pb-2 pt-1' : 'p-4'">
 				<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Details</span>
-				<AppsInlineDetailsEditor
-					collection="project_events"
-					:item-id="String(event.id)"
-					:model-value="detailValues"
-					:fields="detailFields"
-					:can-edit="canEditEvent"
-					@updated="patch => Object.assign(event, patch)"
-				/>
+				<div class="rounded-2xl border border-border/60 bg-muted/10 p-4">
+					<AppsInlineDetailsEditor
+						collection="project_events"
+						:item-id="String(event.id)"
+						:model-value="detailValues"
+						:fields="detailFields"
+						:can-edit="canEditEvent"
+						:columns="2"
+						@updated="patch => Object.assign(event, patch)"
+					/>
+				</div>
 			</div>
 
 			<!-- Main content: two columns in page mode, stacked in compact -->
