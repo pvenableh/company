@@ -23,6 +23,12 @@ const videoMeetingItems = useDirectusItems('video_meetings');
 const { getUrl } = useDirectusFiles();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 const { openEarnestPanel } = useEarnestPanel();
+const { canEdit: canEditFeature } = useOrgRole();
+
+// Editing event fields is gated on the org `projects` update permission.
+// Read-only users (or clients) can open and view the event, but the inline
+// editor, status toggle, and task adder are hidden/disabled.
+const canEditEvent = computed(() => canEditFeature('projects'));
 
 const event = ref(null);
 const loading = ref(true);
@@ -166,20 +172,25 @@ const projectInfo = computed(() => {
 	};
 });
 
-// Inline "Details" editor — autosaving scalar fields. Enum values match the
-// project_events interface verbatim (note the Capitalized status/type values).
-const detailFields = [
+// Org event categories (the classifier that replaced `type` in the UI).
+const { list: listCategories } = useProjectEventCategories();
+const eventCategories = ref([]);
+onMounted(async () => {
+	try { eventCategories.value = await listCategories(); } catch { eventCategories.value = []; }
+});
+const categoryOptions = computed(() => eventCategories.value.map((c) => ({ value: c.id, label: c.name })));
+
+// The selected category's behavior kind — drives whether this event is billable.
+const eventCategoryKind = computed(() => {
+	const cid = typeof event.value?.category_id === 'object' ? event.value?.category_id?.id : event.value?.category_id;
+	return eventCategories.value.find((c) => c.id === cid)?.kind || null;
+});
+
+// Inline "Details" editor — autosaving scalar fields. Category replaces the old
+// `type` dropdown; enum values match the project_events interface verbatim.
+const detailFields = computed(() => [
 	{ key: 'title', label: 'Title', type: 'text', placeholder: 'Event title…' },
-	{
-		key: 'type', label: 'Type', type: 'select', options: [
-			{ value: 'General', label: 'General' },
-			{ value: 'Design', label: 'Design' },
-			{ value: 'Content', label: 'Content' },
-			{ value: 'Timeline', label: 'Timeline' },
-			{ value: 'Financial', label: 'Financial' },
-			{ value: 'Hours', label: 'Hours' },
-		],
-	},
+	{ key: 'category_id', label: 'Category', type: 'select', options: categoryOptions.value },
 	{
 		key: 'status', label: 'Status', type: 'select', options: [
 			{ value: 'draft', label: 'Draft' },
@@ -192,11 +203,11 @@ const detailFields = [
 	{ key: 'event_date', label: 'Event Date', type: 'date' },
 	{ key: 'end_date', label: 'End Date', type: 'date' },
 	{ key: 'description', label: 'Description', type: 'textarea', rows: 4 },
-];
+]);
 
 const detailValues = computed(() => ({
 	title: event.value?.title ?? '',
-	type: event.value?.type ?? '',
+	category_id: (typeof event.value?.category_id === 'object' ? event.value?.category_id?.id : event.value?.category_id) ?? '',
 	status: event.value?.status ?? '',
 	event_date: (event.value?.event_date || '').slice(0, 10),
 	end_date: (event.value?.end_date || '').slice(0, 10),
@@ -230,7 +241,7 @@ function openProject() {
 		<template v-else-if="event">
 			<!-- Bill this milestone — only on Financial payment milestones. -->
 			<div
-				v-if="event.payment_amount || event.type === 'Financial' || event.is_milestone"
+				v-if="event.payment_amount || event.type === 'Financial' || eventCategoryKind === 'financial' || event.is_milestone"
 				class="flex justify-end px-4 pt-3"
 			>
 				<UiActionButton icon="earnest" variant="primary" hide-label="sm" @click="openEarnestPanel(earnestActionsFor('project_event')[0]?.prompt)">
@@ -279,6 +290,7 @@ function openProject() {
 					</button>
 					<ReactionsBar :item-id="String(event.id)" collection="project_events" />
 					<ProjectsCompletedButton
+						v-if="canEditEvent"
 						:initial-status="event.status"
 						:item-id="event.id"
 						@status-changed="handleStatusChanged"
@@ -304,6 +316,7 @@ function openProject() {
 				<div class="flex items-center gap-2">
 					<ReactionsBar :item-id="String(event.id)" collection="project_events" />
 					<ProjectsCompletedButton
+						v-if="canEditEvent"
 						:initial-status="event.status"
 						:item-id="event.id"
 						@status-changed="handleStatusChanged"
@@ -318,6 +331,7 @@ function openProject() {
 					:item-id="String(event.id)"
 					:model-value="detailValues"
 					:fields="detailFields"
+					:can-edit="canEditEvent"
 					@updated="patch => Object.assign(event, patch)"
 				/>
 			</div>
@@ -412,6 +426,7 @@ function openProject() {
 				<div :class="compact ? '' : 'bg-card border-l border-border overflow-hidden'">
 					<div :class="compact ? 'space-y-6' : 'h-full overflow-y-auto p-5 hide-scrollbar space-y-6'">
 						<TasksInlineAdder
+							v-if="canEditEvent"
 							context="event"
 							:context-id="String(event.id)"
 							:organization-id="projectInfo?.id ? event.project?.organization?.id : null"

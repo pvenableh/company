@@ -690,6 +690,7 @@ function statusDotClass(status: IntegrationStatus) {
 const teamsSlide = useAppSlideOver('teams');
 const rolesSlide = useAppSlideOver('roles');
 const documentsLibrarySlide = useAppSlideOver('documents_library');
+const eventCategoriesSlide = useAppSlideOver('event-categories');
 const socialAccountsSlide = useAppSlideOver('social-accounts');
 const accountSubscriptionSlide = useAppSlideOver('account-subscription');
 const settingsTiles = computed(() => [
@@ -699,6 +700,7 @@ const settingsTiles = computed(() => [
     : []),
   { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
   { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
+  { label: 'Event categories', desc: 'Colored labels for events on the project timeline', icon: 'lucide:tags', onClick: () => eventCategoriesSlide.open('_') },
   { label: 'Refer an agency', desc: 'Share your link — you both earn bonus credits on their paid plan', icon: 'lucide:gift', to: '/organization/refer' },
 ]);
 

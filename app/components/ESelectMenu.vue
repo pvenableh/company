@@ -57,6 +57,13 @@ function getOptionLabel(option: any): string {
   return option?.[props.optionAttribute] || option?.label || option?.name || String(option)
 }
 
+/** Optional per-option swatch color, e.g. category `color`. Opt-in: only
+ *  options that carry a `color` field render a dot. */
+function getOptionColor(option: any): string | null {
+  if (option && typeof option === 'object' && typeof option.color === 'string') return option.color
+  return null
+}
+
 function getOptionValue(option: any): any {
   if (typeof option === 'string') return option
   if (props.valueAttribute) return option?.[props.valueAttribute]
@@ -174,7 +181,14 @@ const sizeMap: Record<string, 'sm' | 'default'> = {
         :key="toStringKey(option, idx)"
         :value="toStringKey(option, idx)"
       >
-        {{ getOptionLabel(option) }}
+        <span class="flex items-center gap-2">
+          <span
+            v-if="getOptionColor(option)"
+            class="inline-block w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-black/5"
+            :style="{ backgroundColor: getOptionColor(option)! }"
+          />
+          {{ getOptionLabel(option) }}
+        </span>
       </SelectItem>
 
       <div

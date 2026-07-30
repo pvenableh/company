@@ -3872,6 +3872,10 @@ export interface ProjectEventCategory {
 	color: string;
 	text_color?: string | null;
 	icon?: string | null;
+	/** @description Owning organization — categories are per-org. */
+	organization?: Organization | string | null;
+	/** @description Behavior tag — drives event-form disclosure + billing. */
+	kind?: 'general' | 'design' | 'content' | 'timeline' | 'financial' | 'hours' | null;
 }
 
 export interface ProjectEventFile {

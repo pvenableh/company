@@ -104,6 +104,10 @@ export const TENANT_WRITE_REGISTRY: Record<string, RegistryEntry> = {
   // so gated buttons simply don't show for those roles; any UNGATED control is
   // a pre-existing matrix hole and gets a client guard added alongside this.
   projects: { feature: 'projects', org: { kind: 'direct', field: 'organization' } },
+  // Per-org event categories (colored labels on the Gantt). Managed from org
+  // Settings; gated on the `projects` feature so owner/admin/manager can curate
+  // them, and org-stamped automatically on create.
+  project_event_categories: { feature: 'projects', org: { kind: 'direct', field: 'organization' } },
   tickets: { feature: 'tickets', org: { kind: 'direct', field: 'organization' } },
   tasks: { feature: 'tasks', org: { kind: 'direct', field: 'organization_id' } },
   channels: { feature: 'channels', org: { kind: 'direct', field: 'organization' } },

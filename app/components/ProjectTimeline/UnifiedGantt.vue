@@ -759,8 +759,17 @@ function handleRowClick(row: GanttRow) {
 		if (single.value) return;
 		openProject(row.id);
 	} else if (row.type === 'event') {
-		selectedEventId.value = row.id;
-		showEventDetail.value = true;
+		// Internal users get the rich event detail slide-over (inline edit +
+		// files/invoices/comments/reactions/tasks), the same surface used by
+		// "New Event" and the project workspace — editing there is permission
+		// gated. Portal / legacy full-page contexts (no slide-over stack) keep
+		// the inline read-only modal.
+		if (!props.portal && route.path.startsWith('/apps')) {
+			pushSlideOver('project-event', row.id);
+		} else {
+			selectedEventId.value = row.id;
+			showEventDetail.value = true;
+		}
 	} else if (row.type === 'ticket') {
 		// Inside the apps shell, open the ticket in the slide-over stack (keeps
 		// project context) instead of navigating out to the legacy /tickets/:id.
@@ -772,6 +781,20 @@ function handleRowClick(row: GanttRow) {
 	} else if (row.link) {
 		navigateTo(row.link);
 	}
+}
+
+// Clicking a project NAME on the multi-project timeline expands it inline
+// (tree behavior) rather than opening the side panel — the panel now opens via
+// the row's hover ↗ button or the timeline bar. In single-project mode the
+// header row stays inert (handled by handleRowClick). Non-project rows keep
+// their normal open-on-click behavior.
+function onLabelClick(row: GanttRow) {
+	const isProjectHeader = row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section';
+	if (isProjectHeader && !single.value && row.hasChildren) {
+		toggleProject(row.id);
+		return;
+	}
+	handleRowClick(row);
 }
 
 function closeProjectPreview() {
@@ -1173,7 +1196,7 @@ const showUndated = ref(false);
 							'gantt__label--child': row.depth === 1,
 							'gantt__label--depth2': row.depth >= 2,
 						}"
-						@click="handleRowClick(row)"
+						@click="onLabelClick(row)"
 					>
 						<!-- Absolute toggle button for projects. `.stop.prevent` keeps
 						     the click from bubbling to the label's open-details
@@ -1211,6 +1234,18 @@ const showUndated = ref(false);
 							:style="{ paddingLeft: row.depth === 0 ? '20px' : '4px' }"
 							:title="row.label"
 						>{{ row.label }}</span>
+						<!-- Open the full project panel — the label click now expands
+						     inline, so opening moves to this hover affordance (and the
+						     timeline bar). Multi-project timeline only. -->
+						<button
+							v-if="!props.portal && !single && row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section'"
+							class="gantt__open shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5 rounded"
+							title="Open project"
+							aria-label="Open project"
+							@click.stop="openProject(row.id)"
+						>
+							<Icon name="lucide:arrow-up-right" class="w-3 h-3" />
+						</button>
 						<!-- Pin toggle — real project rows only (not the synthetic
 						     "My Tasks" section), and never in the read-only portal.
 						     Pinned projects float to the top; the button reveals on
