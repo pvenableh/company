@@ -99,9 +99,10 @@ onBeforeUnmount(() => {
       @created="onContractCreated"
     />
 
-    <AppsDocumentsContractWorkspace
+    <AppsDocumentsDocumentWorkspace
       v-else
-      :contract-id="id"
+      type="contract"
+      :document-id="id"
       compact
       @loaded="onLoaded"
       @back="$emit('close')"

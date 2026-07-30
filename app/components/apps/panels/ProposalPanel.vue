@@ -106,9 +106,10 @@ onBeforeUnmount(() => {
       @created="onProposalCreated"
     />
 
-    <AppsDocumentsProposalWorkspace
+    <AppsDocumentsDocumentWorkspace
       v-else
-      :proposal-id="id"
+      type="proposal"
+      :document-id="id"
       compact
       @loaded="onLoaded"
       @back="$emit('close')"

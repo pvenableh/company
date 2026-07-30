@@ -19,6 +19,6 @@ const contractId = computed(() => route.params.id as string);
 
 <template>
   <LayoutPageContainer>
-    <AppsDocumentsContractWorkspace :contract-id="contractId" />
+    <AppsDocumentsDocumentWorkspace type="contract" :document-id="contractId" />
   </LayoutPageContainer>
 </template>

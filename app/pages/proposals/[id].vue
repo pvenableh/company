@@ -19,6 +19,6 @@ const proposalId = computed(() => route.params.id as string);
 
 <template>
   <LayoutPageContainer>
-    <AppsDocumentsProposalWorkspace :proposal-id="proposalId" />
+    <AppsDocumentsDocumentWorkspace type="proposal" :document-id="proposalId" />
   </LayoutPageContainer>
 </template>
