@@ -10,6 +10,10 @@
 <script setup lang="ts">
 export type ProjectTabKey =
 	| 'overview'
+	// `work` groups Timeline / Tasks / Tickets / Meetings behind one inner
+	// sub-switch (see ProjectWorkspace). The four sub-keys remain valid for
+	// deep-links + the inner view state.
+	| 'work'
 	| 'timeline'
 	| 'activity'
 	| 'touchpoints'
@@ -43,12 +47,10 @@ function prefetch(key: ProjectTabKey) {
 
 const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'overview', label: 'Overview', icon: 'lucide:info' },
-	{ key: 'timeline', label: 'Timeline', icon: 'lucide:gantt-chart' },
-	{ key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
-	{ key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
+	// Work = Timeline + Tasks + Tickets + Meetings, grouped behind one tab.
+	{ key: 'work', label: 'Work', icon: 'lucide:gantt-chart' },
 	{ key: 'touchpoints', label: 'Touchpoints', icon: 'lucide:megaphone' },
 	{ key: 'channels', label: 'Channels', icon: 'lucide:message-square' },
-	{ key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'library', label: 'Files & Docs', icon: 'lucide:files' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
@@ -56,7 +58,7 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 ];
 
-const HAS_COUNT = (key: ProjectTabKey) => !['overview', 'timeline', 'activity'].includes(key);
+const HAS_COUNT = (key: ProjectTabKey) => !['overview', 'activity'].includes(key);
 
 // ── Sliding thumb (mirrors AppFloorStrip) ──────────────────────────────
 const scrollerEl = ref<HTMLElement | null>(null);

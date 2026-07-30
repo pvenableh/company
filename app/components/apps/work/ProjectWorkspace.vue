@@ -83,13 +83,34 @@ const project = ref<any | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-// Legacy deep-links (?tab=files / ?tab=documents) now resolve to the merged
-// Files & Docs surface so old bookmarks don't land on a blank tab.
+// The "Work" tab groups the project's time-ordered work — events (Timeline),
+// Tasks, Tickets and Meetings — behind one inner sub-switch, so the top tab bar
+// stays short. The four sub-keys remain valid deep-links + the inner view state.
+const WORK_SUBTABS = ['timeline', 'tasks', 'tickets', 'meetings'] as const;
+type WorkSubTab = (typeof WORK_SUBTABS)[number];
+const workView = ref<WorkSubTab>('timeline');
+const WORK_SUBTAB_ITEMS = computed(() => [
+	{ key: 'timeline', label: 'Timeline' },
+	{ key: 'tasks', label: 'Tasks', count: taskCount.value || null },
+	{ key: 'tickets', label: 'Tickets', count: ticketCount.value || null },
+	{ key: 'meetings', label: 'Meetings', count: meetings.value.length || null },
+]);
+
+// Legacy deep-links (?tab=files / ?tab=documents) resolve to Files & Docs;
+// ?tab=timeline/tasks/tickets/meetings resolve to Work + the right sub-view.
 function normalizeTab(t: ProjectTabKey | undefined | null): ProjectTabKey {
 	if (t === 'files' as any || t === 'documents' as any) return 'library';
+	if (t && (WORK_SUBTABS as readonly string[]).includes(t as string)) {
+		workView.value = t as WorkSubTab;
+		return 'work';
+	}
 	return (t || 'overview') as ProjectTabKey;
 }
 const activeTab = ref<ProjectTabKey>(normalizeTab(props.initialTab));
+// The tab whose content should render: Work delegates to its sub-view.
+const contentTab = computed<ProjectTabKey>(() =>
+	activeTab.value === 'work' ? (workView.value as ProjectTabKey) : activeTab.value,
+);
 
 // Directional tab-content animation. `tabDir` reflects whether we moved to a
 // later tab ('fwd') or an earlier one ('back') in the strip order; a
@@ -98,8 +119,8 @@ const activeTab = ref<ProjectTabKey>(normalizeTab(props.initialTab));
 // matching the sliding tab indicator + the apps floor nav. Attribute-driven
 // (not a <Transition> wrapper) so it can't destabilise the big template.
 const TAB_ORDER: ProjectTabKey[] = [
-	'overview', 'timeline', 'tasks', 'tickets', 'touchpoints', 'channels',
-	'meetings', 'invoices', 'library', 'contacts', 'activity',
+	'overview', 'work', 'touchpoints', 'channels',
+	'invoices', 'library', 'contacts', 'activity',
 ];
 const tabDir = ref<'fwd' | 'back'>('fwd');
 watch(activeTab, (next, prev) => {
@@ -331,6 +352,8 @@ const tasksView = useCookie<'board' | 'list'>('apps-project-tasks-view', { defau
 const ticketsView = useCookie<'board' | 'list'>('apps-project-tickets-view', { default: () => 'list' });
 
 const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
+	// Work badge = open tasks + tickets (the count a user cares about at a glance).
+	work: (taskCount.value || 0) + (ticketCount.value || 0),
 	tasks: taskCount.value,
 	tickets: ticketCount.value,
 	channels: channels.value.length,
@@ -421,8 +444,12 @@ function loadForTab(tab: ProjectTabKey) {
 
 watch(activeTab, (next) => {
 	emit('tab-change', next);
-	loadForTab(next);
+	// Work delegates to its sub-view; warm that sub-view's data.
+	loadForTab(next === 'work' ? workView.value : next);
 });
+// Switching the Work inner sub-switch warms the newly-shown sub-view.
+watch(workView, (v) => { if (activeTab.value === 'work') loadForTab(v); });
+onMounted(() => { if (activeTab.value === 'work') loadForTab(workView.value); });
 
 async function loadProject() {
 	loading.value = true;
@@ -1200,6 +1227,13 @@ watch(() => props.projectId, () => {
 			/>
 
 			<div class="p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
+				<!-- Work inner sub-switch — Timeline / Tasks / Tickets / Meetings.
+				     Sits above the content chain; the chain renders the sub-view
+				     via `contentTab`. -->
+				<div v-if="activeTab === 'work'" class="mb-4">
+					<ETabs v-model="workView" :items="WORK_SUBTAB_ITEMS" />
+				</div>
+
 				<!-- Overview — a work-first dashboard: health, Earnest's next
 				     moves, then the live pulse (recent activity + touchpoints).
 				     The raw field editor is demoted to a disclosure below so the
@@ -1316,7 +1350,7 @@ watch(() => props.projectId, () => {
 				<!-- Timeline — a project-scoped Gantt: this project's events/
 				     milestones + tickets + tasks on one time axis. Self-fetching
 				     (isolated single-project state), so nothing to warm here. -->
-				<div v-else-if="activeTab === 'timeline'">
+				<div v-else-if="contentTab === 'timeline'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">
 							Events, milestones, tickets, and tasks for this project on one timeline.
@@ -1344,7 +1378,7 @@ watch(() => props.projectId, () => {
 				     Workspace only adds the view toggle + Attach Existing
 				     since neither inner component knows about already-existing
 				     tasks elsewhere in the org. -->
-				<div v-else-if="activeTab === 'tasks'">
+				<div v-else-if="contentTab === 'tasks'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">
 							{{ tasksView === 'board' ? 'Drag a task between columns to update its status.' : 'All tasks tied to this project.' }}
@@ -1401,7 +1435,7 @@ watch(() => props.projectId, () => {
 				     (New Ticket + Attach Existing) so they sit together; the
 				     board's own embedded create button is suppressed via
 				     `hide-create`. -->
-				<div v-else-if="activeTab === 'tickets'">
+				<div v-else-if="contentTab === 'tickets'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">All tickets opened for this project.</p>
 						<div class="flex items-center gap-2">
@@ -1506,7 +1540,7 @@ watch(() => props.projectId, () => {
 				</div>
 
 				<!-- Meetings -->
-				<div v-else-if="activeTab === 'meetings'">
+				<div v-else-if="contentTab === 'meetings'">
 					<div class="flex items-center justify-end mb-3">
 						<button
 							type="button"
