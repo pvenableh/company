@@ -142,7 +142,7 @@ async function generate() {
 <template>
   <AppSlideOver
     v-model="open"
-    title="Draft with AI"
+    title="Draft with Earnest"
     description="Describe the deliverables — Earnest drafts editable documents. Nothing is sent."
     elevated
   >

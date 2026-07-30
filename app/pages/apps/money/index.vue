@@ -932,7 +932,7 @@ const headerAction = computed(() => {
           @click="showDraftAiModal = true"
         >
           <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
-          Draft with AI
+          Draft with Earnest
         </Button>
         <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
           <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />

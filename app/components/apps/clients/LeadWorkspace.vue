@@ -176,7 +176,7 @@ async function addReApproachTouch() {
 // create buttons (AI-draft proposal / blank proposal / blank contract) into a
 // single entry point.
 const leadDocActions = computed(() => [
-	{ label: 'AI-draft a proposal', icon: 'lucide:sparkles', click: () => { void generateDraft(); } },
+	{ label: 'Draft with Earnest', icon: 'lucide:sparkles', click: () => { void generateDraft(); } },
 	{ label: 'New proposal', icon: 'lucide:file-plus', click: () => { openProposalCreate({ leadId: lead.value?.id }); } },
 	{ label: 'New contract', icon: 'lucide:file-signature', click: () => { openContractCreate({ leadId: lead.value?.id }); } },
 ]);
@@ -512,7 +512,7 @@ function openContactPivot() {
 										spend
 										@click="generateDraft"
 									>
-										AI Draft
+										Draft with Earnest
 									</UiActionButton>
 								</TooltipTrigger>
 								<TooltipContent side="bottom" :side-offset="8" class="max-w-xs text-xs leading-snug">
