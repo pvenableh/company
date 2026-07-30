@@ -331,11 +331,30 @@ function skeletonRows(n: number, fallback = 4, max = 8): number[] {
 const { inheritedContacts, inheritedConnections, load: loadInherited } = useClientInheritedContacts();
 
 // Legacy `?tab=documents` deep-links fold into the merged Files & Docs surface.
+// The "Work" tab groups Tasks / Tickets / Meetings behind one inner sub-switch,
+// so the top tab bar stays short. Sub-keys remain valid deep-links + view state.
+const WORK_SUBTABS = ['tasks', 'tickets', 'meetings'] as const;
+type WorkSubTab = (typeof WORK_SUBTABS)[number];
+const workView = ref<WorkSubTab>('tasks');
+const WORK_SUBTAB_ITEMS = computed(() => [
+	{ key: 'tasks', label: 'Tasks', count: relatedTasks.value.length || null },
+	{ key: 'tickets', label: 'Tickets', count: relatedTickets.value.length || null },
+	{ key: 'meetings', label: 'Meetings', count: relatedMeetings.value.length || null },
+]);
+
 function normalizeTab(t: ClientTabKey | undefined | null): ClientTabKey {
 	if (t === 'documents' as any) return 'library';
+	if (t && (WORK_SUBTABS as readonly string[]).includes(t as string)) {
+		workView.value = t as WorkSubTab;
+		return 'work';
+	}
 	return (t || 'overview') as ClientTabKey;
 }
 const activeTab = ref<ClientTabKey>(normalizeTab(props.initialTab));
+// The tab whose content should render: Work delegates to its sub-view.
+const contentTab = computed<ClientTabKey>(() =>
+	activeTab.value === 'work' ? (workView.value as ClientTabKey) : activeTab.value,
+);
 
 // Overview "live pulse" sub-tabs — mirrors ProjectWorkspace. Timeline leads;
 // Touchpoints (comms log) sits second, folded in from what used to be a
@@ -350,8 +369,8 @@ const overviewPulseTabs = [
 // slides in from the direction of travel. Attribute-driven (not a Transition
 // wrapper) so it can't destabilise the template.
 const TAB_ORDER: ClientTabKey[] = [
-	'overview', 'contacts', 'projects', 'library', 'tickets', 'tasks',
-	'meetings', 'content', 'invoices', 'partners', 'messages', 'activity',
+	'overview', 'contacts', 'projects', 'library', 'work',
+	'content', 'invoices', 'partners', 'messages', 'activity',
 ];
 const tabDir = ref<'fwd' | 'back'>('fwd');
 watch(activeTab, (next, prev) => {
@@ -382,8 +401,10 @@ function loadForTab(tab: ClientTabKey) {
 
 watch(activeTab, (next) => {
 	emit('tab-change', next);
-	loadForTab(next);
+	loadForTab(next === 'work' ? workView.value : next);
 });
+watch(workView, (v) => { if (activeTab.value === 'work') loadForTab(v); });
+onMounted(() => { if (activeTab.value === 'work') loadForTab(workView.value); });
 
 const relatedContent = ref<any[]>([]);
 const contentLoading = ref(false);
@@ -714,6 +735,8 @@ const totalContactCount = computed(() => relatedContacts.value.length + inherite
 const totalPartnerCount = computed(() => directConnections.value.length + inheritedConnections.value.length);
 
 const tabCounts = computed(() => ({
+	// Work badge = tasks + tickets tied to this client.
+	work: relatedTasks.value.length + relatedTickets.value.length,
 	contacts: totalContactCount.value,
 	// Projects/invoices/messages: cached counts on mount; replaced by the
 	// loaded row count once the tab is activated.
@@ -1140,6 +1163,12 @@ watch(() => props.clientId, () => {
 			/>
 
 			<div class="p-4 sm:p-6 overflow-x-clip" :data-tab-dir="tabDir">
+				<!-- Work inner sub-switch — Tasks / Tickets / Meetings. Sits above
+				     the content chain; the chain renders the sub-view via `contentTab`. -->
+				<div v-if="activeTab === 'work'" class="mb-4">
+					<ETabs v-model="workView" :items="WORK_SUBTAB_ITEMS" />
+				</div>
+
 				<!-- Overview — inline-editable "who they are": website, industry,
 				     location, brand direction, goals, target audience, notes.
 				     Autosaves each field; no need to leave the slide-over. -->
@@ -1737,7 +1766,7 @@ watch(() => props.clientId, () => {
 				</div>
 
 				<!-- Tickets -->
-				<div v-else-if="activeTab === 'tickets'">
+				<div v-else-if="contentTab === 'tickets'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">
 							{{ ticketsView === 'board' ? 'Drag a ticket to update its status.' : 'All tickets opened for this client.' }}
@@ -1832,7 +1861,7 @@ watch(() => props.clientId, () => {
 				</div>
 
 				<!-- Tasks -->
-				<div v-else-if="activeTab === 'tasks'">
+				<div v-else-if="contentTab === 'tasks'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">
 							{{ tasksView === 'board' ? 'Drag a task to update its status.' : 'All tasks tied to this client.' }}
@@ -1941,7 +1970,7 @@ watch(() => props.clientId, () => {
 				     New Meeting opens UnifiedEventModal with the client pinned
 				     (clientId prop). The server route already accepts and
 				     writes `video_meetings.client`. -->
-				<div v-else-if="activeTab === 'meetings'">
+				<div v-else-if="contentTab === 'meetings'">
 					<div class="flex items-center justify-end mb-3">
 						<button
 							type="button"
