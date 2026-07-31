@@ -66,6 +66,7 @@ async function main() {
     console.log('  status (string, default "active" — active|completed|abandoned),');
     console.log('  organization (m2o organizations — set on completion),');
     console.log('  last_activity (timestamp), completed_at (timestamp),');
+    console.log('  reminders_sent (int), last_reminded_at (timestamp),');
     console.log('  date_created / date_updated (timestamps).');
     console.log('\nWritten by admin-token /api/signup/*; NO client perms.');
     console.log('\nDRY RUN. Re-run with --apply to write.');
@@ -87,6 +88,10 @@ async function main() {
   await field('signup_drafts', { field: 'organization', type: 'uuid', meta: { interface: 'select-dropdown-m2o', special: ['m2o'], note: 'Org minted on completion (null until then)' }, schema: {} });
   await field('signup_drafts', { field: 'last_activity', type: 'timestamp', meta: { interface: 'datetime', note: 'Last time the draft was touched — drives abandonment reminders' }, schema: {} });
   await field('signup_drafts', { field: 'completed_at', type: 'timestamp', meta: { interface: 'datetime', readonly: true }, schema: {} });
+  // Abandonment-reminder tracking (Phase 4): first reminder 24h after last
+  // activity, then weekly, capped so it never nags.
+  await field('signup_drafts', { field: 'reminders_sent', type: 'integer', meta: { interface: 'input', note: 'Count of resume-reminder emails sent' }, schema: { default_value: 0 } });
+  await field('signup_drafts', { field: 'last_reminded_at', type: 'timestamp', meta: { interface: 'datetime', note: 'When the last resume reminder was sent' }, schema: {} });
   await field('signup_drafts', { field: 'date_created', type: 'timestamp', meta: { interface: 'datetime', special: ['date-created'], readonly: true }, schema: {} });
   await field('signup_drafts', { field: 'date_updated', type: 'timestamp', meta: { interface: 'datetime', special: ['date-updated'], readonly: true }, schema: {} });
 

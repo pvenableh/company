@@ -4496,6 +4496,10 @@ export interface SignupDraft {
 	completed_at?: string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
+	/** @description Count of resume-reminder emails sent */
+	reminders_sent?: number | null;
+	/** @description When the last resume reminder was sent */
+	last_reminded_at?: string | null;
 }
 
 export interface Slide {

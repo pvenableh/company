@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/demo-token-topup",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/abandoned-signup-reminders",
+      "schedule": "0 16 * * *"
     }
   ]
 }

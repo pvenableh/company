@@ -42,7 +42,12 @@ function react(gesture: string) {
 }
 defineExpose({ react })
 
-const railKey = computed(() => `${props.step}/${props.total}`)
+// Fraction of the journey completed → drives the gradient fill width.
+const fillPct = computed(() => {
+  const t = Math.max(1, props.total)
+  const s = Math.min(Math.max(0, props.step), t)
+  return `${(s / t) * 100}%`
+})
 </script>
 
 <template>
@@ -58,14 +63,9 @@ const railKey = computed(() => `${props.step}/${props.total}`)
       </NuxtLink>
 
       <div class="ob-card ios-card">
-        <!-- Progress rail (spans the whole journey) -->
-        <div class="ob-rail" :key="railKey">
-          <span
-            v-for="s in total"
-            :key="s"
-            class="ob-rail__seg"
-            :class="s <= step ? 'ob-rail__seg--on' : ''"
-          />
+        <!-- Progress rail — palette gradient fill across the whole journey -->
+        <div class="ob-rail">
+          <div class="ob-rail__fill" :style="{ width: fillPct }" />
         </div>
 
         <!-- Earnest presence + step heading -->
@@ -147,22 +147,22 @@ const railKey = computed(() => `${props.step}/${props.total}`)
   padding: 2rem;
 }
 
-/* ── Progress rail ── */
+/* ── Progress rail — continuous palette-gradient fill ── */
 .ob-rail {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin-bottom: 1.75rem;
-}
-.ob-rail__seg {
-  flex: 1;
-  height: 4px;
+  position: relative;
+  height: 5px;
   border-radius: 9999px;
   background: hsl(var(--muted) / 0.5);
-  transition: background-color 500ms cubic-bezier(0.36, 0.66, 0.04, 1);
+  overflow: hidden;
+  margin-bottom: 1.75rem;
 }
-.ob-rail__seg--on {
-  background: var(--cyan);
+.ob-rail__fill {
+  height: 100%;
+  border-radius: 9999px;
+  /* The brand palette ramp (pending → completed): cyan → teal → green. */
+  background: linear-gradient(90deg, var(--cyan), var(--cyan2) 45%, var(--green2) 80%, var(--green));
+  box-shadow: 0 0 12px -2px var(--cyan2);
+  transition: width 500ms cubic-bezier(0.36, 0.66, 0.04, 1);
 }
 
 /* ── Presence + heading ── */
