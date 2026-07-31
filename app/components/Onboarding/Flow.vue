@@ -13,9 +13,21 @@ import { ChevronLeft, ChevronRight, Plus, X, Check } from 'lucide-vue-next'
 const props = withDefaults(defineProps<{
   mode?: 'org' | 'draft'
   referredBy?: string | null
-}>(), { mode: 'org', referredBy: null })
+  // Referral branding for `?ref=` signups (draft mode) — shown on the account step.
+  referrer?: { id: string; name: string | null; logo: string | null; brand_color: string | null } | null
+}>(), { mode: 'org', referredBy: null, referrer: null })
 
 const isDraft = computed(() => props.mode === 'draft')
+
+const referrerLogoUrl = computed(() => {
+  if (!props.referrer?.logo) return null
+  return `${useRuntimeConfig().public.directusUrl}/assets/${props.referrer.logo}?width=120&quality=90`
+})
+const referrerStyle = computed(() =>
+  props.referrer?.brand_color
+    ? { '--ref-brand': props.referrer.brand_color, '--ref-brand-soft': `${props.referrer.brand_color}1f` }
+    : { '--ref-brand': 'hsl(var(--primary))', '--ref-brand-soft': 'hsl(var(--primary) / 0.12)' },
+)
 
 const { setOrganization, organizations, isInitialized, initializeOrganizations } = useOrganization()
 const router = useRouter()
@@ -415,8 +427,10 @@ function persist() {
   else saveState()
 }
 
-// ── Industries (fetched from Directus) ──
-const { list } = useDirectusItems('industries')
+// ── Industries ──
+// Fetched from a same-origin public route so the chips render in draft mode too
+// — the authed useDirectusItems proxy returns nothing for a guest, and a direct
+// cross-origin Directus fetch would be CORS-blocked in the browser.
 const industries = ref<{ id: string; name: string }[]>([])
 
 onMounted(async () => {
@@ -465,10 +479,10 @@ onMounted(async () => {
     }
   }
 
-  // Fetch industries (both modes)
+  // Fetch industries from the same-origin public route (works for guest + authed).
   try {
-    const data = await list({ fields: ['id', 'name'], sort: ['name'] })
-    industries.value = data as any[]
+    const res = await $fetch<{ data: { id: string; name: string }[] }>('/api/onboarding/industries')
+    industries.value = res.data || []
   } catch {}
 })
 
@@ -920,6 +934,18 @@ async function handleFinish() {
   >
     <!-- ═══ STEP: Account (draft mode only) ═══ -->
     <div v-if="currentStep === STEP.ACCOUNT">
+          <!-- Referral banner — brands the signup as the referring agency. -->
+          <div v-if="referrer" class="ob-referral" :style="referrerStyle">
+            <div class="ob-referral__logo">
+              <img v-if="referrerLogoUrl" :src="referrerLogoUrl" :alt="referrer.name || 'Referrer'" />
+              <span v-else>{{ (referrer.name || 'E').charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="min-w-0">
+              <p class="ob-referral__title"><strong>{{ referrer.name || 'A partner' }}</strong> invited you to Earnest</p>
+              <p class="ob-referral__sub">Create your own workspace — you'll both get bonus credits when you go paid.</p>
+            </div>
+          </div>
+
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -1490,3 +1516,34 @@ async function handleFinish() {
     </template>
   </OnboardingShell>
 </template>
+
+<style scoped>
+@reference "~/assets/css/tailwind.css";
+
+.ob-referral {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  border: 1px solid hsl(var(--border));
+  background: var(--ref-brand-soft);
+}
+.ob-referral__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--ref-brand);
+  color: #fff;
+  font-weight: 700;
+}
+.ob-referral__logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.ob-referral__title { font-size: 13px; color: hsl(var(--foreground)); line-height: 1.3; }
+.ob-referral__sub { font-size: 12px; color: hsl(var(--muted-foreground)); line-height: 1.3; margin-top: 2px; }
+</style>
