@@ -4476,6 +4476,28 @@ export interface ShopVariant {
 	stock?: number | null;
 }
 
+export interface SignupDraft {
+	/** @primaryKey */
+	id: number;
+	/** @description Unguessable client key for this draft @required */
+	token: string;
+	/** @description Email captured at step 1 */
+	email?: string | null;
+	first_name?: string | null;
+	last_name?: string | null;
+	/** @description Serialized wizard answers */
+	state?: Record<string, any> | null;
+	/** @description Lifecycle */
+	status?: 'active' | 'completed' | 'abandoned' | null;
+	/** @description Org minted on completion (null until then) */
+	organization?: Organization | string | null;
+	/** @description Last time the draft was touched — drives abandonment reminders */
+	last_activity?: string | null;
+	completed_at?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+}
+
 export interface Slide {
 	/** @primaryKey */
 	id: number;
@@ -5904,6 +5926,7 @@ export interface Schema {
 	shop_settings: ShopSettings;
 	shop_shipping_options: ShopShippingOption[];
 	shop_variants: ShopVariant[];
+	signup_drafts: SignupDraft[];
 	slides: Slide[];
 	social_accounts: SocialAccount[];
 	social_activity: SocialActivity[];
@@ -6175,6 +6198,7 @@ export enum CollectionNames {
 	shop_settings = 'shop_settings',
 	shop_shipping_options = 'shop_shipping_options',
 	shop_variants = 'shop_variants',
+	signup_drafts = 'signup_drafts',
 	slides = 'slides',
 	social_accounts = 'social_accounts',
 	social_activity = 'social_activity',
