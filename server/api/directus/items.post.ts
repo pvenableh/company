@@ -146,8 +146,16 @@ async function executeOperation(
     // single-use refresh token.
     const isTransient503 = status === 503;
 
-    // Retry once with force refresh if the token expired or the call transiently 503'd.
-    if ((isTokenExpired || isTransient503) && retryCount === 0 && session?.user) {
+    // Any 401 on an authenticated request means the access token was rejected —
+    // refresh and retry once, regardless of the exact error shape. The narrow
+    // "Token expired" match above missed some rejections (a stale token used
+    // during a navigation/refresh burst), which then surfaced as a hard failure
+    // and — via the org fetch — bounced valid users to /organization/new. A 403
+    // is a real perms denial and is deliberately NOT retried.
+    const isAuth401 = status === 401;
+
+    // Retry once with force refresh on token expiry, any 401, or a transient 503.
+    if ((isTokenExpired || isAuth401 || isTransient503) && retryCount === 0 && session?.user) {
       if (isTransient503) {
         // Small settle so the in-flight refresh can populate the deduped cache.
         await new Promise((r) => setTimeout(r, 300));
