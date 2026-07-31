@@ -18,15 +18,16 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
     const config = useRuntimeConfig();
 
-    // Invite user using SDK
-    const result = await directus.request(
-      inviteUser(email, role, {
-        invite_url: invite_url || `${config.public.appUrl}/accept-invite`,
-        ...additionalData,
-      })
+    // Invite user using SDK — withAuthRetry refreshes + retries once on a rejected token.
+    const result = await withAuthRetry(event, (directus) =>
+      directus.request(
+        inviteUser(email, role, {
+          invite_url: invite_url || `${config.public.appUrl}/accept-invite`,
+          ...additionalData,
+        })
+      )
     );
 
     return {

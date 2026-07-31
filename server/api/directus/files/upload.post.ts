@@ -9,7 +9,6 @@ import { uploadFiles } from "@directus/sdk";
 export default defineEventHandler(async (event) => {
   try {
     await requireUserSession(event);
-    const directus = await getUserDirectus(event);
     const formData = await readMultipartFormData(event);
 
     if (!formData) {
@@ -59,8 +58,8 @@ export default defineEventHandler(async (event) => {
     if (metadata.folder) uploadFormData.append("folder", metadata.folder);
     if (metadata.tags) uploadFormData.append("tags", JSON.stringify(metadata.tags));
 
-    // Upload using SDK
-    const result = await directus.request(uploadFiles(uploadFormData));
+    // Upload using SDK — withAuthRetry refreshes + retries once on a rejected token.
+    const result = await withAuthRetry(event, (directus) => directus.request(uploadFiles(uploadFormData)));
 
     return result;
   } catch (error: any) {

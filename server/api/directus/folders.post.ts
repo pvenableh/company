@@ -25,33 +25,34 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
+    // withAuthRetry refreshes + retries once on a rejected token (stale-token race).
+    return await withAuthRetry(event, async (directus) => {
+      switch (operation) {
+        case 'list':
+          return await directus.request(readFolders(query || {}));
 
-    switch (operation) {
-      case 'list':
-        return await directus.request(readFolders(query || {}));
+        case 'get':
+          if (!id) throw new Error('Folder ID required for get operation');
+          return await directus.request(readFolder(id, query || {}));
 
-      case 'get':
-        if (!id) throw new Error('Folder ID required for get operation');
-        return await directus.request(readFolder(id, query || {}));
+        case 'create':
+          if (!data) throw new Error('Data required for create operation');
+          return await directus.request(createFolder(data));
 
-      case 'create':
-        if (!data) throw new Error('Data required for create operation');
-        return await directus.request(createFolder(data));
+        case 'update':
+          if (!id) throw new Error('Folder ID required for update operation');
+          if (!data) throw new Error('Data required for update operation');
+          return await directus.request(updateFolder(id, data));
 
-      case 'update':
-        if (!id) throw new Error('Folder ID required for update operation');
-        if (!data) throw new Error('Data required for update operation');
-        return await directus.request(updateFolder(id, data));
+        case 'delete':
+          if (!id) throw new Error('Folder ID required for delete operation');
+          await directus.request(deleteFolder(id));
+          return { deleted: 1 };
 
-      case 'delete':
-        if (!id) throw new Error('Folder ID required for delete operation');
-        await directus.request(deleteFolder(id));
-        return { deleted: 1 };
-
-      default:
-        throw new Error(`Unknown operation: ${operation}`);
-    }
+        default:
+          throw new Error(`Unknown operation: ${operation}`);
+      }
+    });
   } catch (error: any) {
     console.error('Directus folders API error:', error);
 

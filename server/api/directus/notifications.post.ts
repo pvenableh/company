@@ -28,55 +28,56 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
+    // withAuthRetry refreshes + retries once on a rejected token (stale-token race).
+    return await withAuthRetry(event, async (directus) => {
+      switch (operation) {
+        case "list":
+          // Fires on every page load — a transient Directus blip during the burst
+          // must not 500 the shell. Retry, then degrade to an empty list.
+          try {
+            return await withTransientRetry(
+              () => directus.request(readNotifications(query || {})),
+              { label: "notifications:list" },
+            );
+          } catch (err: any) {
+            console.error("[notifications:list] Error (returning empty):", err?.message || err);
+            return [];
+          }
 
-    switch (operation) {
-      case "list":
-        // Fires on every page load — a transient Directus blip during the burst
-        // must not 500 the shell. Retry, then degrade to an empty list.
-        try {
-          return await withTransientRetry(
-            () => directus.request(readNotifications(query || {})),
-            { label: "notifications:list" },
-          );
-        } catch (err: any) {
-          console.error("[notifications:list] Error (returning empty):", err?.message || err);
-          return [];
-        }
+        case "get":
+          if (!id) throw createError({ statusCode: 400, message: "ID required" });
+          return await directus.request(readNotification(id, query || {}));
 
-      case "get":
-        if (!id) throw createError({ statusCode: 400, message: "ID required" });
-        return await directus.request(readNotification(id, query || {}));
+        case "create":
+          if (!data) throw createError({ statusCode: 400, message: "Data required" });
+          return await directus.request(createNotification(data));
 
-      case "create":
-        if (!data) throw createError({ statusCode: 400, message: "Data required" });
-        return await directus.request(createNotification(data));
+        case "createMany":
+          if (!data) throw createError({ statusCode: 400, message: "Data required" });
+          return await directus.request(createNotifications(data));
 
-      case "createMany":
-        if (!data) throw createError({ statusCode: 400, message: "Data required" });
-        return await directus.request(createNotifications(data));
+        case "update":
+          if (!id || !data) throw createError({ statusCode: 400, message: "ID and data required" });
+          return await directus.request(updateNotification(id, data));
 
-      case "update":
-        if (!id || !data) throw createError({ statusCode: 400, message: "ID and data required" });
-        return await directus.request(updateNotification(id, data));
+        case "updateMany":
+          if (!ids || !data) throw createError({ statusCode: 400, message: "IDs and data required" });
+          return await directus.request(updateNotifications(ids, data));
 
-      case "updateMany":
-        if (!ids || !data) throw createError({ statusCode: 400, message: "IDs and data required" });
-        return await directus.request(updateNotifications(ids, data));
+        case "delete":
+          if (!id) throw createError({ statusCode: 400, message: "ID required" });
+          await directus.request(deleteNotification(id));
+          return { success: true };
 
-      case "delete":
-        if (!id) throw createError({ statusCode: 400, message: "ID required" });
-        await directus.request(deleteNotification(id));
-        return { success: true };
+        case "deleteMany":
+          if (!ids) throw createError({ statusCode: 400, message: "IDs required" });
+          await directus.request(deleteNotifications(ids));
+          return { success: true, deleted: ids.length };
 
-      case "deleteMany":
-        if (!ids) throw createError({ statusCode: 400, message: "IDs required" });
-        await directus.request(deleteNotifications(ids));
-        return { success: true, deleted: ids.length };
-
-      default:
-        throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
-    }
+        default:
+          throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
+      }
+    });
   } catch (error: any) {
     console.error("[/api/directus/notifications] Error:", error);
 

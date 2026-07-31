@@ -22,19 +22,20 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
+    // withAuthRetry refreshes + retries once on a rejected token (stale-token race).
+    return await withAuthRetry(event, async (directus) => {
+      switch (operation) {
+        case "list":
+          return await directus.request(readRevisions(query || {}));
 
-    switch (operation) {
-      case "list":
-        return await directus.request(readRevisions(query || {}));
+        case "get":
+          if (!id) throw createError({ statusCode: 400, message: "ID required" });
+          return await directus.request(readRevision(id, query || {}));
 
-      case "get":
-        if (!id) throw createError({ statusCode: 400, message: "ID required" });
-        return await directus.request(readRevision(id, query || {}));
-
-      default:
-        throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
-    }
+        default:
+          throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
+      }
+    });
   } catch (error: any) {
     console.error("[/api/directus/revisions] Error:", error);
 
