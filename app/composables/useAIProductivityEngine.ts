@@ -136,10 +136,14 @@ export const useAIProductivityEngine = () => {
 			.filter((o: any) => !o.archived_at)
 			.map((o: any) => o.id),
 	);
-	const orgFilter = () => {
-		if (selectedOrg.value) return { organization: { _eq: selectedOrg.value } };
+	const orgFilter = () => orgFilterFor('organization');
+	// Same org fragment for collections whose org FK isn't named `organization`
+	// (e.g. tasks use `organization_id`). Scopes to the selected org, or to every
+	// accessible org when the "all orgs" pill is active.
+	const orgFilterFor = (field: string) => {
+		if (selectedOrg.value) return { [field]: { _eq: selectedOrg.value } };
 		const ids = accessibleOrgIds.value;
-		if (ids.length > 0) return { organization: { _in: ids } };
+		if (ids.length > 0) return { [field]: { _in: ids } };
 		return {};
 	};
 	const clientFilter = () => getClientFilter();
@@ -545,6 +549,9 @@ export const useAIProductivityEngine = () => {
 					_and: [
 						{ status: { _neq: 'completed' } },
 						{ assigned_to: { directus_users_id: { _eq: '$CURRENT_USER' } } },
+						// Scope to the selected org so a multi-org member's queue
+						// rescopes on switch (tasks carry `organization_id`).
+						orgFilterFor('organization_id'),
 					],
 				},
 				sort: ['due_date'],
@@ -850,14 +857,16 @@ export const useAIProductivityEngine = () => {
 				return results;
 			}
 
-			// Check scheduled posts
-			// social_posts has no client/org FK; scope to the current user since
-			// non-admin policies grant no row-level read on this collection anyway.
+			// Check scheduled posts — the user's own drafts/scheduled posts in the
+			// selected org (social_posts carries a required `organization` FK).
 			const posts = await socialPostItems.list({
 				fields: ['id', 'post_status', 'scheduled_at', 'platforms', 'caption'],
 				filter: {
-					post_status: { _in: ['scheduled', 'draft', 'failed'] },
-					user_created: { _eq: '$CURRENT_USER' },
+					_and: [
+						{ post_status: { _in: ['scheduled', 'draft', 'failed'] } },
+						{ user_created: { _eq: '$CURRENT_USER' } },
+						orgFilter(),
+					],
 				},
 				sort: ['scheduled_at'],
 				limit: 50,

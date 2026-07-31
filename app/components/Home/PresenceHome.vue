@@ -225,7 +225,9 @@ watch(
 const { selectedOrg } = useOrganization();
 const deeperRead = ref('');
 onMounted(async () => {
-	const orgId = (selectedOrg.value as any)?.id;
+	// `selectedOrg` is already the org id string (not an object), so read it
+	// directly — the old `?.id` was always undefined and short-circuited the read.
+	const orgId = selectedOrg.value;
 	if (!orgId) return;
 	const day = new Date().toISOString().slice(0, 10);
 	const cacheKey = `earnest.home.read.${orgId}.${day}`;

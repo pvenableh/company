@@ -53,6 +53,12 @@ const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, overview: cr
 // ── Earnest Score ──
 const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp, getScoreTier } = useEarnestScore();
 
+// ── Onboarding ──
+// For a brand-new org, surface the get-started checklist on the presence
+// LANDING (not just below the fold), so a new admin sees how to begin instead
+// of a calm-but-empty hero. `shouldShow` self-hides once essentials exist.
+const { shouldShow: onboardingShouldShow } = useOnboardingProgress();
+
 const badgeColor = (id: string): string => {
 	const colors: Record<string, string> = {
 		'first-flame': 'bg-warning/10 text-warning ring-1 ring-warning/20',
@@ -468,7 +474,13 @@ const goTo = (route: string) => {
 			<!-- Presence home: the calm conversational landing (opt-in via home_mode).
 			     The command center below is "everything," one gesture down. -->
 			<div v-if="isPresence" class="min-h-[84vh] flex items-center">
+				<!-- Brand-new org: lead with "here's how to start" instead of an
+				     empty calm hero. -->
+				<div v-if="onboardingShouldShow" class="w-full max-w-2xl mx-auto px-4">
+					<OnboardingGettingStartedChecklist />
+				</div>
 				<HomePresenceHome
+					v-else
 					class="w-full"
 					:greeting="greeting || typedGreeting"
 					:subtitle="subtitle"
@@ -536,8 +548,10 @@ const goTo = (route: string) => {
 
 				<!-- Getting-started activation checklist for new org admins. Self-hides
 				     once the essentials exist (or the admin dismisses it) — see
-				     useOnboardingProgress.shouldShow. -->
-				<OnboardingGettingStartedChecklist />
+				     useOnboardingProgress.shouldShow. On the presence landing it's
+				     shown in the hero instead (above), so skip it here to avoid a
+				     double. -->
+				<OnboardingGettingStartedChecklist v-if="!(isPresence && onboardingShouldShow)" />
 
 				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
