@@ -920,6 +920,19 @@ onContractCreatedPanel(() => onContractCreated());
 const showAttachProposalModal = ref(false);
 const showAttachContractModal = ref(false);
 
+// One context-aware "+ New" menu for the whole client surface — replaces the
+// per-tab "New X" buttons. Items are gated by the same permissions the old
+// buttons used; "Attach Existing" controls stay inline on each tab.
+const clientCreateMenuItems = computed(() => [
+	{ label: 'Project', icon: 'lucide:folder', onClick: () => { showCreateProjectModal.value = true; }, hidden: !canCreate('projects') },
+	{ label: 'Ticket', icon: 'lucide:ticket', onClick: () => { showCreateTicketModal.value = true; }, hidden: !canCreate('tickets') },
+	{ label: 'Meeting', icon: 'lucide:video', onClick: () => openMeetingCreate({ clientId: props.clientId, clientData: { id: props.clientId, name: (client.value as any)?.name }, defaultVideo: true }) },
+	{ label: 'Invoice', icon: 'lucide:file-text', onClick: () => openInvoiceCreate({ client: props.clientId }), separatorBefore: true },
+	{ label: 'Proposal', icon: 'lucide:file-plus', onClick: () => openProposalCreate() },
+	{ label: 'Contract', icon: 'lucide:file-signature', onClick: () => openContractCreate() },
+	{ label: 'Contact', icon: 'lucide:user-plus', onClick: () => openContactCreate({ clientId: props.clientId }), separatorBefore: true },
+]);
+
 // Quick task add: lightweight inline input instead of full FormModal
 // (no FormModal exists for tasks, and a project-less task at client
 // level is most easily expressed as a one-shot create).
@@ -1118,6 +1131,7 @@ watch(() => props.clientId, () => {
 			>
 				<template #actions>
 					<PinButton :pinned="(client as any)?.pinned" always @toggle="onTogglePin" />
+					<AppCreateMenu :items="clientCreateMenuItems" :hide-label="compact ? 'always' : undefined" />
 					<button
 						type="button"
 						class="inline-flex items-center justify-center h-8 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
@@ -1381,14 +1395,6 @@ watch(() => props.clientId, () => {
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
 						</button>
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openContactCreate({ clientId })"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Contact
-						</button>
 					</div>
 
 					<div v-if="!directContactsOrdered.length && !inheritedContacts.length" class="text-sm text-muted-foreground text-center py-10">
@@ -1493,15 +1499,6 @@ watch(() => props.clientId, () => {
 						>
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
-						</button>
-						<button
-							v-if="canCreate('projects')"
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="showCreateProjectModal = true"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Project
 						</button>
 					</div>
 
@@ -1638,14 +1635,6 @@ watch(() => props.clientId, () => {
 									<Icon name="lucide:link" class="w-3 h-3" />
 									Attach Existing
 								</button>
-								<button
-									type="button"
-									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="openProposalCreate()"
-								>
-									<Icon name="lucide:plus" class="w-3 h-3" />
-									New Proposal
-								</button>
 							</div>
 						</div>
 						<MoneyProposalsList
@@ -1672,14 +1661,6 @@ watch(() => props.clientId, () => {
 								>
 									<Icon name="lucide:link" class="w-3 h-3" />
 									Attach Existing
-								</button>
-								<button
-									type="button"
-									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="openContractCreate()"
-								>
-									<Icon name="lucide:plus" class="w-3 h-3" />
-									New Contract
 								</button>
 							</div>
 						</div>
@@ -1799,15 +1780,6 @@ watch(() => props.clientId, () => {
 							>
 								<Icon name="lucide:link" class="w-3 h-3" />
 								Attach Existing
-							</button>
-							<button
-								v-if="canCreate('tickets')"
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="showCreateTicketModal = true"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Ticket
 							</button>
 						</div>
 					</div>
@@ -1972,14 +1944,6 @@ watch(() => props.clientId, () => {
 				     writes `video_meetings.client`. -->
 				<div v-else-if="contentTab === 'meetings'">
 					<div class="flex items-center justify-end mb-3">
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openMeetingCreate({ clientId, clientData: { id: clientId, name: (client as any).name }, defaultVideo: true })"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Meeting
-						</button>
 					</div>
 					<div v-if="meetingsLoading && !relatedMeetings.length" class="text-sm text-muted-foreground text-center py-10">
 						Loading meetings…
@@ -2075,14 +2039,6 @@ watch(() => props.clientId, () => {
 						>
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
-						</button>
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openInvoiceCreate({ client: clientId })"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Invoice
 						</button>
 					</div>
 					<div v-if="invoicesLoading && !relatedInvoices.length" class="space-y-px" aria-busy="true" aria-label="Loading invoices">
