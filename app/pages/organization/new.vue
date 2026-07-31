@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner'
-import { Building2, ChevronLeft, ChevronRight, Plus, X, Check, Sparkles, CreditCard, PackagePlus } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Plus, X, Check } from 'lucide-vue-next'
 
-definePageMeta({ middleware: ['auth'] })
+definePageMeta({ middleware: ['auth'], layout: false })
 useHead({ title: 'New Organization | Earnest' })
 
 const { setOrganization, organizations, isInitialized, initializeOrganizations } = useOrganization()
@@ -10,12 +10,23 @@ const router = useRouter()
 const route = useRoute()
 
 // ── Step state ──
-// Internal step indices (1..6):
-//   1=name, 2=plan, 3=details, 4=payment, 5=addons, 6=invite
-// The Add-ons step is only shown on the paid path. Free-tier users go from
-// step 4 directly to step 6 (invite). The progress bar collapses to 5 dots
-// when paidCheckoutCompleted is false.
-const currentStep = ref(1)
+// Named step indices so inserts/reorders don't rely on magic numbers.
+// Pre-commit steps (NAME…EXPECT) advance via Continue and DETAILS/BRAND/GOALS/
+// EXPECT are skippable. PAYMENT is the commit. ADDONS is paid-path only (free
+// users jump PAYMENT → INVITE); the rail collapses to 8 dots on the free path.
+const STEP = {
+  NAME: 1,
+  PLAN: 2,
+  DETAILS: 3,
+  BRAND: 4,
+  GOALS: 5,
+  EXPECT: 6,
+  PAYMENT: 7,
+  ADDONS: 8,
+  INVITE: 9,
+} as const
+
+const currentStep = ref<number>(STEP.NAME)
 const creating = ref(false)
 const checkingOut = ref(false)
 const subscribingAddons = ref(false)
@@ -26,11 +37,59 @@ const stripeSessionId = ref<string | null>(null)
 const subscriptionId = ref<string | null>(null)
 const termsReaffirmed = ref(false)
 
-const totalSteps = computed(() => paidCheckoutCompleted.value ? 7 : 6)
+const totalSteps = computed(() => paidCheckoutCompleted.value ? 9 : 8)
 const displayedStep = computed(() => {
-  // On the free path, step 6 (invite) is shown as "step 5 of 5".
-  if (!paidCheckoutCompleted.value && currentStep.value === 7) return 6
+  // On the free path, INVITE (9) is shown as the 8th step (ADDONS is skipped).
+  if (!paidCheckoutCompleted.value && currentStep.value === STEP.INVITE) return 8
   return currentStep.value
+})
+
+// ── Journey numbering ──
+// The shared OnboardingShell spans the whole signup: `/register` is step 1,
+// so every wizard step is offset by +1 for the progress rail + label.
+const journeyStep = computed(() => displayedStep.value + 1)
+const journeyTotal = computed(() => totalSteps.value + 1)
+
+// Per-step heading, rendered by the shell above the Earnest presence so the
+// mark + title stack is identical on register and every wizard step.
+const stepMeta = computed<{ eyebrow?: string; title: string; subtitle?: string }>(() => {
+  switch (currentStep.value) {
+    case STEP.NAME: return { eyebrow: 'Your workspace', title: 'Name your organization', subtitle: "What's the name of your company or team?" }
+    case STEP.PLAN: return { eyebrow: 'Plan', title: 'Choose your plan', subtitle: 'You can change this anytime. All plans include every feature.' }
+    case STEP.DETAILS: return { eyebrow: 'Details', title: 'A few details', subtitle: 'Optional — you can always set these up later.' }
+    case STEP.BRAND: return { eyebrow: 'Brand voice', title: 'Your brand voice', subtitle: "Earnest writes in your voice everywhere — proposals, emails, marketing. Let it draft a starting point, then make it yours." }
+    case STEP.GOALS: return { eyebrow: 'Your goals', title: 'What are you working toward?', subtitle: 'Pick a few — Earnest keeps them front of mind and helps you hit them.' }
+    case STEP.EXPECT: return { eyebrow: 'Your take', title: 'What do you want from Earnest?', subtitle: 'This shapes how Earnest shows up for you. No wrong answers.' }
+    case STEP.PAYMENT: return { eyebrow: 'Start trial', title: 'Start your free trial', subtitle: 'Cancel anytime from your account.' }
+    case STEP.ADDONS: return { eyebrow: 'Add-ons', title: 'Round it out with add-ons', subtitle: 'Optional — billed monthly alongside your plan. You can change these anytime.' }
+    case STEP.INVITE: return { eyebrow: 'Your team', title: 'Invite your team', subtitle: 'Optional — add team members now or invite them later.' }
+    default: return { title: '' }
+  }
+})
+
+// Aura mood tracks what Earnest is "doing": drafting, listening, or celebrating.
+const stepMood = computed<'warm' | 'present' | 'think' | 'listen'>(() => {
+  if (currentStep.value === STEP.BRAND) return 'think'                          // drafting
+  if (currentStep.value === STEP.GOALS || currentStep.value === STEP.EXPECT) return 'listen'
+  if (currentStep.value >= STEP.PAYMENT) return 'warm'                          // commit + celebrate
+  return 'present'
+})
+
+// Earnest's contextual aside — reacts to what the user has entered so far.
+// Kept short and warm; the shell renders it under the step subtitle.
+const stepLine = computed(() => {
+  switch (currentStep.value) {
+    case STEP.NAME:
+      return orgName.value.trim() ? `Love the name. Let's build ${orgName.value.trim()} something great.` : ''
+    case STEP.GOALS: {
+      const n = selectedGoals.value.length
+      return n ? `${n} goal${n > 1 ? 's' : ''} locked in — I'll keep ${n > 1 ? 'them' : 'it'} front of mind.` : ''
+    }
+    case STEP.EXPECT:
+      return selectedExpectations.value.length ? "Got it — I'll show up exactly like that." : ''
+    default:
+      return ''
+  }
 })
 
 // ── Form data ──
@@ -49,9 +108,67 @@ const brandDifferentiator = ref('')
 const brandDrafting = ref(false)
 const brandDrafted = ref(false)
 const brandDraftNote = ref('')
+// Playful "thinking" beats shown on the draft button while the LLM works, so
+// the real latency reads as Earnest considering rather than a dead spinner.
+const BRAND_BEATS = ['Reading your business…', 'Listening for your voice…', 'Finding the right words…', 'Almost there…']
+const brandBeatIdx = ref(0)
+let brandBeatTimer: ReturnType<typeof setInterval> | null = null
+const brandBeat = computed(() => BRAND_BEATS[brandBeatIdx.value] ?? BRAND_BEATS[0])
 const invites = ref<{ email: string; role: string }[]>([])
 const newInviteEmail = ref('')
 const newInviteRole = ref('member')
+
+// Goals (GOALS step) — chip picks + optional freeform, serialized into the
+// org's free-text `goals` field (business objectives Earnest keeps in context).
+const GOAL_OPTIONS = [
+  'Win more clients',
+  'Raise my rates & retainers',
+  'Deliver work faster',
+  'One source of truth',
+  'Sharper client communication',
+  'Grow the team',
+  'Healthier profit margins',
+  'Clear financial visibility',
+] as const
+const selectedGoals = ref<string[]>([])
+const goalsNote = ref('')
+
+// Expectations (EXPECT step) — what the user wants from Earnest.
+// The `organizations.expectations` Directus field is live (added via
+// scripts/add-organizations-expectations.ts + generate:types), so the wizard
+// now persists it.
+const EXPECTATIONS_PERSIST = true
+const EXPECT_OPTIONS = [
+  'Save me time',
+  'Keep me organized',
+  'Make me look professional',
+  'Write in my voice',
+  'Chase the money for me',
+  'Tell me what to do next',
+] as const
+const selectedExpectations = ref<string[]>([])
+const expectationsNote = ref('')
+
+function toggleGoal(g: string) {
+  const i = selectedGoals.value.indexOf(g)
+  if (i === -1) selectedGoals.value.push(g)
+  else selectedGoals.value.splice(i, 1)
+  earnestReact('check')
+}
+function toggleExpectation(g: string) {
+  const i = selectedExpectations.value.indexOf(g)
+  if (i === -1) selectedExpectations.value.push(g)
+  else selectedExpectations.value.splice(i, 1)
+  earnestReact('check')
+}
+
+// Serialize chip picks + freeform into one readable string for storage.
+function composeList(picks: string[], note: string): string {
+  const parts: string[] = []
+  if (picks.length) parts.push(picks.join(', '))
+  if (note.trim()) parts.push(note.trim())
+  return parts.join('. ')
+}
 
 // Add-on selection (paid path only). Map of addonId -> selected.
 const selectedAddons = ref<Record<string, boolean>>({})
@@ -82,6 +199,10 @@ function loadState() {
     brandIdealClient.value = data.brandIdealClient || ''
     brandDifferentiator.value = data.brandDifferentiator || ''
     brandDrafted.value = !!(data.brandDirection || data.targetAudience)
+    selectedGoals.value = Array.isArray(data.selectedGoals) ? data.selectedGoals : []
+    goalsNote.value = data.goalsNote || ''
+    selectedExpectations.value = Array.isArray(data.selectedExpectations) ? data.selectedExpectations : []
+    expectationsNote.value = data.expectationsNote || ''
     invites.value = Array.isArray(data.invites) ? data.invites : []
     createdOrgId.value = data.createdOrgId || null
     paidCheckoutCompleted.value = !!data.paidCheckoutCompleted
@@ -106,6 +227,10 @@ function saveState() {
       targetAudience: targetAudience.value,
       brandIdealClient: brandIdealClient.value,
       brandDifferentiator: brandDifferentiator.value,
+      selectedGoals: selectedGoals.value,
+      goalsNote: goalsNote.value,
+      selectedExpectations: selectedExpectations.value,
+      expectationsNote: expectationsNote.value,
       invites: invites.value,
       createdOrgId: createdOrgId.value,
       paidCheckoutCompleted: paidCheckoutCompleted.value,
@@ -137,17 +262,17 @@ onMounted(async () => {
 
   if (stepParam === 'invite' && checkoutFlag === 'ok') {
     // Successful Stripe round-trip — flip into the paid path so the wizard
-    // surfaces the Add-ons step (5) before Invite (6).
+    // surfaces the Add-ons step before Invite.
     if (orgIdParam && !createdOrgId.value) createdOrgId.value = orgIdParam
     if (createdOrgId.value) setOrganization(createdOrgId.value)
     if (sessionIdParam) stripeSessionId.value = sessionIdParam
     paidCheckoutCompleted.value = true
     toast.success('Payment received — pick any add-ons to round it out')
-    currentStep.value = 6  // Add-ons step (paid path)
+    currentStep.value = STEP.ADDONS
     saveState()
     router.replace({ path: '/organization/new' })
   } else if (stepParam === 'plan' && checkoutFlag === 'cancel') {
-    currentStep.value = 2
+    currentStep.value = STEP.PLAN
     toast.info('No problem — pick a plan when you’re ready to start your free trial.')
     router.replace({ path: '/organization/new' })
   }
@@ -161,7 +286,7 @@ onMounted(async () => {
 
 // Persist on every relevant change. Cheap and lossless across reloads.
 watch(
-  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, brandDirection, targetAudience, brandIdealClient, brandDifferentiator, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, subscriptionId, selectedAddons],
+  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, brandDirection, targetAudience, brandIdealClient, brandDifferentiator, selectedGoals, goalsNote, selectedExpectations, expectationsNote, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, subscriptionId, selectedAddons],
   () => saveState(),
   { deep: true },
 )
@@ -232,28 +357,36 @@ const roles = [
 
 // ── Validation ──
 const canProceed = computed(() => {
-  if (currentStep.value === 1) return orgName.value.trim().length > 0
+  if (currentStep.value === STEP.NAME) return orgName.value.trim().length > 0
   return true
 })
 
+// ── Earnest presence (shell proxy) ──
+// Lets us fire the morphing "E" gestures (check / celebrate / think) as the
+// user moves through the flow. Set on the <OnboardingShell ref>.
+const shellRef = ref<{ react: (g: string) => void } | null>(null)
+function earnestReact(gesture: string) {
+  shellRef.value?.react?.(gesture)
+}
+
 // ── Navigation ──
 function nextStep() {
-  // Steps 1-3 advance normally. Step 4 is handled by Skip-Free /
-  // Continue-to-Payment buttons. Steps 5-6 use their own handlers.
-  if (currentStep.value < 5 && canProceed.value) {
+  // Pre-commit steps (NAME…EXPECT) advance to PAYMENT. Commit + post-commit
+  // steps have their own handlers.
+  if (currentStep.value < STEP.PAYMENT && canProceed.value) {
     currentStep.value++
+    earnestReact('check')  // Earnest nods you along
   }
 }
 
 function prevStep() {
-  // Once the org is committed (step 5+), there is no rewind. Free path users
-  // never visit step 5.
-  if (currentStep.value > 1 && currentStep.value <= 5) {
+  // Once the org is committed (PAYMENT+), there is no rewind.
+  if (currentStep.value > STEP.NAME && currentStep.value <= STEP.PAYMENT) {
     currentStep.value--
   }
 }
 
-// ── Brand voice (step 4) ──
+// ── Brand voice (BRAND step) ──
 const industryName = computed(() =>
   industries.value.find(i => i.id === selectedIndustry.value)?.name || '',
 )
@@ -262,6 +395,11 @@ async function draftBrandVoice() {
   if (brandDrafting.value) return
   brandDrafting.value = true
   brandDraftNote.value = ''
+  brandBeatIdx.value = 0
+  earnestReact('think')  // the "E" becomes a thinking indicator
+  brandBeatTimer = setInterval(() => {
+    brandBeatIdx.value = (brandBeatIdx.value + 1) % BRAND_BEATS.length
+  }, 1400)
   try {
     const res = await $fetch('/api/ai/onboarding-brand', {
       method: 'POST',
@@ -281,12 +419,18 @@ async function draftBrandVoice() {
     brandDraftNote.value = res.readWebsite
       ? 'Drafted from your website — edit anything that feels off.'
       : 'Drafted from your industry — add your website above for a sharper read.'
+    earnestReact('thumbsup')
   } catch (err: any) {
     toast.error(err?.data?.message || 'Could not draft your brand voice. You can write it yourself.')
   } finally {
+    if (brandBeatTimer) { clearInterval(brandBeatTimer); brandBeatTimer = null }
     brandDrafting.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (brandBeatTimer) { clearInterval(brandBeatTimer); brandBeatTimer = null }
+})
 
 // ── Invite management ──
 function addInvite() {
@@ -321,6 +465,9 @@ async function ensureOrgCreated(plan: string): Promise<string> {
     return existing.id
   }
 
+  const goalsStr = composeList(selectedGoals.value, goalsNote.value)
+  const expectationsStr = composeList(selectedExpectations.value, expectationsNote.value)
+
   const result = await $fetch('/api/org/create', {
     method: 'POST',
     body: {
@@ -332,6 +479,10 @@ async function ensureOrgCreated(plan: string): Promise<string> {
       brand_color: orgBrandColor.value.trim() || undefined,
       brand_direction: brandDirection.value.trim() || undefined,
       target_audience: targetAudience.value.trim() || undefined,
+      goals: goalsStr || undefined,
+      // Gated until the Directus field ships — sending an unknown field would
+      // fail the whole org insert. Flip EXPECTATIONS_PERSIST once it's live.
+      expectations: (EXPECTATIONS_PERSIST && expectationsStr) ? expectationsStr : undefined,
     },
   }) as any
 
@@ -353,7 +504,7 @@ async function handleSubscribeAddons() {
 
   // Nothing selected: just advance.
   if (picks.length === 0) {
-    currentStep.value = 7
+    currentStep.value = STEP.INVITE
     return
   }
 
@@ -395,11 +546,11 @@ async function handleSubscribeAddons() {
     toast.success(`Added ${picks.length} add-on${picks.length > 1 ? 's' : ''}`)
   }
 
-  currentStep.value = 7
+  currentStep.value = STEP.INVITE
 }
 
 function handleSkipAddons() {
-  currentStep.value = 7
+  currentStep.value = STEP.INVITE
 }
 
 async function handleStartTrial() {
@@ -430,10 +581,11 @@ async function handleStartTrial() {
     )
 
     subscriptionId.value = data.subscriptionId
+    earnestReact('celebrate')
     toast.success('Your 14-day free trial has started — no card needed. We’ll ask for one at day 14.')
     // Add-ons require a card, so the trial signup skips straight to inviting the
     // team. The owner can add add-ons from Billing after adding a card.
-    currentStep.value = 7
+    currentStep.value = STEP.INVITE
   } catch (err: any) {
     toast.error(err?.data?.message || err?.message || 'Failed to start your free trial')
   } finally {
@@ -468,12 +620,13 @@ async function handleFinish() {
       }
     }
 
+    earnestReact('celebrate')
     toast.success('You\'re all set!')
 
     clearState()
     if (import.meta.client) {
-      // Brief delay so the success toast registers before reload.
-      setTimeout(() => { window.location.href = '/' }, 400)
+      // Brief delay so the success toast (and celebrate) register before reload.
+      setTimeout(() => { window.location.href = '/' }, 600)
     }
   } catch (err: any) {
     toast.error(err?.data?.message || 'Something went wrong')
@@ -484,29 +637,19 @@ async function handleFinish() {
 </script>
 
 <template>
-  <div class="flex min-h-svh items-center justify-center px-4 py-12">
-    <div class="w-full max-w-xl">
-      <div class="ios-card p-8">
-        <!-- Step indicator (collapses to 5 dots for free path, 6 for paid) -->
-        <div class="flex items-center gap-1.5 mb-8">
-          <div
-            v-for="s in totalSteps"
-            :key="s"
-            class="flex-1 h-1 rounded-full transition-all duration-500"
-            :class="s <= displayedStep ? 'bg-[var(--cyan)]' : 'bg-muted/50'"
-          />
-        </div>
-
-        <!-- ═══ STEP 1: Name + Industry ═══ -->
-        <div v-if="currentStep === 1">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Building2 class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Create Your Organization</h1>
-            <p class="text-sm text-muted-foreground mt-1">What's the name of your company or team?</p>
-          </div>
-
+  <OnboardingShell
+    ref="shellRef"
+    :step="journeyStep"
+    :total="journeyTotal"
+    :step-key="currentStep"
+    :mood="stepMood"
+    :eyebrow="stepMeta.eyebrow"
+    :title="stepMeta.title"
+    :subtitle="stepMeta.subtitle"
+    :line="stepLine"
+  >
+    <!-- ═══ STEP: Name + Industry ═══ -->
+    <div v-if="currentStep === STEP.NAME">
           <div class="space-y-6">
             <div>
               <label class="text-sm font-medium mb-1.5 block">Organization Name</label>
@@ -540,16 +683,8 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 2: Plan Selection ═══ -->
-        <div v-if="currentStep === 2">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Sparkles class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Choose Your Plan</h1>
-            <p class="text-sm text-muted-foreground mt-1">You can change this anytime. All plans include every feature.</p>
-          </div>
-
+    <!-- ═══ STEP: Plan Selection ═══ -->
+    <div v-if="currentStep === STEP.PLAN">
           <!-- Billing interval toggle -->
           <div class="flex justify-center mb-5">
             <div class="inline-flex p-1 bg-muted/50 rounded-full">
@@ -616,16 +751,8 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 3: Details (Optional) ═══ -->
-        <div v-if="currentStep === 3">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Icon name="lucide:palette" class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Organization Details</h1>
-            <p class="text-sm text-muted-foreground mt-1">Optional — you can always set these up later.</p>
-          </div>
-
+    <!-- ═══ STEP: Details (Optional) ═══ -->
+    <div v-if="currentStep === STEP.DETAILS">
           <div class="space-y-4">
             <div>
               <label class="text-sm font-medium mb-1.5 block">Location</label>
@@ -666,16 +793,8 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 4: Brand voice ═══ -->
-        <div v-if="currentStep === 4">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Icon name="lucide:sparkles" class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Your brand voice</h1>
-            <p class="text-sm text-muted-foreground mt-1">Earnest writes in your voice everywhere — proposals, emails, marketing. Let it draft a starting point from what you've told us, then make it yours.</p>
-          </div>
-
+    <!-- ═══ STEP: Brand voice ═══ -->
+    <div v-if="currentStep === STEP.BRAND">
           <div class="space-y-4">
             <button
               type="button"
@@ -684,7 +803,7 @@ async function handleFinish() {
               @click="draftBrandVoice"
             >
               <Icon :name="brandDrafting ? 'lucide:loader-2' : 'lucide:sparkles'" class="w-4 h-4" :class="brandDrafting && 'animate-spin'" />
-              {{ brandDrafting ? 'Reading your business…' : (brandDrafted ? 'Regenerate with Earnest' : 'Draft with Earnest') }}
+              {{ brandDrafting ? brandBeat : (brandDrafted ? 'Regenerate with Earnest' : 'Draft with Earnest') }}
             </button>
             <p v-if="brandDraftNote" class="text-[11px] text-center text-muted-foreground -mt-2">{{ brandDraftNote }}</p>
 
@@ -725,16 +844,67 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 5: Payment ═══ -->
-        <div v-if="currentStep === 5">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <CreditCard class="w-6 h-6 text-gray-500" />
+    <!-- ═══ STEP: Goals ═══ -->
+    <div v-if="currentStep === STEP.GOALS">
+          <div class="space-y-5">
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="g in GOAL_OPTIONS"
+                :key="g"
+                type="button"
+                class="px-4 py-2.5 rounded-full text-[11px] font-medium text-left transition-all border"
+                :class="selectedGoals.includes(g)
+                  ? 'border-[var(--cyan)] bg-info/10 text-foreground'
+                  : 'border-border bg-card hover:border-foreground/30 text-muted-foreground hover:text-foreground'"
+                @click="toggleGoal(g)"
+              >
+                {{ g }}
+              </button>
             </div>
-            <h1 class="text-xl font-semibold">Set Up Payment</h1>
-            <p class="text-sm text-muted-foreground mt-1">Cancel anytime from your account.</p>
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Anything else?</label>
+              <textarea
+                v-model="goalsNote"
+                rows="3"
+                placeholder="In your words — what does a great year look like?"
+                class="w-full rounded-2xl glass-field px-3 py-2.5 text-sm focus:outline-none resize-none"
+              />
+            </div>
+            <p class="text-[11px] text-muted-foreground">Optional — pick what fits, skip what doesn't. Earnest keeps these in view and nudges you toward them.</p>
           </div>
+        </div>
 
+    <!-- ═══ STEP: Expectations ═══ -->
+    <div v-if="currentStep === STEP.EXPECT">
+          <div class="space-y-5">
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="g in EXPECT_OPTIONS"
+                :key="g"
+                type="button"
+                class="px-4 py-2.5 rounded-full text-[11px] font-medium text-left transition-all border"
+                :class="selectedExpectations.includes(g)
+                  ? 'border-[var(--cyan)] bg-info/10 text-foreground'
+                  : 'border-border bg-card hover:border-foreground/30 text-muted-foreground hover:text-foreground'"
+                @click="toggleExpectation(g)"
+              >
+                {{ g }}
+              </button>
+            </div>
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Tell Earnest more (optional)</label>
+              <textarea
+                v-model="expectationsNote"
+                rows="3"
+                placeholder="What would make Earnest a no-brainer for you?"
+                class="w-full rounded-2xl glass-field px-3 py-2.5 text-sm focus:outline-none resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+    <!-- ═══ STEP: Payment ═══ -->
+    <div v-if="currentStep === STEP.PAYMENT">
           <!-- Order summary -->
           <div class="rounded-xl border-2 border-[var(--cyan)] bg-info/10 p-4 mb-5">
             <div class="flex items-start justify-between">
@@ -781,16 +951,8 @@ async function handleFinish() {
           </label>
         </div>
 
-        <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
-        <div v-if="currentStep === 6">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <PackagePlus class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Round it out with add-ons</h1>
-            <p class="text-sm text-muted-foreground mt-1">Optional — billed monthly alongside your plan. You can change these anytime.</p>
-          </div>
-
+    <!-- ═══ STEP: Add-ons (paid path only) ═══ -->
+    <div v-if="currentStep === STEP.ADDONS">
           <div class="space-y-2">
             <button
               v-for="addon in visibleAddons"
@@ -830,16 +992,8 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ STEP 6: Invite Team (Optional) ═══ -->
-        <div v-if="currentStep === 7">
-          <div class="text-center mb-8">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Icon name="lucide:users" class="w-6 h-6 text-gray-500" />
-            </div>
-            <h1 class="text-xl font-semibold">Invite Your Team</h1>
-            <p class="text-sm text-muted-foreground mt-1">Optional — add team members now or invite them later.</p>
-          </div>
-
+    <!-- ═══ STEP: Invite Team (Optional) ═══ -->
+    <div v-if="currentStep === STEP.INVITE">
           <div class="space-y-4">
             <!-- Add invite form -->
             <div class="flex items-center gap-2">
@@ -898,11 +1052,12 @@ async function handleFinish() {
           </div>
         </div>
 
-        <!-- ═══ Navigation buttons ═══ -->
-        <div class="flex items-center gap-3 mt-8 pt-6 border-t border-border/30">
-          <!-- Back / Cancel (only for steps 2-4 pre-payment; step 5+ is post-commit) -->
+    <!-- ═══ Navigation buttons ═══ -->
+    <template #footer>
+        <div class="flex items-center gap-3 w-full">
+          <!-- Back / Cancel (pre-commit only; PAYMENT+ is post-commit, no rewind) -->
           <button
-            v-if="currentStep > 1 && currentStep <= 5"
+            v-if="currentStep > STEP.NAME && currentStep <= STEP.PAYMENT"
             class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
@@ -910,7 +1065,7 @@ async function handleFinish() {
             Back
           </button>
           <button
-            v-else-if="currentStep === 1"
+            v-else-if="currentStep === STEP.NAME"
             class="flex items-center gap-1 px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="router.back()"
           >
@@ -919,18 +1074,18 @@ async function handleFinish() {
 
           <div class="flex-1" />
 
-          <!-- Skip (steps 3 & 4 — details and brand voice are optional) -->
+          <!-- Skip (details, brand voice, goals, expectations are all optional) -->
           <button
-            v-if="currentStep === 3 || currentStep === 4"
+            v-if="currentStep === STEP.DETAILS || currentStep === STEP.BRAND || currentStep === STEP.GOALS || currentStep === STEP.EXPECT"
             class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             @click="nextStep"
           >
             Skip
           </button>
 
-          <!-- Steps 1-3: Continue -->
+          <!-- Pre-commit: Continue -->
           <button
-            v-if="currentStep < 5"
+            v-if="currentStep < STEP.PAYMENT"
             class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="!canProceed"
             @click="nextStep"
@@ -939,8 +1094,8 @@ async function handleFinish() {
             <ChevronRight class="w-4 h-4" />
           </button>
 
-          <!-- Step 5: start the 14-day free trial (no card) -->
-          <template v-else-if="currentStep === 5">
+          <!-- PAYMENT: start the 14-day free trial (no card) -->
+          <template v-else-if="currentStep === STEP.PAYMENT">
             <button
               class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
               :disabled="creating || checkingOut || !termsReaffirmed"
@@ -952,8 +1107,8 @@ async function handleFinish() {
             </button>
           </template>
 
-          <!-- Step 5: Add-ons (skip / subscribe) -->
-          <template v-else-if="currentStep === 6">
+          <!-- ADDONS: skip / subscribe -->
+          <template v-else-if="currentStep === STEP.ADDONS">
             <button
               class="px-4 py-2.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="subscribingAddons"
@@ -972,9 +1127,9 @@ async function handleFinish() {
             </button>
           </template>
 
-          <!-- Step 6: Finish -->
+          <!-- INVITE: Finish -->
           <button
-            v-else-if="currentStep === 7"
+            v-else-if="currentStep === STEP.INVITE"
             class="flex items-center gap-1 px-6 py-2.5 rounded-full text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="creating"
             @click="handleFinish"
@@ -983,12 +1138,6 @@ async function handleFinish() {
             {{ creating ? 'Finishing...' : (invites.length > 0 ? 'Send Invites & Finish' : 'Finish') }}
           </button>
         </div>
-
-        <!-- Step label -->
-        <p class="text-center text-[10px] text-muted-foreground/50 mt-4 uppercase tracking-wider">
-          Step {{ displayedStep }} of {{ totalSteps }}
-        </p>
-      </div>
-    </div>
-  </div>
+    </template>
+  </OnboardingShell>
 </template>

@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { name, plan, industry, location, website, brand_color, brand_direction, target_audience, goals } = body;
+  const { name, plan, industry, location, website, brand_color, brand_direction, target_audience, goals, expectations } = body;
 
   if (!name?.trim()) {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
@@ -66,6 +66,10 @@ export default defineEventHandler(async (event) => {
     if (brand_direction?.trim()) orgData.brand_direction = brand_direction.trim();
     if (target_audience?.trim()) orgData.target_audience = target_audience.trim();
     if (goals?.trim()) orgData.goals = goals.trim();
+    // What the user said they want from Earnest (onboarding "Expectations" step).
+    // Only written when present — the client gates sending this until the
+    // `organizations.expectations` field exists (scripts/add-organizations-expectations.ts).
+    if (expectations?.trim()) orgData.expectations = expectations.trim();
 
     const org = await directus.request(
       createItem('organizations', orgData)

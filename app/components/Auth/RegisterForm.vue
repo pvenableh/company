@@ -18,6 +18,9 @@ const googleRegError = ref<string | null>(null);
 
 const props = defineProps<{
   class?: HTMLAttributes["class"];
+  // Chromeless: drop the card wrapper + header + sign-in footer so the form
+  // can live inside the shared OnboardingShell as step 1 of the journey.
+  bare?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -132,10 +135,10 @@ const inputClass = "w-full rounded-full glass-field px-3 py-2.5 text-sm focus:ou
 </script>
 
 <template>
-  <div :class="cn('flex flex-col gap-6 w-full max-w-md', props.class)">
-    <div class="glass-surface glass-surface--strong rounded-2xl p-8">
+  <div :class="bare ? cn('w-full', props.class) : cn('flex flex-col gap-6 w-full max-w-md', props.class)">
+    <div :class="bare ? '' : 'glass-surface glass-surface--strong rounded-2xl p-8'">
       <!-- Header -->
-      <div class="text-center mb-6">
+      <div v-if="!bare" class="text-center mb-6">
         <h3 class="text-xl font-semibold">Create an account</h3>
         <p class="text-sm text-muted-foreground mt-1">Enter your information to get started</p>
       </div>
@@ -303,7 +306,7 @@ const inputClass = "w-full rounded-full glass-field px-3 py-2.5 text-sm focus:ou
       </form>
     </div>
 
-    <p class="text-center text-sm text-muted-foreground">
+    <p v-if="!bare" class="text-center text-sm text-muted-foreground">
       Already have an account?
       <button
         type="button"

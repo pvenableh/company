@@ -1932,7 +1932,7 @@ export interface Contract {
 	/** @description Source proposal (if generated from one) */
 	proposal?: Proposal | string | null;
 	client?: Client | string | null;
-	/** @description Project this contract is attached to (nullable, SET NULL). */
+	/** @description Project this contract is attached to. Null when not yet linked to a project. */
 	project?: Project | string | null;
 }
 
@@ -2675,6 +2675,8 @@ export interface Industry {
 	portfolio?: PortfolioIndustry[] | string[];
 	content_blocks?: IndustriesContentBlock[] | string[];
 	case_studies?: CaseStudiesIndustry[] | string[];
+	/** @description Curated, ordered work for this industry — case studies and/or standalone portfolio items. Drives the 'Work in this industry' grid on the website. */
+	featured_work?: IndustriesFeaturedWork[] | string[];
 }
 
 export interface IndustriesContentBlock {
@@ -2682,6 +2684,15 @@ export interface IndustriesContentBlock {
 	id: number;
 	industries_id?: Industry | string | null;
 	item?: BlockHero | BlockText | BlockCard | BlockProcess | BlockCta | BlockStickyText | BlockClientSuccess | BlockPortfolioShowcase | BlockCapabilitiesShowcase | string | null;
+	collection?: string | null;
+	sort?: number | null;
+}
+
+export interface IndustriesFeaturedWork {
+	/** @primaryKey */
+	id: number;
+	industries_id?: Industry | string | null;
+	item?: CaseStudy | Portfolio | string | null;
 	collection?: string | null;
 	sort?: number | null;
 }
@@ -2794,7 +2805,7 @@ export interface Lead {
 	date_updated?: string | null;
 	priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
 	lead_score?: number | null;
-	source?: `business card` | 'call' | 'website' | 'referral' | 'event' | 'carddesk' | null;
+	source?: `business card` | 'call' | 'website' | 'referral' | 'event' | null;
 	estimated_value?: number | null;
 	related_contact?: Contact | string | null;
 	source_details?: string | null;
@@ -3292,10 +3303,6 @@ export interface Organization {
 	archived_at?: string | null;
 	/** @description Org-level mirror of the active Stripe Subscription id. */
 	stripe_subscription_id?: string | null;
-	/** @description Org-level mirror of the Stripe subscription status (written by the Stripe webhook). Drives the trial-expiry gate. 'incomplete' = signed up but no plan chosen yet. */
-	subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
-	/** @description When the org's free trial ends (Stripe trial_end). Null when not on a trial. */
-	trial_ends_at?: string | null;
 	/** @description When true (and plan supports whitelabel), hides "Powered by Earnest." on client-facing documents. */
 	whitelabel?: boolean;
 	/** @description Applied across invoices, proposals, and contracts sent from this organization. */
@@ -3334,6 +3341,12 @@ export interface Organization {
 	weather_enabled?: boolean | null;
 	/** @description Show the Teams feature (team selectors, team fields, the org Teams floor). Off = hide it for solo/small orgs. On by default. */
 	teams_enabled?: boolean | null;
+	/** @description Org-level mirror of the Stripe subscription status (written by the Stripe webhook). Drives the trial-expiry gate. */
+	subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
+	/** @description When the org's free trial ends (Stripe trial_end). Null when not on a trial. */
+	trial_ends_at?: string | null;
+	/** @description What the owner said they want from Earnest at signup. Feeds AI context. Optional. */
+	expectations?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3874,7 +3887,7 @@ export interface ProjectEventCategory {
 	icon?: string | null;
 	/** @description Owning organization — categories are per-org. */
 	organization?: Organization | string | null;
-	/** @description Behavior tag — drives event-form disclosure + billing. */
+	/** @description Behavior tag — drives which sections the event form auto-opens and billing. */
 	kind?: 'general' | 'design' | 'content' | 'timeline' | 'financial' | 'hours' | null;
 }
 
@@ -4053,52 +4066,6 @@ export interface ProjectStatusUpdate {
 	date_created?: string | null;
 }
 
-export interface Touchpoint {
-	/** @primaryKey */
-	id: number;
-	sort?: number | null;
-	date_created?: string | null;
-	user_created?: string | null;
-	/** @description Denormalized owner org for the create permission. @required */
-	organization: Organization | string;
-	/** @description The client this touchpoint is about (optional). */
-	client?: Client | string | null;
-	/** @description Optional project context. */
-	project?: Project | string | null;
-	/** @description Client contacts involved (m2m via touchpoints_contacts). */
-	contacts?: TouchpointsContact[] | number[];
-	/** @required */
-	type: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
-	/** @description Short label for the touch point. */
-	summary?: string | null;
-	note?: string | null;
-	/** @description When the touch happened. */
-	occurred_at?: string | null;
-	/** @description Expecting a reply. */
-	awaiting_response?: boolean | null;
-	/** @description This touch received / is a response. */
-	is_response?: boolean | null;
-	/** @description What came back. */
-	response_note?: string | null;
-	/** @description Extra non-contact tags (team / portal): [{ kind, id, name }]. */
-	participants?: Record<string, any> | null;
-	/** @description Lead this touch is about (nullable). Unifies lead_activities into touchpoints; carries forward on conversion. */
-	lead?: Lead | number | null;
-	/** @description How the touch landed (absorbed from lead_activities.outcome). */
-	outcome?: 'positive' | 'neutral' | 'negative' | 'no_response' | null;
-	/** @description Planned next follow-up for this pursuit. */
-	next_action?: string | null;
-	/** @description When the next follow-up is due. */
-	next_action_date?: string | null;
-}
-
-export interface TouchpointsContact {
-	/** @primaryKey */
-	id: number;
-	touchpoints_id?: Touchpoint | number | null;
-	contacts_id?: Contact | string | null;
-}
-
 export interface Prompt {
 	/** @primaryKey */
 	id: number;
@@ -4127,10 +4094,6 @@ export interface Proposal {
 	file?: DirectusFile | string | null;
 	/** @description Proposal name/title @required */
 	title: string;
-	/** @description Project this proposal is attached to (nullable, SET NULL). */
-	project?: Project | string | null;
-	/** @description Client this proposal is attached to directly (nullable, SET NULL). */
-	client?: Client | string | null;
 	/** @description Originating lead */
 	lead?: Lead | string | null;
 	/** @description Primary contact */
@@ -4141,10 +4104,14 @@ export interface Proposal {
 	valid_until?: string | null;
 	/** @description Current proposal status */
 	proposal_status?: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | null;
-	/** @description Why a proposal went cold or was rejected — the pursuit learning signal. */
-	outcome_reason?: 'price' | 'timing' | 'competitor' | 'no_response' | 'scope' | 'budget' | 'other' | null;
 	/** @description Ordered array of block entries: { block_id, heading, content, page_break_after } */
 	blocks?: Record<string, any> | null;
+	/** @description Project this proposal is attached to. Null when not yet linked to a project. */
+	project?: Project | string | null;
+	/** @description Client this proposal is attached to. Null when tied only via lead/contact. */
+	client?: Client | string | null;
+	/** @description Why a proposal went cold or was rejected — the learning signal for the pursuit pipeline. */
+	outcome_reason?: 'price' | 'timing' | 'competitor' | 'no_response' | 'scope' | 'budget' | 'other' | null;
 }
 
 export interface ProposalsFile {
@@ -4954,6 +4921,52 @@ export interface TokenPurchase {
 	amount_cents?: number | null;
 	currency?: string | null;
 	status?: string | null;
+}
+
+export interface Touchpoint {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	date_created?: string | null;
+	user_created?: string | null;
+	/** @description Denormalized owner org for the create permission (Directus 11 can't FK-walk on create). @required */
+	organization: Organization | string;
+	/** @description The client this touchpoint is about (optional). */
+	client?: Client | string | null;
+	/** @description Optional project context. */
+	project?: Project | string | null;
+	/** @required */
+	type: 'email' | 'call' | 'text' | 'meeting' | 'note' | 'other';
+	/** @description Short label for the touch point. */
+	summary?: string | null;
+	note?: string | null;
+	/** @description When the touch happened. */
+	occurred_at?: string | null;
+	/** @description Expecting a reply. */
+	awaiting_response?: boolean | null;
+	/** @description This touch received / is a response. */
+	is_response?: boolean | null;
+	/** @description What came back. */
+	response_note?: string | null;
+	/** @description Extra non-contact tags (team members / portal users): [{ kind, id, name }]. */
+	participants?: Record<string, any> | null;
+	/** @description Lead this touch is about (nullable). Lets a touchpoint attach to a lead — not just a client/project — so pursuit history is continuous and carries forward on conversion. */
+	lead?: Lead | string | null;
+	/** @description How the touch landed (absorbed from lead_activities.outcome). */
+	outcome?: 'positive' | 'neutral' | 'negative' | 'no_response' | null;
+	/** @description Planned next follow-up for this pursuit. */
+	next_action?: string | null;
+	/** @description When the next follow-up is due. */
+	next_action_date?: string | null;
+	/** @description Client contacts involved in this touchpoint (m2m). */
+	contacts?: TouchpointsContact[] | string[];
+}
+
+export interface TouchpointsContact {
+	/** @primaryKey */
+	id: number;
+	touchpoints_id?: Touchpoint | string | null;
+	contacts_id?: Contact | string | null;
 }
 
 export interface UpsellEvent {
@@ -5803,6 +5816,7 @@ export interface Schema {
 	home_slides: HomeSlide[];
 	industries: Industry[];
 	industries_content_blocks: IndustriesContentBlock[];
+	industries_featured_work: IndustriesFeaturedWork[];
 	invoices: Invoice[];
 	invoices_products: InvoicesProduct[];
 	invoices_projects: InvoicesProject[];
@@ -5869,8 +5883,6 @@ export interface Schema {
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
-	touchpoints: Touchpoint[];
-	touchpoints_contacts: TouchpointsContact[];
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
@@ -5913,6 +5925,8 @@ export interface Schema {
 	tickets_services: TicketsService[];
 	time_entries: TimeEntry[];
 	token_purchases: TokenPurchase[];
+	touchpoints: Touchpoint[];
+	touchpoints_contacts: TouchpointsContact[];
 	upsell_events: UpsellEvent[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
@@ -6073,6 +6087,7 @@ export enum CollectionNames {
 	home_slides = 'home_slides',
 	industries = 'industries',
 	industries_content_blocks = 'industries_content_blocks',
+	industries_featured_work = 'industries_featured_work',
 	invoices = 'invoices',
 	invoices_products = 'invoices_products',
 	invoices_projects = 'invoices_projects',
@@ -6139,8 +6154,6 @@ export enum CollectionNames {
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',
-	touchpoints = 'touchpoints',
-	touchpoints_contacts = 'touchpoints_contacts',
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',
@@ -6183,6 +6196,8 @@ export enum CollectionNames {
 	tickets_services = 'tickets_services',
 	time_entries = 'time_entries',
 	token_purchases = 'token_purchases',
+	touchpoints = 'touchpoints',
+	touchpoints_contacts = 'touchpoints_contacts',
 	upsell_events = 'upsell_events',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',

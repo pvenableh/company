@@ -2,10 +2,14 @@
 import { toast } from 'vue-sonner';
 
 definePageMeta({
-	layout: 'auth',
+	// The shared OnboardingShell owns the chrome — this is step 1 of the journey.
+	layout: false,
 	middleware: 'guest',
 });
 useHead({ title: 'Register | Earnest' });
+
+// Inline explainer for the "joining a team" path (invites are email deep-links).
+const showJoinHelp = ref(false);
 
 const { register } = useDirectusAuth();
 const route = useRoute();
@@ -71,7 +75,9 @@ async function handleRegister(values: {
 
 		toast.success('Account created! Redirecting...');
 
-		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/';
+		// Go straight into the org wizard so the journey reads as one continuous
+		// flow (no flash through the app shell + needs-org bounce).
+		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/organization/new';
 		setTimeout(() => {
 			window.location.href = redirectTo;
 		}, 1000);
@@ -83,28 +89,58 @@ async function handleRegister(values: {
 </script>
 
 <template>
-	<div class="w-full max-w-md">
-		<!-- Referral banner — brands the signup as the referring agency. -->
-		<div v-if="referrer" class="referral-banner" :style="referrerStyle">
-			<div class="referral-banner__logo">
-				<img v-if="referrerLogoUrl" :src="referrerLogoUrl" :alt="referrer.name || 'Referrer'" />
-				<span v-else>{{ (referrer.name || 'E').charAt(0).toUpperCase() }}</span>
+	<OnboardingShell
+		:step="1"
+		:total="9"
+		mood="warm"
+		eyebrow="Welcome to Earnest"
+		title="Create your account"
+		subtitle="First your details — then Earnest walks you through setting up your workspace."
+	>
+		<div class="w-full">
+			<!-- Referral banner — brands the signup as the referring agency. -->
+			<div v-if="referrer" class="referral-banner" :style="referrerStyle">
+				<div class="referral-banner__logo">
+					<img v-if="referrerLogoUrl" :src="referrerLogoUrl" :alt="referrer.name || 'Referrer'" />
+					<span v-else>{{ (referrer.name || 'E').charAt(0).toUpperCase() }}</span>
+				</div>
+				<div class="min-w-0">
+					<p class="referral-banner__title">
+						<strong>{{ referrer.name || 'A partner' }}</strong> invited you to Earnest
+					</p>
+					<p class="referral-banner__sub">
+						Create your own workspace — you'll both get bonus credits when you go paid.
+					</p>
+				</div>
 			</div>
-			<div class="min-w-0">
-				<p class="referral-banner__title">
-					<strong>{{ referrer.name || 'A partner' }}</strong> invited you to Earnest
+
+			<AuthRegisterForm
+				bare
+				@submit="handleRegister"
+				@login="navigateTo('/auth/signin')"
+			/>
+
+			<!-- Secondary paths: sign in, or join an existing team via invite. -->
+			<div class="mt-5 space-y-2 text-center text-sm text-muted-foreground">
+				<p>
+					Already have an account?
+					<NuxtLink to="/auth/signin" class="text-foreground font-medium hover:underline underline-offset-4">Sign in</NuxtLink>
 				</p>
-				<p class="referral-banner__sub">
-					Create your own workspace — you'll both get bonus credits when you go paid.
+				<p>
+					Joining a team?
+					<button
+						type="button"
+						class="text-foreground font-medium hover:underline underline-offset-4"
+						@click="showJoinHelp = !showJoinHelp"
+					>Use your invite</button>
+				</p>
+				<p v-if="showJoinHelp" class="text-[12px] leading-relaxed text-muted-foreground/80 max-w-sm mx-auto">
+					Team invites arrive by email. Open the link in your invitation to join your
+					team's workspace — no need to create a new organization here.
 				</p>
 			</div>
 		</div>
-
-		<AuthRegisterForm
-			@submit="handleRegister"
-			@login="navigateTo('/auth/signin')"
-		/>
-	</div>
+	</OnboardingShell>
 </template>
 
 <style scoped>
