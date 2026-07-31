@@ -471,6 +471,12 @@ const goTo = (route: string) => {
 			     chip + page title, matching the rest of /apps/*. -->
 			<AppHeader title="Dashboard" />
 
+			<!-- Trial AI-token nudge — self-hides unless a no-card trial is ~80%+
+			     through its bounded grant. Kept above the fold on both home modes. -->
+			<div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+				<OrganizationTrialTokenBanner />
+			</div>
+
 			<!-- Presence home: the calm conversational landing (opt-in via home_mode).
 			     The command center below is "everything," one gesture down. -->
 			<div v-if="isPresence" class="min-h-[84vh] flex items-center">

@@ -245,16 +245,18 @@ interface EarnestInputData {
 }
 
 function calculateEarnestScore(data: EarnestInputData): { score: number; dimensions: DimensionScores } {
-	// A brand-new account with zero activity should read 0 — not the ~37 "benefit
-	// of the doubt" floor the constant fallbacks below would otherwise produce
-	// (no overdue = 6, few unread = 8, etc.). That phantom score also suppressed
-	// the "Complete your first ticket to start scoring" empty state. Once there's
-	// any real engagement, the normal calculation takes over.
+	// A brand-new account should read 0 — not the ~37 "benefit of the doubt" floor
+	// the constant fallbacks below would otherwise produce (no overdue = 6, few
+	// unread = 8, etc.), which also suppressed the "start scoring" empty state.
+	// Count only real WORK artifacts — NOT streak/daysActive, which are already 1
+	// on day one just from logging in and would defeat this. Once there's any real
+	// work, the normal calculation (including the streak/consistency reward) kicks
+	// in.
 	const hasActivity =
 		data.totalStarted > 0 || data.completed > 0 || data.activeProjects > 0 ||
 		data.projectsWithDeadlines > 0 || data.leadsInPipeline > 0 || data.totalLeadsClosed > 0 ||
 		data.scheduledPosts > 0 || data.projectTasksThisWeek > 0 || data.tasksCompletedToday > 0 ||
-		data.totalFollowups > 0 || data.daysActiveThisWeek > 0 || data.streak > 0 || data.earlyCompletions > 0;
+		data.totalFollowups > 0 || data.earlyCompletions > 0;
 	if (!hasActivity) {
 		return { score: 0, dimensions: { followThrough: 0, consistency: 0, responsiveness: 0, proactivity: 0, depth: 0, crm: 0 } };
 	}
