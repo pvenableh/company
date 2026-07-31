@@ -69,12 +69,6 @@ const { data: ticket, error, refresh } = await useAsyncData(
 		}
 	},
 );
-const columns = [
-	{ id: 'Pending', name: 'Pending', color: 'gray' },
-	{ id: 'Scheduled', name: 'Scheduled', color: 'black' },
-	{ id: 'In Progress', name: 'In Progress', color: 'blue' },
-	{ id: 'Completed', name: 'Completed', color: 'green' },
-];
 </script>
 <template>
 	<LayoutPageContainer>
@@ -94,7 +88,7 @@ const columns = [
 				<p class="text-sm text-muted-foreground">Couldn't load this ticket.</p>
 				<Button size="sm" variant="outline" @click="refresh">Retry</Button>
 			</div>
-			<TicketsDetailsNew v-else :element="ticket" :columns="columns" />
+			<AppsWorkTicketWorkspace v-else :element="ticket" @deleted="navigateTo(backTo)" />
 		</div>
 	</LayoutPageContainer>
 </template>

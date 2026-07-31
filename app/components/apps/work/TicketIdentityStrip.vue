@@ -1,8 +1,9 @@
 <!--
   Shared identity strip for a ticket — priority, due date (inline-editable),
-  and linked project / client / team. Used by both the full page
-  (`Tickets/DetailsNew.vue`) and the `TicketDetailPanel` slide-over so the two
-  surfaces can't visually drift. Mirrors `ProjectIdentityStrip`.
+  and linked project / client / team. Lives inside the shared
+  `TicketWorkspace`, which both the full page (`/tickets/[id]`) and the
+  `TicketDetailPanel` slide-over render, so the two surfaces can't visually
+  drift. Mirrors `ProjectIdentityStrip`.
 
   Title + status live in the surrounding hero (AppHeader / panel title); this
   strip is the metadata row so the title isn't repeated. The `rating` slot

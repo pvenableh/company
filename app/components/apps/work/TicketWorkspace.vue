@@ -14,8 +14,9 @@
 
 		<!-- Header — standard detail-surface hero: title + status badge, then a
 		     shared identity strip carrying priority / links / due date / CSAT and
-		     the action row. Mirrors the project & client surfaces. -->
-		<div class="flex items-start justify-between mb-3 gap-2">
+		     the action row. Mirrors the project & client surfaces. In compact
+		     (slide-over) the shell already shows the title, so the hero is hidden. -->
+		<div v-if="!compact" class="flex items-start justify-between mb-3 gap-2">
 			<div class="min-w-0">
 				<div class="sm:hidden mb-1">
 					<UiStatusBadge :status="currentStatus" />
@@ -32,6 +33,7 @@
 		<AppsWorkTicketIdentityStrip
 			:ticket="localElement"
 			class="mb-6"
+			:use-panel-stack="compact"
 			@update="handleStripUpdate"
 		>
 			<!-- CSAT sits in the universal rating position (set from the portal
@@ -67,9 +69,12 @@
 		>
 			<!-- Overview Tab -->
 			<template #overview>
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 animate-fadein items-start">
+				<div
+					class="grid grid-cols-1 gap-6 pt-6 animate-fadein items-start"
+					:class="compact ? '' : 'lg:grid-cols-3'"
+				>
 					<!-- Main Content -->
-					<div class="lg:col-span-2 space-y-6">
+					<div class="space-y-6" :class="compact ? '' : 'lg:col-span-2'">
 						<!-- Ticket Details Card -->
 						<div class="ios-card p-5">
 							<div ref="stickyHeaderSentinel" class="h-0" />
@@ -219,6 +224,11 @@
 <script setup>
 import { Button } from '~/components/ui/button';
 
+// TicketWorkspace — the single ticket detail surface, shared by the full page
+// (`/tickets/[id]`) and the `TicketDetailPanel` slide-over so the two can't
+// drift (mirrors ClientWorkspace / ProjectWorkspace). Pass a pre-fetched
+// `element`; set `compact` when hosted in the slide-over (single-column layout,
+// the shell already owns the title, delete closes the panel instead of routing).
 const props = defineProps({
 	element: {
 		type: Object,
@@ -226,9 +236,15 @@ const props = defineProps({
 	},
 	columns: {
 		type: Array,
-		required: true,
+		default: () => TICKET_BOARD_COLUMNS,
 	},
 	isLoading: {
+		type: Boolean,
+		default: false,
+	},
+	// Slide-over host: narrower layout, no duplicate title hero, delete pops the
+	// panel rather than navigating to /tickets.
+	compact: {
 		type: Boolean,
 		default: false,
 	},
@@ -245,7 +261,6 @@ const ticketItems = useDirectusItems('tickets');
 const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
 const { notify } = useNotifications();
 const toast = useToast();
-const router = useRouter();
 const { notifyTicketStatusChange, notifyTicketAssignment, notifyTicketUpdate, notifyMentions } =
 	useNotificationHelper();
 const config = useRuntimeConfig();
@@ -580,9 +595,11 @@ const deleteTicket = async () => {
 			color: 'green',
 		});
 
+		// The host decides what happens next: the full page navigates back to the
+		// board on `deleted`, the slide-over just closes. Keeping route knowledge
+		// out of the workspace keeps it apps-shell-agnostic.
 		emit('deleted');
 		emit('close');
-		router.push('/tickets');
 	} catch (error) {
 		console.error('Error deleting ticket:', error);
 		toast.add({
