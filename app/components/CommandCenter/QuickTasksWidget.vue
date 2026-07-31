@@ -12,14 +12,14 @@
 					<button
 						@click="viewMode = 'list'"
 						class="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
-						:class="viewMode === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'list' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>
 						List
 					</button>
 					<button
 						@click="viewMode = 'grouped'"
 						class="px-2 py-1 rounded-md text-[10px] font-medium transition-all"
-						:class="viewMode === 'grouped' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'grouped' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>
 						Grouped
 					</button>

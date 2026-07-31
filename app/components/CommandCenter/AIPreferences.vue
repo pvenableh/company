@@ -50,7 +50,7 @@ const formatTokens = (n: number) => {
 				:key="tab.key"
 				@click="activeSection = tab.key as any"
 				class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all"
-				:class="activeSection === tab.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+				:class="activeSection === tab.key ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 			>
 				{{ tab.label }}
 			</button>

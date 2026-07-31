@@ -1432,8 +1432,8 @@ const headerAction = computed(() => {
               @preset="setMoneyRange"
             />
             <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium shrink-0">
-              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'list'">List</button>
-              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'river' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'river'">River</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'list' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'list'">List</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="paymentsView === 'river' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="paymentsView = 'river'">River</button>
             </div>
           </div>
 

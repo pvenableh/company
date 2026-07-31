@@ -1056,8 +1056,8 @@ const scopeLabel = computed(() => {
             <!-- List / River — either-or so the campaign river never competes
                  with a flat list; River is an opt-in visual view. -->
             <div v-if="filteredCampaigns.length" class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[11px] font-medium">
-              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'list'">List</button>
-              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'river' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'river'">River</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'list' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'list'">List</button>
+              <button type="button" class="px-3 py-1 rounded-full transition-colors" :class="campaignsView === 'river' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="campaignsView = 'river'">River</button>
             </div>
             <span class="text-xs text-muted-foreground">
               {{ scopeLabel }}

@@ -28,7 +28,7 @@
 						@click="clientActiveTab = tab.key"
 						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
 						:class="clientActiveTab === tab.key
-							? 'bg-background text-foreground shadow-sm'
+							? 'glass-active-thumb relative text-foreground'
 							: 'text-muted-foreground hover:text-foreground'"
 					>
 						<span class="flex items-center gap-1.5">

@@ -1388,7 +1388,7 @@ watch(() => props.projectId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-									:class="tasksView === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+									:class="tasksView === 'board' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 									@click="tasksView = 'board'"
 								>
 									<Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
@@ -1397,7 +1397,7 @@ watch(() => props.projectId, () => {
 								<button
 									type="button"
 									class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-									:class="tasksView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+									:class="tasksView === 'list' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 									@click="tasksView = 'list'"
 								>
 									<Icon name="lucide:list" class="w-3.5 h-3.5" />

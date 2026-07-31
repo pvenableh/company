@@ -10,7 +10,7 @@
 						@click="setPeriod(p.value)"
 						class="px-2 py-0.5 rounded-md text-[10px] font-medium transition-all"
 						:class="activePeriod === p.value
-							? 'bg-background text-foreground shadow-sm'
+							? 'glass-active-thumb relative text-foreground'
 							: 'text-muted-foreground hover:text-foreground'"
 					>
 						{{ p.label }}

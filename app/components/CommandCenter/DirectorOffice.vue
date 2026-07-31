@@ -1247,10 +1247,10 @@ const vReveal = {
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
-                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'arc' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'arc'">
+                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'arc' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'arc'">
                         <EIcon name="i-lucide-users-round" class="w-3.5 h-3.5" /> Board
                       </button>
-                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'cards' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'cards'">
+                      <button type="button" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors" :class="agendaLayout === 'cards' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'" @click="agendaLayout = 'cards'">
                         <EIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Agenda
                       </button>
                     </div>
@@ -1565,7 +1565,7 @@ const vReveal = {
                     <button
                       type="button"
                       class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                      :class="viewMode === 'outline' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      :class="viewMode === 'outline' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                       @click="viewMode = 'outline'"
                     >
                       <EIcon name="i-lucide-list" class="w-3.5 h-3.5" /> Outline
@@ -1573,7 +1573,7 @@ const vReveal = {
                     <button
                       type="button"
                       class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                      :class="viewMode === 'slides' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                      :class="viewMode === 'slides' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                       @click="viewMode = 'slides'"
                     >
                       <EIcon name="i-lucide-gallery-horizontal-end" class="w-3.5 h-3.5" /> Slides

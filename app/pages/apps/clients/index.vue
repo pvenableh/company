@@ -597,7 +597,7 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="!sortByRating && clientsSortMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                :class="!sortByRating && clientsSortMode === 'activity' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                 @click="sortByRating = false; setClientsSortMode('activity')"
               >
                 <Icon name="lucide:activity" class="w-3.5 h-3.5" />
@@ -606,7 +606,7 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="!sortByRating && clientsSortMode === 'manual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                :class="!sortByRating && clientsSortMode === 'manual' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                 @click="sortByRating = false; setClientsSortMode('manual')"
               >
                 <Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
@@ -615,7 +615,7 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="sortByRating ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                :class="sortByRating ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                 title="Sort by Earnest client rating (A → F)"
                 @click="enableRatingSort()"
               >
@@ -628,7 +628,7 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="clientsViewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                :class="clientsViewMode === 'table' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                 @click="clientsViewMode = 'table'"
               >
                 <Icon name="lucide:list" class="w-3.5 h-3.5" />
@@ -637,7 +637,7 @@ watch(view, (next) => {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-                :class="clientsViewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                :class="clientsViewMode === 'board' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
                 @click="clientsViewMode = 'board'; activeClientTab = 'active'; fetchClients()"
               >
                 <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />

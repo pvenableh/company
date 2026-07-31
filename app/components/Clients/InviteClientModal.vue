@@ -26,7 +26,7 @@
 				<button
 					type="button"
 					class="px-3 py-1.5 text-[11px] font-medium rounded-md transition-colors"
-					:class="tab === 'contact' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+					:class="tab === 'contact' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					@click="tab = 'contact'"
 				>
 					<Icon name="lucide:user" class="inline w-3 h-3 mr-1" />
@@ -35,7 +35,7 @@
 				<button
 					type="button"
 					class="px-3 py-1.5 text-[11px] font-medium rounded-md transition-colors"
-					:class="tab === 'email' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+					:class="tab === 'email' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					@click="tab = 'email'"
 				>
 					<Icon name="lucide:at-sign" class="inline w-3 h-3 mr-1" />

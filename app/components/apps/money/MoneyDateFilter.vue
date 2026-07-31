@@ -49,7 +49,7 @@ const presets = [
         :key="p.key"
         type="button"
         class="px-2.5 py-1 rounded-full transition-colors"
-        :class="(p.key === 'all' && !active) ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+        :class="(p.key === 'all' && !active) ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
         @click="emit('preset', p.key)"
       >
         {{ p.label }}

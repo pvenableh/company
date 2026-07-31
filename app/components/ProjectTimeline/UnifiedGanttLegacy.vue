@@ -440,12 +440,12 @@ function handleCloseDetail() {
 					<button
 						@click="setViewMode('nested')"
 						class="px-3 py-1 text-[11px] font-medium rounded-md transition-all"
-						:class="viewMode === 'nested' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'nested' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>Nested</button>
 					<button
 						@click="setViewMode('flat')"
 						class="px-3 py-1 text-[11px] font-medium rounded-md transition-all"
-						:class="viewMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'flat' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>Flat</button>
 				</div>
 				<!-- Type filters -->

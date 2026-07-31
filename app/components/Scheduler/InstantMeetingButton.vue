@@ -154,7 +154,7 @@ const startMeeting = async () => {
 							@click="prefs.duration = opt"
 							class="flex-1 px-2 py-1 rounded-md text-[12px] font-medium transition-all"
 							:class="prefs.duration === opt
-								? 'bg-background text-foreground shadow-sm'
+								? 'glass-active-thumb relative text-foreground'
 								: 'text-muted-foreground hover:text-foreground'"
 						>
 							{{ opt }}m

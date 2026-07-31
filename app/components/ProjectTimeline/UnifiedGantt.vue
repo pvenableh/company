@@ -1003,12 +1003,12 @@ const showUndated = ref(false);
 					<button
 						@click="setViewMode('nested')"
 						class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
-						:class="viewMode === 'nested' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'nested' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>Nested</button>
 					<button
 						@click="setViewMode('flat')"
 						class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
-						:class="viewMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+						:class="viewMode === 'flat' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
 					>Flat</button>
 				</div>
 				<button @click="scrollToToday" class="px-2 h-6 rounded-full text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">

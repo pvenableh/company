@@ -99,7 +99,7 @@ const src = computed(() => `/api/email/preview-mjml?template=${template.value}&b
 
 .tx-preview__brand { @apply inline-flex items-center gap-1 rounded-full bg-muted p-1; }
 .tx-preview__toggle { @apply px-3 py-1.5 text-xs font-medium rounded-full text-muted-foreground transition-colors; }
-.tx-preview__toggle--active { @apply bg-background text-foreground shadow-sm; }
+.tx-preview__toggle--active { @apply glass-active-thumb relative text-foreground; }
 
 .tx-preview__body { @apply flex flex-col md:flex-row gap-4; }
 
