@@ -150,6 +150,41 @@ export async function getUserDirectus(
   }
 
   client.setToken(accessToken);
+
+  // Auto-recover from a rejected token at the REQUEST level: any 401 triggers one
+  // force-refresh + retry, transparently for every getUserDirectus caller — so
+  // individual handlers don't each need withAuthRetry to survive the stale-token
+  // race (a stale access token used during a navigation/refresh burst). A 403 is
+  // a real permission denial and is NOT retried. Refresh routes through
+  // dedupedDirectusRefresh (L1/L2 dedup) so the retry rides a sibling's rotation
+  // rather than fighting over the single-use refresh token.
+  const rawRequest = client.request.bind(client);
+  client.request = (async (options: any) => {
+    try {
+      return await rawRequest(options);
+    } catch (err: any) {
+      const status = err?.response?.status ?? err?.statusCode;
+      if (status !== 401) throw err;
+
+      const freshSession = await getUserSession(event);
+      const refreshToken = getSessionRefreshToken(freshSession);
+      if (!refreshToken) throw err;
+
+      try {
+        const fresh = await dedupedDirectusRefresh(refreshToken);
+        await updateSessionTokens(event, freshSession, fresh);
+        client.setToken(fresh.access_token);
+      } catch {
+        // Refresh failed — surface the original 401 (the caller/session owner
+        // decides teardown; we never clear the session from here).
+        throw err;
+      }
+
+      // Retry exactly once with the fresh token. A second 401 propagates.
+      return await rawRequest(options);
+    }
+  }) as typeof client.request;
+
   return client;
 }
 
