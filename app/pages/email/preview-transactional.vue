@@ -9,13 +9,13 @@
 				<button
 					type="button"
 					class="tx-preview__toggle"
-					:class="{ 'tx-preview__toggle--active': brand === 'earnest' }"
+					:class="{ 'tx-preview__toggle--active glass-active-thumb': brand === 'earnest' }"
 					@click="brand = 'earnest'"
 				>Earnest</button>
 				<button
 					type="button"
 					class="tx-preview__toggle"
-					:class="{ 'tx-preview__toggle--active': brand === 'org' }"
+					:class="{ 'tx-preview__toggle--active glass-active-thumb': brand === 'org' }"
 					@click="brand = 'org'"
 				>Org-branded</button>
 			</div>
@@ -99,7 +99,9 @@ const src = computed(() => `/api/email/preview-mjml?template=${template.value}&b
 
 .tx-preview__brand { @apply inline-flex items-center gap-1 rounded-full bg-muted p-1; }
 .tx-preview__toggle { @apply px-3 py-1.5 text-xs font-medium rounded-full text-muted-foreground transition-colors; }
-.tx-preview__toggle--active { @apply glass-active-thumb relative text-foreground; }
+/* glass-active-thumb is a plain theme.css class (applied via the template, not
+   @apply — Tailwind can't @apply a non-utility class). */
+.tx-preview__toggle--active { @apply relative text-foreground; }
 
 .tx-preview__body { @apply flex flex-col md:flex-row gap-4; }
 
