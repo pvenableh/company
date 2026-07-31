@@ -181,6 +181,15 @@ const leadDocActions = computed(() => [
 	{ label: 'New contract', icon: 'lucide:file-signature', click: () => { openContractCreate({ leadId: lead.value?.id }); } },
 ]);
 
+// One context-aware "+ New" menu for the lead header — collapses the separate
+// Meeting / Proposal create buttons into a single entry point. The hero AI
+// actions (Ask Earnest, Draft with Earnest) stay as standalone buttons.
+const leadCreateMenuItems = computed(() => [
+	{ label: 'Meeting', icon: 'lucide:video', onClick: () => openMeetingCreate({ leadId: lead.value?.id, leadData: lead.value, defaultVideo: true }) },
+	{ label: 'Proposal', icon: 'lucide:file-plus', onClick: () => openProposalCreate({ leadId: lead.value?.id }), separatorBefore: true },
+	{ label: 'Contract', icon: 'lucide:file-signature', onClick: () => openContractCreate({ leadId: lead.value?.id }) },
+]);
+
 // Activity form
 const showActivityForm = ref(false);
 const newActivity = reactive({
@@ -499,9 +508,6 @@ function openContactPivot() {
 							<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
 								Edit
 							</UiActionButton>
-							<UiActionButton icon="lucide:video" variant="primary" @click="openMeetingCreate({ leadId: lead?.id, leadData: lead, defaultVideo: true })" hide-label="sm">
-								Meeting
-							</UiActionButton>
 							<Tooltip>
 								<TooltipTrigger as-child>
 									<UiActionButton
@@ -519,9 +525,7 @@ function openContactPivot() {
 									Generates a tailored proposal draft from this lead's context — contact, company, scope notes, past won-lead patterns. Drops the result straight into a new proposal you can edit.
 								</TooltipContent>
 							</Tooltip>
-							<UiActionButton icon="lucide:file-plus" @click="openProposalCreate({ leadId: lead?.id })">
-								Proposal
-							</UiActionButton>
+							<AppCreateMenu :items="leadCreateMenuItems" />
 						</div>
 					</TooltipProvider>
 				</div>
@@ -536,9 +540,6 @@ function openContactPivot() {
 					<div class="flex items-center gap-1.5 flex-wrap">
 						<UiActionButton icon="lucide:pencil" @click="showFormModal = true">
 							Edit
-						</UiActionButton>
-						<UiActionButton icon="lucide:video" variant="primary" @click="openMeetingCreate({ leadId: lead?.id, leadData: lead, defaultVideo: true })">
-							Meeting
 						</UiActionButton>
 						<Tooltip>
 							<TooltipTrigger as-child>
@@ -556,9 +557,7 @@ function openContactPivot() {
 								Generates a tailored proposal draft from this lead's context.
 							</TooltipContent>
 						</Tooltip>
-						<UiActionButton icon="lucide:file-plus" @click="openProposalCreate({ leadId: lead?.id })">
-							Proposal
-						</UiActionButton>
+						<AppCreateMenu :items="leadCreateMenuItems" />
 					</div>
 				</TooltipProvider>
 			</div>
