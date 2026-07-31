@@ -2,7 +2,7 @@
 /**
  * Proposals → Draft with Earnest.
  * Full-surface home for the Document Generative Canvas. Standalone route while
- * the pattern proves out; a follow-up threads it into ProposalWorkspace.
+ * the pattern proves out; a follow-up threads it into DocumentWorkspace.
  */
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Draft a proposal with Earnest' });

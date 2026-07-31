@@ -1,7 +1,7 @@
 <!--
   ProposalPanel — slide-over body for a single proposal.
 
-  Wraps the shared `<AppsDocumentsProposalWorkspace>` in `compact` mode
+  Wraps the shared `<AppsDocumentsDocumentWorkspace type="proposal">` in `compact` mode
   inside `AppSlideOverShell` so the panel renders the same workspace as
   `/proposals/[id]` without a full-route navigation.
 -->

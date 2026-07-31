@@ -1,7 +1,7 @@
 <!--
   /proposals/[id] — thin deep-link wrapper.
 
-  Body lives in `<AppsDocumentsProposalWorkspace>` so the same surface
+  Body lives in `<AppsDocumentsDocumentWorkspace type="proposal">` so the same surface
   renders inside the `proposal` slide-over panel as well. This page
   exists so email links and direct URLs still work; apps-shell users
   hit the slide-over via `useAppSlideOver('proposal').open(id)`.

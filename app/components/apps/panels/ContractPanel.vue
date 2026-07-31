@@ -1,7 +1,7 @@
 <!--
   ContractPanel — slide-over body for a single contract.
 
-  Wraps the shared `<AppsDocumentsContractWorkspace>` in `compact` mode
+  Wraps the shared `<AppsDocumentsDocumentWorkspace type="contract">` in `compact` mode
   inside `AppSlideOverShell` so the panel renders the same workspace as
   `/contracts/[id]` without a full-route navigation. Reads the panel
   registry's `id` prop as the contractId.

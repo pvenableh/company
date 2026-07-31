@@ -29,7 +29,7 @@ const props = defineProps<{
   /**
    * Embedded mode: instead of creating a new proposal, seed the canvas with an
    * existing document's blocks and hand edited blocks back via @apply. The host
-   * (e.g. ProposalWorkspace) owns persistence.
+   * (e.g. DocumentWorkspace) owns persistence.
    */
   embedded?: boolean;
   /** Existing document blocks to seed the canvas with (embedded mode). */
