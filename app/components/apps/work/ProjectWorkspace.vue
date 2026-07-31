@@ -96,6 +96,19 @@ const WORK_SUBTAB_ITEMS = computed(() => [
 	{ key: 'meetings', label: 'Meetings', count: meetings.value.length || null },
 ]);
 
+// Communications tab — one home for the live channel thread ("Messages") and
+// the touchpoint outreach log ("Log"), toggled by a segmented control so the
+// two comms modes never share a scroll. Sub-keys map to the existing
+// channels / touchpoints content branches via `contentTab`.
+const COMMS_SUBTABS = ['messages', 'log'] as const;
+type CommsSubTab = (typeof COMMS_SUBTABS)[number];
+const commsView = ref<CommsSubTab>('messages');
+const commsViewToTab = (v: CommsSubTab): ProjectTabKey => (v === 'log' ? 'touchpoints' : 'channels');
+const COMMS_SUBTAB_ITEMS = computed(() => [
+	{ key: 'messages', label: 'Messages', count: channels.value.length || null },
+	{ key: 'log', label: 'Log', count: null },
+]);
+
 // Legacy deep-links (?tab=files / ?tab=documents) resolve to Files & Docs;
 // ?tab=timeline/tasks/tickets/meetings resolve to Work + the right sub-view.
 function normalizeTab(t: ProjectTabKey | undefined | null): ProjectTabKey {
@@ -104,12 +117,17 @@ function normalizeTab(t: ProjectTabKey | undefined | null): ProjectTabKey {
 		workView.value = t as WorkSubTab;
 		return 'work';
 	}
+	// Legacy ?tab=channels / ?tab=touchpoints resolve to Communications + view.
+	if (t === 'channels') { commsView.value = 'messages'; return 'communications'; }
+	if (t === 'touchpoints') { commsView.value = 'log'; return 'communications'; }
 	return (t || 'overview') as ProjectTabKey;
 }
 const activeTab = ref<ProjectTabKey>(normalizeTab(props.initialTab));
 // The tab whose content should render: Work delegates to its sub-view.
 const contentTab = computed<ProjectTabKey>(() =>
-	activeTab.value === 'work' ? (workView.value as ProjectTabKey) : activeTab.value,
+	activeTab.value === 'work' ? (workView.value as ProjectTabKey)
+	: activeTab.value === 'communications' ? commsViewToTab(commsView.value)
+	: activeTab.value,
 );
 
 // Directional tab-content animation. `tabDir` reflects whether we moved to a
@@ -119,7 +137,7 @@ const contentTab = computed<ProjectTabKey>(() =>
 // matching the sliding tab indicator + the apps floor nav. Attribute-driven
 // (not a <Transition> wrapper) so it can't destabilise the big template.
 const TAB_ORDER: ProjectTabKey[] = [
-	'overview', 'work', 'touchpoints', 'channels',
+	'overview', 'work', 'communications',
 	'invoices', 'library', 'contacts', 'activity',
 ];
 const tabDir = ref<'fwd' | 'back'>('fwd');
@@ -357,6 +375,8 @@ const tabCounts = computed<Partial<Record<ProjectTabKey, number>>>(() => ({
 	tasks: taskCount.value,
 	tickets: ticketCount.value,
 	channels: channels.value.length,
+	// Communications badge = tagged channels (the touchpoint log self-fetches).
+	communications: channels.value.length,
 	meetings: meetings.value.length,
 	invoices: invoices.value.length,
 	// Files & Docs = uploaded files + authored proposals + authored contracts.
@@ -444,12 +464,20 @@ function loadForTab(tab: ProjectTabKey) {
 
 watch(activeTab, (next) => {
 	emit('tab-change', next);
-	// Work delegates to its sub-view; warm that sub-view's data.
-	loadForTab(next === 'work' ? workView.value : next);
+	// Work / Communications delegate to their sub-view; warm that view's data.
+	loadForTab(
+		next === 'work' ? workView.value
+		: next === 'communications' ? commsViewToTab(commsView.value)
+		: next,
+	);
 });
-// Switching the Work inner sub-switch warms the newly-shown sub-view.
+// Switching an inner sub-switch warms the newly-shown sub-view.
 watch(workView, (v) => { if (activeTab.value === 'work') loadForTab(v); });
-onMounted(() => { if (activeTab.value === 'work') loadForTab(workView.value); });
+watch(commsView, (v) => { if (activeTab.value === 'communications') loadForTab(commsViewToTab(v)); });
+onMounted(() => {
+	if (activeTab.value === 'work') loadForTab(workView.value);
+	else if (activeTab.value === 'communications') loadForTab(commsViewToTab(commsView.value));
+});
 
 async function loadProject() {
 	loading.value = true;
@@ -1250,6 +1278,13 @@ watch(() => props.projectId, () => {
 					<ETabs v-model="workView" :items="WORK_SUBTAB_ITEMS" />
 				</div>
 
+				<!-- Communications sub-switch — Messages (live channel thread) vs
+				     Log (touchpoint outreach history). Kept as a segmented control
+				     so the composer and the log never share a scroll. -->
+				<div v-if="activeTab === 'communications'" class="mb-4">
+					<ETabs v-model="commsView" :items="COMMS_SUBTAB_ITEMS" />
+				</div>
+
 				<!-- Overview — a work-first dashboard: health, Earnest's next
 				     moves, then the live pulse (recent activity + touchpoints).
 				     The raw field editor is demoted to a disclosure below so the
@@ -1465,7 +1500,7 @@ watch(() => props.projectId, () => {
 				</div>
 
 				<!-- Touchpoints — lightweight communication log (outreach + follow-up). -->
-				<div v-else-if="activeTab === 'touchpoints'">
+				<div v-else-if="contentTab === 'touchpoints'">
 					<AppsTouchpoints
 						:project-id="projectId"
 						:organization-id="organizationId"
@@ -1473,8 +1508,8 @@ watch(() => props.projectId, () => {
 					/>
 				</div>
 
-				<!-- Channels -->
-				<div v-else-if="activeTab === 'channels'">
+				<!-- Messages (channel threads tagged to this project) -->
+				<div v-else-if="contentTab === 'channels'">
 					<div class="flex items-center justify-end gap-2 mb-3">
 						<button
 							type="button"
