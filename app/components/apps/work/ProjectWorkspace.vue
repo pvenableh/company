@@ -704,8 +704,8 @@ function openInvoiceFromHunt(_id: string) {
 
 // ── Manual event creation (Timeline tab) ───────────────────────────────────
 // Adding a project_event by hand now happens in a stacked slide-over
-// (`project-event` panel, create mode) pushed via the "New Event" button. The
-// panel bumps this project-scoped signal on success; we watch it and remount
+// (`project-event` panel, create mode) pushed from the header "+ New" menu
+// (Event). The panel bumps this project-scoped signal on success; we watch it and remount
 // the Gantt via `timelineRefreshKey` so the new event appears.
 const timelineRefreshKey = ref(0);
 const eventsRefresh = useState<number>(`project-events-refresh:${props.projectId}`, () => 0);
@@ -888,8 +888,8 @@ function openChannel(channel: { id: string | number }) {
 	pushPanel('channel', String(channel.id));
 }
 
-// Ticket board status columns — shared source of truth (also feeds the header
-// New Ticket composer). Bound in script so template access is unambiguous.
+// Ticket board status columns — shared source of truth for the embedded
+// board. Bound in script so template access is unambiguous.
 const ticketColumns = TICKET_BOARD_COLUMNS;
 
 // Pin-to-top toggle — bumps the project to the front of the home widget + lists.
@@ -966,8 +966,8 @@ function onFileDrop(e: DragEvent) {
 // ── Inline create / attach modals ─────────────────────────────────────────
 // Task creation is owned by the embedded TasksBoard / TasksListView (each
 // ships its own + button), so the workspace only adds Attach Existing there.
-// Tickets are workspace-owned: the New Ticket + Attach Existing buttons live
-// together in the tickets header (board create suppressed via `hide-create`).
+// Ticket creation lives in the header "+ New" menu; the tickets tab keeps
+// Attach Existing (the board's own create is suppressed via `hide-create`).
 const showAttachTicketModal = ref(false);
 const showAttachTaskModal = ref(false);
 // New invoice opens as a stacked slide-over (`invoice` panel, create mode).
@@ -996,8 +996,8 @@ function onTicketAttached() {
 	showAttachTicketModal.value = false;
 	refreshTicketCount();
 }
-// New Ticket is created from the workspace header (next to Attach Existing);
-// refresh the tab count and nudge the embedded board to re-fetch.
+// A ticket is created from the header "+ New" menu; refresh the tab count
+// and nudge the embedded board to re-fetch.
 function onTicketCreated() {
 	refreshTicketCount();
 	useTicketsStore().triggerRefresh();
@@ -1024,8 +1024,8 @@ function onChannelAttached() {
 }
 
 // Channel creation now happens in a stacked slide-over (`channel` panel,
-// create mode) pushed via "New Channel". The panel bumps this project-scoped
-// signal on success; we watch it and refetch the channel list.
+// create mode) pushed from the header "+ New" menu (Channel). The panel bumps
+// this project-scoped signal on success; we watch it and refetch the channel list.
 const channelsRefresh = useState<number>(`project-channels-refresh:${props.projectId}`, () => 0);
 watch(channelsRefresh, () => { loadChannels(); });
 function onMeetingCreated() {
@@ -1438,10 +1438,9 @@ watch(() => props.projectId, () => {
 					/>
 				</div>
 
-				<!-- Tickets — the workspace owns both create affordances here
-				     (New Ticket + Attach Existing) so they sit together; the
-				     board's own embedded create button is suppressed via
-				     `hide-create`. -->
+				<!-- Tickets — the tab keeps its Attach Existing control; ticket
+				     creation is in the header "+ New" menu, and the board's own
+				     embedded create button is suppressed via `hide-create`. -->
 				<div v-else-if="contentTab === 'tickets'">
 					<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 						<p class="text-xs text-muted-foreground">All tickets opened for this project.</p>
@@ -1863,7 +1862,7 @@ watch(() => props.projectId, () => {
 
 				<!-- Contacts — extra contacts pinned to this project via the
 				     projects_contacts m2m junction. Mirrors the ClientWorkspace
-				     contacts tab (drag to reorder, Attach Existing, New Contact)
+				     contacts tab (drag to reorder, Attach Existing)
 				     but writes to the project junction instead of the client's
 				     clients_contacts. New contacts also get a clients_contacts
 				     row when the project has a client, so the same contact
