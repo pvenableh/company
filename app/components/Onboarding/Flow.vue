@@ -458,6 +458,25 @@ onMounted(async () => {
   } else {
     // Org mode — restore sessionStorage + handle the Stripe checkout round-trip.
     loadState()
+
+    // Reactivation: the billing "Choose a plan" CTA passes ?org=<id> to restart
+    // THIS org's plan rather than create a duplicate. Validate the user owns it,
+    // reuse it (so ensureOrgCreated returns its id), prefill the name, and jump
+    // straight to the plan step — it's already named/configured.
+    const reactivateOrgId = route.query.org as string | undefined
+    if (reactivateOrgId) {
+      if (!isInitialized.value) await initializeOrganizations().catch(() => {})
+      const owned = (organizations.value || []).find((o: any) => o?.id === reactivateOrgId) as any
+      if (owned) {
+        createdOrgId.value = reactivateOrgId
+        setOrganization(reactivateOrgId)
+        if (owned.name) orgName.value = owned.name
+        if (owned.industry) selectedIndustry.value = owned.industry
+        currentStep.value = STEP.PLAN
+        router.replace({ path: '/organization/new' })
+      }
+    }
+
     const stepParam = route.query.step as string | undefined
     const checkoutFlag = route.query.checkout as string | undefined
     const orgIdParam = route.query.org_id as string | undefined

@@ -254,6 +254,40 @@ async function handleCancelAddon() {
 		toast.error(err?.data?.message || 'Failed to remove add-on');
 	}
 }
+
+// ── Change plan ─────────────────────────────────────────────────────────────
+// In-app plan switching (solo/studio/agency) without the Stripe portal. Swaps
+// the base price via /api/stripe/subscription/change-plan (proration handled).
+const PLAN_CATALOG = [
+	{ key: 'solo', name: 'Solo', monthly: 49, annual: 408, blurb: 'For the one-person shop doing serious work.' },
+	{ key: 'studio', name: 'Studio', monthly: 149, annual: 1241, blurb: 'For the team that means business.' },
+	{ key: 'agency', name: 'Agency', monthly: 299, annual: 2988, blurb: 'For the business that has grown into something real.' },
+];
+
+const showChangePlan = ref(false);
+const changeInterval = ref<'monthly' | 'annual'>('monthly');
+const changingPlan = ref<string | null>(null);
+
+async function handleChangePlan(planKey: string) {
+	if (!selectedOrg.value || changingPlan.value) return;
+	if (planKey === orgPlan.value) { showChangePlan.value = false; return; }
+	changingPlan.value = planKey;
+	try {
+		await $fetch('/api/stripe/subscription/change-plan', {
+			method: 'POST',
+			body: { organizationId: selectedOrg.value, plan: planKey, interval: changeInterval.value },
+		});
+		toast.success(`Switched to ${planKey.charAt(0).toUpperCase() + planKey.slice(1)}`, {
+			description: 'Your plan is updated — billing prorates on your next invoice.',
+		});
+		showChangePlan.value = false;
+		await Promise.all([fetchStatus(), fetchOrganizationDetails()]);
+	} catch (err: any) {
+		toast.error(err?.data?.message || 'Failed to change plan');
+	} finally {
+		changingPlan.value = null;
+	}
+}
 </script>
 
 <template>
@@ -346,7 +380,10 @@ async function handleCancelAddon() {
 				</div>
 
 				<!-- Plan Actions -->
-				<div v-if="isActive || isPastDue" class="flex items-center gap-2 mt-6 pt-4 border-t">
+				<div v-if="isActive || isPastDue" class="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t">
+					<EButton v-if="isOrgAdminOrAbove" size="sm" @click="showChangePlan = true">
+						Change plan
+					</EButton>
 					<EButton size="sm" variant="soft" :loading="loading" @click="handleManageBilling">
 						Manage Billing
 					</EButton>
@@ -361,12 +398,15 @@ async function handleCancelAddon() {
 					</EButton>
 				</div>
 
-				<!-- Trialing: nudge to secure the plan with a card -->
+				<!-- Trialing: nudge to secure the plan with a card; allow plan switch -->
 				<div v-else-if="isTrialing && isOrgAdminOrAbove" class="mt-6 pt-4 border-t">
 					<p class="text-sm text-muted-foreground mb-3">
 						You're on a free trial. Add a card to keep your plan when the trial ends — no charge until then.
 					</p>
-					<EButton size="sm" to="/organization/upgrade">Add a card</EButton>
+					<div class="flex flex-wrap items-center gap-2">
+						<EButton size="sm" to="/organization/upgrade">Add a card</EButton>
+						<EButton size="sm" variant="soft" @click="showChangePlan = true">Change plan</EButton>
+					</div>
 				</div>
 
 				<!-- No active plan: let admins start one (member-only orgs just see the state) -->
@@ -374,7 +414,9 @@ async function handleCancelAddon() {
 					<p class="text-sm text-muted-foreground mb-3">
 						You don't have an active plan yet. Choose one to start your 14-day free trial and unlock your full workspace.
 					</p>
-					<EButton size="sm" to="/organization/new">Choose a plan</EButton>
+					<!-- Pass the current org so the wizard restarts THIS org's plan
+					     instead of creating a duplicate. -->
+					<EButton size="sm" :to="{ path: '/organization/new', query: { org: selectedOrg } }">Choose a plan</EButton>
 				</div>
 			</div>
 
@@ -588,6 +630,64 @@ async function handleCancelAddon() {
 							Keep It
 						</EButton>
 					</div>
+				</div>
+			</div>
+		</EModal>
+
+		<!-- Change Plan Modal -->
+		<EModal v-model="showChangePlan">
+			<div>
+				<h3 class="text-lg font-semibold text-foreground">Change your plan</h3>
+				<p class="text-sm text-muted-foreground mt-1 mb-4">
+					Switch anytime — billing prorates automatically on your next invoice.
+				</p>
+
+				<!-- Interval toggle -->
+				<div class="flex justify-center mb-4">
+					<div class="inline-flex p-1 bg-muted/50 rounded-full">
+						<button
+							class="px-3 py-1 rounded-full text-xs font-medium transition-all"
+							:class="changeInterval === 'monthly' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'"
+							@click="changeInterval = 'monthly'"
+						>Monthly</button>
+						<button
+							class="px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1.5"
+							:class="changeInterval === 'annual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'"
+							@click="changeInterval = 'annual'"
+						>
+							Annual
+							<span class="text-[9px] uppercase tracking-wider text-primary font-bold">2 mo free</span>
+						</button>
+					</div>
+				</div>
+
+				<div class="space-y-2">
+					<div
+						v-for="p in PLAN_CATALOG"
+						:key="p.key"
+						class="p-4 rounded-xl border-2 flex items-center justify-between gap-3"
+						:class="p.key === orgPlan ? 'border-primary bg-primary/5' : 'border-border'"
+					>
+						<div class="min-w-0">
+							<div class="flex items-baseline gap-2 flex-wrap">
+								<span class="font-bold text-foreground">{{ p.name }}</span>
+								<span class="font-bold text-foreground">${{ changeInterval === 'annual' ? p.annual : p.monthly }}</span>
+								<span class="text-xs text-muted-foreground">{{ changeInterval === 'annual' ? '/yr' : '/mo' }}</span>
+								<EBadge v-if="p.key === orgPlan" color="green" variant="soft" size="xs">Current</EBadge>
+							</div>
+							<p class="text-xs text-muted-foreground mt-0.5">{{ p.blurb }}</p>
+						</div>
+						<EButton
+							v-if="p.key !== orgPlan"
+							size="sm"
+							:loading="changingPlan === p.key"
+							@click="handleChangePlan(p.key)"
+						>Switch</EButton>
+					</div>
+				</div>
+
+				<div class="mt-5 flex justify-end">
+					<EButton variant="ghost" @click="showChangePlan = false">Close</EButton>
 				</div>
 			</div>
 		</EModal>
