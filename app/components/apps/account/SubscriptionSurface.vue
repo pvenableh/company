@@ -42,6 +42,11 @@ const {
 const { isOrgAdminOrAbove, hasAddon, planAllows, orgPlan } = useOrgRole();
 const { selectedOrg, fetchOrganizationDetails } = useOrganization();
 const isEnterprise = computed(() => orgPlan.value === 'enterprise');
+const isTrialing = computed(() => subscriptionData.value?.subscription?.status === 'trialing');
+// No live plan and not an entitled enterprise/wholesale org → needs to start one.
+const noActivePlan = computed(() =>
+	!isEnterprise.value && !isActive.value && !isPastDue.value && !isTrialing.value,
+);
 
 const showCancelConfirm = ref(false);
 const route = useRoute();
@@ -354,6 +359,22 @@ async function handleCancelAddon() {
 					>
 						Cancel Plan
 					</EButton>
+				</div>
+
+				<!-- Trialing: nudge to secure the plan with a card -->
+				<div v-else-if="isTrialing && isOrgAdminOrAbove" class="mt-6 pt-4 border-t">
+					<p class="text-sm text-muted-foreground mb-3">
+						You're on a free trial. Add a card to keep your plan when the trial ends — no charge until then.
+					</p>
+					<EButton size="sm" to="/organization/upgrade">Add a card</EButton>
+				</div>
+
+				<!-- No active plan: let admins start one (member-only orgs just see the state) -->
+				<div v-else-if="noActivePlan && isOrgAdminOrAbove" class="mt-6 pt-4 border-t">
+					<p class="text-sm text-muted-foreground mb-3">
+						You don't have an active plan yet. Choose one to start your 14-day free trial and unlock your full workspace.
+					</p>
+					<EButton size="sm" to="/organization/new">Choose a plan</EButton>
 				</div>
 			</div>
 
