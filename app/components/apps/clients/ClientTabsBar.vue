@@ -51,7 +51,7 @@ const tabs: Array<{ key: ClientTabKey; label: string; icon: string }> = [
 	{ key: 'content', label: 'Content', icon: 'lucide:palette' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'partners', label: 'Partners', icon: 'lucide:network' },
-	{ key: 'messages', label: 'Messages', icon: 'lucide:message-square' },
+	{ key: 'messages', label: 'Communications', icon: 'lucide:messages-square' },
 	// Activity lives last — the deepest history, not the landing view.
 	{ key: 'activity', label: 'Activity', icon: 'lucide:activity' },
 ];

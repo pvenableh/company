@@ -342,6 +342,15 @@ const WORK_SUBTAB_ITEMS = computed(() => [
 	{ key: 'meetings', label: 'Meetings', count: relatedMeetings.value.length || null },
 ]);
 
+// Communications tab (labelled on the tab bar) has two segments: Messages (the
+// live channel thread) and Log (the touchpoint outreach history). Segmented so
+// the composer and the log never share a scroll — mirrors the project surface.
+const COMMS_SUBTAB_ITEMS = [
+	{ key: 'messages', label: 'Messages' },
+	{ key: 'log', label: 'Log' },
+];
+const commsView = ref<'messages' | 'log'>('messages');
+
 function normalizeTab(t: ClientTabKey | undefined | null): ClientTabKey {
 	if (t === 'documents' as any) return 'library';
 	if (t && (WORK_SUBTABS as readonly string[]).includes(t as string)) {
@@ -2129,6 +2138,14 @@ watch(() => props.clientId, () => {
 
 				<!-- Messages -->
 				<div v-else-if="activeTab === 'messages'">
+					<!-- Communications sub-switch — Messages (live channel thread) vs
+					     Log (touchpoint outreach history). -->
+					<div class="mb-4">
+						<ETabs v-model="commsView" :items="COMMS_SUBTAB_ITEMS" />
+					</div>
+
+					<!-- Messages: live channel threads tagged to this client -->
+					<template v-if="commsView === 'messages'">
 					<div class="flex items-center justify-end mb-3">
 						<button
 							type="button"
@@ -2201,6 +2218,15 @@ watch(() => props.clientId, () => {
 								:can-moderate="isOrgAdminOrAbove"
 							/>
 						</div>
+					</div>
+					</template>
+
+					<!-- Log: touchpoint outreach history for this client -->
+					<div v-else>
+						<AppsTouchpoints
+							:client-id="clientId"
+							:organization-id="(client as any)?.organization || null"
+						/>
 					</div>
 				</div>
 			</div>
