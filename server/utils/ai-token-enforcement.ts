@@ -153,10 +153,15 @@ export async function enforceTokenLimits(event: H3Event, organizationId?: string
         const used = Number(org.ai_tokens_used_this_period) || 0;
         const remaining = org.ai_token_limit_monthly - used;
         if (remaining <= 0) {
+          // A no-card trial hit its bounded grant — the fix is to add a card
+          // (which unlocks the full plan allotment), not to buy a token pack.
+          const onTrial = org.subscription_status === 'trialing';
           return {
             allowed: false,
             statusCode: 402,
-            reason: 'Your monthly AI token limit has been reached. Purchase more tokens or wait until the next billing period.',
+            reason: onTrial
+              ? "You've used the AI included in your free trial. Add a card to unlock your plan's full monthly allotment."
+              : 'Your monthly AI token limit has been reached. Purchase more tokens or wait until the next billing period.',
             orgTokensRemaining: 0,
           };
         }

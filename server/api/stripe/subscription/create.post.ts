@@ -14,7 +14,7 @@
 // handleSubscriptionChange) syncs the org's plan, token allotment, scan
 // credits, addons, and mirrors subscription_status + trial_ends_at onto the org.
 import { readUsers, updateUser, readItem, updateItem } from '@directus/sdk';
-import { EARNEST_PLANS } from '~~/server/utils/stripe';
+import { EARNEST_PLANS, TRIAL_AI_TOKEN_GRANT } from '~~/server/utils/stripe';
 import type { EarnestPlanId } from '~~/server/utils/stripe';
 
 interface CreateBody {
@@ -162,10 +162,11 @@ export default defineEventHandler(async (event) => {
 					trial_ends_at: subscription.trial_end
 						? new Date(subscription.trial_end * 1000).toISOString()
 						: null,
-					// Grant the plan's allotment now so trial AI works immediately
-					// (org/create seeds these at 0). The webhook re-affirms the same
-					// values authoritatively.
-					ai_token_limit_monthly: planDef.aiTokens.monthlyAllotment,
+					// This endpoint always starts a NO-CARD trial, so grant the
+					// bounded trial token allotment (not the full plan) — adding a
+					// card later unlocks the full amount. Scan credits stay at plan
+					// level. The webhook re-affirms these authoritatively.
+					ai_token_limit_monthly: TRIAL_AI_TOKEN_GRANT,
 					scan_credits_limit_monthly: planDef.scanCredits,
 				}),
 			).catch((e: any) => {

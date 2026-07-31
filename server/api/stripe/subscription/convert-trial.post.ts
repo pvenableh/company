@@ -11,7 +11,9 @@
 // `customer.subscription.updated` → the webhook (paymentchange.ts) flips the
 // org's mirrored `subscription_status` back to `active`/`trialing`, which clears
 // the trial-expiry gate.
-import { readItem } from '@directus/sdk';
+import { readItem, updateItem } from '@directus/sdk';
+import { EARNEST_PLANS } from '~~/server/utils/stripe';
+import type { EarnestPlanId } from '~~/server/utils/stripe';
 
 interface ConvertBody {
 	organizationId: string;
@@ -39,7 +41,7 @@ export default defineEventHandler(async (event) => {
 	const org = (await directus
 		.request(
 			readItem('organizations', organizationId, {
-				fields: ['stripe_customer_id', 'stripe_subscription_id'],
+				fields: ['stripe_customer_id', 'stripe_subscription_id', 'plan'],
 			}),
 		)
 		.catch(() => null)) as any;
@@ -77,6 +79,21 @@ export default defineEventHandler(async (event) => {
 				billing_cycle_anchor: 'now',
 			});
 			status = resumed.status;
+		}
+
+		// Adding a card unlocks the plan's FULL monthly AI allotment right away
+		// (the no-card trial only had the bounded grant). The subscription.updated
+		// webhook re-affirms this authoritatively; this optimistic write just
+		// makes it instant.
+		const planId = org?.plan as EarnestPlanId | undefined;
+		const planDef = planId ? EARNEST_PLANS[planId] : null;
+		if (planDef) {
+			await directus.request(
+				updateItem('organizations', organizationId, {
+					ai_token_limit_monthly: planDef.aiTokens.monthlyAllotment,
+					scan_credits_limit_monthly: planDef.scanCredits,
+				}),
+			).catch((e: any) => console.warn('[convert-trial] optimistic full grant failed (non-fatal):', e?.message));
 		}
 
 		return { subscriptionId, status };

@@ -81,6 +81,13 @@ export const EARNEST_PLANS = {
 
 export type EarnestPlanId = keyof typeof EARNEST_PLANS;
 
+// AI tokens granted during a NO-CARD free trial — deliberately bounded (well
+// under any plan's monthly allotment) to control real LLM spend and discourage
+// trial-farming for free tokens. Adding a card (convert-trial) unlocks the
+// plan's full monthly allotment. Tune here; enforced in paymentchange.ts +
+// subscription/create.post.ts. Env override: TRIAL_AI_TOKEN_GRANT.
+export const TRIAL_AI_TOKEN_GRANT = Number(process.env.TRIAL_AI_TOKEN_GRANT) || 50_000;
+
 // Token add-on packages available for purchase
 // `wholesalePriceInCents` is charged instead of `priceInCents` when the buying
 // org has `wholesale_pricing` (Earnest-admin grant, e.g. Hue). Tokens granted

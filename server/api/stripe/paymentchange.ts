@@ -21,7 +21,7 @@
 import { defineEventHandler, getHeader, readRawBody } from 'h3';
 import Stripe from 'stripe';
 import { updateItems, updateItem, readItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
-import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
+import { EARNEST_PLANS, EARNEST_ADDONS, TRIAL_AI_TOKEN_GRANT, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 import { recomputeInvoiceStatus } from '~~/server/utils/recompute-invoice-status';
 import { applyRefundAdjustment } from '~~/server/utils/apply-refund-adjustment';
@@ -447,7 +447,12 @@ async function handleSubscriptionChange(
 
 				if (planId && plan) {
 					orgUpdate.plan = planId;
-					orgUpdate.ai_token_limit_monthly = plan.aiTokens.monthlyAllotment;
+					// A no-card trial (trialing + no default card on the sub) gets the
+					// bounded trial allotment; adding a card — which sets the sub's
+					// default_payment_method — or converting to `active` unlocks the
+					// full plan allotment.
+					const noCardTrial = subscription.status === 'trialing' && !subscription.default_payment_method;
+					orgUpdate.ai_token_limit_monthly = noCardTrial ? TRIAL_AI_TOKEN_GRANT : plan.aiTokens.monthlyAllotment;
 					orgUpdate.scan_credits_limit_monthly = plan.scanCredits;
 				}
 
