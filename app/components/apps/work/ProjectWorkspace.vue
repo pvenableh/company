@@ -1080,6 +1080,20 @@ const invoiceDefaults = computed(() => ({
 	client: clientId.value || null,
 }));
 
+// One context-aware "+ New" — everything creatable within a project, in one
+// menu, so the per-tab "New X" buttons no longer have to. Permission-gated to
+// match the individual create controls.
+const createMenuItems = computed(() => [
+	{ label: 'Event', icon: 'lucide:calendar', onClick: () => pushPanel('project-event', props.projectId, 'create'), hidden: !canCreate('projects') },
+	{ label: 'Ticket', icon: 'lucide:ticket', onClick: () => openTicketCreate({ projectId: props.projectId, organizationId: organizationId.value || null }), hidden: !canCreate('tickets') },
+	{ label: 'Meeting', icon: 'lucide:video', onClick: () => openMeetingCreate({ projectId: props.projectId, defaultVideo: true }) },
+	{ label: 'Invoice', icon: 'lucide:file-text', onClick: () => openInvoiceCreate(invoiceDefaults), separatorBefore: true },
+	{ label: 'Proposal', icon: 'lucide:file-plus', onClick: () => openProposalCreate() },
+	{ label: 'Contract', icon: 'lucide:file-signature', onClick: () => openContractCreate() },
+	{ label: 'Contact', icon: 'lucide:user-plus', onClick: () => openContactCreate({ clientId: clientId.value || null }), separatorBefore: true },
+	{ label: 'Channel', icon: 'lucide:message-square', onClick: () => pushPanel('channel', props.projectId, 'create'), hidden: !canCreate('channels') },
+]);
+
 // ── Formatting helpers ─────────────────────────────────────────────────────
 function fmtCurrency(n: number | string | null | undefined): string {
 	const num = Number(n);
@@ -1196,6 +1210,8 @@ watch(() => props.projectId, () => {
 					     action, Ask-Earnest drafting, then any panel-injected
 					     escape hatch (e.g. "Open Project" in the slide-over). -->
 					<PinButton :pinned="(project as any)?.pinned" always @toggle="onTogglePin" />
+					<!-- One "+ New" for everything creatable in this project. -->
+					<AppCreateMenu :items="createMenuItems" :hide-label="compact ? 'always' : undefined" />
 					<button
 						type="button"
 						class="inline-flex items-center justify-center h-8 rounded-full bg-foreground text-background text-xs font-medium ios-press shrink-0"
