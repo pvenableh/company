@@ -999,7 +999,7 @@ async function handleFinish() {
               />
             </div>
 
-            <div>
+            <div v-if="industries.length">
               <label class="text-sm font-medium mb-2 block">Industry</label>
               <div class="grid grid-cols-2 gap-2">
                 <button
