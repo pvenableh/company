@@ -114,14 +114,18 @@ const fillPct = computed(() => {
   overflow: hidden;
 }
 
-/* The aura fills the viewport behind the card; its own dark veil keeps the
-   card legible. Sits below all content. */
+/* The aura fills the viewport behind the card. Matches the live Earnest (Focus)
+   panel: the metaball orbs composite over an explicit --aura-ground base + a
+   top-anchored vignette, at full opacity, so onboarding reads as the same deep,
+   immersive surface rather than a flatter dimmed field. */
 .ob-aura {
   position: fixed;
   inset: 0;
   z-index: 0;
-  opacity: 0.9;
   pointer-events: none;
+  background:
+    radial-gradient(140% 120% at 50% 8%, transparent 0%, hsl(0 0% 0% / 0.4) 52%, hsl(0 0% 0% / 0.72) 100%),
+    hsl(var(--aura-ground));
 }
 
 .ob-stage {

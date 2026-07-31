@@ -245,6 +245,20 @@ interface EarnestInputData {
 }
 
 function calculateEarnestScore(data: EarnestInputData): { score: number; dimensions: DimensionScores } {
+	// A brand-new account with zero activity should read 0 — not the ~37 "benefit
+	// of the doubt" floor the constant fallbacks below would otherwise produce
+	// (no overdue = 6, few unread = 8, etc.). That phantom score also suppressed
+	// the "Complete your first ticket to start scoring" empty state. Once there's
+	// any real engagement, the normal calculation takes over.
+	const hasActivity =
+		data.totalStarted > 0 || data.completed > 0 || data.activeProjects > 0 ||
+		data.projectsWithDeadlines > 0 || data.leadsInPipeline > 0 || data.totalLeadsClosed > 0 ||
+		data.scheduledPosts > 0 || data.projectTasksThisWeek > 0 || data.tasksCompletedToday > 0 ||
+		data.totalFollowups > 0 || data.daysActiveThisWeek > 0 || data.streak > 0 || data.earlyCompletions > 0;
+	if (!hasActivity) {
+		return { score: 0, dimensions: { followThrough: 0, consistency: 0, responsiveness: 0, proactivity: 0, depth: 0, crm: 0 } };
+	}
+
 	// Follow-Through (25 max)
 	const completionRate = data.totalStarted > 0 ? (data.completed / data.totalStarted) * 16 : 8;
 	const overduePenalty = Math.min(data.overdueItems * 2, 8);

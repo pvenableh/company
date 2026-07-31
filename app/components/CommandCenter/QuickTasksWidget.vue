@@ -1,12 +1,12 @@
 <template>
 	<div class="ios-card p-5">
 		<!-- Header -->
-		<div class="flex items-center justify-between mb-4">
-			<div class="flex items-center gap-2">
-				<EIcon name="i-heroicons-clipboard-document-check" class="w-5 h-5 text-primary" />
-				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Quick Tasks</h3>
+		<div class="flex items-center justify-between gap-2 mb-4">
+			<div class="flex items-center gap-2 min-w-0">
+				<EIcon name="i-heroicons-clipboard-document-check" class="w-5 h-5 text-primary shrink-0" />
+				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70 truncate">Quick Tasks</h3>
 			</div>
-			<div class="flex items-center gap-3">
+			<div class="flex items-center gap-2 shrink-0">
 				<!-- View toggle: list vs grouped -->
 				<div class="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg">
 					<button
@@ -76,30 +76,35 @@
 			</Transition>
 		</div>
 
-		<!-- Quick Add (always visible) -->
-		<div class="flex gap-2 mb-4">
+		<!-- Quick Add (always visible). Input on its own row so it never gets
+		     squeezed; the "when" dropdown + Add sit below and can't overflow. The
+		     date is also editable on the task after it's created. -->
+		<div class="mb-4 space-y-2">
 			<input
 				v-model="newTaskTitle"
 				type="text"
 				placeholder="Add a quick task..."
-				class="flex-1 h-9 rounded-full glass-field px-4 text-xs placeholder:text-muted-foreground focus:outline-none transition-colors"
+				class="w-full h-9 rounded-full glass-field px-4 text-xs placeholder:text-muted-foreground focus:outline-none transition-colors"
 				@keydown.enter="handleAddTask"
 			/>
-			<ESelectMenu
-				v-model="newTaskSchedule"
-				:options="scheduleOptions"
-				option-attribute="label"
-				value-attribute="value"
-				size="xs"
-				class="w-24"
-			/>
-			<button
-				class="h-9 px-4 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-				:disabled="!newTaskTitle.trim()"
-				@click="handleAddTask"
-			>
-				Add
-			</button>
+			<div class="flex items-center gap-2">
+				<ESelectMenu
+					v-model="newTaskSchedule"
+					:options="scheduleOptions"
+					option-attribute="label"
+					value-attribute="value"
+					size="xs"
+					class="w-32 shrink-0"
+				/>
+				<div class="flex-1" />
+				<button
+					class="h-9 px-5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0"
+					:disabled="!newTaskTitle.trim()"
+					@click="handleAddTask"
+				>
+					Add
+				</button>
+			</div>
 		</div>
 
 		<!-- Empty State -->
