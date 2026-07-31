@@ -158,6 +158,14 @@ export default defineEventHandler(async (event) => {
 			await directus.request(
 				updateItem('organizations', organizationId, {
 					plan,
+					// Write the sub + customer ids HERE, not just via the webhook. The
+					// billing tab looks up the LIVE Stripe subscription by
+					// stripe_subscription_id; if the webhook doesn't fire (e.g. prod
+					// webhook-secret drift) the org is left `trialing` with a null sub
+					// id and billing wrongly reads "No Plan". Writing them directly makes
+					// billing correct immediately, independent of the webhook.
+					stripe_subscription_id: subscription.id,
+					stripe_customer_id: customerId,
 					subscription_status: subscription.status,
 					trial_ends_at: subscription.trial_end
 						? new Date(subscription.trial_end * 1000).toISOString()
