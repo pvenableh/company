@@ -50,7 +50,7 @@ const tabs: Array<{ key: ProjectTabKey; label: string; icon: string }> = [
 	// Work = Timeline + Tasks + Tickets + Meetings, grouped behind one tab.
 	{ key: 'work', label: 'Work', icon: 'lucide:gantt-chart' },
 	{ key: 'touchpoints', label: 'Touchpoints', icon: 'lucide:megaphone' },
-	{ key: 'channels', label: 'Channels', icon: 'lucide:message-square' },
+	{ key: 'channels', label: 'Messages', icon: 'lucide:message-square' },
 	{ key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
 	{ key: 'library', label: 'Files & Docs', icon: 'lucide:files' },
 	{ key: 'contacts', label: 'Contacts', icon: 'lucide:user-circle' },
