@@ -591,6 +591,9 @@ function earnestReact(gesture: string) {
   shellRef.value?.react?.(gesture)
 }
 
+// Theme-matched confetti burst for the "you're in" moment (trial started).
+const { celebrate } = useConfetti()
+
 // ── Navigation ──
 // Walk the mode-aware `visibleSteps` list. The commit + post-commit steps have
 // their own handlers, so Continue only advances up to (not through) the commit.
@@ -627,6 +630,12 @@ const industryName = computed(() =>
 
 async function draftBrandVoice() {
   if (brandDrafting.value) return
+  // Draft mode has no session — the endpoint authorizes via the signup-draft
+  // token instead, so make sure the draft row exists before we call.
+  if (isDraft.value && !draftToken.value) {
+    const ok = await startDraft()
+    if (!ok) return
+  }
   brandDrafting.value = true
   brandDraftNote.value = ''
   brandBeatIdx.value = 0
@@ -641,6 +650,7 @@ async function draftBrandVoice() {
         name: orgName.value.trim(),
         industry: industryName.value,
         website: orgWebsite.value.trim() || undefined,
+        draftToken: isDraft.value ? (draftToken.value || undefined) : undefined,
         answers: {
           idealClient: brandIdealClient.value.trim() || undefined,
           differentiator: brandDifferentiator.value.trim() || undefined,
@@ -816,6 +826,7 @@ async function handleStartTrial() {
 
     subscriptionId.value = data.subscriptionId
     earnestReact('celebrate')
+    celebrate()
     toast.success('Your 14-day free trial has started — no card needed. We’ll ask for one at day 14.')
     // Add-ons require a card, so the trial signup skips straight to inviting the
     // team. The owner can add add-ons from Billing after adding a card.
@@ -879,6 +890,7 @@ async function handleDraftComplete() {
 
     if (import.meta.client) { try { sessionStorage.removeItem(DRAFT_TOKEN_KEY) } catch {} }
     earnestReact('celebrate')
+    celebrate()
     toast.success('Welcome to Earnest! Your 14-day free trial has started.')
     currentStep.value = STEP.INVITE
   } catch (err: any) {
@@ -1046,7 +1058,7 @@ async function handleFinish() {
               <button
                 class="px-4 py-1.5 rounded-full text-xs font-medium transition-all"
                 :class="selectedInterval === 'monthly'
-                  ? 'bg-white text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'"
                 @click="selectedInterval = 'monthly'"
               >
@@ -1055,7 +1067,7 @@ async function handleFinish() {
               <button
                 class="px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5"
                 :class="selectedInterval === 'annual'
-                  ? 'bg-white text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'"
                 @click="selectedInterval = 'annual'"
               >
@@ -1072,7 +1084,7 @@ async function handleFinish() {
               class="w-full text-left p-4 rounded-xl border-2 transition-all relative"
               :class="selectedPlan === plan.key
                 ? 'border-[var(--cyan)] bg-info/10'
-                : 'border-gray-200 hover:border-gray-300 bg-white'"
+                : 'border-border hover:border-muted-foreground/40 bg-muted/40'"
               @click="selectedPlan = plan.key"
             >
               <span
@@ -1083,13 +1095,13 @@ async function handleFinish() {
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-baseline gap-2">
-                    <span class="text-base font-bold">{{ plan.name }}</span>
-                    <span class="text-lg font-bold">${{ selectedInterval === 'annual' ? plan.annual : plan.monthly }}</span>
+                    <span class="text-base font-bold text-foreground">{{ plan.name }}</span>
+                    <span class="text-lg font-bold text-foreground">${{ selectedInterval === 'annual' ? plan.annual : plan.monthly }}</span>
                     <span class="text-xs text-muted-foreground">{{ selectedInterval === 'annual' ? '/yr' : '/mo' }}</span>
                   </div>
                   <p class="text-xs text-muted-foreground mt-0.5">{{ plan.desc }}</p>
                   <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-2">
-                    <span v-for="f in plan.features" :key="f" class="text-[10px] text-gray-500 flex items-center gap-1">
+                    <span v-for="f in plan.features" :key="f" class="text-[10px] text-muted-foreground flex items-center gap-1">
                       <Check class="w-3 h-3 text-[var(--cyan)]" />
                       {{ f }}
                     </span>
@@ -1097,7 +1109,7 @@ async function handleFinish() {
                 </div>
                 <div
                   class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors"
-                  :class="selectedPlan === plan.key ? 'border-[var(--cyan)] bg-[var(--cyan)]' : 'border-gray-300'"
+                  :class="selectedPlan === plan.key ? 'border-[var(--cyan)] bg-[var(--cyan)]' : 'border-muted-foreground/40'"
                 >
                   <Check v-if="selectedPlan === plan.key" class="w-3 h-3 text-white" />
                 </div>
@@ -1133,7 +1145,7 @@ async function handleFinish() {
               <label class="text-sm font-medium mb-1.5 block">Brand Color</label>
               <div class="flex items-center gap-3">
                 <div
-                  class="w-10 h-10 rounded-lg border border-gray-200 shrink-0"
+                  class="w-10 h-10 rounded-lg border border-border shrink-0"
                   :style="{ backgroundColor: orgBrandColor || '#e5e7eb' }"
                 />
                 <input
@@ -1312,7 +1324,7 @@ async function handleFinish() {
               </div>
             </div>
             <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 pt-3 border-t border-info/40">
-              <span v-for="f in currentPlan.features" :key="f" class="text-[10px] text-gray-600 flex items-center gap-1">
+              <span v-for="f in currentPlan.features" :key="f" class="text-[10px] text-muted-foreground flex items-center gap-1">
                 <Check class="w-3 h-3 text-[var(--cyan)]" />
                 {{ f }}
               </span>
@@ -1328,11 +1340,11 @@ async function handleFinish() {
           </div>
 
           <!-- Terms re-affirmation -->
-          <label class="flex items-start gap-2 cursor-pointer select-none mb-4 p-3 rounded-lg border border-gray-200 bg-muted/10 hover:bg-muted/20 transition-colors">
+          <label class="flex items-start gap-2 cursor-pointer select-none mb-4 p-3 rounded-lg border border-border bg-muted/10 hover:bg-muted/20 transition-colors">
             <input
               v-model="termsReaffirmed"
               type="checkbox"
-              class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
+              class="mt-0.5 h-4 w-4 rounded border-input text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
             />
             <span class="text-[12px] text-muted-foreground leading-relaxed">
               I agree to the
@@ -1353,12 +1365,12 @@ async function handleFinish() {
               class="w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3"
               :class="selectedAddons[addon.id]
                 ? 'border-[var(--cyan)] bg-info/10'
-                : 'border-gray-200 hover:border-gray-300 bg-white'"
+                : 'border-border hover:border-muted-foreground/40 bg-muted/40'"
               @click="selectedAddons[addon.id] = !selectedAddons[addon.id]"
             >
               <div
                 class="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors"
-                :class="selectedAddons[addon.id] ? 'border-[var(--cyan)] bg-[var(--cyan)]' : 'border-gray-300'"
+                :class="selectedAddons[addon.id] ? 'border-[var(--cyan)] bg-[var(--cyan)]' : 'border-muted-foreground/40'"
               >
                 <Check v-if="selectedAddons[addon.id]" class="w-3 h-3 text-white" />
               </div>

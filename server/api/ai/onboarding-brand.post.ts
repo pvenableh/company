@@ -7,9 +7,15 @@
  * an optional website (which we actually read), and 1–2 optional sharpening
  * answers. Returns editable prose the user refines, not a locked value.
  *
- * No org token enforcement: there is no org yet, and this is a single low-cost
- * onboarding call gated by an authenticated session.
+ * Auth: two accepted callers, because this step runs in BOTH onboarding modes.
+ *   - `org` mode  (/organization/new): an authenticated session (existing user
+ *     creating another org).
+ *   - `draft` mode (/register, password-at-end): NO session yet — the guest is
+ *     gated instead by their unguessable `signup_drafts` token, which must match
+ *     an in-progress (non-completed) draft. This is the same token that protects
+ *     every other public signup call, so it can't be used anonymously.
  */
+import { readItems } from '@directus/sdk';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import { readWebsite } from '~~/server/utils/read-website';
 import type { ChatMessage } from '~~/server/utils/llm/types';
@@ -18,6 +24,8 @@ interface OnboardingBrandRequest {
 	name?: string;
 	industry?: string; // industry name (free text)
 	website?: string;
+	/** Public draft-flow gate — an active signup_drafts token (draft mode only). */
+	draftToken?: string;
 	answers?: {
 		idealClient?: string;
 		differentiator?: string;
@@ -32,12 +40,32 @@ interface OnboardingBrandResponse {
 }
 
 export default defineEventHandler(async (event): Promise<OnboardingBrandResponse> => {
-	const session = await requireUserSession(event);
-	if (!(session as any).user?.id) {
-		throw createError({ statusCode: 401, message: 'Authentication required' });
+	const body = await readBody<OnboardingBrandRequest>(event);
+
+	// Accept EITHER an authenticated session (org mode) OR a valid in-progress
+	// signup draft token (public draft mode). getUserSession never throws, so we
+	// can fall through to the token check for the not-yet-registered guest.
+	const session = await getUserSession(event);
+	const hasSession = !!(session as any)?.user?.id;
+	if (!hasSession) {
+		const token = String(body?.draftToken || '').trim();
+		if (!token) {
+			throw createError({ statusCode: 401, message: 'Authentication required' });
+		}
+		const directus = getServerDirectus();
+		const rows = (await directus.request(
+			readItems('signup_drafts', {
+				filter: { token: { _eq: token } },
+				fields: ['id', 'status'],
+				limit: 1,
+			}),
+		).catch(() => [])) as Array<{ id: number; status: string | null }>;
+		const draft = rows[0];
+		if (!draft || draft.status === 'completed') {
+			throw createError({ statusCode: 401, message: 'Authentication required' });
+		}
 	}
 
-	const body = await readBody<OnboardingBrandRequest>(event);
 	const name = String(body?.name || '').trim();
 	const industry = String(body?.industry || '').trim();
 	const website = String(body?.website || '').trim();
