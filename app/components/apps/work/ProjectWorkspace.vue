@@ -1371,15 +1371,6 @@ watch(() => props.projectId, () => {
 						<p class="text-xs text-muted-foreground">
 							Events, milestones, tickets, and tasks for this project on one timeline.
 						</p>
-						<button
-							v-if="canCreate('projects')"
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="pushPanel('project-event', props.projectId, 'create')"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Event
-						</button>
 					</div>
 					<ProjectTimelineUnifiedGantt :key="timelineRefreshKey" :project-id="projectId" />
 				</div>
@@ -1463,15 +1454,6 @@ watch(() => props.projectId, () => {
 								<Icon name="lucide:link" class="w-3 h-3" />
 								Attach Existing
 							</button>
-							<button
-								v-if="canCreate('tickets')"
-								type="button"
-								class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-								@click="openTicketCreate({ projectId, organizationId: organizationId || null })"
-							>
-								<Icon name="lucide:plus" class="w-3 h-3" />
-								New Ticket
-							</button>
 						</div>
 					</div>
 
@@ -1502,15 +1484,6 @@ watch(() => props.projectId, () => {
 						>
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
-						</button>
-						<button
-							v-if="canCreate('channels')"
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
-							@click="pushPanel('channel', props.projectId, 'create')"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Channel
 						</button>
 					</div>
 
@@ -1558,14 +1531,6 @@ watch(() => props.projectId, () => {
 				<!-- Meetings -->
 				<div v-else-if="contentTab === 'meetings'">
 					<div class="flex items-center justify-end mb-3">
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openMeetingCreate({ projectId, defaultVideo: true })"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Meeting
-						</button>
 					</div>
 					<div v-if="meetingsLoading && !meetings.length" class="space-y-2" aria-busy="true" aria-label="Loading meetings">
 						<div
@@ -1641,14 +1606,6 @@ watch(() => props.projectId, () => {
 						>
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
-						</button>
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openInvoiceCreate(invoiceDefaults)"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Invoice
 						</button>
 					</div>
 					<div v-if="invoicesLoading && !invoices.length" class="space-y-px" aria-busy="true" aria-label="Loading invoices">
@@ -1774,14 +1731,6 @@ watch(() => props.projectId, () => {
 									<Icon name="lucide:link" class="w-3 h-3" />
 									Attach Existing
 								</button>
-								<button
-									type="button"
-									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="openProposalCreate()"
-								>
-									<Icon name="lucide:plus" class="w-3 h-3" />
-									New Proposal
-								</button>
 							</div>
 						</div>
 						<MoneyProposalsList
@@ -1813,14 +1762,6 @@ watch(() => props.projectId, () => {
 								>
 									<Icon name="lucide:link" class="w-3 h-3" />
 									Attach Existing
-								</button>
-								<button
-									type="button"
-									class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-									@click="openContractCreate()"
-								>
-									<Icon name="lucide:plus" class="w-3 h-3" />
-									New Contract
 								</button>
 							</div>
 						</div>
@@ -1936,14 +1877,6 @@ watch(() => props.projectId, () => {
 						>
 							<Icon name="lucide:link" class="w-3 h-3" />
 							Attach Existing
-						</button>
-						<button
-							type="button"
-							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-							@click="openContactCreate({ clientId: clientId || null })"
-						>
-							<Icon name="lucide:plus" class="w-3 h-3" />
-							New Contact
 						</button>
 					</div>
 
