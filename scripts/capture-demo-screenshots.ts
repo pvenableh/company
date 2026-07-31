@@ -198,8 +198,14 @@ const SHOTS: Shot[] = [
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/boardroom`,
 		waitFor: async (page) => {
 			try {
-				await page.locator('button:has-text("Convene")').first().click({ timeout: 8000 });
-				await page.waitForSelector('button[class*="-translate-x-1/2"]', { timeout: 20000 });
+				// The board may auto-convene; if a Convene/Go-live button is present,
+				// click it, but don't abort when it isn't.
+				await page.locator('button:has-text("Convene"), button:has-text("Go live")').first().click({ timeout: 8000 }).catch(() => {});
+				// The live board is the "arc" constellation — each department is a
+				// `.do-seat` button. (The legacy `-translate-x-1/2` table variant is
+				// retained-but-never-rendered, so targeting it used to time out and
+				// the deck was never reached.)
+				await page.waitForSelector('.do-seat', { timeout: 20000 });
 				await page.waitForTimeout(800);
 				const slidesToggle = page.locator('button:has-text("Slides")').first();
 				const emptyState = page.getByText('No concrete steps').first();
@@ -209,7 +215,7 @@ const SHOTS: Shot[] = [
 				// mid-draft never lets the AI finish.
 				for (const subject of ['MONEY', 'LEADS', 'PROPOSALS', 'PROJECTS']) {
 					const clicked = await page.evaluate((label) => {
-						const seats = Array.from(document.querySelectorAll('button[class*="-translate-x-1/2"]')) as HTMLElement[];
+						const seats = Array.from(document.querySelectorAll('.do-seat')) as HTMLElement[];
 						const seat = seats.find((b) => (b.textContent || '').toUpperCase().includes(label));
 						if (seat) { seat.click(); return true; }
 						return false;
@@ -234,8 +240,11 @@ const SHOTS: Shot[] = [
 					await page.waitForTimeout(1200);
 					// Advance to the graphic "By the numbers" metrics slide — the
 					// redesigned deck's nicest visual. Falls back to the last slide.
+					// NOTE: this reads well only when the demo org has real financials;
+					// if it shows $0, re-seed demo payments (scripts/seed-demo-payments.ts)
+					// and ensure the boardroom isn't serving a stale cached briefing.
 					const metricsSlide = page.getByText('By the numbers').first();
-					for (let i = 0; i < 12; i++) {
+					for (let i = 0; i < 14; i++) {
 						if (await metricsSlide.isVisible().catch(() => false)) break;
 						await page.keyboard.press('ArrowRight');
 						await page.waitForTimeout(700);
