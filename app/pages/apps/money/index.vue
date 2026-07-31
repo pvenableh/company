@@ -320,6 +320,26 @@ function connectExistingAccount() {
   window.location.href = `/api/stripe/connect/oauth-start?organizationId=${encodeURIComponent(orgId)}&returnTo=money`;
 }
 
+// Disconnect the current account so a different one can be linked. Clears the
+// org's stripe_account_* reference (and revokes an OAuth link). Unsticks a
+// pending OAuth account that can't be onboarded via account links.
+const showDisconnectConfirm = ref(false);
+async function disconnectStripe() {
+  const orgId = selectedOrg.value;
+  if (!orgId || connectActing.value) return;
+  connectActing.value = true;
+  try {
+    await $fetch('/api/stripe/connect/disconnect', { method: 'POST', body: { organizationId: orgId } });
+    toast.success('Stripe account disconnected', { description: 'You can now connect a different account.' });
+    showDisconnectConfirm.value = false;
+    await fetchStripeConnect();
+  } catch (err: any) {
+    toast.error('Could not disconnect', { description: err?.data?.message || err?.message || 'Please try again.' });
+  } finally {
+    connectActing.value = false;
+  }
+}
+
 // Return leg for both Connect flows (Express onboarding + Standard OAUTH link).
 // Refresh status, toast, then strip the query so a refresh doesn't re-fire.
 watch(
@@ -1576,17 +1596,51 @@ const headerAction = computed(() => {
               >
                 Already using Stripe? <span class="text-primary hover:underline">Link an existing account</span>
               </button>
+
+              <!-- Disconnect / switch — when an account is already linked (e.g. a
+                   pending OAuth account that can't finish onboarding). -->
+              <template v-if="['pending', 'restricted', 'unknown'].includes(stripeConnect?.status || '')">
+                <button
+                  v-if="!showDisconnectConfirm"
+                  type="button"
+                  class="text-xs text-muted-foreground text-left w-fit disabled:opacity-50"
+                  :disabled="connectActing"
+                  @click="showDisconnectConfirm = true"
+                >
+                  Wrong account? <span class="text-destructive hover:underline">Disconnect &amp; switch</span>
+                </button>
+                <div v-else class="flex items-center gap-2 text-xs">
+                  <span class="text-muted-foreground">Disconnect this account?</span>
+                  <button type="button" class="text-destructive font-medium hover:underline disabled:opacity-50" :disabled="connectActing" @click="disconnectStripe">Yes, disconnect</button>
+                  <button type="button" class="text-muted-foreground hover:text-foreground" :disabled="connectActing" @click="showDisconnectConfirm = false">Cancel</button>
+                </div>
+              </template>
             </div>
-            <div v-else class="mt-4">
+            <div v-else class="mt-4 flex flex-col gap-2.5">
               <a
                 href="https://dashboard.stripe.com/"
                 target="_blank"
                 rel="noopener"
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline w-fit"
               >
                 <Icon name="lucide:external-link" class="w-3.5 h-3.5" />
                 Manage on Stripe
               </a>
+              <!-- Disconnect to switch to a different Stripe account. -->
+              <button
+                v-if="!showDisconnectConfirm"
+                type="button"
+                class="text-xs text-muted-foreground text-left w-fit disabled:opacity-50"
+                :disabled="connectActing"
+                @click="showDisconnectConfirm = true"
+              >
+                Need a different account? <span class="text-destructive hover:underline">Disconnect &amp; switch</span>
+              </button>
+              <div v-else class="flex items-center gap-2 text-xs">
+                <span class="text-muted-foreground">Disconnect this account? Invoice payments will stop until you connect another.</span>
+                <button type="button" class="text-destructive font-medium hover:underline disabled:opacity-50" :disabled="connectActing" @click="disconnectStripe">Yes, disconnect</button>
+                <button type="button" class="text-muted-foreground hover:text-foreground" :disabled="connectActing" @click="showDisconnectConfirm = false">Cancel</button>
+              </div>
             </div>
           </div>
 

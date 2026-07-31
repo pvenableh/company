@@ -16,6 +16,21 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'orgId is required' });
 	}
 
+	// The header score badge is non-critical — a Directus permission denial or a
+	// stale-token race on org switch must degrade to zeros, never 500 the request.
+	const EMPTY = {
+		total_ep: 0,
+		today_ep: 0,
+		level: 1,
+		current_score: 0,
+		streak: 0,
+		best_streak: 0,
+		last_activity_date: null,
+		dimension_scores: {},
+		badges_unlocked: {},
+		days_active_this_week: 0,
+	};
+
 	try {
 		const directus = await getUserDirectus(event);
 
@@ -50,28 +65,15 @@ export default defineEventHandler(async (event) => {
 
 		if (scores.length === 0) {
 			// No score yet — return defaults
-			return {
-				data: {
-					total_ep: 0,
-					today_ep: 0,
-					level: 1,
-					current_score: 0,
-					streak: 0,
-					best_streak: 0,
-					last_activity_date: null,
-					dimension_scores: {},
-					badges_unlocked: {},
-					days_active_this_week: 0,
-				},
-			};
+			return { data: EMPTY };
 		}
 
 		return { data: { ...scores[0], today_ep: todayEp } };
 	} catch (error: any) {
-		console.error('[score/me] Error:', error);
-		throw createError({
-			statusCode: error.statusCode || 500,
-			message: error.message || 'Failed to fetch score',
-		});
+		// Log for diagnosis but degrade gracefully — the badge shows zeros rather
+		// than surfacing a 500 (a Directus 403/401 has no top-level statusCode, so
+		// it would otherwise mask as 500 and spam the console on every org switch).
+		console.warn('[score/me] falling back to empty score:', error?.errors?.[0]?.message || error?.message || error);
+		return { data: EMPTY };
 	}
 });

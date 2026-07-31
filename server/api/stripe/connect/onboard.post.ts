@@ -105,12 +105,26 @@ export default defineEventHandler(async (event) => {
 	const returnUrl = body?.returnUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=complete`;
 	const refreshUrl = body?.refreshUrl || `${baseUrl}/apps/money?floor=deposits&onboarding=refresh`;
 
-	const link = await stripe.accountLinks.create({
-		account: accountId,
-		type: 'account_onboarding',
-		return_url: returnUrl,
-		refresh_url: refreshUrl,
-	});
+	let link;
+	try {
+		link = await stripe.accountLinks.create({
+			account: accountId,
+			type: 'account_onboarding',
+			return_url: returnUrl,
+			refresh_url: refreshUrl,
+		});
+	} catch (err: any) {
+		// An account linked via OAuth ("Link an existing account") can't be onboarded
+		// through platform account links — Stripe 400s. Guide the user to disconnect
+		// and start a fresh account instead of surfacing the raw Stripe error.
+		if (err?.type === 'StripeInvalidRequestError' || err?.statusCode === 400) {
+			throw createError({
+				statusCode: 409,
+				message: 'This account was linked from an existing Stripe login and can’t be set up here. Use “Disconnect & switch” to connect a fresh account.',
+			});
+		}
+		throw err;
+	}
 
 	return {
 		accountId,
