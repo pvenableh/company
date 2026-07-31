@@ -65,9 +65,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return;
   }
 
-  const { organizations, isInitialized, initializeOrganizations } = useOrganization();
+  const { organizations, isInitialized, fetchDegraded, initializeOrganizations } = useOrganization();
 
-  if (!isInitialized.value) {
+  // Retry when not yet initialized OR when a prior fetch degraded (self-heal).
+  if (!isInitialized.value || fetchDegraded.value) {
     try {
       await initializeOrganizations();
     } catch {
@@ -78,6 +79,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Active membership in any org → continue (client-portal middleware will narrow further if needed)
   if (organizations.value.length > 0) return;
+
+  // Fail OPEN when the org fetch failed/degraded (e.g. a stale-token race, a
+  // transient Directus error). `fetchOrganizationDetails` swallows those errors
+  // — leaving `organizations` empty while `isInitialized` is still true — so
+  // without this an admin/staff/portal user whose fetch hiccupped gets wrongly
+  // bounced to /organization/new. They re-resolve on the next navigation.
+  if (fetchDegraded.value) return;
 
   // Orgless and not a client → onboarding gate
   const { isOrgClient } = useOrgRole();

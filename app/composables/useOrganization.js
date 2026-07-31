@@ -5,6 +5,10 @@ export function useOrganization() {
 	const selectedOrg = useState('selectedOrganization', () => null);
 	const organizations = useState('organizations', () => []);
 	const error = useState('orgError', () => null);
+	// True when an org read failed but was caught (so the fetch didn't throw).
+	// Lets `needs-org` distinguish "genuinely org-less" from "couldn't load orgs"
+	// and fail OPEN rather than bouncing a valid user to /organization/new.
+	const fetchDegraded = useState('orgFetchDegraded', () => false);
 	const isInitialized = useState('orgIsInitialized', () => false);
 	// Show-archived toggle: archived orgs are excluded by default. Flip via
 	// the org switcher dropdown to surface them (for restore).
@@ -82,6 +86,7 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
+			fetchDegraded.value = false;
 			// Fetch orgs, staff memberships, and portal-user rows in parallel
 			const [junctionOrgs, memberships, portalRows] = await Promise.all([
 				orgItems.list({
@@ -90,14 +95,20 @@ export function useOrganization() {
 						active: { _neq: false },
 					},
 					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'trial_ends_at', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
-				}),
+				// Resilient like the other two reads: a transient failure here (e.g.
+				// a stale-token race) must NOT collapse the whole fetch and leave the
+				// user "org-less" — their org_membership/portal rows still resolve
+				// their orgs below. `junctionFailed` propagates the error to
+				// `needs-org` so it can fail OPEN instead of bouncing a valid user
+				// to /organization/new.
+				}).catch(() => { fetchDegraded.value = true; return []; }),
 				membershipItems.list({
 					filter: {
 						user: { _eq: user.value.id },
 						status: { _eq: 'active' },
 					},
 					fields: ['id', 'organization', 'role.id', 'role.name', 'role.slug'],
-				}).catch(() => []),
+				}).catch(() => { fetchDegraded.value = true; return []; }),
 				portalUserItems.list({
 					filter: {
 						user: { _eq: user.value.id },
@@ -110,7 +121,7 @@ export function useOrganization() {
 					// portal-only users with an empty `organizations.value`, breaking the
 					// /portal redirect. The `clientName` is fetched separately downstream.
 					fields: ['id', 'organization', 'client', 'status'],
-				}).catch(() => []),
+				}).catch(() => { fetchDegraded.value = true; return []; }),
 			]);
 
 			const membershipByOrg = {};
@@ -164,7 +175,9 @@ export function useOrganization() {
 						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'trial_ends_at', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel', 'document_theme', 'document_accent', 'document_theme_config', 'brand_color', 'brand_direction', 'app_palette', 'goals', 'goals_enabled', 'weather_enabled', 'teams_enabled', 'target_audience', 'location', 'website', 'notes', 'email_reply_to', 'mailing_address', 'email_bcc'],
 					});
 				} catch {
-					// Continue if extra orgs can't be fetched
+					// Continue if extra orgs can't be fetched — but flag it so a
+					// membership/portal-only user isn't treated as org-less.
+					fetchDegraded.value = true;
 				}
 			}
 
@@ -258,6 +271,7 @@ export function useOrganization() {
 		} catch (err) {
 			console.error('Failed to fetch organizations:', err);
 			error.value = err.message;
+			fetchDegraded.value = true;
 		} finally {
 			orgInitializing.value = false;
 		}
@@ -301,7 +315,10 @@ export function useOrganization() {
 	const nuxtApp = useNuxtApp();
 
 	const initializeOrganizations = async () => {
-		if (isInitialized.value || !user.value) return;
+		// Re-run when a previous fetch DEGRADED (a caught read failure that left
+		// orgs empty) so the app self-heals on the next navigation instead of
+		// staying stuck org-less. A clean init early-returns.
+		if ((isInitialized.value && !fetchDegraded.value) || !user.value) return;
 		if (nuxtApp._orgInitInflight) return nuxtApp._orgInitInflight;
 
 		const run = (async () => {
@@ -407,6 +424,7 @@ export function useOrganization() {
 		showArchived,
 		isLoading: readonly(orgInitializing),
 		error: readonly(error),
+		fetchDegraded: readonly(fetchDegraded),
 		isInitialized: readonly(isInitialized),
 		hasMultipleOrgs,
 		organizationOptions,
