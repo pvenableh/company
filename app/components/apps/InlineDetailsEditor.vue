@@ -48,7 +48,7 @@ const props = withDefaults(defineProps<{
 // responsive grid so short inputs (value, dates, status) sit side-by-side.
 const containerCls = computed(() => {
   if (props.columns === 2) return 'grid grid-cols-1 sm:grid-cols-2 gap-4';
-  if (props.columns === 3) return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4';
+  if (props.columns === 3) return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
   return 'space-y-4';
 });
 

@@ -678,7 +678,9 @@ export const useAIProductivityEngine = () => {
 						title: `Unpaid Invoice: ${invoice.invoice_code}`,
 						description: `$${amount.toLocaleString()} from ${name} is ${daysOverdue} days past due`,
 						actionLabel: 'Follow Up',
-						actionRoute: `/invoices/${invoice.id}`,
+						// Open the internal invoice DETAILS workspace, not the public
+						// /invoices/[id] pay/preview surface.
+						actionRoute: `/invoices/detail/${invoice.id}`,
 						category: 'invoices',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue, amount }),

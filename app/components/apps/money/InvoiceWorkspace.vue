@@ -779,6 +779,7 @@ if (!props.compact) {
           :item-id="String(invoice.id)"
           :model-value="detailValues"
           :fields="detailFields"
+          :columns="3"
           @updated="onDetailsUpdated"
         />
       </div>
