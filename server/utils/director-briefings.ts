@@ -100,8 +100,26 @@ export interface LoadedDirectorBriefing {
 }
 
 /**
+ * How long a saved briefing is served before a reopen recomputes it fresh.
+ *
+ * A briefing snapshots live business state — finances, open notices, proposed
+ * steps — so an indefinitely-cached one goes stale: it keeps showing yesterday's
+ * numbers and, worse, is never regenerated to pick up code changes to the
+ * planner (e.g. a stale `step_count: 0` briefing hides a now-working plan). We
+ * cap the age so within a working session the plan is stable (no re-draft on
+ * every reopen) but a later visit redraws against current data.
+ *
+ * Overridable via NUXT_DIRECTOR_BRIEFING_TTL_HOURS for demo/testing.
+ */
+const BRIEFING_TTL_MS = (() => {
+  const hours = Number(process.env.NUXT_DIRECTOR_BRIEFING_TTL_HOURS);
+  return (Number.isFinite(hours) && hours > 0 ? hours : 6) * 60 * 60 * 1000;
+})();
+
+/**
  * Fetch the most recently saved briefing for a section, or null if none exists
- * (or the collection isn't set up yet).
+ * within the TTL window (or the collection isn't set up yet). Briefings older
+ * than BRIEFING_TTL_MS are ignored so the caller recomputes a fresh plan.
  */
 export async function loadLatestDirectorBriefing(
   organizationId: string,
@@ -109,12 +127,15 @@ export async function loadLatestDirectorBriefing(
 ): Promise<LoadedDirectorBriefing | null> {
   try {
     const directus = getTypedDirectus();
+    const cutoffIso = new Date(Date.now() - BRIEFING_TTL_MS).toISOString();
     const rows = await directus.request(
       readItems('director_briefings' as any, {
         filter: {
           _and: [
             { organization: { _eq: organizationId } },
             { cache_key: { _eq: directorBriefingCacheKey(scope) } },
+            // Ignore stale briefings — force a fresh recompute past the TTL.
+            { date_created: { _gte: cutoffIso } },
           ],
         } as any,
         fields: ['id', 'plan_id', 'intro', 'finance', 'opportunity', 'client_rating', 'agenda', 'step_count', 'date_created'],
