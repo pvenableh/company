@@ -233,6 +233,19 @@
 							/>
 						</div>
 
+						<!-- Self-test: fires a push to this device so anyone can confirm
+						     it's wired end to end. Only shown once subscribed. -->
+						<div v-if="pushIsSubscribed" class="-mt-1">
+							<button
+								type="button"
+								:disabled="testingPush"
+								class="text-xs text-primary hover:underline disabled:opacity-50"
+								@click="sendTestPush"
+							>
+								{{ testingPush ? 'Sending…' : 'Send a test notification' }}
+							</button>
+						</div>
+
 						<div class="pl-4 space-y-3 border-l-2 border-muted">
 							<!-- Per-category channel matrix. Each row independently controls
 							     the in-app Bell and the Email. Reactions email is opt-in
@@ -491,6 +504,20 @@ async function handlePushToggle(next) {
 	} else {
 		await unsubscribePush();
 		toast.success('Push notifications disabled');
+	}
+}
+
+const testingPush = ref(false);
+async function sendTestPush() {
+	testingPush.value = true;
+	try {
+		const res = await $fetch('/api/push/test', { method: 'POST' });
+		if (res?.ok) toast.success(res.message || 'Test notification sent — check your device');
+		else toast.error(res?.reason || 'Could not send test notification');
+	} catch (err) {
+		toast.error(err?.data?.message || err?.message || 'Could not send test notification');
+	} finally {
+		testingPush.value = false;
 	}
 }
 const notificationsContainer = ref(null);
