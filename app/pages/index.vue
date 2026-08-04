@@ -207,7 +207,9 @@ const feedSynthesis = computed(() => {
 // Calm first, density on demand: when on, login lands on the presence home and
 // the command center sits below the fold (revealed by scroll / the "Everything"
 // affordance). Preference is remembered per-user (directus_users.home_mode).
-const { isPresence, load: loadHomeMode, setMode: setHomeMode } = useHomeMode();
+// Home mode read here for layout branching; the Focus/Classic switch itself
+// lives in <HomeModeToggle> (which owns setMode).
+const { isPresence, load: loadHomeMode } = useHomeMode();
 const commandCenterEl = ref<HTMLElement | null>(null);
 const presenceTopAction = computed(() => {
 	const a = topActions.value[0];
@@ -476,26 +478,35 @@ const goTo = (route: string) => {
 			</div>
 
 			<!-- Presence home: the calm conversational landing (opt-in via home_mode).
-			     The command center below is "everything," one gesture down. -->
-			<div v-if="isPresence" class="min-h-[84vh] flex items-center">
-				<!-- Brand-new org: lead with "here's how to start" instead of an
-				     empty calm hero. -->
-				<div v-if="onboardingShouldShow" class="w-full max-w-2xl mx-auto px-4">
-					<OnboardingGettingStartedChecklist />
+			     The command center below is "everything," one gesture down. The
+			     Focus/Classic toggle swaps this in/out; the transition animates the
+			     hero's height (grid-rows) + opacity so it collapses/expands smoothly
+			     instead of snapping. -->
+			<Transition name="home-hero">
+				<div v-if="isPresence" class="home-hero">
+					<div class="home-hero__inner">
+						<div class="min-h-[84vh] flex items-center">
+							<!-- Brand-new org: lead with "here's how to start" instead of an
+							     empty calm hero. -->
+							<div v-if="onboardingShouldShow" class="w-full max-w-2xl mx-auto px-4">
+								<OnboardingGettingStartedChecklist />
+							</div>
+							<HomePresenceHome
+								v-else
+								class="w-full"
+								:greeting="greeting || typedGreeting"
+								:subtitle="subtitle"
+								:read="feedSynthesis"
+								:top-action="presenceTopAction"
+								:analyzing="isAnalyzing"
+								:greeting-source="greetingSource"
+								@open-top="onPresenceOpenTop"
+								@reveal="revealCommandCenter"
+							/>
+						</div>
+					</div>
 				</div>
-				<HomePresenceHome
-					v-else
-					class="w-full"
-					:greeting="greeting || typedGreeting"
-					:subtitle="subtitle"
-					:read="feedSynthesis"
-					:top-action="presenceTopAction"
-					:analyzing="isAnalyzing"
-					:greeting-source="greetingSource"
-					@open-top="onPresenceOpenTop"
-					@reveal="revealCommandCenter"
-				/>
-			</div>
+			</Transition>
 
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- When presence home is on, a quiet marker back to the calm landing. -->
@@ -509,10 +520,7 @@ const goTo = (route: string) => {
 							@click="onPresenceStartCalm"
 						>Earnest opened this — start calm instead</button>
 					</div>
-					<button
-						class="text-[12px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
-						@click="setHomeMode('classic')"
-					>Use the classic home</button>
+					<HomeModeToggle class="shrink-0" />
 				</div>
 
 				<!-- Greeting + Lens Toggle + Assistant Button (classic home only) -->
@@ -530,13 +538,8 @@ const goTo = (route: string) => {
 						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
-						<!-- Opt into the calm conversational home (remembered per-user). -->
-						<button
-							class="hidden sm:inline-flex items-center h-8 px-3 rounded-full text-[12px] font-medium text-muted-foreground border border-border hover:text-foreground hover:border-primary/40 transition-colors"
-							@click="setHomeMode('presence')"
-						>
-							Try the calm home
-						</button>
+						<!-- Focus / Classic home toggle (remembered per-user). -->
+						<HomeModeToggle class="hidden sm:inline-flex" />
 						<button
 							@click="openEarnestPanel()"
 							aria-label="Earnest"
@@ -794,9 +797,10 @@ const goTo = (route: string) => {
                                     <EarnestTrendChart :history="earnestState.history" />
                                 </div>
                             </div>
-                            <!-- Badges — their own full-width row above the identity trio. -->
+                            <!-- Badges — their own full-width row above the identity trio.
+                                 Single row, scrolls horizontally (no wrap). -->
                             <div v-else-if="element.id === 'badges'" class="ios-card p-4">
-                                <div class="flex flex-wrap items-center gap-2">
+                                <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar">
                                     <ETooltip
                                         v-for="badge in earnestState.badges"
                                         :key="badge.id"
@@ -906,6 +910,27 @@ const goTo = (route: string) => {
 @reference "~/assets/css/tailwind.css";
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Focus/Classic switch — animate the presence hero's height (grid-rows fr
+ * accordion) + opacity so it collapses/expands smoothly instead of snapping.
+ * The inner wrapper clips the fixed-height hero as the row shrinks to 0fr. */
+.home-hero { display: grid; grid-template-rows: 1fr; }
+.home-hero__inner { overflow: hidden; min-height: 0; }
+.home-hero-enter-active,
+.home-hero-leave-active {
+	transition: grid-template-rows 0.45s cubic-bezier(0.36, 0.66, 0.04, 1), opacity 0.3s ease;
+}
+.home-hero-enter-from,
+.home-hero-leave-to {
+	grid-template-rows: 0fr;
+	opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.home-hero-enter-active,
+	.home-hero-leave-active { transition: opacity 0.2s ease; }
+	.home-hero-enter-from,
+	.home-hero-leave-to { grid-template-rows: 1fr; }
+}
 
 /* Drag placeholder while reordering dashboard widgets (vuedraggable ghost). */
 .dash-ghost {

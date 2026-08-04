@@ -27,9 +27,22 @@ const refresh = async () => {
 			],
 			filter: { recipient: { _eq: user.value.id } },
 			sort: ['-date_created'],
-			limit: 6,
+			limit: 40,
 		}) as DigestRow[];
-		digests.value = Array.isArray(result) ? result : [];
+		// The worker writes a fresh brief per project per day, so the raw list
+		// repeats projects. Keep only the LATEST brief per project (the list is
+		// already -date_created, so the first occurrence wins), then cap at 6.
+		const seen = new Set<string>();
+		const deduped: DigestRow[] = [];
+		for (const row of Array.isArray(result) ? result : []) {
+			const projectId = typeof row.project === 'object' ? row.project?.id : row.project;
+			const key = String(projectId ?? row.id);
+			if (seen.has(key)) continue;
+			seen.add(key);
+			deduped.push(row);
+			if (deduped.length >= 6) break;
+		}
+		digests.value = deduped;
 	} catch (err) {
 		console.warn('[ProjectDigestsWidget] fetch failed', err);
 	}

@@ -35,11 +35,11 @@ export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
 	{ id: 'quick-tasks', label: 'Quick Tasks', span: 1, scroll: true },
 	{ id: 'active-work', label: 'Active Clients & Projects', span: 3 },
 	{ id: 'suggestions', label: 'More Suggestions', span: 3 },
-	{ id: 'project-briefs', label: 'Project Briefs', span: 3, scroll: true },
-	{ id: 'financial', label: 'Financial', span: 3, scroll: true },
-	// Marketing + Channels share a row (2 + 1) on large screens.
-	{ id: 'marketing', label: 'Marketing Pulse', span: 2 },
+	// Project Briefs + Channels share a row (2 + 1) on large screens.
+	{ id: 'project-briefs', label: 'Project Briefs', span: 2, scroll: true },
 	{ id: 'channels', label: 'Channels', span: 1, scroll: true },
+	{ id: 'financial', label: 'Financial', span: 3, scroll: true },
+	{ id: 'marketing', label: 'Marketing Pulse', span: 3 },
 	// ── Identity / gamification / relationship (below the work widgets) ──
 	// Badges get their own full-width row, above the trio below.
 	{ id: 'badges', label: 'Badges', span: 3 },
