@@ -51,6 +51,10 @@ const _order = ref<string[]>([...CATALOG_IDS]);
 const _hidden = ref<Set<string>>(new Set(DASHBOARD_WIDGETS.filter((w) => w.defaultHidden).map((w) => w.id)));
 const _editing = ref(false);
 let _loaded = false;
+// The user's `ai_preferences` row id, for the cross-device mirror. Shared with
+// useAIPreferences' own copy in spirit; we track our own since it isn't exported.
+let _recordId: number | null = null;
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Reconcile a saved id list against the current catalog: keep known ids in their
 // saved order, drop stale ones, append any new catalog ids at the end.
@@ -60,25 +64,89 @@ function reconcileOrder(saved: string[]): string[] {
 	return [...known, ...missing];
 }
 
-function persist() {
+// Apply a persisted { order, hidden } payload (from localStorage or Directus).
+function applyLayout(parsed: { order?: string[]; hidden?: string[] } | null | undefined): boolean {
+	if (!parsed || typeof parsed !== 'object') return false;
+	let applied = false;
+	if (Array.isArray(parsed.order)) { _order.value = reconcileOrder(parsed.order); applied = true; }
+	if (Array.isArray(parsed.hidden)) { _hidden.value = new Set(parsed.hidden.filter((id) => CATALOG_IDS.includes(id))); applied = true; }
+	return applied;
+}
+
+function persistLocal() {
 	if (import.meta.server) return;
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: _order.value, hidden: [..._hidden.value] }));
-	} catch { /* private mode / quota — layout just won't persist */ }
+	} catch { /* private mode / quota — layout just won't persist locally */ }
 }
 
 export const useDashboardLayout = () => {
-	const load = () => {
-		if (_loaded || import.meta.server) return;
-		_loaded = true;
-		try {
-			const raw = localStorage.getItem(STORAGE_KEY);
-			if (raw) {
-				const parsed = JSON.parse(raw) as { order?: string[]; hidden?: string[] };
-				if (Array.isArray(parsed.order)) _order.value = reconcileOrder(parsed.order);
-				if (Array.isArray(parsed.hidden)) _hidden.value = new Set(parsed.hidden.filter((id) => CATALOG_IDS.includes(id)));
+	const prefItems = useDirectusItems('ai_preferences');
+	const { user } = useDirectusAuth();
+
+	// Debounced mirror to ai_preferences.dashboard_layout (cross-device). Isolated
+	// so a missing column (before scripts/setup-dashboard-layout.ts runs) or any
+	// write error never breaks the instant localStorage save. `as any` on the
+	// payload keeps this compiling before `pnpm generate:types` adds the field.
+	const saveToDirectus = () => {
+		if (_saveTimer) clearTimeout(_saveTimer);
+		_saveTimer = setTimeout(async () => {
+			if (import.meta.server || !user.value?.id) return;
+			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value] } } as any;
+			try {
+				if (_recordId) {
+					await prefItems.update(_recordId, payload);
+				} else {
+					// No known row yet — find one (useAIPreferences usually created it)
+					// before creating, so we don't duplicate the user's prefs row.
+					const rows = await prefItems.list({ fields: ['id'], filter: { user: { _eq: user.value.id } }, limit: 1 }) as any[];
+					if (rows?.[0]?.id) {
+						_recordId = rows[0].id;
+						await prefItems.update(_recordId as any, payload);
+					} else {
+						const rec = await prefItems.create({ user: user.value.id, ...payload }) as any;
+						_recordId = rec?.id ?? null;
+					}
+				}
+			} catch (err) {
+				console.warn('[useDashboardLayout] Could not save layout to Directus (field may be unprovisioned):', err);
 			}
-		} catch { /* fall back to defaults */ }
+		}, 600);
+	};
+
+	const commit = () => { persistLocal(); saveToDirectus(); };
+
+	// Pull the saved layout from Directus (cross-device authority). Runs after the
+	// instant localStorage load; a server value overrides local so the user's
+	// arrangement follows them between devices.
+	const syncFromDirectus = async () => {
+		if (import.meta.server || !user.value?.id) return;
+		try {
+			const rows = await prefItems.list({
+				fields: ['id', 'dashboard_layout'],
+				filter: { user: { _eq: user.value.id } },
+				limit: 1,
+			}) as any[];
+			if (rows?.[0]) {
+				_recordId = rows[0].id;
+				if (applyLayout(rows[0].dashboard_layout)) persistLocal(); // refresh local cache
+			}
+		} catch (err) {
+			console.warn('[useDashboardLayout] Could not sync layout from Directus:', err);
+		}
+	};
+
+	const load = () => {
+		if (import.meta.server) return;
+		if (!_loaded) {
+			_loaded = true;
+			try {
+				const raw = localStorage.getItem(STORAGE_KEY);
+				if (raw) applyLayout(JSON.parse(raw));
+			} catch { /* fall back to defaults */ }
+		}
+		// Always attempt a background cross-device sync (cheap, cached row).
+		void syncFromDirectus();
 	};
 
 	const orderedIds = computed(() => reconcileOrder(_order.value));
@@ -93,7 +161,7 @@ export const useDashboardLayout = () => {
 	const hideWidget = (id: string) => {
 		if (!_hidden.value.has(id)) {
 			_hidden.value = new Set([..._hidden.value, id]);
-			persist();
+			commit();
 		}
 	};
 	const showWidget = (id: string) => {
@@ -101,7 +169,7 @@ export const useDashboardLayout = () => {
 			const next = new Set(_hidden.value);
 			next.delete(id);
 			_hidden.value = next;
-			persist();
+			commit();
 		}
 	};
 	const toggleWidget = (id: string) => (isHidden(id) ? showWidget(id) : hideWidget(id));
@@ -112,7 +180,7 @@ export const useDashboardLayout = () => {
 		const visible = ids.filter((id) => CATALOG_IDS.includes(id));
 		const hidden = orderedIds.value.filter((id) => _hidden.value.has(id));
 		_order.value = [...visible, ...hidden];
-		persist();
+		commit();
 	};
 
 	// Up/down nudge within the FULL order (used by the a11y/touch buttons).
@@ -124,13 +192,13 @@ export const useDashboardLayout = () => {
 		if (to === from) return;
 		arr.splice(to, 0, arr.splice(from, 1)[0]);
 		_order.value = arr;
-		persist();
+		commit();
 	};
 
 	const reset = () => {
 		_order.value = [...CATALOG_IDS];
 		_hidden.value = new Set(DASHBOARD_WIDGETS.filter((w) => w.defaultHidden).map((w) => w.id));
-		persist();
+		commit();
 	};
 
 	const editing = computed(() => _editing.value);

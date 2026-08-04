@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { VueDraggable } from 'vuedraggable';
+// vuedraggable's component is the DEFAULT export (there is no named
+// `VueDraggable` export — that import resolves to undefined and renders nothing).
+import VueDraggable from 'vuedraggable';
 
 definePageMeta({ middleware: 'auth' });
 useHead({ title: 'Home | Earnest' });
