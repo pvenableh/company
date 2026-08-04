@@ -40,6 +40,51 @@ export interface TaskSuggestion {
 		| 'proposals';
 	timestamp: Date;
 	score: number;
+	/**
+	 * Optional client follow-up affordance for the priority card: a "Draft email"
+	 * (opens the user's mail client via mailto) and "Send from Earnest" (branded
+	 * send to the client via /api/followups/send). Set by analyzers that surface
+	 * a client-facing nudge (cold proposal, overdue lead follow-up).
+	 */
+	followUp?: {
+		toEmail: string | null;
+		toName: string | null;
+		subject: string;
+		body: string;
+		kind: 'proposal' | 'lead';
+		refId: string;
+	};
+}
+
+// Build a short, professional follow-up draft. The user reviews/edits it (in
+// their mail client, or before an in-app send), so keep it a warm skeleton.
+function buildFollowUpDraft(kind: 'proposal' | 'lead', opts: { firstName?: string | null; title?: string | null }): { subject: string; body: string } {
+	const name = (opts.firstName || '').trim();
+	const greeting = name ? `Hi ${name},` : 'Hi there,';
+	if (kind === 'proposal') {
+		const ref = opts.title ? ` for ${opts.title}` : '';
+		return {
+			subject: opts.title ? `Following up on ${opts.title}` : 'Following up on our proposal',
+			body: `${greeting}\n\nI wanted to follow up on the proposal we sent${ref}. Happy to walk through anything or adjust it to fit what you need.\n\nIs there a good time this week to connect?\n\nBest,`,
+		};
+	}
+	return {
+		subject: 'Checking in',
+		body: `${greeting}\n\nJust checking in — I wanted to see where things stand and whether there's anything I can help move forward.\n\nWould a quick call this week work?\n\nBest,`,
+	};
+}
+
+function leadFollowUp(lead: any): TaskSuggestion['followUp'] {
+	const c: any = lead?.related_contact;
+	const draft = buildFollowUpDraft('lead', { firstName: c?.first_name });
+	return {
+		toEmail: c?.email || null,
+		toName: [c?.first_name, c?.last_name].filter(Boolean).join(' ').trim() || null,
+		subject: draft.subject,
+		body: draft.body,
+		kind: 'lead',
+		refId: String(lead.id),
+	};
 }
 
 export interface ProductivityMetrics {
@@ -1116,7 +1161,7 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const leads = await dealItems.list({
-				fields: ['id', 'status', 'priority', 'estimated_value', 'next_follow_up', 'related_contact.id', 'source', 'notes', 'closed_date'],
+				fields: ['id', 'status', 'priority', 'estimated_value', 'next_follow_up', 'related_contact.id', 'related_contact.email', 'related_contact.first_name', 'related_contact.last_name', 'source', 'notes', 'closed_date'],
 				filter: {
 					...orgFilter(),
 					status: { _in: ['published', 'draft'] },
@@ -1156,6 +1201,7 @@ export const useAIProductivityEngine = () => {
 							category: 'leads',
 							timestamp: new Date(),
 							score: calculateScore({ type: 'action', daysOverdue: daysOver, amount: value }),
+							followUp: leadFollowUp(lead),
 						});
 					} else if (isToday) {
 						results.push({
@@ -1237,7 +1283,7 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const proposals = await proposalItems.list({
-				fields: ['id', 'title', 'total_value', 'proposal_status', 'date_sent', 'valid_until', 'date_created'],
+				fields: ['id', 'title', 'total_value', 'proposal_status', 'date_sent', 'valid_until', 'date_created', 'contact.email', 'contact.first_name', 'contact.last_name'],
 				filter: { ...orgFilter() },
 				sort: ['-date_sent'],
 				limit: 100,
@@ -1263,6 +1309,8 @@ export const useAIProductivityEngine = () => {
 				if (isCold) {
 					cold++;
 					const daysOverdue = Math.max(1, daysOut - COLD_DAYS);
+					const contact: any = (p as any).contact;
+					const draft = buildFollowUpDraft('proposal', { firstName: contact?.first_name, title: p.title });
 					results.push({
 						id: `proposal-followup-${p.id}`,
 						type: 'followup',
@@ -1275,6 +1323,14 @@ export const useAIProductivityEngine = () => {
 						category: 'proposals',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue, amount: value }),
+						followUp: {
+							toEmail: contact?.email || null,
+							toName: [contact?.first_name, contact?.last_name].filter(Boolean).join(' ').trim() || null,
+							subject: draft.subject,
+							body: draft.body,
+							kind: 'proposal',
+							refId: String(p.id),
+						},
 					});
 				}
 			}

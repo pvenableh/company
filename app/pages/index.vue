@@ -724,6 +724,13 @@ const goTo = (route: string) => {
 												:entity="action.entity"
 												@updated="(s) => onActionStatusUpdated(action, s)"
 											/>
+											<!-- Client follow-up (cold proposal / overdue lead): draft in the
+											     user's mail client, or send a branded follow-up from Earnest. -->
+											<CommandCenterPriorityActionFollowUp
+												v-else-if="action.followUp"
+												:follow-up="action.followUp"
+												@sent="() => onActionStatusUpdated(action, 'completed')"
+											/>
 											<!-- App tag — which app this action lives in, tinted with that
 											     app's palette accent. -->
 											<span
