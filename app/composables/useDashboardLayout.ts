@@ -92,7 +92,7 @@ export const useDashboardLayout = () => {
 		if (_saveTimer) clearTimeout(_saveTimer);
 		_saveTimer = setTimeout(async () => {
 			if (import.meta.server || !user.value?.id) return;
-			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value] } } as any;
+			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value] } };
 			try {
 				if (_recordId) {
 					await prefItems.update(_recordId, payload);

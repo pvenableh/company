@@ -193,6 +193,8 @@ export interface AiPreference {
 	motivational_digest_hour?: number | null;
 	/** @description Which content blocks to include (see shared/digest.ts DIGEST_SECTIONS). */
 	motivational_digest_sections?: string[] | null;
+	/** @description Per-user command-center layout: { order: string[], hidden: string[] } (see useDashboardLayout.ts). */
+	dashboard_layout?: Record<string, any> | null;
 }
 
 export interface AiTag {
