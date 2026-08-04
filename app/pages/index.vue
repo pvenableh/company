@@ -299,8 +299,8 @@ onMounted(async () => {
 // user hasn't scrolled to those widgets. loadModule is cached + idempotent.
 const APP_MODULES: Record<ActionApp, string[]> = {
 	people: ['carddesk', 'deals', 'phone'],
-	work: ['tickets', 'projects', 'tasks', 'scheduling', 'goals', 'channels'],
-	money: ['invoices', 'deals'],
+	work: ['tickets', 'projects', 'tasks', 'scheduling', 'goals', 'channels', 'comments'],
+	money: ['invoices', 'deals', 'proposals'],
 	marketing: ['social'],
 };
 watch(actionAppFilter, (app) => {

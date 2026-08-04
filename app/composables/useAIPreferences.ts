@@ -61,10 +61,24 @@ const AI_MODULES: AIModule[] = [
 		category: 'Finance',
 	},
 	{
+		key: 'proposals',
+		label: 'Proposals',
+		icon: 'i-heroicons-document-text',
+		description: 'Cold proposals that need a follow-up nudge',
+		category: 'Finance',
+	},
+	{
 		key: 'channels',
 		label: 'Channels & Messages',
 		icon: 'i-heroicons-chat-bubble-left-right',
 		description: 'Team chat activity',
+		category: 'Communication',
+	},
+	{
+		key: 'comments',
+		label: 'Client Replies',
+		icon: 'i-heroicons-chat-bubble-left-ellipsis',
+		description: 'Client comments on tickets & projects awaiting a reply',
 		category: 'Communication',
 	},
 	{

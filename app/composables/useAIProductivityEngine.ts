@@ -182,6 +182,7 @@ export const useAIProductivityEngine = () => {
 	const proposalItems = useDirectusItems('proposals');
 	const goalItems = useDirectusItems('goals');
 	const appointmentItems = useDirectusItems('appointments');
+	const commentItems = useDirectusItems('comments');
 	const { user } = useDirectusAuth();
 	const { selectedOrg, organizations } = useOrganization();
 	const { selectedTeam } = useTeams();
@@ -884,6 +885,146 @@ export const useAIProductivityEngine = () => {
 			}
 		} catch (e) {
 			console.warn('[AI Engine] Could not analyze channels:', e);
+		}
+
+		return results;
+	};
+
+	// Unanswered client comments — a portal/client user left a comment on a
+	// ticket or project and nobody on the team has replied since. The correct
+	// follow-up here is an in-thread reply (not an email, which would splinter
+	// the portal conversation), so the card deep-links straight to the
+	// conversation slide-over rather than carrying a Draft/Send affordance.
+	//
+	// `comments` is polymorphic (collection + item) and has NO organization
+	// column, so we can't org-scope it directly. Instead we bound the query by
+	// AUTHOR: the org's client-portal user ids (fetched via the admin-token
+	// endpoint, since the user-policy row filter would otherwise hide peers).
+	// A comment authored by one of this org's portal users is inherently scoped
+	// to this org — a client only ever comments on their own org's work.
+	const analyzeUnansweredComments = async (): Promise<TaskSuggestion[]> => {
+		const results: TaskSuggestion[] = [];
+		// Requires a single selected org: the portal-user lookup takes one org id,
+		// and this is an agency-staff concern anyway. Skip on the "All Orgs" view.
+		const orgId = selectedOrg.value;
+		if (!orgId) return results;
+
+		try {
+			// Org-wide portal (client) user ids. Endpoint is owner/admin/manager
+			// only — a plain member 403s, which we swallow (they don't triage
+			// client replies org-wide). Returns [] → no clients → nothing to do.
+			const portalRows = await $fetch<any[]>('/api/org/list-portal-users', {
+				method: 'POST',
+				body: { organizationId: orgId },
+			}).catch(() => [] as any[]);
+			const portalUserIds = Array.from(
+				new Set((portalRows || []).map((r: any) => r?.user?.id).filter(Boolean)),
+			);
+			if (portalUserIds.length === 0) return results;
+
+			const sinceIso = new Date(Date.now() - 30 * 86_400_000).toISOString();
+
+			// Newest-first inbound comments (authored by a client) on tickets/projects
+			// in the last 30 days.
+			const inbound = await commentItems.list({
+				fields: [
+					'id', 'collection', 'item', 'comment', 'date_created', 'is_resolved',
+					'user.id', 'user.first_name', 'user.last_name', 'user.email',
+				],
+				filter: {
+					_and: [
+						{ collection: { _in: ['tickets', 'projects'] } },
+						{ user: { _in: portalUserIds } },
+						{ hidden_at: { _null: true } },
+						{ date_created: { _gte: sinceIso } },
+					],
+				},
+				sort: ['-date_created'],
+				limit: 200,
+			});
+			if (!inbound.length) return results;
+
+			// Keep the newest inbound per entity (list is desc, so first wins).
+			// Skip any the team already marked resolved.
+			const newestByKey = new Map<string, any>();
+			for (const c of inbound) {
+				if (!c.item || !c.collection) continue;
+				if (c.is_resolved) continue;
+				const key = `${c.collection}:${c.item}`;
+				if (!newestByKey.has(key)) newestByKey.set(key, c);
+			}
+			if (newestByKey.size === 0) return results;
+
+			const itemIds = Array.from(newestByKey.values()).map((c: any) => c.item);
+
+			// Team replies on those same items (any comment NOT by a portal user).
+			// A later team comment means the thread was answered.
+			const teamReplies = await commentItems.list({
+				fields: ['collection', 'item', 'date_created'],
+				filter: {
+					_and: [
+						{ item: { _in: itemIds } },
+						{ user: { _nin: portalUserIds } },
+						{ hidden_at: { _null: true } },
+					],
+				},
+				sort: ['-date_created'],
+				limit: 400,
+			});
+			// Latest team-reply timestamp per entity key.
+			const latestTeamReply = new Map<string, number>();
+			for (const r of teamReplies) {
+				if (!r.item || !r.collection) continue;
+				const key = `${r.collection}:${r.item}`;
+				const t = new Date(r.date_created).getTime();
+				if (t > (latestTeamReply.get(key) || 0)) latestTeamReply.set(key, t);
+			}
+
+			// Entity titles for the flagged (small) set, so cards read concretely.
+			const flagged = Array.from(newestByKey.entries()).filter(([key, c]) => {
+				const inboundTs = new Date(c.date_created).getTime();
+				return (latestTeamReply.get(key) || 0) < inboundTs; // no reply since
+			});
+			if (!flagged.length) return results;
+
+			const ticketIds = flagged.filter(([, c]) => c.collection === 'tickets').map(([, c]) => c.item);
+			const projectIds = flagged.filter(([, c]) => c.collection === 'projects').map(([, c]) => c.item);
+			const titleByKey = new Map<string, string>();
+			const [tks, prjs] = await Promise.all([
+				ticketIds.length
+					? ticketItems.list({ fields: ['id', 'title'], filter: { id: { _in: ticketIds } }, limit: ticketIds.length }).catch(() => [])
+					: Promise.resolve([]),
+				projectIds.length
+					? projectItems.list({ fields: ['id', 'title'], filter: { id: { _in: projectIds } }, limit: projectIds.length }).catch(() => [])
+					: Promise.resolve([]),
+			]);
+			for (const t of tks as any[]) titleByKey.set(`tickets:${t.id}`, t.title);
+			for (const p of prjs as any[]) titleByKey.set(`projects:${p.id}`, p.title);
+
+			for (const [key, c] of flagged) {
+				const isTicket = c.collection === 'tickets';
+				const slideType = isTicket ? 'ticket' : 'work-project';
+				const daysAgo = Math.max(0, Math.floor((Date.now() - new Date(c.date_created).getTime()) / 86_400_000));
+				const who = [c.user?.first_name, c.user?.last_name].filter(Boolean).join(' ').trim() || 'A client';
+				const entityTitle = titleByKey.get(key) || (isTicket ? 'a ticket' : 'a project');
+				const snippet = String(c.comment || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+				results.push({
+					id: `comment-unanswered-${c.collection}-${c.item}`,
+					type: 'followup',
+					priority: 'high',
+					icon: 'i-heroicons-chat-bubble-left-right',
+					title: `Reply to ${who}: ${entityTitle}`,
+					description: `${who} commented ${daysAgo === 0 ? 'today' : `${daysAgo}d ago`} with no reply yet${snippet ? ` — "${snippet}${c.comment && c.comment.length > 90 ? '…' : ''}"` : '.'}`,
+					actionLabel: 'Open & reply',
+					actionRoute: `/apps/work?slide=${slideType}:${c.item}`,
+					category: 'communication',
+					timestamp: new Date(),
+					// A client waiting on a reply is time-sensitive; score by staleness.
+					score: calculateScore({ type: 'action', daysOverdue: Math.max(1, daysAgo) }),
+				});
+			}
+		} catch (e) {
+			console.warn('[AI Engine] Could not analyze unanswered comments:', e);
 		}
 
 		return results;
@@ -1778,11 +1919,11 @@ export const useAIProductivityEngine = () => {
 
 	const ALL_MODULES = [
 		'tickets', 'projects', 'tasks', 'invoices',
-		'channels', 'social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals',
+		'channels', 'comments', 'social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals',
 	] as const;
 
 	const PRIORITY_MODULES = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
-	const SECONDARY_MODULES = ['social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals'];
+	const SECONDARY_MODULES = ['comments', 'social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals'];
 
 	const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
 		tickets: analyzeTickets,
@@ -1790,6 +1931,7 @@ export const useAIProductivityEngine = () => {
 		tasks: analyzeTasks,
 		invoices: analyzeInvoices,
 		channels: analyzeChannels,
+		comments: analyzeUnansweredComments,
 		social: analyzeSocial,
 		scheduling: analyzeScheduling,
 		phone: analyzePhone,
