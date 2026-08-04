@@ -793,19 +793,21 @@ const goTo = (route: string) => {
                                 <div class="ios-card rounded-2xl bg-card p-4">
                                     <EarnestTrendChart :history="earnestState.history" />
                                 </div>
-                                <!-- Badges — folded in with the Earnest Score (gamification lives together). -->
-                                <div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
+                            </div>
+                            <!-- Badges — their own full-width row above the identity trio. -->
+                            <div v-else-if="element.id === 'badges'" class="ios-card p-4">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <ETooltip
                                         v-for="badge in earnestState.badges"
                                         :key="badge.id"
                                         :text="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
                                     >
                                         <div
-                                            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shrink-0 transition-all cursor-default"
+                                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 transition-all cursor-default"
                                             :class="badge.unlocked ? badgeColor(badge.id) : 'bg-muted/30 text-muted-foreground/40'"
                                         >
-                                            <EIcon :name="badge.icon" class="w-3 h-3" />
-                                            <span class="text-[10px] font-medium whitespace-nowrap">{{ badge.name }}</span>
+                                            <EIcon :name="badge.icon" class="w-3.5 h-3.5" />
+                                            <span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
                                         </div>
                                     </ETooltip>
                                 </div>

@@ -37,15 +37,19 @@ export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
 	{ id: 'suggestions', label: 'More Suggestions', span: 3 },
 	{ id: 'project-briefs', label: 'Project Briefs', span: 3, scroll: true },
 	{ id: 'financial', label: 'Financial', span: 3, scroll: true },
-	{ id: 'marketing', label: 'Marketing Pulse', span: 3 },
-	// ── Identity / gamification / relationship (below the work widgets). Earnest
-	//    Score stacks its trend + the badges; CRM + CardDesk sit alongside. ──
-	{ id: 'earnest-score', label: 'Earnest Score', span: 1 },
-	{ id: 'my-goals', label: 'My Goals', span: 1, scroll: true },
-	{ id: 'crm-pulse', label: 'CRM Pulse', span: 1 },
-	{ id: 'goals-summary', label: 'Goals Summary', span: 3, scroll: true },
+	// Marketing + Channels share a row (2 + 1) on large screens.
+	{ id: 'marketing', label: 'Marketing Pulse', span: 2 },
 	{ id: 'channels', label: 'Channels', span: 1, scroll: true },
+	// ── Identity / gamification / relationship (below the work widgets) ──
+	// Badges get their own full-width row, above the trio below.
+	{ id: 'badges', label: 'Badges', span: 3 },
+	// Row: Earnest Score (+trend) | CardDesk | CRM Pulse.
+	{ id: 'earnest-score', label: 'Earnest Score', span: 1 },
 	{ id: 'carddesk', label: 'CardDesk Pipeline', span: 1, scroll: true },
+	{ id: 'crm-pulse', label: 'CRM Pulse', span: 1 },
+	// Goals + leaderboard.
+	{ id: 'my-goals', label: 'My Goals', span: 1, scroll: true },
+	{ id: 'goals-summary', label: 'Goals Summary', span: 3, scroll: true },
 	{ id: 'leaderboard', label: 'Team Leaderboard', span: 3 },
 	// Active Work already sorts pinned-first, so standalone Pinned Work is
 	// redundant — default-hidden, re-addable from the Customize tray.
