@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { VueDraggable } from 'vuedraggable';
+
 definePageMeta({ middleware: 'auth' });
 useHead({ title: 'Home | Earnest' });
 
@@ -44,11 +46,8 @@ const { enabledModules } = useAIPreferences();
 const activeEngineModules = computed<Set<string>>(() => new Set(enabledModules.value));
 
 // ── CRM Intelligence Engine ──
-// `snapshot` is the algorithmic snapshot that drives the slim CRM-pulse
-// callout. `overview` carries any cached AI result so the score reflects
-// the deeper number when present. The AI run-button + insights surface
-// live on /contacts?view=insights now.
-const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, overview: crmOverview } = useCRMIntelligence();
+// The slim CRM-pulse callout now owns its own useCRMIntelligence() (see
+// CommandCenter/CrmPulseCard.vue), so the page no longer wires it here.
 
 // ── Earnest Score ──
 const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp, getScoreTier } = useEarnestScore();
@@ -90,36 +89,20 @@ const router = useRouter();
 const marketingPulse = useMarketingPulse();
 watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
 
-// ── Band ordering ──
-// Fixed order: YOU → US → REFERENCE. Mine/All used to reorder these bands, which
-// pushed Priority Actions below the fold on 'all' and read as "the widget
-// disappeared". Mine/All is now a LOCAL control on Priority Actions (below) that
-// filters its queue instead of reshuffling the page.
-// See docs/dashboard-filters-localization-poc.md.
+// ── Priority Actions scope ──
+// Mine/All is a LOCAL control on Priority Actions that filters its queue. (The
+// old YOU/US/REFERENCE band ordering is gone — the page is now a pinned Priority
+// Actions block above a user-customizable widget grid; see useDashboardLayout.)
 const { isMine, canChooseAll, setScope } = useDataScope();
-const youOrder = computed(() => 1);
-const usOrder = computed(() => 2);
 
 // Org-level goals toggle — hides the dashboard's goal widgets when off.
 const { goalsEnabled } = useGoalsEnabled();
 
-// ── My Goals (scope=user) for the YOU band's right column ──
-// Shares state with the rest of useGoals consumers (e.g. GoalsSummaryWidget),
-// so this doesn't add a separate fetch. weeklyCheckinStreak (Stage 2.5)
-// is derived from snapshots already loaded by useGoals.
-const { myGoals, goalProgress: goalProgressFn, weeklyCheckinStreak } = useGoals();
-const topMyGoals = computed(() =>
-	(myGoals.value || [])
-		.filter((g: any) => g.status === 'active')
-		.slice(0, 3),
-);
-
-// ── Org/Team goal counts for the US band's chip strip ──
-const { goalsByScope } = useGoals();
-const orgTeamGoalCount = computed(() => {
-	const byScope = goalsByScope.value || {} as Record<string, any[]>;
-	return ((byScope.team || []).length) + ((byScope.organization || []).length);
-});
+// ── Weekly check-in streak (Stage 2.5) for the Earnest Score widget ──
+// My Goals + org/team goal counts moved into their own widgets
+// (CommandCenter/MyGoalsCard.vue, GoalsSummaryWidget); the page keeps only the
+// check-in streak the score card needs. Derived from snapshots useGoals loaded.
+const { weeklyCheckinStreak } = useGoals();
 
 // ── Weekly check-in modal (Stage 2.5) ──
 // Modal lives at the bottom of <template>; trigger pill in YOU's right column
@@ -353,19 +336,6 @@ const otherSuggestions = computed(() => {
 	return suggestions.value.filter(s => s.priority !== 'urgent' && s.priority !== 'high').slice(0, 12);
 });
 
-// ── CRM Pulse (drives the slim glass callout — full breakdown lives on
-//     /contacts?view=insights) ──
-const healthScore = computed(() => crmOverview.value?.healthScore ?? crmSnapshot.value?.healthScore ?? null);
-const healthBreakdown = computed(() => crmOverview.value?.healthBreakdown ?? crmSnapshot.value?.breakdown ?? null);
-const crmAlerts = computed(() => crmSnapshot.value?.alerts ?? []);
-const healthColor = computed(() => {
-	const score = healthScore.value;
-	if (score === null) return 'text-muted-foreground';
-	if (score >= 75) return 'text-success';
-	if (score >= 50) return 'text-warning';
-	return 'text-destructive';
-});
-
 // ── Priority Styles ──
 const { getPriorityIconClass: priorityIconColor, getPriorityBadgeClasses: priorityChipClasses } = useStatusStyle();
 
@@ -453,6 +423,32 @@ watch([selectedOrg, selectedClient, selectedTeam, isMine], () => {
 
 // Show leaderboard when a team is selected
 const showLeaderboard = computed(() => !!selectedTeam.value);
+
+// ── Command-center layout (per-user show/hide + drag-reorder) ──
+// Governs everything BELOW the pinned Priority Actions block.
+const layout = useDashboardLayout();
+const { editing: dashEditing, hiddenList, spanOf, labelOf, hideWidget, showWidget, moveBy } = layout;
+const toggleDashEditing = () => layout.toggleEditing();
+const resetDash = () => layout.reset();
+// Deterministic guards: a "visible" widget still renders nothing when its own
+// precondition is false (goals off, no team), which would leave an empty grid
+// cell — so filter those out of what the grid receives. setVisibleOrder keeps
+// the positions of ids not in this subset, so filtering never drops them from
+// the saved order.
+const shouldRenderWidget = (id: string) => {
+	if (id === 'my-goals' || id === 'goals-summary') return goalsEnabled.value;
+	if (id === 'leaderboard') return showLeaderboard.value;
+	return true;
+};
+const renderIds = computed(() => layout.visibleOrdered.value.filter(shouldRenderWidget));
+// vuedraggable mutates its :list in place; mirror the canonical order locally
+// and commit back on drag end.
+const dragList = ref<{ id: string }[]>([]);
+watch(renderIds, (ids) => { dragList.value = ids.map((id) => ({ id })); }, { immediate: true });
+const onReorderEnd = () => layout.setVisibleOrder(dragList.value.map((w) => w.id));
+// Read the saved layout after mount only (client-only localStorage) so SSR and
+// first client render both use defaults — no hydration mismatch.
+onMounted(() => layout.load());
 
 const goTo = (route: string) => {
 	router.push(route);
@@ -589,16 +585,10 @@ const goTo = (route: string) => {
 				     the single source of truth for "what's this view about." A
 				     redundant in-page label only added a second mental model.
 				     Order still flips via :style based on the same toggle. -->
-				<section :style="{ order: youOrder }" class="space-y-4">
+				<section class="space-y-4">
 
-				<!-- Pinned work — the projects/clients you've kept close, surfaced as
-				     recommended work. Self-hides when nothing is pinned. -->
-				<CommandCenterPinnedWork />
-
-				<!-- Priority Actions + Quick Tasks | Earnest Score + My Goals -->
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<!-- Left Column: Priority Actions + Quick Tasks (2/3 width) -->
-					<div class="lg:col-span-2 space-y-6">
+                <!-- ═══ PINNED: Priority Actions — the point of the page, always first,
+                     never hidden or moved. Everything below is the customizable grid. -->
 						<!-- Priority Actions -->
 						<div class="space-y-4">
 							<div class="flex items-center gap-2">
@@ -759,253 +749,125 @@ const goTo = (route: string) => {
 							</div>
 						</div>
 
-						<!-- Other Suggestions (lower priority) — personal AI nudges, lives in YOU -->
-						<div v-if="otherSuggestions.length > 0" class="ios-card p-5">
-							<div class="flex items-center justify-between mb-4">
-								<div class="flex items-center gap-2">
-									<EarnestIcon class="w-5 h-5 text-primary" />
-									<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-										Suggestions
-									</h3>
-								</div>
-								<UiViewLink
-									v-if="suggestions.length > 10"
-									size="sm"
-									@click="openEarnestPanel()"
-								>
-									View all {{ suggestions.length }}
-								</UiViewLink>
-							</div>
+                <!-- Weekly check-in nudge — self-hides unless a personal goal is stale. -->
+                <GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
 
-							<!-- Horizontal snap-scroll carousel — each card is a fixed-width
-							     snap target; the row scrolls sideways when suggestions
-							     overflow. -->
-							<div class="flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar -mx-1 px-1 pb-1 scroll-px-1">
-								<div
-									v-for="suggestion in otherSuggestions"
-									:key="suggestion.id"
-									class="snap-start shrink-0 w-[280px] sm:w-[300px]"
-								>
-									<CommandCenterSuggestionCard :suggestion="suggestion" class="h-full" />
-								</div>
-							</div>
-						</div>
+                <!-- ═══ Customizable widget grid — everything below Priority Actions.
+                     Users show/hide + drag to reorder; layout persists per device
+                     (useDashboardLayout). Priority Actions above stays pinned. -->
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                        @click="toggleDashEditing"
+                    >
+                        <EIcon :name="dashEditing ? 'i-heroicons-check' : 'i-heroicons-adjustments-horizontal'" class="w-3.5 h-3.5" />
+                        {{ dashEditing ? 'Done arranging' : 'Customize' }}
+                    </button>
+                    <button
+                        v-if="dashEditing"
+                        type="button"
+                        class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        @click="resetDash"
+                    >Reset to default</button>
+                </div>
 
-					</div>
+                <VueDraggable
+                    :list="dragList"
+                    item-key="id"
+                    handle=".dash-drag-handle"
+                    :disabled="!dashEditing"
+                    :animation="180"
+                    ghost-class="dash-ghost"
+                    class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
+                    @end="onReorderEnd"
+                >
+                    <template #item="{ element, index }">
+                        <CommandCenterWidgetFrame
+                            :widget-id="element.id"
+                            :label="labelOf(element.id)"
+                            :span="spanOf(element.id)"
+                            :editing="dashEditing"
+                            :first="index === 0"
+                            :last="index === dragList.length - 1"
+                            @hide="hideWidget(element.id)"
+                            @move-up="moveBy(element.id, -1)"
+                            @move-down="moveBy(element.id, 1)"
+                        >
+                            <CommandCenterQuickTasksWidget v-if="element.id === 'quick-tasks'" />
+                            <EarnestScoreWidget
+                                v-else-if="element.id === 'earnest-score'"
+                                :current-score="earnestState.currentScore"
+                                :level="earnestState.level"
+                                :level-title="earnestState.levelTitle"
+                                :total-e-p="earnestState.totalEP"
+                                :next-level-e-p="earnestState.nextLevelEP"
+                                :level-progress="earnestState.levelProgress"
+                                :streak="earnestState.streak"
+                                :team-rank="earnestState.teamRank"
+                                :team-size="earnestState.teamSize"
+                                :dimensions="earnestState.dimensions"
+                                :weekly-checkin-streak="weeklyCheckinStreak"
+                            />
+                            <div v-else-if="element.id === 'score-trend'" class="ios-card rounded-2xl bg-card p-4">
+                                <EarnestTrendChart :history="earnestState.history" />
+                            </div>
+                            <CommandCenterMyGoalsCard v-else-if="element.id === 'my-goals'" />
+                            <CommandCenterSuggestionsCarousel
+                                v-else-if="element.id === 'suggestions'"
+                                :suggestions="otherSuggestions"
+                                :total="suggestions.length"
+                            />
+                            <CommandCenterPinnedWork v-else-if="element.id === 'pinned-work'" />
+                            <DeferUntilVisible v-else-if="element.id === 'active-work'" min-height="180px">
+                                <CommandCenterActiveWorkTabs />
+                            </DeferUntilVisible>
+                            <ClientOnly v-else-if="element.id === 'project-briefs'">
+                                <CommandCenterProjectDigestsWidget />
+                            </ClientOnly>
+                            <CommandCenterCrmPulseCard v-else-if="element.id === 'crm-pulse'" />
+                            <template v-else-if="element.id === 'marketing'">
+                                <CommandCenterMarketingPulseWidget v-if="marketingPulse.hasRichData.value" />
+                                <CommandCenterMarketingActionsWidget v-else />
+                            </template>
+                            <DeferUntilVisible v-else-if="element.id === 'goals-summary'" min-height="120px">
+                                <GoalsSummaryWidget />
+                            </DeferUntilVisible>
+                            <DeferUntilVisible v-else-if="element.id === 'financial'" min-height="320px" @enter="onFinancialEnter">
+                                <CommandCenterFinancialQuarter />
+                            </DeferUntilVisible>
+                            <DeferUntilVisible v-else-if="element.id === 'channels'" min-height="200px" @enter="onChatDeskEnter">
+                                <CommandCenterChannelsCard />
+                            </DeferUntilVisible>
+                            <DeferUntilVisible v-else-if="element.id === 'carddesk'" min-height="200px" @enter="onChatDeskEnter">
+                                <CommandCenterCardDeskPipeline />
+                            </DeferUntilVisible>
+                            <div v-else-if="element.id === 'leaderboard'" class="ios-card p-5">
+                                <EarnestTeamLeaderboard />
+                            </div>
+                        </CommandCenterWidgetFrame>
+                    </template>
+                </VueDraggable>
 
-					<!-- Right Column: Earnest Score + My Goals (1/3 width). CRM Health
-					     relocated to US band so this column is now purely personal. -->
-					<div class="space-y-4 flex flex-col">
-						<!-- Quick Tasks — lifted up beside Priority Actions; the Earnest Score
-						     card drops below (order-last) to de-emphasise gamification. -->
-						<CommandCenterQuickTasksWidget />
+                <!-- Hidden widgets — re-add from here (edit mode only). -->
+                <div v-if="dashEditing && hiddenList.length" class="ios-card p-4">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Hidden widgets</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="id in hiddenList"
+                            :key="id"
+                            type="button"
+                            class="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                            @click="showWidget(id)"
+                        >
+                            <EIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
+                            {{ labelOf(id) }}
+                        </button>
+                    </div>
+                </div>
 
-						<!-- Earnest Score (lifted to top of column since CRM Health left) -->
-						<EarnestScoreWidget
-							class="order-last"
-							:current-score="earnestState.currentScore"
-							:level="earnestState.level"
-							:level-title="earnestState.levelTitle"
-							:total-e-p="earnestState.totalEP"
-							:next-level-e-p="earnestState.nextLevelEP"
-							:level-progress="earnestState.levelProgress"
-							:streak="earnestState.streak"
-							:team-rank="earnestState.teamRank"
-							:team-size="earnestState.teamSize"
-							:dimensions="earnestState.dimensions"
-							:weekly-checkin-streak="weeklyCheckinStreak"
-						/>
-
-						<!-- 30-day Earnest Score trend sparkline -->
-						<div class="ios-card rounded-2xl bg-card p-4 order-last">
-							<EarnestTrendChart :history="earnestState.history" />
-						</div>
-
-						<!-- Stage 2.5: weekly check-in trigger pill. Renders only when
-						     >=1 of the user's active personal goals is stale (no snapshot
-						     in 7 days, created >=7 days ago). Quiet state = no DOM. -->
-						<GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
-
-						<!-- My Goals (scope=user) — small inline mini-widget reusing
-						     useGoals state already loaded by GoalsSummaryWidget in US.
-						     Hidden when the org has goals turned off. -->
-						<div v-if="goalsEnabled" class="ios-card p-5">
-							<div class="flex items-center justify-between mb-3">
-								<div class="flex items-center gap-2">
-									<EIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
-									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
-								</div>
-								<UiViewLink to="/goals?scope=user" size="sm">
-									{{ topMyGoals.length > 0 ? 'View all' : 'Set one' }}
-								</UiViewLink>
-							</div>
-							<div v-if="topMyGoals.length === 0" class="py-3 text-center">
-								<p class="text-xs text-muted-foreground">No personal goals yet.</p>
-								<p class="text-[10px] text-muted-foreground/70 mt-0.5">Set one to track what's yours.</p>
-							</div>
-							<div v-else class="space-y-3">
-								<NuxtLink
-									v-for="g in topMyGoals"
-									:key="g.id"
-									:to="`/goals?id=${g.id}`"
-									class="block group"
-								>
-									<div class="flex items-center justify-between gap-2 mb-1">
-										<p class="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">{{ g.title }}</p>
-										<span class="text-[10px] font-medium text-muted-foreground tabular-nums">{{ Math.round(goalProgressFn(g)) }}%</span>
-									</div>
-									<div class="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-										<div
-											class="h-full rounded-full transition-all duration-500"
-											:class="{
-												'bg-success': goalProgressFn(g) >= 90,
-												'bg-blue-500': goalProgressFn(g) >= 50 && goalProgressFn(g) < 90,
-												'bg-warning': goalProgressFn(g) >= 25 && goalProgressFn(g) < 50,
-												'bg-destructive': goalProgressFn(g) < 25,
-											}"
-											:style="{ width: `${Math.max(goalProgressFn(g), 4)}%` }"
-										/>
-									</div>
-								</NuxtLink>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Team Leaderboard (shown when a team is selected) -->
-				<div v-if="showLeaderboard" class="ios-card p-5">
-					<EarnestTeamLeaderboard />
-				</div>
-				</section>
-
-				<!-- ─── Org band ─── See above re: dropped header label. -->
-				<section :style="{ order: usOrder }" class="space-y-4">
-
-					<!-- Active client + project carousels — quick access to the
-					     most-recently-active rows. Cards open the corresponding
-					     slide-over panel. Deferred until scrolled into view so their
-					     clients/projects fetches leave the critical login burst
-					     (they sit below the fold on the presence-home landing). -->
-					<DeferUntilVisible min-height="180px">
-						<CommandCenterActiveClientCarousel />
-					</DeferUntilVisible>
-					<DeferUntilVisible min-height="180px">
-						<CommandCenterActiveProjectCarousel />
-					</DeferUntilVisible>
-
-					<!-- Today's Briefs + CRM Pulse share one row on large screens. -->
-					<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-					<!-- Today's Briefs (org-wide project digests) -->
-					<ClientOnly>
-						<CommandCenterProjectDigestsWidget />
-					</ClientOnly>
-
-					<!-- CRM Pulse — slim glass callout. The full radial + breakdown
-					     + insights + growth-opportunities surface lives on the
-					     /contacts Insights tab (one destination per noun). This
-					     gives quick reference here without dominating the band. -->
-					<NuxtLink
-						to="/contacts?view=insights"
-						class="glass-surface glass-surface--hoverable p-4 flex items-center gap-4 group"
-					>
-						<!-- Mini radial -->
-						<div v-if="healthScore !== null" class="relative w-12 h-12 shrink-0">
-							<svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
-								<path class="stroke-muted/30" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" />
-								<path
-									:class="healthColor.replace('text-', 'stroke-')"
-									d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-									fill="none"
-									stroke-width="3"
-									stroke-linecap="round"
-									:stroke-dasharray="`${healthScore}, 100`"
-								/>
-							</svg>
-							<div class="absolute inset-0 flex items-center justify-center">
-								<span :class="healthColor" class="text-sm font-bold tabular-nums">{{ healthScore }}</span>
-							</div>
-						</div>
-						<div v-else-if="crmSnapshotLoading" class="w-12 h-12 shrink-0 rounded-full bg-muted/40 animate-pulse"></div>
-						<div v-else class="w-12 h-12 shrink-0 rounded-full bg-muted/30 flex items-center justify-center">
-							<EIcon name="i-heroicons-user-group" class="w-5 h-5 text-muted-foreground/60" />
-						</div>
-
-						<!-- Headline + first alert -->
-						<div class="flex-1 min-w-0">
-							<div class="flex items-center gap-2">
-								<h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">CRM pulse</h3>
-								<span v-if="healthScore !== null" :class="healthColor" class="text-[10px] font-semibold tabular-nums">
-									{{ healthScore >= 75 ? 'Strong' : healthScore >= 50 ? 'Steady' : 'Needs attention' }}
-								</span>
-							</div>
-							<p v-if="crmAlerts.length > 0" class="text-xs text-foreground/80 mt-0.5 truncate">
-								{{ crmAlerts[0].message }}
-							</p>
-							<p v-else-if="healthScore === null" class="text-xs text-muted-foreground mt-0.5">
-								Add your first client to start tracking pulse.
-							</p>
-							<p v-else class="text-xs text-muted-foreground mt-0.5">
-								{{ healthBreakdown ? `${Object.keys(healthBreakdown).length} dimensions tracked` : 'Open Insights for full breakdown' }}
-							</p>
-						</div>
-
-						<!-- Open insights affordance — visually mirrors <UiViewLink> (this
-						     is a decorative span, not a nested link, since the whole card
-						     is already a NuxtLink). -->
-						<span class="hidden sm:inline-flex items-center gap-0.5 text-[11px] font-medium uppercase tracking-wide text-primary opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-							Open insights
-							<EIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5" />
-						</span>
-					</NuxtLink>
-					</div>
-
-				<!-- Marketing & Social Pulse — full width when we have social/email data -->
-				<CommandCenterMarketingPulseWidget v-if="marketingPulse.hasRichData.value" />
-
-					<!-- Marketing actions — compact (only when no social/email data) -->
-					<CommandCenterMarketingActionsWidget v-if="!marketingPulse.hasRichData.value" />
-
-					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->
-					<DeferUntilVisible v-if="goalsEnabled" min-height="120px">
-						<GoalsSummaryWidget />
-					</DeferUntilVisible>
-
-					<!-- Financial Analysis (full width) — deferred until scrolled near.
-					     `invoices` / `deals` are lazy-loaded here when the slot
-					     enters view. -->
-					<DeferUntilVisible
-						min-height="320px"
-						@enter="onFinancialEnter"
-					>
-						<CommandCenterFinancialQuarter />
-					</DeferUntilVisible>
-				</section>
-
-				<!-- ─── REFERENCE band ─── -->
-				<section
-					style="order: 3"
-					class="space-y-2"
-				>
-					<details class="group">
-						<summary class="flex items-center gap-2 cursor-pointer list-none py-1 select-none">
-							<EIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5 text-muted-foreground transition-transform group-open:rotate-90" />
-							<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Less-used</h2>
-							<div class="flex-1 h-px bg-border/40"></div>
-						</summary>
-						<div class="pt-4">
-							<DeferUntilVisible min-height="500px" @enter="onChatDeskEnter">
-								<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-									<div class="self-start">
-										<CommandCenterChannelsCard />
-									</div>
-									<CommandCenterCardDeskPipeline />
-								</div>
-							</DeferUntilVisible>
-						</div>
-					</details>
-				</section>
-
-				</div><!-- /three-band wrapper -->
+                </section>
+                </div><!-- /customizable command center -->
 
 				</div><!-- /Command Center -->
 
@@ -1044,6 +906,14 @@ const goTo = (route: string) => {
 @reference "~/assets/css/tailwind.css";
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Drag placeholder while reordering dashboard widgets (vuedraggable ghost). */
+.dash-ghost {
+	opacity: 0.4;
+	outline: 2px dashed hsl(var(--primary));
+	outline-offset: 2px;
+	border-radius: 1rem;
+}
 
 /* Blinking caret for the dashboard's typed greeting. The character is part
  * of the line so it inherits the heading's color and weight. */

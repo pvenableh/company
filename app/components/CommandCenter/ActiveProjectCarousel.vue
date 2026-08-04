@@ -9,6 +9,9 @@
   Card click opens the ProjectDetailPanel slide-over.
 -->
 <script setup lang="ts">
+// `embedded` renders the strip bare (no card / no header) for hosting inside
+// ActiveWorkTabs, which supplies the card + a Clients|Projects toggle instead.
+const props = defineProps<{ embedded?: boolean }>();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const projectSlide = useAppSlideOver('work-project');
@@ -93,9 +96,9 @@ function fmtDue(d: string | null | undefined) {
 </script>
 
 <template>
-	<div class="ios-card p-5">
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-4">
+	<div :class="embedded ? '' : 'ios-card p-5'">
+		<!-- Header (standalone only; the tab host owns it when embedded) -->
+		<div v-if="!embedded" class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
 				<EIcon name="i-heroicons-folder-open" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Projects</h3>

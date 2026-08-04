@@ -8,6 +8,9 @@
   Card click opens the ClientDetailPanel slide-over.
 -->
 <script setup lang="ts">
+// `embedded` renders the strip bare (no card / no header) for hosting inside
+// ActiveWorkTabs, which supplies the card + a Clients|Projects toggle instead.
+const props = defineProps<{ embedded?: boolean }>();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const clientSlide = useAppSlideOver('client');
@@ -82,11 +85,12 @@ function relTime(iso: string | null | undefined) {
 </script>
 
 <template>
-	<!-- Hide entirely when the header has scoped to a single client / org —
-	     showing "Active Clients" with one row would be redundant. -->
-	<div v-if="!isScoped" class="ios-card p-5">
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-4">
+	<!-- Standalone: hide entirely when the header has scoped to a single client
+	     / org (one row would be redundant). Embedded: always render — the tab
+	     host owns the card, header, and "view all" link. -->
+	<div v-if="embedded || !isScoped" :class="embedded ? '' : 'ios-card p-5'">
+		<!-- Header (standalone only) -->
+		<div v-if="!embedded" class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
 				<EIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-primary" />
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Active Clients</h3>
