@@ -14,6 +14,7 @@
 import { renderBrandedTemplate } from '~~/server/utils/email-templates';
 import { fetchOrgBrand } from '~~/server/utils/email-send';
 import { renderDigestBodyHtml } from '~~/server/utils/motivational-digest-email';
+import { composeDigestCopy } from '~~/server/utils/motivational-digest-ai';
 import type { DigestPayload } from '~~/server/utils/motivational-digest';
 import type { DigestTone } from '~~/shared/digest';
 
@@ -59,7 +60,10 @@ export default defineEventHandler(async (event) => {
 	const org = q.org ? await fetchOrgBrand(String(q.org)) : null;
 
 	const payload = samplePayload(tone);
-	const { subject, heading, bodyHtml, text } = renderDigestBodyHtml(payload, 'Camila', 'https://app.earnest.guru');
+	// ?ai=1 exercises the LLM-written intro (needs NUXT_LLM_API_KEY; falls back to
+	// the template copy on any failure).
+	const introOverride = (q.ai === '1' || q.ai === 'true') ? await composeDigestCopy(payload, 'Camila') : null;
+	const { subject, heading, bodyHtml, text } = renderDigestBodyHtml(payload, 'Camila', 'https://app.earnest.guru', introOverride);
 
 	const { html } = await renderBrandedTemplate('generic', {
 		subject,

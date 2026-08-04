@@ -61,6 +61,7 @@ export default defineEventHandler(async (event) => {
 	const dryRun = queryDryRun === 'true' || queryDryRun === true || bodyDryRun === true || bodyDryRun === 'true';
 
 	const useWorker = String((config as any).digestUseWorker ?? process.env.NUXT_DIGEST_USE_WORKER ?? '') === 'true';
+	const aiEnabled = String((config as any).digestAi ?? process.env.NUXT_DIGEST_AI ?? '') === 'true';
 	const appUrl = (config.public as any)?.appUrl || 'https://app.earnest.guru';
 	const now = new Date();
 	const directus = getServerDirectus();
@@ -151,6 +152,7 @@ export default defineEventHandler(async (event) => {
 				payload,
 				orgId: d.orgId,
 				appUrl,
+				ai: aiEnabled,
 			});
 			if (res.sent) { sent++; notes.push({ userId: d.userId, result: 'sent' }); }
 			else { skipped++; notes.push({ userId: d.userId, result: `send-failed:${res.reason || 'unknown'}` }); }

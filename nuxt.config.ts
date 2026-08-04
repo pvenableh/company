@@ -296,9 +296,14 @@ export default defineNuxtConfig({
 
 		// Motivational digest: 'true' routes the daily/weekly user digest to the
 		// external earnest-worker for AI-composed copy. Unset/false = in-repo
-		// direct-send fallback (deterministic branded email), so the feature works
-		// before the worker handler ships.
+		// send (see digestAi for whether that copy is AI-written or templated).
 		digestUseWorker: process.env.NUXT_DIGEST_USE_WORKER,
+
+		// Motivational digest: 'true' has the in-repo sender write the
+		// subject/heading/lead with the LLM (grounded in the real numbers; the
+		// data cards stay deterministic). Falls back to the template on any LLM
+		// failure. Unset/false = deterministic template copy.
+		digestAi: process.env.NUXT_DIGEST_AI,
 
 		// Redis Queue (BullMQ for async AI jobs) — leave empty to disable the worker
 		// and noop enqueues. Async AI is scaffolding only; not wired to real consumers.

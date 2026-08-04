@@ -13,6 +13,7 @@ import { renderBrandedTemplate } from './email-templates';
 import { sendBrandedEmail, fetchOrgBrand } from './email-send';
 import { escapeHtml, type OrgBrandRef } from './email-shell';
 import type { DigestPayload } from './motivational-digest';
+import { composeDigestCopy, type DigestCopy } from './motivational-digest-ai';
 
 const usd = (n: number) => `$${(Math.round(n || 0)).toLocaleString('en-US')}`;
 
@@ -226,11 +227,18 @@ function scoreboardBlock(p: DigestPayload): string {
 	</div>`;
 }
 
-/** Compose the full inner-HTML body for the digest. Exported for previews. */
-export function renderDigestBodyHtml(payload: DigestPayload, firstName: string, appUrl = 'https://app.earnest.guru'): { subject: string; heading: string; bodyHtml: string; text: string } {
-	const intro = toneIntro(payload, firstName);
+/**
+ * Compose the full inner-HTML body for the digest. Exported for previews.
+ * `introOverride` (the AI-written subject/heading/lead) wins over the
+ * deterministic template copy when supplied.
+ */
+export function renderDigestBodyHtml(payload: DigestPayload, firstName: string, appUrl = 'https://app.earnest.guru', introOverride?: DigestCopy | null): { subject: string; heading: string; bodyHtml: string; text: string } {
+	const intro = introOverride || toneIntro(payload, firstName);
 	const body = [
-		`<p style="margin:0 0 16px 0">${intro.lead}</p>`,
+		// intro.lead is model- or template-generated text → escape once here (it
+		// lands in raw {{{bodyHtml}}}). firstName is passed raw and escaped in the
+		// same pass, so there's no double-escaping.
+		`<p style="margin:0 0 16px 0">${escapeHtml(intro.lead)}</p>`,
 		scoreboardBlock(payload),
 		winsBlock(payload),
 		suggestionsBlock(payload),
@@ -257,15 +265,19 @@ export async function sendMotivationalDigest(params: {
 	org?: OrgBrandRef | null;
 	orgId?: string | null;
 	appUrl?: string;
+	/** When true, the LLM writes the subject/heading/lead (falls back to template on failure). */
+	ai?: boolean;
 }): Promise<{ sent: boolean; reason?: string }> {
 	const { to, payload } = params;
 	if (!to) return { sent: false, reason: 'No recipient email' };
 	if (!payload.hasContent) return { sent: false, reason: 'Nothing to report' };
 
 	const org = params.org ?? (params.orgId ? await fetchOrgBrand(params.orgId) : null);
-	const firstName = escapeHtml((params.firstName || '').trim());
+	const firstName = (params.firstName || '').trim();
 	const appUrl = params.appUrl || 'https://app.earnest.guru';
-	const { subject, heading, bodyHtml, text } = renderDigestBodyHtml(payload, firstName, appUrl);
+	// AI copy (best-effort) — null on any failure, so we keep the template copy.
+	const introOverride = params.ai ? await composeDigestCopy(payload, firstName) : null;
+	const { subject, heading, bodyHtml, text } = renderDigestBodyHtml(payload, firstName, appUrl, introOverride);
 
 	const { html, text: renderedText } = await renderBrandedTemplate('generic', {
 		subject,

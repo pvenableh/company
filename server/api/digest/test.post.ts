@@ -62,8 +62,12 @@ export default defineEventHandler(async (event) => {
 		return { ok: false, reason: 'Nothing to report for this org right now — try the layout preview at /api/email/preview-motivational-digest.' };
 	}
 
-	const res = await sendMotivationalDigest({ to: me.email, firstName: me.first_name, payload, orgId, appUrl });
+	// AI copy when enabled for the env, or forced per-request with { ai: true }.
+	const aiEnabled = String((config as any).digestAi ?? process.env.NUXT_DIGEST_AI ?? '') === 'true';
+	const ai = body?.ai === true || body?.ai === 'true' || aiEnabled;
+
+	const res = await sendMotivationalDigest({ to: me.email, firstName: me.first_name, payload, orgId, appUrl, ai });
 	return res.sent
-		? { ok: true, to: me.email, tone, message: `Test digest sent to ${me.email}.` }
+		? { ok: true, to: me.email, tone, ai, message: `Test digest sent to ${me.email}${ai ? ' (AI copy)' : ''}.` }
 		: { ok: false, reason: res.reason || 'Send failed.' };
 });
