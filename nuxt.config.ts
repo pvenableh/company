@@ -294,6 +294,12 @@ export default defineNuxtConfig({
 		// Cron
 		cronSecret: process.env.CRON_SECRET,
 
+		// Motivational digest: 'true' routes the daily/weekly user digest to the
+		// external earnest-worker for AI-composed copy. Unset/false = in-repo
+		// direct-send fallback (deterministic branded email), so the feature works
+		// before the worker handler ships.
+		digestUseWorker: process.env.NUXT_DIGEST_USE_WORKER,
+
 		// Redis Queue (BullMQ for async AI jobs) — leave empty to disable the worker
 		// and noop enqueues. Async AI is scaffolding only; not wired to real consumers.
 		redisQueueUrl: process.env.REDIS_QUEUE_URL || '',

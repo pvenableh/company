@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import { DIGEST_SECTIONS, CADENCE_LABELS, formatHour12, type DigestCadence } from '~~/shared/digest';
+
 const emit = defineEmits<{
 	(e: 'close'): void;
 }>();
 
-const { modules, enabledModules, toggle, isEnabled, enableAll, disableAll, personalizationsEnabled, lowUsageMode, digestCadence } = useAIPreferences();
+const {
+	modules, enabledModules, toggle, isEnabled, enableAll, disableAll,
+	personalizationsEnabled, lowUsageMode, digestCadence,
+	motivationalDigestEnabled, motivationalDigestCadence, motivationalDigestHour,
+	toggleDigestSection, isDigestSectionOn,
+} = useAIPreferences();
 const { usageSummary } = useAITokens();
+
+const digestCadenceOptions = Object.entries(CADENCE_LABELS) as [DigestCadence, string][];
+const digestHours = Array.from({ length: 24 }, (_, h) => ({ value: h, label: formatHour12(h) }));
+const digestSections = DIGEST_SECTIONS;
 
 const enabledCount = computed(() => enabledModules.value.size);
 const totalCount = modules.length;
@@ -175,6 +186,69 @@ const formatTokens = (n: number) => {
 						<option value="off">Off</option>
 					</select>
 				</div>
+			</div>
+
+			<!-- Motivational Digest — the daily/weekly "here's your day" email -->
+			<div class="p-3 rounded-lg bg-muted/20 space-y-3">
+				<div class="flex items-center justify-between gap-3">
+					<div class="min-w-0">
+						<p class="text-xs font-medium text-foreground">Daily Digest Email</p>
+						<p class="text-[10px] text-muted-foreground">Wins + what to tackle, sent before your day starts</p>
+					</div>
+					<button
+						@click="motivationalDigestEnabled = !motivationalDigestEnabled"
+						class="w-10 h-6 rounded-full flex items-center transition-colors flex-shrink-0 px-0.5"
+						:class="motivationalDigestEnabled ? 'bg-primary justify-end' : 'bg-muted justify-start'"
+					>
+						<div class="w-5 h-5 bg-white rounded-full shadow-sm" />
+					</button>
+				</div>
+
+				<template v-if="motivationalDigestEnabled">
+					<!-- Cadence + send time -->
+					<div class="grid grid-cols-2 gap-2">
+						<div>
+							<p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">How often</p>
+							<select
+								:value="motivationalDigestCadence"
+								@change="(e) => motivationalDigestCadence = (e.target as HTMLSelectElement).value as any"
+								class="w-full text-[11px] rounded-full glass-field px-2.5 py-1 focus:outline-none"
+							>
+								<option v-for="[val, label] in digestCadenceOptions" :key="val" :value="val">{{ label }}</option>
+							</select>
+						</div>
+						<div>
+							<p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Send at (your time)</p>
+							<select
+								:value="motivationalDigestHour"
+								@change="(e) => motivationalDigestHour = Number((e.target as HTMLSelectElement).value)"
+								class="w-full text-[11px] rounded-full glass-field px-2.5 py-1 focus:outline-none"
+							>
+								<option v-for="h in digestHours" :key="h.value" :value="h.value">{{ h.label }}</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- What to include -->
+					<div>
+						<p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">What to include</p>
+						<div class="flex flex-wrap gap-1.5">
+							<button
+								v-for="s in digestSections"
+								:key="s.key"
+								type="button"
+								@click="toggleDigestSection(s.key)"
+								class="text-[10px] px-2.5 py-1 rounded-full border transition-colors"
+								:class="isDigestSectionOn(s.key)
+									? 'bg-primary/10 text-primary border-primary/30'
+									: 'bg-muted/40 text-muted-foreground border-transparent hover:text-foreground'"
+							>
+								{{ s.label }}
+							</button>
+						</div>
+					</div>
+					<p class="text-[10px] text-muted-foreground">Friday leans into wins; Monday into a fresh-week lift.</p>
+				</template>
 			</div>
 
 			<!-- Usage Summary -->
