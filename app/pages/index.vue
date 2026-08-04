@@ -557,25 +557,6 @@ const goTo = (route: string) => {
 				     double. -->
 				<OnboardingGettingStartedChecklist v-if="!(isPresence && onboardingShouldShow)" />
 
-				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
-				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
-					<!-- Badges -->
-					<ETooltip
-						v-for="badge in earnestState.badges"
-						:key="badge.id"
-						:text="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
-					>
-						<div
-							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 transition-all cursor-default"
-							:class="badge.unlocked
-								? badgeColor(badge.id)
-								: 'bg-muted/30 text-muted-foreground/40'"
-						>
-							<EIcon :name="badge.icon" class="w-3.5 h-3.5" />
-							<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
-						</div>
-					</ETooltip>
-				</div>
 
 				<!-- Three-band layout. CSS `order` is reactive to the lens toggle —
 				     YOU/US swap; REFERENCE always last. Preserves DOM state across
@@ -589,10 +570,53 @@ const goTo = (route: string) => {
 				     Order still flips via :style based on the same toggle. -->
 				<section class="space-y-4">
 
-                <!-- ═══ PINNED: Priority Actions — the point of the page, always first,
-                     never hidden or moved. Everything below is the customizable grid. -->
-						<!-- Priority Actions -->
-						<div class="space-y-4">
+                <!-- Weekly check-in nudge — self-hides unless a personal goal is stale. -->
+                <GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
+
+                <!-- ═══ Customizable widget grid — Priority Actions is the first widget now.
+                     Users show/hide + drag to reorder; layout persists per device
+                     (useDashboardLayout). Everything is customizable. -->
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                        @click="toggleDashEditing"
+                    >
+                        <EIcon :name="dashEditing ? 'i-heroicons-check' : 'i-heroicons-adjustments-horizontal'" class="w-3.5 h-3.5" />
+                        {{ dashEditing ? 'Done arranging' : 'Customize' }}
+                    </button>
+                    <button
+                        v-if="dashEditing"
+                        type="button"
+                        class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        @click="resetDash"
+                    >Reset to default</button>
+                </div>
+
+                <VueDraggable
+                    :list="dragList"
+                    item-key="id"
+                    handle=".dash-drag-handle"
+                    :disabled="!dashEditing"
+                    :animation="180"
+                    ghost-class="dash-ghost"
+                    class="grid grid-cols-1 lg:grid-cols-3 grid-flow-row-dense gap-6 items-start"
+                    @end="onReorderEnd"
+                >
+                    <template #item="{ element, index }">
+                        <CommandCenterWidgetFrame
+                            :widget-id="element.id"
+                            :label="labelOf(element.id)"
+                            :span="spanOf(element.id)"
+                            :scroll="scrollOf(element.id)"
+                            :editing="dashEditing"
+                            :first="index === 0"
+                            :last="index === dragList.length - 1"
+                            @hide="hideWidget(element.id)"
+                            @move-up="moveBy(element.id, -1)"
+                            @move-down="moveBy(element.id, 1)"
+                        >
+						<div v-if="element.id === 'priority-actions'" class="space-y-4">
 							<div class="flex items-center gap-2">
 								<EIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
 								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
@@ -750,54 +774,7 @@ const goTo = (route: string) => {
 								</div>
 							</div>
 						</div>
-
-                <!-- Weekly check-in nudge — self-hides unless a personal goal is stale. -->
-                <GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
-
-                <!-- ═══ Customizable widget grid — everything below Priority Actions.
-                     Users show/hide + drag to reorder; layout persists per device
-                     (useDashboardLayout). Priority Actions above stays pinned. -->
-                <div class="flex items-center justify-between gap-2 pt-1">
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                        @click="toggleDashEditing"
-                    >
-                        <EIcon :name="dashEditing ? 'i-heroicons-check' : 'i-heroicons-adjustments-horizontal'" class="w-3.5 h-3.5" />
-                        {{ dashEditing ? 'Done arranging' : 'Customize' }}
-                    </button>
-                    <button
-                        v-if="dashEditing"
-                        type="button"
-                        class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                        @click="resetDash"
-                    >Reset to default</button>
-                </div>
-
-                <VueDraggable
-                    :list="dragList"
-                    item-key="id"
-                    handle=".dash-drag-handle"
-                    :disabled="!dashEditing"
-                    :animation="180"
-                    ghost-class="dash-ghost"
-                    class="grid grid-cols-1 lg:grid-cols-3 grid-flow-row-dense gap-6 items-start"
-                    @end="onReorderEnd"
-                >
-                    <template #item="{ element, index }">
-                        <CommandCenterWidgetFrame
-                            :widget-id="element.id"
-                            :label="labelOf(element.id)"
-                            :span="spanOf(element.id)"
-                            :scroll="scrollOf(element.id)"
-                            :editing="dashEditing"
-                            :first="index === 0"
-                            :last="index === dragList.length - 1"
-                            @hide="hideWidget(element.id)"
-                            @move-up="moveBy(element.id, -1)"
-                            @move-down="moveBy(element.id, 1)"
-                        >
-                            <CommandCenterQuickTasksWidget v-if="element.id === 'quick-tasks'" />
+                            <CommandCenterQuickTasksWidget v-else-if="element.id === 'quick-tasks'" />
                             <!-- Earnest Score + its 30-day trend, stacked in one column. -->
                             <div v-else-if="element.id === 'earnest-score'" class="space-y-4">
                                 <EarnestScoreWidget
@@ -815,6 +792,22 @@ const goTo = (route: string) => {
                                 />
                                 <div class="ios-card rounded-2xl bg-card p-4">
                                     <EarnestTrendChart :history="earnestState.history" />
+                                </div>
+                                <!-- Badges — folded in with the Earnest Score (gamification lives together). -->
+                                <div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
+                                    <ETooltip
+                                        v-for="badge in earnestState.badges"
+                                        :key="badge.id"
+                                        :text="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
+                                    >
+                                        <div
+                                            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shrink-0 transition-all cursor-default"
+                                            :class="badge.unlocked ? badgeColor(badge.id) : 'bg-muted/30 text-muted-foreground/40'"
+                                        >
+                                            <EIcon :name="badge.icon" class="w-3 h-3" />
+                                            <span class="text-[10px] font-medium whitespace-nowrap">{{ badge.name }}</span>
+                                        </div>
+                                    </ETooltip>
                                 </div>
                             </div>
                             <CommandCenterMyGoalsCard v-else-if="element.id === 'my-goals'" />
