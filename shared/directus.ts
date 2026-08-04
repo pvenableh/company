@@ -185,6 +185,14 @@ export interface AiPreference {
 	organization?: Organization | string | null;
 	/** @description How often to receive daily PM project briefs */
 	digest_cadence?: 'daily' | 'weekly' | 'off' | null;
+	/** @description Send the daily/weekly motivational digest email. */
+	motivational_digest_enabled?: boolean | null;
+	/** @description How often the motivational digest is sent. */
+	motivational_digest_cadence?: 'daily' | 'weekdays' | 'weekly' | 'off' | null;
+	/** @description Preferred LOCAL send hour (0–23), evaluated against the user timezone. */
+	motivational_digest_hour?: number | null;
+	/** @description Which content blocks to include (see shared/digest.ts DIGEST_SECTIONS). */
+	motivational_digest_sections?: string[] | null;
 }
 
 export interface AiTag {
