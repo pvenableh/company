@@ -51,14 +51,15 @@ export interface TaskSuggestion {
 		toName: string | null;
 		subject: string;
 		body: string;
-		kind: 'proposal' | 'lead';
+		kind: 'proposal' | 'lead' | 'carddesk';
 		refId: string;
 	};
 }
 
-// Build a short, professional follow-up draft. The user reviews/edits it (in
-// their mail client, or before an in-app send), so keep it a warm skeleton.
-function buildFollowUpDraft(kind: 'proposal' | 'lead', opts: { firstName?: string | null; title?: string | null }): { subject: string; body: string } {
+// Build a short, professional follow-up draft — the TEMPLATE FALLBACK used when
+// "Draft with Earnest" (AI, /api/followups/draft) is unavailable. Kept warm and
+// generic; the user reviews/edits it in their mail client.
+function buildFollowUpDraft(kind: 'proposal' | 'lead' | 'carddesk', opts: { firstName?: string | null; title?: string | null }): { subject: string; body: string } {
 	const name = (opts.firstName || '').trim();
 	const greeting = name ? `Hi ${name},` : 'Hi there,';
 	if (kind === 'proposal') {
@@ -66,6 +67,12 @@ function buildFollowUpDraft(kind: 'proposal' | 'lead', opts: { firstName?: strin
 		return {
 			subject: opts.title ? `Following up on ${opts.title}` : 'Following up on our proposal',
 			body: `${greeting}\n\nI wanted to follow up on the proposal we sent${ref}. Happy to walk through anything or adjust it to fit what you need.\n\nIs there a good time this week to connect?\n\nBest,`,
+		};
+	}
+	if (kind === 'carddesk') {
+		return {
+			subject: 'Good to reconnect',
+			body: `${greeting}\n\nIt's been a little while — I wanted to reach out and see how things are going on your end.\n\nWould you be up for a quick catch-up sometime soon?\n\nBest,`,
 		};
 	}
 	return {
@@ -1360,6 +1367,7 @@ export const useAIProductivityEngine = () => {
 			// Hot contacts needing follow-up
 			for (const contact of s.needsFollowUp.slice(0, 3)) {
 				const isHot = contact.rating === 'hot';
+				const draft = buildFollowUpDraft('carddesk', { firstName: contact.firstName });
 				results.push({
 					id: `cd-followup-${contact.id}`,
 					type: 'followup',
@@ -1372,6 +1380,16 @@ export const useAIProductivityEngine = () => {
 					category: 'carddesk',
 					timestamp: new Date(),
 					score: calculateScore({ type: 'action', daysOverdue: contact.daysSinceContact }),
+					// CardDesk is personal networking → Draft-only (mailto); the
+					// component hides "Send from Earnest" for kind 'carddesk'.
+					followUp: {
+						toEmail: contact.email || null,
+						toName: contact.firstName || contact.name || null,
+						subject: draft.subject,
+						body: draft.body,
+						kind: 'carddesk',
+						refId: String(contact.id),
+					},
 				});
 			}
 

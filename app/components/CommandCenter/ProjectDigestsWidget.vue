@@ -90,7 +90,7 @@ const openDigest = async (d: DigestRow) => {
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
 				<EIcon name="i-heroicons-newspaper" class="w-5 h-5 text-violet-500" />
-				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Today's Briefs</h3>
+				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Project Briefs</h3>
 				<ETooltip
 					text="Auto-generated daily summaries of activity on projects you manage — tasks, events, comments, and meeting notes from the last day. Refreshed every morning at 12:00 UTC for active projects updated in the last 14 days."
 					:popper="{ placement: 'bottom' }"

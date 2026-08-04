@@ -20,6 +20,8 @@ export interface CardDeskStats {
 export interface CdContactSummary {
 	id: string;
 	name: string;
+	firstName: string | null;
+	email: string | null;
 	company: string | null;
 	rating: string | null;
 	daysSinceContact: number;
@@ -124,7 +126,7 @@ export const useCardDesk = () => {
 		try {
 			const [contacts, activities, xpState] = await Promise.all([
 				contactItems.list({
-					fields: ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'hibernated', 'is_client', 'client_at', 'date_created'],
+					fields: ['id', 'name', 'first_name', 'last_name', 'email', 'company', 'rating', 'hibernated', 'is_client', 'client_at', 'date_created'],
 					filter: { _and: [{ status: { _in: ['published', 'draft'] } }, { user_created: { _eq: userId } }] },
 					limit: -1,
 				}).catch(() => []),
@@ -173,6 +175,8 @@ export const useCardDesk = () => {
 					needsFollowUp.push({
 						id: contact.id,
 						name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown',
+						firstName: contact.first_name || null,
+						email: contact.email || null,
 						company: contact.company,
 						rating: contact.rating,
 						daysSinceContact: daysSince,
