@@ -966,7 +966,7 @@ const fmtModDate = (d) => {
 
 				<!-- Messages -->
 				<div ref="messagesContainer" class="flex-1 overflow-y-auto px-5 py-4 messages-scroll min-h-0">
-					<div v-if="messagesLoading" class="space-y-4">
+					<div v-if="messagesLoading" class="space-y-4 max-w-3xl mx-auto">
 						<div v-for="n in 5" :key="n" class="flex items-start gap-3">
 							<div class="w-8 h-8 rounded-full bg-muted/60 animate-pulse shrink-0" />
 							<div class="flex-1 space-y-1.5">
@@ -975,7 +975,7 @@ const fmtModDate = (d) => {
 							</div>
 						</div>
 					</div>
-					<div v-else-if="visibleMessages.length" class="space-y-3">
+					<div v-else-if="visibleMessages.length" class="space-y-3 max-w-3xl mx-auto">
 						<template v-for="message in visibleMessages" :key="message.id">
 							<div v-if="message.id === firstUnreadId" class="flex items-center gap-2 py-1">
 								<div class="flex-1 h-px bg-destructive/40" />
@@ -1013,9 +1013,10 @@ const fmtModDate = (d) => {
 					</div>
 				</div>
 
-				<!-- Composer -->
+				<!-- Composer — constrained + centered to match the message column so it
+				     doesn't stretch to the right edge on wide screens. -->
 				<div class="px-5 pb-4 pt-2 shrink-0">
-					<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
+					<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all max-w-3xl mx-auto w-full">
 						<LazyFormTiptap
 							v-model="newMessage"
 							:show-toolbar="true"

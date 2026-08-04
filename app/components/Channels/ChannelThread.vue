@@ -157,9 +157,9 @@ const sendMessage = async () => {
 			</div>
 		</div>
 
-		<!-- Composer -->
+		<!-- Composer — capped + centered to match the message column on wide panels. -->
 		<div class="pt-2 shrink-0">
-			<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all">
+			<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/50 transition-all max-w-3xl mx-auto w-full">
 				<LazyFormTiptap
 					v-model="newMessage"
 					:show-toolbar="true"

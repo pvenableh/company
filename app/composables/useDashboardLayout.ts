@@ -18,31 +18,44 @@ export interface DashboardWidgetDef {
 	span?: 1 | 2 | 3;
 	/** Hidden by default until the user opts in from the Customize tray. */
 	defaultHidden?: boolean;
+	/** Cap the widget height and scroll its overflow so it can't stretch a row. */
+	scroll?: boolean;
 }
 
 // Catalog + DEFAULT ORDER of the reorderable widgets. Adding a new id here makes
 // it appear (appended) for users who already have a saved layout.
+//
+// Order is grouped for a COHESIVE grid: the three column-1 "personal" widgets
+// form a tidy top row, then full-width blocks stack, then the two column-1
+// reference widgets pair up. `grid-flow-row-dense` backfills any gaps.
 export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
-	{ id: 'quick-tasks', label: 'Quick Tasks', span: 1 },
+	// Personal row (3 × col-1). Earnest Score now stacks the trend beneath it,
+	// so score + trend live in ONE column, as requested.
 	{ id: 'earnest-score', label: 'Earnest Score', span: 1 },
-	{ id: 'score-trend', label: 'Score Trend', span: 1 },
-	{ id: 'my-goals', label: 'My Goals', span: 1 },
-	{ id: 'suggestions', label: 'Suggestions', span: 3 },
-	{ id: 'pinned-work', label: 'Pinned Work', span: 3 },
+	{ id: 'quick-tasks', label: 'Quick Tasks', span: 1, scroll: true },
+	{ id: 'my-goals', label: 'My Goals', span: 1, scroll: true },
+	// Work / clients (Active Work already sorts pinned-first, so the standalone
+	// Pinned Work widget is redundant — default-hidden, re-addable from the tray).
 	{ id: 'active-work', label: 'Active Clients & Projects', span: 3 },
-	{ id: 'project-briefs', label: 'Project Briefs', span: 2 },
+	{ id: 'pinned-work', label: 'Pinned Work', span: 3, defaultHidden: true },
+	{ id: 'suggestions', label: 'More Suggestions', span: 3 },
+	// Briefs + CRM fill one row (2 + 1).
+	{ id: 'project-briefs', label: 'Project Briefs', span: 2, scroll: true },
 	{ id: 'crm-pulse', label: 'CRM Pulse', span: 1 },
+	// Money / marketing / goals — full width.
+	{ id: 'financial', label: 'Financial', span: 3, scroll: true },
 	{ id: 'marketing', label: 'Marketing Pulse', span: 3 },
-	{ id: 'goals-summary', label: 'Goals Summary', span: 3 },
-	{ id: 'financial', label: 'Financial', span: 3 },
-	{ id: 'channels', label: 'Channels', span: 1 },
-	{ id: 'carddesk', label: 'CardDesk Pipeline', span: 1 },
+	{ id: 'goals-summary', label: 'Goals Summary', span: 3, scroll: true },
+	// Reference row (2 × col-1).
+	{ id: 'channels', label: 'Channels', span: 1, scroll: true },
+	{ id: 'carddesk', label: 'CardDesk Pipeline', span: 1, scroll: true },
 	{ id: 'leaderboard', label: 'Team Leaderboard', span: 3 },
 ];
 
 const CATALOG_IDS = DASHBOARD_WIDGETS.map((w) => w.id);
 const SPAN_BY_ID = new Map(DASHBOARD_WIDGETS.map((w) => [w.id, w.span ?? 3]));
 const LABEL_BY_ID = new Map(DASHBOARD_WIDGETS.map((w) => [w.id, w.label]));
+const SCROLL_IDS = new Set(DASHBOARD_WIDGETS.filter((w) => w.scroll).map((w) => w.id));
 const STORAGE_KEY = 'earnest-dashboard-layout-v1';
 
 // Module-level shared state so every consumer (page + customize panel) sees the
@@ -157,6 +170,7 @@ export const useDashboardLayout = () => {
 	const isVisible = (id: string) => !_hidden.value.has(id);
 	const spanOf = (id: string) => SPAN_BY_ID.get(id) ?? 3;
 	const labelOf = (id: string) => LABEL_BY_ID.get(id) ?? id;
+	const scrollOf = (id: string) => SCROLL_IDS.has(id);
 
 	const hideWidget = (id: string) => {
 		if (!_hidden.value.has(id)) {
@@ -215,6 +229,7 @@ export const useDashboardLayout = () => {
 		isVisible,
 		spanOf,
 		labelOf,
+		scrollOf,
 		hideWidget,
 		showWidget,
 		toggleWidget,

@@ -429,7 +429,7 @@ const showLeaderboard = computed(() => !!selectedTeam.value);
 // ── Command-center layout (per-user show/hide + drag-reorder) ──
 // Governs everything BELOW the pinned Priority Actions block.
 const layout = useDashboardLayout();
-const { editing: dashEditing, hiddenList, spanOf, labelOf, hideWidget, showWidget, moveBy } = layout;
+const { editing: dashEditing, hiddenList, spanOf, labelOf, scrollOf, hideWidget, showWidget, moveBy } = layout;
 const toggleDashEditing = () => layout.toggleEditing();
 const resetDash = () => layout.reset();
 // Deterministic guards: a "visible" widget still renders nothing when its own
@@ -781,7 +781,7 @@ const goTo = (route: string) => {
                     :disabled="!dashEditing"
                     :animation="180"
                     ghost-class="dash-ghost"
-                    class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
+                    class="grid grid-cols-1 lg:grid-cols-3 grid-flow-row-dense gap-6 items-start"
                     @end="onReorderEnd"
                 >
                     <template #item="{ element, index }">
@@ -789,6 +789,7 @@ const goTo = (route: string) => {
                             :widget-id="element.id"
                             :label="labelOf(element.id)"
                             :span="spanOf(element.id)"
+                            :scroll="scrollOf(element.id)"
                             :editing="dashEditing"
                             :first="index === 0"
                             :last="index === dragList.length - 1"
@@ -797,22 +798,24 @@ const goTo = (route: string) => {
                             @move-down="moveBy(element.id, 1)"
                         >
                             <CommandCenterQuickTasksWidget v-if="element.id === 'quick-tasks'" />
-                            <EarnestScoreWidget
-                                v-else-if="element.id === 'earnest-score'"
-                                :current-score="earnestState.currentScore"
-                                :level="earnestState.level"
-                                :level-title="earnestState.levelTitle"
-                                :total-e-p="earnestState.totalEP"
-                                :next-level-e-p="earnestState.nextLevelEP"
-                                :level-progress="earnestState.levelProgress"
-                                :streak="earnestState.streak"
-                                :team-rank="earnestState.teamRank"
-                                :team-size="earnestState.teamSize"
-                                :dimensions="earnestState.dimensions"
-                                :weekly-checkin-streak="weeklyCheckinStreak"
-                            />
-                            <div v-else-if="element.id === 'score-trend'" class="ios-card rounded-2xl bg-card p-4">
-                                <EarnestTrendChart :history="earnestState.history" />
+                            <!-- Earnest Score + its 30-day trend, stacked in one column. -->
+                            <div v-else-if="element.id === 'earnest-score'" class="space-y-4">
+                                <EarnestScoreWidget
+                                    :current-score="earnestState.currentScore"
+                                    :level="earnestState.level"
+                                    :level-title="earnestState.levelTitle"
+                                    :total-e-p="earnestState.totalEP"
+                                    :next-level-e-p="earnestState.nextLevelEP"
+                                    :level-progress="earnestState.levelProgress"
+                                    :streak="earnestState.streak"
+                                    :team-rank="earnestState.teamRank"
+                                    :team-size="earnestState.teamSize"
+                                    :dimensions="earnestState.dimensions"
+                                    :weekly-checkin-streak="weeklyCheckinStreak"
+                                />
+                                <div class="ios-card rounded-2xl bg-card p-4">
+                                    <EarnestTrendChart :history="earnestState.history" />
+                                </div>
                             </div>
                             <CommandCenterMyGoalsCard v-else-if="element.id === 'my-goals'" />
                             <CommandCenterSuggestionsCarousel
