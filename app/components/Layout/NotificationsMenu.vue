@@ -233,6 +233,23 @@
 							/>
 						</div>
 
+						<!-- Platform-aware enablement help (iOS Home-Screen step, etc.). -->
+						<div v-if="!pushIsSubscribed" class="-mt-1">
+							<button
+								type="button"
+								class="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+								@click="showPushHelp = !showPushHelp"
+							>
+								{{ showPushHelp ? 'Hide setup steps' : 'How do I enable this on my device?' }}
+							</button>
+							<div v-if="showPushHelp" class="mt-2 rounded-md bg-muted/40 p-3 text-xs space-y-1.5">
+								<div class="font-medium text-foreground">{{ pushHelp.platform }}</div>
+								<ol class="list-decimal pl-4 space-y-1 text-muted-foreground">
+									<li v-for="(step, i) in pushHelp.steps" :key="i">{{ step }}</li>
+								</ol>
+							</div>
+						</div>
+
 						<!-- Self-test: fires a push to this device so anyone can confirm
 						     it's wired end to end. Only shown once subscribed. -->
 						<div v-if="pushIsSubscribed" class="-mt-1">
@@ -587,6 +604,48 @@ async function sendTestPush() {
 		testingPush.value = false;
 	}
 }
+
+// Platform-aware "how to enable push" steps. iOS is the tricky one (16.4+ AND
+// installed to the Home Screen); Android/desktop just need the permission grant.
+const showPushHelp = ref(false);
+const pushHelp = computed(() => {
+	if (typeof window === 'undefined') return { platform: 'Your device', steps: [] };
+	const ua = navigator.userAgent || '';
+	const isAndroid = /Android/.test(ua);
+	const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+	if (pushIsIOS.value) {
+		return {
+			platform: 'iPhone / iPad',
+			steps: isStandalone
+				? ['Turn the switch above on, then tap Allow when iOS asks.']
+				: [
+					'Open Earnest in Safari (push doesn’t work in other iOS browsers).',
+					'Tap the Share button, then “Add to Home Screen.”',
+					'Open Earnest from the new Home Screen icon.',
+					'Return here, turn the switch on, and tap Allow.',
+				],
+		};
+	}
+	if (isAndroid) {
+		return {
+			platform: 'Android',
+			steps: [
+				'Turn the switch above on.',
+				'Tap Allow when Chrome asks about notifications.',
+				'Optional: Chrome menu → “Install app” for an app-like experience.',
+			],
+		};
+	}
+	return {
+		platform: 'Desktop',
+		steps: [
+			'Turn the switch above on.',
+			'Choose Allow in the browser’s permission prompt.',
+			'No prompt? Click the lock / site icon in the address bar and set Notifications to Allow.',
+			'Optional: use the install icon in the address bar to add Earnest as an app.',
+		],
+	};
+});
 
 // ── Daily Digest email settings (shared state via useAIPreferences) ──
 const { selectedOrg } = useOrganization();
