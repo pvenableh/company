@@ -44,9 +44,11 @@ function onContractCount(n: number) {
 
 const proposalsRef = ref<any>(null);
 const contractsRef = ref<any>(null);
+const momentumRef = ref<any>(null);
 function refresh() {
 	proposalsRef.value?.refresh?.();
 	contractsRef.value?.refresh?.();
+	momentumRef.value?.refresh?.();
 }
 defineExpose({ refresh, tab });
 </script>
@@ -80,6 +82,9 @@ defineExpose({ refresh, tab });
 				<span class="text-[10px] opacity-70 ml-0.5">{{ contractCount }}</span>
 			</button>
 		</div>
+
+		<!-- Encouragement strip — proposals sent total, won, and what's gone quiet. -->
+		<MoneyProposalMomentum v-show="tab === 'proposals'" ref="momentumRef" />
 
 		<div class="ios-card p-4 sm:p-6">
 			<MoneyProposalsList

@@ -56,6 +56,8 @@ const route = useRoute();
 const { createContract } = useContracts();
 const contractItems = useDirectusItems('contracts');
 const contractSlide = useAppSlideOver('contract');
+const { upload: uploadDirectusFile } = useDirectusFiles();
+const { celebrateContract } = useProposalEncouragement();
 
 const contractStatuses = Object.entries(CONTRACT_STATUS_LABELS).map(([id, name]) => ({ id, name }));
 
@@ -72,10 +74,13 @@ function triggerSave() {
 async function onFormSave(payload: any) {
 	saving.value = true;
 	try {
-		const fullPayload = {
-			...payload,
-			contract_status: currentStatus.value,
-			...(payload.lead && { lead: typeof payload.lead === 'string' ? Number(payload.lead) : payload.lead }),
+		const { _logExisting, _file, ...rest } = payload;
+		const logExisting = !!_logExisting;
+
+		const fullPayload: Record<string, any> = {
+			...rest,
+			contract_status: logExisting ? rest.contract_status || 'signed' : currentStatus.value,
+			...(rest.lead && { lead: typeof rest.lead === 'string' ? Number(rest.lead) : rest.lead }),
 		};
 
 		if (isEditing.value && props.contract?.id) {
@@ -84,9 +89,36 @@ async function onFormSave(payload: any) {
 			emit('updated', updated);
 		} else {
 			const created = await createContract(fullPayload);
-			toast.add({ title: 'Contract created — opening composer', color: 'green' });
+
+			// Attach the signed/executed PDF (log-existing path).
+			if (logExisting && _file && created?.id) {
+				try {
+					const res: any = await uploadDirectusFile(_file, { title: _file.name });
+					const fileId = (res?.data || res)?.id;
+					if (fileId) await contractItems.update(created.id, { file: fileId } as any);
+				} catch (fileErr: any) {
+					console.error('Contract PDF upload failed:', fileErr);
+					toast.add({ title: 'Contract saved, but the PDF failed to attach', description: fileErr?.data?.message || fileErr?.message, color: 'amber' });
+				}
+			}
+
 			emit('created', created);
 			isOpen.value = false;
+
+			// Logged (historical) contracts skip the composer — open the detail view.
+			if (logExisting) {
+				celebrateContract({ status: fullPayload.contract_status });
+				if (created?.id) {
+					if (route.path.startsWith('/apps/')) {
+						await contractSlide.open(String(created.id));
+					} else {
+						await navigateTo(`/contracts/${created.id}`);
+					}
+				}
+				return;
+			}
+
+			toast.add({ title: 'Contract created — opening composer', color: 'green' });
 			if (created?.id) {
 				if (route.path.startsWith('/apps/')) {
 					await contractSlide.open(String(created.id), 'edit');

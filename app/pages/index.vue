@@ -142,7 +142,7 @@ const handledActionIds = ref<Set<string>>(new Set());
 type ActionApp = 'people' | 'work' | 'money' | 'marketing';
 const CATEGORY_TO_APP: Record<string, ActionApp> = {
 	tasks: 'work', projects: 'work', scheduling: 'work', goals: 'work', communication: 'work',
-	invoices: 'money',
+	invoices: 'money', proposals: 'money',
 	leads: 'people', carddesk: 'people', phone: 'people',
 	social: 'marketing',
 };

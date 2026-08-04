@@ -46,6 +46,7 @@ const { setEntity, clearEntity, sidebarOpen } = useEntityPageContext();
 const slideOverStack = useAppSlideOverStack();
 const docItems = useDirectusItems(collection);
 const toast = useToast();
+const { celebrateProposal, celebrateContract } = useProposalEncouragement();
 
 const doc = ref<any>(null);
 const loading = ref(true);
@@ -151,6 +152,7 @@ async function sendForSignature() {
       try { await navigator.clipboard.writeText(res.url); } catch { /* ignore */ }
       toast.add({ title: 'Signing link copied', description: 'Email delivery is off for this org — paste the link to the client.', color: 'green' });
     }
+    celebrateContract({ status: res.status });
     emit('loaded', doc.value);
   } catch (err: any) {
     toast.add({ title: 'Failed to send', description: err?.data?.message || err?.message, color: 'red' });
@@ -231,6 +233,15 @@ const detailFields = computed(() => [
 
 function onDetailsUpdated(patch: Record<string, any>) {
   if (!doc.value) return;
+  // Celebrate a genuine forward status move (draft → sent, or a win) — but only
+  // when the status actually changed, so routine edits stay quiet.
+  if (isProposal.value && 'proposal_status' in patch) {
+    const prev = doc.value.proposal_status;
+    const next = patch.proposal_status;
+    if (next && next !== prev && ['sent', 'viewed', 'accepted'].includes(next)) {
+      celebrateProposal({ status: next });
+    }
+  }
   Object.assign(doc.value, patch);
   emit('loaded', doc.value);
 }
@@ -242,6 +253,11 @@ const attaching = ref(false);
 const attachmentUrl = computed(() =>
   doc.value?.file?.id ? `${config.public.directusUrl}/assets/${doc.value.file.id}?download` : null,
 );
+const isPdfAttachment = computed(() => {
+  const f = doc.value?.file;
+  if (!f) return false;
+  return (f.type || '').includes('pdf') || /\.pdf$/i.test(f.title || '');
+});
 function pickAttachment() { attachInput.value?.click(); }
 async function onAttachmentSelected(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -449,6 +465,29 @@ if (!props.compact) {
             />
             <template v-else>
               <DocumentsBlockRenderer v-if="hasBlocks" :blocks="blocks" :cover="coverContext" />
+              <!-- Logged-from-PDF: the attachment IS the document. Show it front and
+                   centre rather than an "add blocks" empty state. -->
+              <div v-else-if="doc.file && attachmentUrl" class="py-4">
+                <div class="rounded-2xl border border-border/60 bg-muted/20 overflow-hidden">
+                  <iframe
+                    v-if="isPdfAttachment"
+                    :src="attachmentUrl"
+                    class="w-full h-[70vh] bg-white"
+                    title="Attached document"
+                  />
+                  <div class="flex items-center gap-3 px-4 py-3 border-t border-border/50">
+                    <EIcon name="i-heroicons-document-text" class="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-medium truncate">{{ doc.file.title || 'Attached document' }}</div>
+                      <div class="text-[11px] uppercase tracking-wide text-muted-foreground">Logged from an external file</div>
+                    </div>
+                    <a :href="attachmentUrl" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border bg-background text-xs hover:bg-muted/40 transition-colors shrink-0">
+                      <EIcon name="i-heroicons-arrow-down-tray" class="w-3.5 h-3.5" />
+                      Open
+                    </a>
+                  </div>
+                </div>
+              </div>
               <div v-else-if="doc.notes" class="prose prose-sm dark:prose-invert max-w-none" v-html="doc.notes" />
               <div v-else class="py-10 text-center opacity-50 text-sm">No content yet — click “Edit content” to add blocks.</div>
             </template>

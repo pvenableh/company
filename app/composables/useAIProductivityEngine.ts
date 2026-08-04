@@ -3,7 +3,9 @@
 // and generates prioritized action items, suggestions, and insights.
 //
 // Data sources: tickets, projects, tasks, invoices, channels/messages,
-//               social media, scheduling, phone/activities, deals
+//               social media, scheduling, phone/activities, deals, proposals
+
+import { proposalPursuitState, COLD_DAYS } from '~~/shared/proposals';
 
 export interface TaskSuggestion {
 	id: string;
@@ -34,7 +36,8 @@ export interface TaskSuggestion {
 		| 'social'
 		| 'phone'
 		| 'carddesk'
-		| 'goals';
+		| 'goals'
+		| 'proposals';
 	timestamp: Date;
 	score: number;
 }
@@ -62,6 +65,11 @@ export interface ProductivityMetrics {
 	leadsInPipeline: number;
 	overdueFollowUps: number;
 	totalLeadsClosed: number;
+	// Proposal momentum (encouragement + follow-up nudges)
+	proposalsSentCount: number;
+	proposalsSentValue: number;
+	proposalsWonValue: number;
+	coldProposals: number;
 }
 
 // Module-level cache — persists across composable calls for 60s TTL
@@ -91,6 +99,10 @@ export const useAIProductivityEngine = () => {
 		leadsInPipeline: 0,
 		overdueFollowUps: 0,
 		totalLeadsClosed: 0,
+		proposalsSentCount: 0,
+		proposalsSentValue: 0,
+		proposalsWonValue: 0,
+		coldProposals: 0,
 	});
 	const isAnalyzing = ref(false);
 	const greeting = ref('');
@@ -115,6 +127,7 @@ export const useAIProductivityEngine = () => {
 	const socialAccountItems = useDirectusItems('social_accounts');
 	const callLogItems = useDirectusItems('call_logs');
 	const dealItems = useDirectusItems('leads');
+	const proposalItems = useDirectusItems('proposals');
 	const goalItems = useDirectusItems('goals');
 	const appointmentItems = useDirectusItems('appointments');
 	const { user } = useDirectusAuth();
@@ -1214,6 +1227,69 @@ export const useAIProductivityEngine = () => {
 		return results;
 	};
 
+	// ─── Proposal Analysis (momentum + follow-up nudges) ─────────────────────
+
+	const analyzeProposals = async (): Promise<TaskSuggestion[]> => {
+		const results: TaskSuggestion[] = [];
+
+		// Same tenant-data guard as deals — never query without an org scope.
+		if (!selectedOrg.value && accessibleOrgIds.value.length === 0) return results;
+
+		try {
+			const proposals = await proposalItems.list({
+				fields: ['id', 'title', 'total_value', 'proposal_status', 'date_sent', 'valid_until', 'date_created'],
+				filter: { ...orgFilter() },
+				sort: ['-date_sent'],
+				limit: 100,
+			});
+
+			const now = today();
+			let sentCount = 0;
+			let sentValue = 0;
+			let wonValue = 0;
+			let cold = 0;
+
+			for (const p of proposals) {
+				const value = Number(p.total_value) || 0;
+				const { state, isCold, daysOut } = proposalPursuitState(p as any, now);
+
+				// "Sent" momentum = anything that ever left draft (in-flight or won).
+				if (state !== 'draft' && state !== 'lost') {
+					sentCount++;
+					sentValue += value;
+				}
+				if (state === 'won') wonValue += value;
+
+				if (isCold) {
+					cold++;
+					const daysOverdue = Math.max(1, daysOut - COLD_DAYS);
+					results.push({
+						id: `proposal-followup-${p.id}`,
+						type: 'followup',
+						priority: 'high',
+						icon: 'i-heroicons-document-text',
+						title: `Follow up: ${p.title || `Proposal #${String(p.id).slice(0, 8)}`}`,
+						description: `Sent ${daysOut} day${daysOut === 1 ? '' : 's'} ago with no reply${value ? ` · $${value.toLocaleString()}` : ''}. A nudge now often closes it.`,
+						actionLabel: 'Follow Up',
+						actionRoute: `/apps/money?floor=documents&tab=proposals&slide=proposal:${p.id}`,
+						category: 'proposals',
+						timestamp: new Date(),
+						score: calculateScore({ type: 'action', daysOverdue, amount: value }),
+					});
+				}
+			}
+
+			metrics.value.proposalsSentCount = sentCount;
+			metrics.value.proposalsSentValue = sentValue;
+			metrics.value.proposalsWonValue = wonValue;
+			metrics.value.coldProposals = cold;
+		} catch (e) {
+			console.warn('[AI Engine] Could not analyze proposals:', e);
+		}
+
+		return results;
+	};
+
 	// ─── CardDesk Analysis ───────────────────────────────────────────────────
 
 	const analyzeCardDesk = async (): Promise<TaskSuggestion[]> => {
@@ -1628,11 +1704,11 @@ export const useAIProductivityEngine = () => {
 
 	const ALL_MODULES = [
 		'tickets', 'projects', 'tasks', 'invoices',
-		'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals',
+		'channels', 'social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals',
 	] as const;
 
 	const PRIORITY_MODULES = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
-	const SECONDARY_MODULES = ['social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals'];
+	const SECONDARY_MODULES = ['social', 'scheduling', 'phone', 'deals', 'proposals', 'carddesk', 'goals'];
 
 	const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
 		tickets: analyzeTickets,
@@ -1644,6 +1720,7 @@ export const useAIProductivityEngine = () => {
 		scheduling: analyzeScheduling,
 		phone: analyzePhone,
 		deals: analyzeDeals,
+		proposals: analyzeProposals,
 		carddesk: analyzeCardDesk,
 		goals: analyzeGoals,
 	};

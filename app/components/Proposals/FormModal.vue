@@ -54,6 +54,8 @@ const route = useRoute();
 const { createProposal } = useProposals();
 const proposalItems = useDirectusItems('proposals');
 const proposalSlide = useAppSlideOver('proposal');
+const { upload: uploadDirectusFile } = useDirectusFiles();
+const { celebrateProposal } = useProposalEncouragement();
 
 const proposalStatuses = Object.entries(PROPOSAL_STATUS_LABELS).map(([id, name]) => ({ id, name }));
 
@@ -70,10 +72,16 @@ function triggerSave() {
 async function onFormSave(payload: any) {
 	saving.value = true;
 	try {
-		const fullPayload = {
-			...payload,
-			proposal_status: currentStatus.value,
-			...(payload.lead && { lead: typeof payload.lead === 'string' ? Number(payload.lead) : payload.lead }),
+		// Strip the form-only control fields before they reach Directus.
+		const { _logExisting, _file, ...rest } = payload;
+		const logExisting = !!_logExisting;
+
+		const fullPayload: Record<string, any> = {
+			...rest,
+			// Logging supplies its own status (sent/accepted/…); otherwise use the
+			// status timeline (edit) or the 'draft' default (new).
+			proposal_status: logExisting ? rest.proposal_status || 'sent' : currentStatus.value,
+			...(rest.lead && { lead: typeof rest.lead === 'string' ? Number(rest.lead) : rest.lead }),
 		};
 
 		if (isEditing.value && props.proposal?.id) {
@@ -82,9 +90,37 @@ async function onFormSave(payload: any) {
 			emit('updated', updated);
 		} else {
 			const created = await createProposal(fullPayload);
-			toast.add({ title: 'Proposal created — opening composer', color: 'green' });
+
+			// Attach the uploaded PDF (log-existing path) once we have the record id.
+			if (logExisting && _file && created?.id) {
+				try {
+					const res: any = await uploadDirectusFile(_file, { title: _file.name });
+					const fileId = (res?.data || res)?.id;
+					if (fileId) await proposalItems.update(created.id, { file: fileId } as any);
+				} catch (fileErr: any) {
+					console.error('Proposal PDF upload failed:', fileErr);
+					toast.add({ title: 'Proposal saved, but the PDF failed to attach', description: fileErr?.data?.message || fileErr?.message, color: 'amber' });
+				}
+			}
+
 			emit('created', created);
 			isOpen.value = false;
+
+			// Logged (historical) proposals shouldn't drop into the block composer —
+			// they're already-finished documents. Open the detail view instead.
+			if (logExisting) {
+				celebrateProposal({ status: fullPayload.proposal_status });
+				if (created?.id) {
+					if (route.path.startsWith('/apps/')) {
+						await proposalSlide.open(String(created.id));
+					} else {
+						await navigateTo(`/proposals/${created.id}`);
+					}
+				}
+				return;
+			}
+
+			toast.add({ title: 'Proposal created — opening composer', color: 'green' });
 			if (created?.id) {
 				// Inside Apps Layout: push the slide-over panel in edit mode so
 				// the user stays in the apps chrome. Elsewhere: route to the full
