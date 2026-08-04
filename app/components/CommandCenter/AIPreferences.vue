@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { DIGEST_SECTIONS, CADENCE_LABELS, formatHour12, type DigestCadence } from '~~/shared/digest';
+import { toast } from 'vue-sonner';
 
 const emit = defineEmits<{
 	(e: 'close'): void;
 }>();
+
+const { selectedOrg } = useOrganization();
 
 const {
 	modules, enabledModules, toggle, isEnabled, enableAll, disableAll,
@@ -16,6 +19,25 @@ const { usageSummary } = useAITokens();
 const digestCadenceOptions = Object.entries(CADENCE_LABELS) as [DigestCadence, string][];
 const digestHours = Array.from({ length: 24 }, (_, h) => ({ value: h, label: formatHour12(h) }));
 const digestSections = DIGEST_SECTIONS;
+
+// Self-test: build + send the caller's real digest to their inbox now, bypassing
+// the schedule. Works even before the ai_preferences fields are provisioned.
+const testingDigest = ref(false);
+async function sendTestDigest() {
+	testingDigest.value = true;
+	try {
+		const res = await $fetch<{ ok: boolean; reason?: string; message?: string }>('/api/digest/test', {
+			method: 'POST',
+			body: { orgId: selectedOrg.value },
+		});
+		if (res?.ok) toast.success(res.message || 'Test digest sent — check your inbox');
+		else toast.error(res?.reason || 'Could not send test digest');
+	} catch (err: any) {
+		toast.error(err?.data?.message || err?.message || 'Could not send test digest');
+	} finally {
+		testingDigest.value = false;
+	}
+}
 
 const enabledCount = computed(() => enabledModules.value.size);
 const totalCount = modules.length;
@@ -249,6 +271,16 @@ const formatTokens = (n: number) => {
 					</div>
 					<p class="text-[10px] text-muted-foreground">Friday leans into wins; Monday into a fresh-week lift.</p>
 				</template>
+
+				<!-- Self-test: sends your real digest now, bypassing the schedule. -->
+				<button
+					type="button"
+					:disabled="testingDigest"
+					class="text-[11px] text-primary hover:underline disabled:opacity-50"
+					@click="sendTestDigest"
+				>
+					{{ testingDigest ? 'Sending…' : 'Send me a test digest now' }}
+				</button>
 			</div>
 
 			<!-- Usage Summary -->

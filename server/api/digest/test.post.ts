@@ -1,0 +1,69 @@
+// server/api/digest/test.post.ts
+//
+// Authenticated SELF-test for the motivational digest. Builds the digest from
+// the caller's OWN real data and sends it to their OWN email immediately —
+// bypassing the cadence/send-hour schedule — so you can see a real digest in
+// your inbox on demand.
+//
+// Works independently of the ai_preferences digest fields (uses default
+// sections), so it's usable before scripts/setup-motivational-digest.ts runs.
+// Only ever sends to the logged-in user.
+//
+// Optional JSON body:
+//   orgId?    — which org to summarise (defaults to the caller's first membership)
+//   tone?     — 'motivational' | 'forward' | 'wins' (defaults to today's tone)
+//   sections? — string[] override (defaults to DEFAULT_DIGEST_SECTIONS)
+
+import { readUsers, readItems } from '@directus/sdk';
+import { buildDigestPayload } from '~~/server/utils/motivational-digest';
+import { sendMotivationalDigest } from '~~/server/utils/motivational-digest-email';
+import { DEFAULT_DIGEST_SECTIONS, digestTone, localHourAndDay, type DigestTone } from '~~/shared/digest';
+
+export default defineEventHandler(async (event) => {
+	const session = await requireUserSession(event);
+	const userId = (session as any).user?.id;
+	if (!userId) throw createError({ statusCode: 401, message: 'Authentication required' });
+
+	const config = useRuntimeConfig();
+	const appUrl = (config.public as any)?.appUrl || 'https://app.earnest.guru';
+	const body = (await readBody(event).catch(() => ({}))) as any;
+	const directus = getServerDirectus();
+
+	// Recipient = the caller (email/name/timezone from the core users collection).
+	const users = (await directus
+		.request(readUsers({ filter: { id: { _eq: userId } } as any, fields: ['email', 'first_name', 'timezone'] as any, limit: 1 }))
+		.catch(() => [])) as any[];
+	const me = users[0];
+	if (!me?.email) return { ok: false, reason: 'No email address on your account.' };
+
+	// Org = explicit override, else the caller's first membership.
+	let orgId: string | null = body?.orgId || null;
+	if (!orgId) {
+		const memberships = (await directus
+			.request(readItems('organizations_directus_users' as any, {
+				filter: { directus_users_id: { _eq: userId } } as any,
+				fields: ['organizations_id'] as any,
+				limit: 1,
+			}))
+			.catch(() => [])) as any[];
+		const m = memberships[0]?.organizations_id;
+		orgId = (typeof m === 'object' ? m?.id : m) || null;
+	}
+	if (!orgId) return { ok: false, reason: 'No organization found for your account.' };
+
+	const now = new Date();
+	const tone: DigestTone = ['motivational', 'forward', 'wins'].includes(body?.tone)
+		? body.tone
+		: digestTone(localHourAndDay(now, me.timezone).weekday);
+	const sections = Array.isArray(body?.sections) && body.sections.length ? body.sections : DEFAULT_DIGEST_SECTIONS;
+
+	const payload = await buildDigestPayload({ directus, userId, orgId, tone, sections, now });
+	if (!payload.hasContent) {
+		return { ok: false, reason: 'Nothing to report for this org right now — try the layout preview at /api/email/preview-motivational-digest.' };
+	}
+
+	const res = await sendMotivationalDigest({ to: me.email, firstName: me.first_name, payload, orgId, appUrl });
+	return res.sent
+		? { ok: true, to: me.email, tone, message: `Test digest sent to ${me.email}.` }
+		: { ok: false, reason: res.reason || 'Send failed.' };
+});
