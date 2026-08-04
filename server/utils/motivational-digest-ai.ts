@@ -81,10 +81,17 @@ export async function composeDigestCopy(payload: DigestPayload, firstName: strin
 
 		const user = `First name: ${name}\nOrg: ${payload.orgName || 'their agency'}\n\nToday's real data:\n${summarize(payload)}`;
 
-		const res = await provider.chat([{ role: 'user', content: user }], {
-			systemPrompt: system,
-			maxTokens: 400,
-		});
+		// Hard per-call timeout — the Anthropic SDK's own timeout is minutes, but
+		// this runs inside a 60s Vercel cron, so a single hung call must not eat the
+		// whole invocation. On timeout we resolve null → template fallback.
+		const res = await Promise.race([
+			provider.chat([{ role: 'user', content: user }], { systemPrompt: system, maxTokens: 400 }),
+			new Promise<null>((resolve) => setTimeout(() => resolve(null), 15_000)),
+		]);
+		if (!res) {
+			console.warn('[digest-ai] LLM call timed out — using template copy');
+			return null;
+		}
 
 		const parsed = extractJson(res?.content || '');
 		if (parsed && parsed.subject && parsed.heading && parsed.lead) {

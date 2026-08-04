@@ -117,43 +117,38 @@ export default defineEventHandler(async (event) => {
 
 	const dateKey = now.toISOString().slice(0, 10);
 	const queue = useWorker ? getAIQueue() : null;
-	let sent = 0, enqueued = 0, skipped = 0;
+	let sent = 0, enqueued = 0, skipped = 0, deferred = 0;
 	const notes: Array<{ userId: string; result: string }> = [];
 
-	for (const d of due) {
-		if (!d.orgId) { skipped++; notes.push({ userId: d.userId, result: 'no-org' }); continue; }
-		if (dryRun) { notes.push({ userId: d.userId, result: 'dry-run-would-send' }); continue; }
+	// Serverless budget: the function is capped (maxDuration 60s in nuxt.config).
+	// Each AI send makes a blocking LLM call, so we run a small concurrency pool
+	// and stop STARTING new work at BUDGET_MS — leaving headroom to finish the
+	// in-flight batch and return cleanly rather than being killed mid-send. The
+	// natural spread of users across 24 local hours × timezones keeps the per-run
+	// count low; anything left over is reported as `deferred` (next hour it's no
+	// longer "due", so raise maxDuration or flip to the worker if this recurs).
+	const startedAt = Date.now();
+	const BUDGET_MS = 50_000;
+	const CONCURRENCY = 5;
 
+	async function processOne(d: (typeof due)[number]) {
+		if (!d.orgId) { skipped++; notes.push({ userId: d.userId, result: 'no-org' }); return; }
+		if (dryRun) { notes.push({ userId: d.userId, result: 'dry-run-would-send' }); return; }
 		try {
 			if (useWorker && queue) {
-				// Hand the structured payload params to the worker; it composes AI copy.
 				await queue.add('motivational-digest', {
 					type: 'motivational-digest',
-					userId: d.userId,
-					organizationId: d.orgId,
-					tone: d.tone,
-					sections: d.sections,
-					digestDate: dateKey,
+					userId: d.userId, organizationId: d.orgId, tone: d.tone, sections: d.sections, digestDate: dateKey,
 				}, { jobId: `motivational-digest-${d.userId}-${dateKey}` });
 				enqueued++;
 				notes.push({ userId: d.userId, result: 'enqueued' });
-				continue;
+				return;
 			}
 
-			// Direct-send fallback.
 			const u = userById.get(d.userId);
-			const payload = await buildDigestPayload({
-				directus, userId: d.userId, orgId: d.orgId, tone: d.tone, sections: d.sections, now,
-			});
-			if (!payload.hasContent) { skipped++; notes.push({ userId: d.userId, result: 'no-content' }); continue; }
-			const res = await sendMotivationalDigest({
-				to: u.email,
-				firstName: u.first_name,
-				payload,
-				orgId: d.orgId,
-				appUrl,
-				ai: aiEnabled,
-			});
+			const payload = await buildDigestPayload({ directus, userId: d.userId, orgId: d.orgId, tone: d.tone, sections: d.sections, now });
+			if (!payload.hasContent) { skipped++; notes.push({ userId: d.userId, result: 'no-content' }); return; }
+			const res = await sendMotivationalDigest({ to: u.email, firstName: u.first_name, payload, orgId: d.orgId, appUrl, ai: aiEnabled });
 			if (res.sent) { sent++; notes.push({ userId: d.userId, result: 'sent' }); }
 			else { skipped++; notes.push({ userId: d.userId, result: `send-failed:${res.reason || 'unknown'}` }); }
 		} catch (err: any) {
@@ -162,7 +157,21 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	console.log(`[cron/motivational-digest] ${dryRun ? 'DRY-RUN ' : ''}candidates=${prefs.length} due=${due.length} sent=${sent} enqueued=${enqueued} skipped=${skipped} worker=${useWorker}`);
+	// Concurrency-capped worker pool over `due`. Counter mutation is safe (single-
+	// threaded JS). Workers stop pulling new items once the budget is spent.
+	const pending = [...due];
+	async function poolWorker() {
+		while (pending.length) {
+			if (Date.now() - startedAt > BUDGET_MS) return;
+			const d = pending.shift();
+			if (d) await processOne(d);
+		}
+	}
+	await Promise.all(Array.from({ length: Math.min(CONCURRENCY, due.length) }, () => poolWorker()));
+	deferred = pending.length;
+	if (deferred) notes.push({ userId: '—', result: `deferred:${deferred} (budget)` });
 
-	return { ok: true, dryRun, mode: useWorker ? 'worker' : 'direct', candidates: prefs.length, due: due.length, sent, enqueued, skipped, notes };
+	console.log(`[cron/motivational-digest] ${dryRun ? 'DRY-RUN ' : ''}candidates=${prefs.length} due=${due.length} sent=${sent} enqueued=${enqueued} skipped=${skipped} deferred=${deferred} ai=${aiEnabled} worker=${useWorker} ms=${Date.now() - startedAt}`);
+
+	return { ok: true, dryRun, mode: useWorker ? 'worker' : 'direct', ai: aiEnabled, candidates: prefs.length, due: due.length, sent, enqueued, skipped, deferred, notes };
 });
