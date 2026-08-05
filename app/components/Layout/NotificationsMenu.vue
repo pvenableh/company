@@ -263,71 +263,28 @@
 							</button>
 						</div>
 
-						<!-- Daily Digest — the "here's your day" summary email. Settings
-						     are shared with the Earnest panel via useAIPreferences. -->
-						<div class="space-y-3 pt-1">
-							<div class="flex items-start justify-between gap-3">
-								<div class="min-w-0">
-									<div class="font-medium text-sm">Daily Digest</div>
-									<div class="text-xs text-muted-foreground">A morning summary across Work, People, Money &amp; Marketing — plus wins and what to tackle.</div>
-								</div>
-								<Switch :model-value="motivationalDigestEnabled" @update:model-value="motivationalDigestEnabled = $event" />
+						<!-- Daily digest email — full settings (cadence, send-time,
+						     sections, test) live in Account → Notifications. This is a
+						     compact shortcut that links there. -->
+						<NuxtLink
+							to="/account?section=notifications"
+							class="flex items-center justify-between gap-3 pt-1 group"
+							@click="isSheetOpen = false; isPopoverOpen = false"
+						>
+							<div class="min-w-0">
+								<div class="font-medium text-sm">Daily digest email</div>
+								<div class="text-xs text-muted-foreground">Cadence, send-time &amp; sections — manage in Account</div>
 							</div>
-
-							<template v-if="motivationalDigestEnabled">
-								<div class="grid grid-cols-2 gap-2">
-									<div>
-										<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">How often</div>
-										<select
-											:value="motivationalDigestCadence"
-											@change="e => motivationalDigestCadence = e.target.value"
-											class="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 focus:outline-none"
-										>
-											<option v-for="[val, label] in digestCadenceOptions" :key="val" :value="val">{{ label }}</option>
-										</select>
-									</div>
-									<div>
-										<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Send at (your time)</div>
-										<select
-											:value="motivationalDigestHour"
-											@change="e => motivationalDigestHour = Number(e.target.value)"
-											class="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 focus:outline-none"
-										>
-											<option v-for="h in digestHours" :key="h.value" :value="h.value">{{ h.label }}</option>
-										</select>
-									</div>
-								</div>
-
-								<div>
-									<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">What to include</div>
-									<div class="flex flex-wrap gap-1.5">
-										<button
-											v-for="s in digestSections"
-											:key="s.key"
-											type="button"
-											@click="toggleDigestSection(s.key)"
-											class="text-[10px] px-2.5 py-1 rounded-full border transition-colors"
-											:class="isDigestSectionOn(s.key)
-												? 'bg-primary/10 text-primary border-primary/30'
-												: 'bg-muted/40 text-muted-foreground border-transparent hover:text-foreground'"
-										>
-											{{ s.label }}
-										</button>
-									</div>
-								</div>
-								<p class="text-[10px] text-muted-foreground">Friday leans into wins; Monday into a fresh-week lift.</p>
-							</template>
-
-							<!-- Self-test: emails your real digest now, bypassing the schedule. -->
-							<button
-								type="button"
-								:disabled="testingDigest"
-								class="text-xs text-primary hover:underline disabled:opacity-50"
-								@click="sendTestDigest"
-							>
-								{{ testingDigest ? 'Sending…' : 'Send me a test digest now' }}
-							</button>
-						</div>
+							<div class="flex items-center gap-2 shrink-0">
+								<span
+									class="text-[10px] font-semibold uppercase tracking-wide"
+									:class="motivationalDigestEnabled ? 'text-success' : 'text-muted-foreground'"
+								>
+									{{ motivationalDigestEnabled ? 'On' : 'Off' }}
+								</span>
+								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground" />
+							</div>
+						</NuxtLink>
 
 						<div class="pl-4 space-y-3 border-l-2 border-muted">
 							<!-- Per-category channel matrix. Each row independently controls
@@ -460,7 +417,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Bell, BellRing, BellOff, Check, Maximize2, Loader2, X, Settings } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import { DIGEST_SECTIONS, CADENCE_LABELS, formatHour12 } from '~~/shared/digest'
 
 const { user } = useDirectusAuth();
 const {
@@ -647,32 +603,11 @@ const pushHelp = computed(() => {
 	};
 });
 
-// ── Daily Digest email settings (shared state via useAIPreferences) ──
-const { selectedOrg } = useOrganization();
-const {
-	motivationalDigestEnabled,
-	motivationalDigestCadence,
-	motivationalDigestHour,
-	toggleDigestSection,
-	isDigestSectionOn,
-} = useAIPreferences();
-const digestCadenceOptions = Object.entries(CADENCE_LABELS);
-const digestHours = Array.from({ length: 24 }, (_, h) => ({ value: h, label: formatHour12(h) }));
-const digestSections = DIGEST_SECTIONS;
+// Daily digest email — full controls moved to Account → Notifications
+// (AccountDailyDigestSettings). We keep the enabled flag only, to show the
+// On/Off status on the shortcut that links there.
+const { motivationalDigestEnabled } = useAIPreferences();
 
-const testingDigest = ref(false);
-async function sendTestDigest() {
-	testingDigest.value = true;
-	try {
-		const res = await $fetch('/api/digest/test', { method: 'POST', body: { orgId: selectedOrg.value } });
-		if (res?.ok) toast.success(res.message || 'Test digest sent — check your inbox');
-		else toast.error(res?.reason || 'Could not send test digest');
-	} catch (err) {
-		toast.error(err?.data?.message || err?.message || 'Could not send test digest');
-	} finally {
-		testingDigest.value = false;
-	}
-}
 const notificationsContainer = ref(null);
 const loadMoreTrigger = ref(null);
 

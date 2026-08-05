@@ -193,6 +193,12 @@
 						</div>
 					</div>
 
+					<!-- Daily digest email — a per-user delivery preference, so it lives
+					     here (Account) rather than the org Communications floor. The
+					     header bell keeps a compact shortcut that links here. -->
+					<h3 class="account-page__subheading">Email digest</h3>
+					<AccountDailyDigestSettings />
+
 					<h3 class="account-page__subheading">Interaction Feedback</h3>
 
 					<div class="ios-card p-5 space-y-5">
