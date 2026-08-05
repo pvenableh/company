@@ -1,8 +1,10 @@
 /**
- * Update a pitch page's gating (staff, org-scoped). Supports:
+ * Update a pitch page (staff, org-scoped). Supports:
  *   - status: 'published' | 'revoked' | 'draft'  (revoke kills the link)
  *   - expires_at: ISO string | null              (change/clear expiry)
  *   - password: string | null                    (set/clear/change; null clears)
+ *   - title, client_name                         (metadata edit)
+ *   - lead / client / contact                    (re-link to a record; null unlinks)
  *
  * Verifies the pitch belongs to the caller's org before touching it. Gated
  * behind the `proposals` feature.
@@ -17,6 +19,8 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody<{
     status?: string; expires_at?: string | null; password?: string | null;
+    title?: string; client_name?: string | null;
+    lead?: number | string | null; client?: string | null; contact?: string | null;
   }>(event);
 
   const directus = getServerDirectus();
@@ -37,6 +41,13 @@ export default defineEventHandler(async (event) => {
   if (body.password !== undefined) {
     patch.password_hash = body.password ? hashPitchPassword(body.password) : null;
   }
+  if (typeof body.title === 'string' && body.title.trim()) patch.title = body.title.trim();
+  if (body.client_name !== undefined) patch.client_name = body.client_name?.trim() || null;
+  // Re-link: leads.id is an integer PK; clients/contacts are uuid. Setting one
+  // to a value (and the others to null) moves the pitch's "For".
+  if (body.lead !== undefined) patch.lead = body.lead === null || body.lead === '' ? null : Number(body.lead);
+  if (body.client !== undefined) patch.client = body.client || null;
+  if (body.contact !== undefined) patch.contact = body.contact || null;
 
   if (!Object.keys(patch).length) throw createError({ statusCode: 400, message: 'Nothing to update' });
 

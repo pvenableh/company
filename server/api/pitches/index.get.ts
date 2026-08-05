@@ -35,20 +35,23 @@ export default defineEventHandler(async (event) => {
   const data = (rows || []).map((r) => {
     // Resolve the linked record into a { type, label, to } for the list UI.
     // Priority: client → lead → contact (most concrete first).
-    let linked: { type: 'client' | 'lead' | 'contact'; label: string; to: string } | null = null;
+    // `value` is the "<type>:<id>" the create/edit form's For picker uses.
+    let linked: { type: 'client' | 'lead' | 'contact'; label: string; to: string; value: string } | null = null;
     if (r.client?.id) {
-      linked = { type: 'client', label: r.client.name || 'Client', to: `/clients/${r.client.id}` };
+      linked = { type: 'client', label: r.client.name || 'Client', to: `/clients/${r.client.id}`, value: `client:${r.client.id}` };
     } else if (r.lead?.id) {
       linked = {
         type: 'lead',
         label: fullName(r.lead.related_contact?.first_name, r.lead.related_contact?.last_name) || `Lead #${r.lead.id}`,
         to: `/leads/${r.lead.id}`,
+        value: `lead:${r.lead.id}`,
       };
     } else if (r.contact?.id) {
       linked = {
         type: 'contact',
         label: fullName(r.contact.first_name, r.contact.last_name) || 'Contact',
         to: `/contacts/${r.contact.id}`,
+        value: `contact:${r.contact.id}`,
       };
     }
     return {

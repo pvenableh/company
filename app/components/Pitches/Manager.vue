@@ -15,6 +15,7 @@ interface LinkedRef {
   type: 'client' | 'lead' | 'contact'
   label: string
   to: string
+  value: string
 }
 interface PitchRow {
   id: string
@@ -36,6 +37,9 @@ const { selectedOrg } = useOrganization()
 const rows = ref<PitchRow[]>([])
 const loading = ref(true)
 const showForm = ref(false)
+// When set, the form edits this pitch's metadata instead of creating a new one.
+const editingId = ref<string | null>(null)
+const isEditing = computed(() => !!editingId.value)
 
 // ── Create form state ────────────────────────────────────────────────────────
 const form = reactive({
@@ -96,7 +100,81 @@ function onAssetsPick(e: Event) {
   assetFiles.value = Array.from((e.target as HTMLInputElement).files || [])
 }
 
+function resetForm() {
+  Object.assign(form, { title: '', client_name: '', link: '', password: '', expires_at: '', publish: true })
+  htmlFile.value = null
+  assetFiles.value = []
+  formError.value = null
+}
+function openCreate() {
+  editingId.value = null
+  resetForm()
+  showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editingId.value = null
+  resetForm()
+}
+function ensureLinkOptions() {
+  if (!linkOptions.value.clients.length && !linkOptions.value.leads.length && !linkOptions.value.contacts.length) loadLinkOptions()
+}
+function startEdit(row: PitchRow) {
+  editingId.value = row.id
+  Object.assign(form, {
+    title: row.title,
+    client_name: row.client_name || '',
+    link: row.linked?.value || '',
+    password: '',
+    expires_at: row.expires_at ? row.expires_at.slice(0, 10) : '',
+    publish: true,
+  })
+  htmlFile.value = null
+  assetFiles.value = []
+  formError.value = null
+  showForm.value = true
+  ensureLinkOptions()
+}
+
+// Decode the "For" select into the matching FK, nulling the others.
+function linkFields(): { lead: number | null; client: string | null; contact: string | null } {
+  const out = { lead: null as number | null, client: null as string | null, contact: null as string | null }
+  if (form.link) {
+    const [type, ...rest] = form.link.split(':')
+    const id = rest.join(':')
+    if (type === 'client') out.client = id
+    else if (type === 'contact') out.contact = id
+    else if (type === 'lead') out.lead = Number(id)
+  }
+  return out
+}
+
+async function submitEdit() {
+  formError.value = null
+  if (!form.title.trim()) { formError.value = 'Give the pitch a title.'; return }
+  submitting.value = true
+  try {
+    const { lead, client, contact } = linkFields()
+    const payload: Record<string, any> = {
+      title: form.title.trim(),
+      client_name: form.link ? null : form.client_name.trim(),
+      lead, client, contact,
+      expires_at: form.expires_at || null,
+    }
+    // Blank password on edit = leave unchanged (only send when the user typed one).
+    if (form.password) payload.password = form.password
+    await $fetch(`/api/pitches/${editingId.value}`, { method: 'PATCH', body: payload })
+    closeForm()
+    await load()
+  } catch (err: any) {
+    formError.value = err?.data?.message || 'Could not save changes.'
+  } finally {
+    submitting.value = false
+  }
+}
+
 async function submit() {
+  if (isEditing.value) return submitEdit()
   formError.value = null
   if (!selectedOrg.value) { formError.value = 'Select an organization first.'; return }
   if (!htmlFile.value) { formError.value = 'Choose the pitch .html file.'; return }
@@ -193,7 +271,7 @@ onMounted(() => {
       </div>
       <button
         class="inline-flex shrink-0 items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
-        @click="showForm = !showForm"
+        @click="showForm ? closeForm() : openCreate()"
       >
         <Icon :name="showForm ? 'lucide:x' : 'lucide:plus'" class="h-4 w-4" />
         {{ showForm ? 'Close' : 'New pitch' }}
@@ -223,10 +301,13 @@ onMounted(() => {
       class="mb-8 grid gap-4 rounded-2xl border border-border bg-card p-5"
       @submit.prevent="submit"
     >
+      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {{ isEditing ? 'Edit pitch' : 'New pitch' }}
+      </p>
       <div class="grid gap-4 sm:grid-cols-2">
         <label class="grid gap-1.5">
           <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</span>
-          <input v-model="form.title" type="text" placeholder="Myles — Private Events"
+          <input v-model="form.title" type="text" placeholder="e.g. Q3 Partnership Pitch"
             class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
         </label>
         <label class="grid gap-1.5">
@@ -249,11 +330,11 @@ onMounted(() => {
 
       <label v-if="!form.link" class="grid gap-1.5">
         <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Or type a client name (optional)</span>
-        <input v-model="form.client_name" type="text" placeholder="Myles Restaurant Group"
+        <input v-model="form.client_name" type="text" placeholder="e.g. Acme Co."
           class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
       </label>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div v-if="!isEditing" class="grid gap-4 sm:grid-cols-2">
         <label class="grid gap-1.5">
           <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pitch file (.html)</span>
           <input type="file" accept=".html,text/html" class="text-sm text-muted-foreground file:mr-3 file:rounded-full file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
@@ -269,7 +350,7 @@ onMounted(() => {
       <div class="grid gap-4 sm:grid-cols-2">
         <label class="grid gap-1.5">
           <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Password (optional)</span>
-          <input v-model="form.password" type="text" autocomplete="off" placeholder="Leave blank for no password"
+          <input v-model="form.password" type="text" autocomplete="off" :placeholder="isEditing ? 'Leave blank to keep unchanged' : 'Leave blank for no password'"
             class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
         </label>
         <label class="grid gap-1.5">
@@ -279,10 +360,13 @@ onMounted(() => {
         </label>
       </div>
 
-      <label class="flex items-center gap-2 text-sm text-muted-foreground">
+      <label v-if="!isEditing" class="flex items-center gap-2 text-sm text-muted-foreground">
         <input v-model="form.publish" type="checkbox" class="h-4 w-4 rounded border-border">
         Publish immediately (make the link live now)
       </label>
+      <p v-else class="text-xs text-muted-foreground">
+        Editing details only — the pitch's HTML stays as uploaded. Use Revoke / Republish to change its live status.
+      </p>
 
       <p v-if="formError" class="text-sm text-rose-500">{{ formError }}</p>
 
@@ -290,7 +374,7 @@ onMounted(() => {
         <button type="submit" :disabled="submitting"
           class="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background disabled:opacity-50">
           <Icon v-if="submitting" name="lucide:loader-2" class="h-4 w-4 animate-spin" />
-          {{ submitting ? 'Publishing…' : 'Create pitch' }}
+          {{ submitting ? (isEditing ? 'Saving…' : 'Publishing…') : (isEditing ? 'Save changes' : 'Create pitch') }}
         </button>
       </div>
     </form>
@@ -326,6 +410,9 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
+          <button class="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs" @click="startEdit(row)">
+            <Icon name="lucide:pencil" class="h-3 w-3" /> Edit
+          </button>
           <button class="rounded-full border border-border px-3 py-1.5 text-xs" @click="copyLink(row)">
             {{ copiedToken === row.token ? 'Copied' : 'Copy link' }}
           </button>
