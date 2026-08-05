@@ -40,6 +40,7 @@ export type AppId =
 	| 'channels'
 	| 'money'
 	| 'marketing'
+	| 'files'
 	| 'director'
 	| 'organization'
 	| 'account';
@@ -102,6 +103,9 @@ const APP_META: Record<AppId, AppMeta> = {
 	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
 	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'lucide:megaphone',           to: '/apps/marketing' },
+	// Org-wide file storage ("Dropbox"). Lives at the classic /files route, not
+	// under /apps, so appIdForPath maps it explicitly.
+	files:        { id: 'files',        name: 'Files',        shortName: 'Files',   icon: 'lucide:folder',              to: '/files' },
 	// The Director's Office isn't rendered by the rail's app/footer loops (it has
 	// a bespoke tile with a custom chair glyph), but it takes a slot in CHIP_IDS
 	// so it earns its own in-order colour from the palette spread.
@@ -557,7 +561,7 @@ export function resolvePaletteId(raw: unknown): AppPaletteId {
 	return (APP_PALETTE_IDS as readonly string[]).includes(raw) ? (raw as AppPaletteId) : DEFAULT_APP_PALETTE;
 }
 
-export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'channels', 'money', 'marketing'];
+export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'channels', 'money', 'marketing', 'files'];
 export const APP_FOOTER_ORDER: AppId[] = ['organization', 'account'];
 /**
  * Main + footer apps concatenated in visual order — this is the index
@@ -920,6 +924,7 @@ export function appIdForPath(path: string): AppId | null {
 
 	if (seg[0] === 'channels') return 'channels';
 	if (seg[0] === 'marketing' || seg[0] === 'social') return 'marketing';
+	if (seg[0] === 'files') return 'files';
 	if (seg[0] === 'organization' || seg[0] === 'team') return 'organization';
 
 	return null;

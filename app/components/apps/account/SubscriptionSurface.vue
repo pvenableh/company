@@ -150,6 +150,7 @@ const ADDON_CATALOG: AddonCatalogEntry[] = [
 	{ id: 'client_pack_starter', name: 'Client Pack Starter', price: 29, blurb: '+5 client portal seats · 50K tokens' },
 	{ id: 'client_pack_pro', name: 'Client Pack Pro', price: 59, blurb: '+10 client portal seats · 150K tokens' },
 	{ id: 'client_pack_unlimited', name: 'Client Pack Unlimited', price: 129, blurb: 'Unlimited client portals · 500K tokens' },
+	{ id: 'extra_storage_100', name: 'Extra Storage', price: 10, blurb: '+100 GB file storage' },
 	{ id: 'white_label', name: 'Companion White-Label', price: 19, blurb: 'Remove Earnest branding', agencyOnly: true },
 ];
 

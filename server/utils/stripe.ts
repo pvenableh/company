@@ -25,9 +25,12 @@ export function useStripe(): Stripe {
 	return _stripe;
 }
 
+/** Bytes in one gibibyte — keeps storage figures readable below. */
+export const GB = 1024 ** 3;
+
 // Subscription plan definitions — must match business model v3 pricing
-// All plans get all features. Differentiation is seats, tokens, and scans.
-// White-label is the one exception (agency only).
+// All plans get all features. Differentiation is seats, tokens, scans, and
+// file storage. White-label is the one exception (agency only).
 export const EARNEST_PLANS = {
 	solo: {
 		name: 'Solo',
@@ -38,6 +41,7 @@ export const EARNEST_PLANS = {
 		seats: 1,
 		clientPortalSeats: 5,
 		scanCredits: 25,
+		storageBytes: 25 * GB,   // 25 GB of file storage
 		whiteLabel: false,
 		aiTokens: {
 			monthlyAllotment: 100_000,     // 100K tokens/month
@@ -54,6 +58,7 @@ export const EARNEST_PLANS = {
 		seats: 8,
 		clientPortalSeats: 15,
 		scanCredits: 150,
+		storageBytes: 100 * GB,  // 100 GB of file storage
 		whiteLabel: false,
 		aiTokens: {
 			monthlyAllotment: 400_000,     // 400K tokens/month
@@ -70,6 +75,7 @@ export const EARNEST_PLANS = {
 		seats: 15,
 		clientPortalSeats: -1, // unlimited — growth loop for token consumption
 		scanCredits: 500,      // generous cap; heavy scanners buy SCAN_PACKAGES
+		storageBytes: 500 * GB,  // 500 GB of file storage
 		whiteLabel: false,     // $19/mo add-on via hasAddon('white_label')
 		aiTokens: {
 			monthlyAllotment: 1_000_000,   // 1M tokens/month
@@ -149,6 +155,12 @@ export const EARNEST_ADDONS = {
 		name: 'Companion White-Label',
 		stripePriceId: process.env.STRIPE_PRICE_ADDON_WHITE_LABEL || null,
 		monthlyAmount: 1900, // $19.00
+	},
+	extra_storage_100: {
+		name: 'Extra Storage (100GB)',
+		stripePriceId: process.env.STRIPE_PRICE_ADDON_STORAGE_100 || null,
+		monthlyAmount: 1000, // $10.00
+		storageBytes: 100 * GB, // adds 100 GB on top of the plan's allotment
 	},
 } as const;
 

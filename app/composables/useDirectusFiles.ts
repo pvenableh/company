@@ -125,6 +125,8 @@ export const useDirectusFiles = () => {
       description?: string;
       folder?: string | { id: string };
       tags?: string[];
+      /** Org this upload belongs to — enables storage quota enforcement. */
+      organization?: string;
     }
   ) => {
     if (!loggedIn.value) {

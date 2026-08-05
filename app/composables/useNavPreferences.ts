@@ -40,7 +40,8 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Channels', type: ['header', 'footer', 'drawer'], to: '/channels', icon: 'i-heroicons-chat-bubble-left-right', color: 'bg-cyan-500', description: 'Team messaging', section: 'secondary', featureKey: 'channels' },
 	{ name: 'Scheduler', type: ['header', 'footer', 'drawer'], to: '/scheduler', icon: 'i-heroicons-calendar-date-range', color: 'bg-amber-500', description: 'Book meetings', section: 'secondary', featureKey: 'appointments' },
 	{ name: 'Tasks', type: ['drawer'], to: '/tasks', icon: 'i-heroicons-clipboard-document-check', color: 'bg-blue-500', description: 'Manage tasks', section: 'secondary', featureKey: 'tasks' },
-	{ name: 'Files', type: ['header', 'footer', 'drawer'], to: '/files', icon: 'i-heroicons-folder-open', color: 'bg-sky-500', description: 'File manager', section: 'secondary' },
+	{ name: 'Files', type: ['header', 'footer', 'drawer'], to: '/files', icon: 'i-heroicons-folder-open', color: 'bg-sky-500', description: 'File manager', section: 'primary' },
+	{ name: 'Pitch Pages', type: ['header', 'footer', 'drawer'], to: '/pitches', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-amber-400 to-yellow-600', description: 'Gated pitch links', section: 'primary', featureKey: 'proposals' },
 	// ── Everything below starts HIDDEN from sidebar — accessible via Command Center grid + Cmd+K ──
 	{ name: 'Tickets', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/tickets', icon: 'i-heroicons-queue-list', color: 'bg-indigo-500', description: 'Support tickets', section: 'secondary', featureKey: 'tickets' },
 	{ name: 'Teams', type: ['drawer'], to: '/apps/organization?floor=settings&slide=teams:_', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },
@@ -62,6 +63,7 @@ const DEFAULT_VISIBLE_ROUTES = new Set([
 	...DEFAULT_LINKS.slice(0, 10).map(l => l.to),
 	'/email',
 	'/social',
+	'/files',
 ]);
 
 // ── Hats (deprecated) ───────────────────────────────────────────────────────

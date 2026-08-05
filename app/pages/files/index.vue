@@ -16,9 +16,45 @@ const folders = ref<any[]>([]);
 const files = ref<any[]>([]);
 const loading = ref(true);
 const search = ref('');
-const viewMode = ref<'grid' | 'list'>('grid');
+// View preference is remembered per user, per device (localStorage — same
+// convention as useDashboardLayout). Defaults to 'list' until a saved choice
+// is restored on mount.
+const { user } = useUserSession();
+const viewModeKey = computed(() => `earnest:files:view:${(user.value as any)?.id || 'anon'}`);
+const viewMode = ref<'grid' | 'list'>('list');
 const uploading = ref(false);
 const uploadProgress = ref(0);
+const uploadError = ref<string | null>(null);
+
+// ── Storage usage meter ──────────────────────────────────────────────────────
+const { selectedOrg } = useOrganization();
+const storage = ref<{ usedBytes: number; limitBytes: number | null } | null>(null);
+
+async function loadStorage(recompute = false) {
+  if (!selectedOrg.value) return;
+  try {
+    storage.value = await $fetch(`/api/org/${selectedOrg.value}/storage`, {
+      query: recompute ? { recompute: 1 } : undefined,
+    });
+  } catch { /* meter is non-critical */ }
+}
+
+// Instantly adjust the cached counter (e.g. on delete) without the slow recompute.
+async function adjustStorage(deltaBytes: number) {
+  if (!selectedOrg.value || !deltaBytes) return;
+  try {
+    storage.value = await $fetch(`/api/org/${selectedOrg.value}/storage/adjust`, {
+      method: 'POST',
+      body: { deltaBytes },
+    });
+  } catch { /* meter is non-critical */ }
+}
+
+const storagePct = computed(() => {
+  const s = storage.value;
+  if (!s || s.limitBytes == null || s.limitBytes <= 0) return 0;
+  return Math.min(100, Math.round((s.usedBytes / s.limitBytes) * 100));
+});
 
 // ── Modals ───────────────────────────────────────────────────────────────────
 const showNewFolder = ref(false);
@@ -28,6 +64,8 @@ const showRenameModal = ref(false);
 const renameTarget = ref<{ id: string; name: string; type: 'folder' | 'file' } | null>(null);
 const renameName = ref('');
 const renameSaving = ref(false);
+const deleteFolderTarget = ref<any | null>(null);
+const deletingFolder = ref(false);
 
 // ── Fetch data ───────────────────────────────────────────────────────────────
 async function fetchContents() {
@@ -148,6 +186,36 @@ function openFile(file: any) {
   window.open(url, '_blank');
 }
 
+// Force-download via Directus's ?download (sets Content-Disposition: attachment).
+function downloadFile(file: any) {
+  const a = document.createElement('a');
+  a.href = `${config.public.directusUrl}/assets/${file.id}?download`;
+  a.download = file.filename_download || getFileName(file);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// Download several files (sequential clicks — no client-side zip dependency).
+async function downloadFiles(items: any[]) {
+  for (const f of items) {
+    downloadFile(f);
+    await new Promise((r) => setTimeout(r, 250)); // let each download register
+  }
+}
+
+// Copy a shareable link to the file (the Directus asset URL — an unguessable
+// UUID, publicly viewable, so it just works when pasted to a client).
+const copiedFileId = ref<string | null>(null);
+async function copyFileLink(file: any) {
+  const url = `${config.public.directusUrl}/assets/${file.id}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    copiedFileId.value = file.id;
+    setTimeout(() => { if (copiedFileId.value === file.id) copiedFileId.value = null; }, 1600);
+  } catch { /* clipboard denied */ }
+}
+
 // ── Create folder ────────────────────────────────────────────────────────────
 async function handleCreateFolder() {
   if (!newFolderName.value.trim()) return;
@@ -181,17 +249,21 @@ async function handleFileUpload(event: Event) {
 
   uploading.value = true;
   uploadProgress.value = 0;
+  uploadError.value = null;
 
   try {
     const total = uploadFiles.length;
     for (let i = 0; i < total; i++) {
       await uploadFile(uploadFiles[i], {
         folder: currentFolderId.value || undefined,
+        organization: selectedOrg.value || undefined,
       });
       uploadProgress.value = Math.round(((i + 1) / total) * 100);
     }
     await fetchContents();
-  } catch (err) {
+    await loadStorage(false);
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || err?.message || 'Upload failed.';
     console.error('Upload failed:', err);
   } finally {
     uploading.value = false;
@@ -221,17 +293,21 @@ async function onDrop(e: DragEvent) {
 
   uploading.value = true;
   uploadProgress.value = 0;
+  uploadError.value = null;
 
   try {
     const total = droppedFiles.length;
     for (let i = 0; i < total; i++) {
       await uploadFile(droppedFiles[i], {
         folder: currentFolderId.value || undefined,
+        organization: selectedOrg.value || undefined,
       });
       uploadProgress.value = Math.round(((i + 1) / total) * 100);
     }
     await fetchContents();
-  } catch (err) {
+    await loadStorage(false);
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || err?.message || 'Upload failed.';
     console.error('Drop upload failed:', err);
   } finally {
     uploading.value = false;
@@ -244,19 +320,35 @@ async function handleDeleteFile(file: any) {
   if (!confirm(`Delete "${getFileName(file)}"?`)) return;
   try {
     await removeFile(file.id);
+    await adjustStorage(-(Number(file.filesize) || 0)); // free the deleted bytes instantly
     await fetchContents();
   } catch (err) {
     console.error('Failed to delete file:', err);
   }
 }
 
-async function handleDeleteFolder(folder: any) {
-  if (!confirm(`Delete folder "${folder.name}"? This will not delete files inside it.`)) return;
+// Opens the delete-folder dialog so the user authorizes what happens to contents.
+function handleDeleteFolder(folder: any) {
+  deleteFolderTarget.value = folder;
+}
+
+async function confirmDeleteFolder(mode: 'contents' | 'keep') {
+  const folder = deleteFolderTarget.value;
+  if (!folder) return;
+  deletingFolder.value = true;
   try {
-    await removeFolder(folder.id);
+    await $fetch('/api/directus/folders/delete-recursive', {
+      method: 'POST',
+      body: { organization: selectedOrg.value, folderId: folder.id, mode },
+    });
+    deleteFolderTarget.value = null;
+    bump.value++;
     await fetchContents();
-  } catch (err) {
-    console.error('Failed to delete folder:', err);
+    await loadStorage(false);
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || 'Could not delete that folder.';
+  } finally {
+    deletingFolder.value = false;
   }
 }
 
@@ -292,8 +384,125 @@ async function handleRename() {
   }
 }
 
+// ── Selection + drag/move (list view via FilesListNode) ──────────────────────
+import type { FilesContext } from '~/components/Files/context';
+
+const selectedMap = reactive(new Map<string, { kind: 'file' | 'folder'; item: any }>());
+const selectedCount = computed(() => selectedMap.size);
+const bump = ref(0);
+const crumbDropIndex = ref<number | null>(null);
+const upDropActive = ref(false);
+const parentFolderId = computed(() => {
+  const bc = breadcrumbs.value;
+  return bc.length > 1 ? bc[bc.length - 2].id : null;
+});
+
+function toggleSelect(kind: 'file' | 'folder', item: any) {
+  if (selectedMap.has(item.id)) selectedMap.delete(item.id);
+  else selectedMap.set(item.id, { kind, item });
+}
+function clearSelection() { selectedMap.clear(); }
+
+async function moveItem(kind: 'file' | 'folder', id: string, targetFolderId: string | null) {
+  try {
+    await $fetch('/api/directus/folders/move', {
+      method: 'POST',
+      body: { organization: selectedOrg.value, kind, id, targetFolderId },
+    });
+    bump.value++;
+    await fetchContents();
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || 'Could not move that item.';
+  }
+}
+
+async function folderSize(folderId: string): Promise<number> {
+  try {
+    const r = await $fetch<{ bytes: number }>('/api/directus/folders/size', {
+      method: 'POST', body: { organization: selectedOrg.value, folderId },
+    });
+    return r?.bytes || 0;
+  } catch { return 0; }
+}
+
+async function downloadSelected() {
+  await downloadFiles([...selectedMap.values()].filter((x) => x.kind === 'file').map((x) => x.item));
+}
+
+async function deleteSelected() {
+  const items = [...selectedMap.values()];
+  if (!items.length) return;
+  if (!confirm(`Delete ${items.length} selected item(s)? Folders delete everything inside. This can't be undone.`)) return;
+  for (const { kind, item } of items) {
+    try {
+      if (kind === 'folder') {
+        await $fetch('/api/directus/folders/delete-recursive', {
+          method: 'POST', body: { organization: selectedOrg.value, folderId: item.id },
+        });
+      } else {
+        await removeFile(item.id);
+        await adjustStorage(-(Number(item.filesize) || 0));
+      }
+    } catch (err) { console.error('bulk delete failed for', item.id, err); }
+  }
+  clearSelection();
+  bump.value++;
+  await fetchContents();
+  await loadStorage(false);
+}
+
+// Fetchers used by the recursive list nodes (lazy children).
+function fetchChildFolders(parentId: string | null) { return getSubfolders(parentId); }
+async function fetchChildFiles(folderId: string | null) {
+  return (await listFiles({
+    filter: folderId ? { folder: { _eq: folderId } } : { folder: { _null: true } },
+    fields: ['id', 'title', 'filename_download', 'type', 'filesize', 'width', 'height', 'uploaded_on', 'modified_on'],
+    sort: ['-uploaded_on'],
+    limit: 200,
+  })) as any[];
+}
+
+provide<FilesContext>('filesCtx', {
+  organization: computed(() => (selectedOrg.value as string) || null),
+  selected: selectedMap,
+  bump,
+  toggleSelect,
+  openFile,
+  download: downloadFile,
+  copyLink: copyFileLink,
+  copiedId: copiedFileId,
+  rename: (item, kind) => startRename(item, kind),
+  remove: (item, kind) => (kind === 'folder' ? handleDeleteFolder(item) : handleDeleteFile(item)),
+  move: moveItem,
+  fetchFolders: fetchChildFolders,
+  fetchFiles: fetchChildFiles,
+  folderSize,
+  isImage,
+  thumbUrl: getThumbnailUrl,
+  fileIcon: getFileIcon,
+  fileIconColor: getFileIconColor,
+  fileName: getFileName,
+  formatSize: formatFileSize,
+  formatDate,
+});
+
+// Drop onto a breadcrumb / up target → move selection or dragged item there.
+function onCrumbDrop(e: DragEvent, targetFolderId: string | null) {
+  e.preventDefault();
+  const raw = e.dataTransfer?.getData('application/x-earnest-item');
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    moveItem(d.kind, d.id, targetFolderId);
+  } catch { /* ignore */ }
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 onMounted(async () => {
+  // Restore this user's saved view choice (grid/list); default stays 'list'.
+  const saved = localStorage.getItem(viewModeKey.value);
+  if (saved === 'grid' || saved === 'list') viewMode.value = saved;
+
   // Default to the current org's folder tree
   const orgFolderId = getOrgFolderId();
   if (orgFolderId) {
@@ -302,6 +511,15 @@ onMounted(async () => {
     breadcrumbs.value = [{ id: orgFolderId, name: currentOrg.value?.name || 'Files' }];
   }
   await fetchContents();
+  await loadStorage();
+});
+
+// Refresh the storage meter when the active org changes.
+watch(selectedOrg, () => loadStorage());
+
+// Persist the choice whenever it changes.
+watch(viewMode, (v) => {
+  if (import.meta.client) localStorage.setItem(viewModeKey.value, v);
 });
 </script>
 
@@ -349,7 +567,20 @@ onMounted(async () => {
           {{ totalItems }} item{{ totalItems !== 1 ? 's' : '' }}
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
+        <!-- Storage meter -->
+        <div v-if="storage && storage.limitBytes != null" class="hidden sm:flex flex-col items-end gap-1">
+          <span class="text-xs text-muted-foreground">
+            {{ formatFileSize(storage.usedBytes) || '0 B' }} of {{ formatFileSize(storage.limitBytes) }}
+          </span>
+          <div class="h-1.5 w-32 rounded-full bg-muted overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all"
+              :class="storagePct >= 90 ? 'bg-destructive' : storagePct >= 75 ? 'bg-amber-500' : 'bg-primary'"
+              :style="{ width: Math.max(2, storagePct) + '%' }"
+            />
+          </div>
+        </div>
         <Button variant="outline" size="sm" @click="showNewFolder = true">
           <Icon name="lucide:folder-plus" class="w-4 h-4 mr-1" />
           New Folder
@@ -361,13 +592,31 @@ onMounted(async () => {
       </div>
     </div>
 
+    <!-- Upload error (too large / storage full) -->
+    <div
+      v-if="uploadError"
+      class="mb-4 flex items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+    >
+      <div class="flex items-start gap-2">
+        <Icon name="lucide:alert-triangle" class="w-4 h-4 mt-0.5 text-destructive shrink-0" />
+        <p class="text-sm text-foreground">{{ uploadError }}</p>
+      </div>
+      <button class="text-muted-foreground hover:text-foreground shrink-0" @click="uploadError = null">
+        <Icon name="lucide:x" class="w-4 h-4" />
+      </button>
+    </div>
+
     <!-- Breadcrumbs -->
     <div class="flex items-center gap-1 mb-4 text-sm overflow-x-auto">
       <template v-for="(crumb, i) in breadcrumbs" :key="i">
         <button
           v-if="i < breadcrumbs.length - 1"
-          class="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          class="text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md px-1.5 py-0.5 data-[drop=on]:bg-primary/10 data-[drop=on]:text-foreground"
+          :data-drop="crumbDropIndex === i ? 'on' : 'off'"
           @click="navigateToBreadcrumb(i)"
+          @dragover.prevent="crumbDropIndex = i"
+          @dragleave="crumbDropIndex = null"
+          @drop="crumbDropIndex = null; onCrumbDrop($event, crumb.id)"
         >
           {{ crumb.name }}
         </button>
@@ -384,29 +633,44 @@ onMounted(async () => {
         placeholder="Search files & folders..."
         class="flex-1 min-w-48 rounded-full glass-field px-3 py-2 text-sm"
       />
-      <div class="flex items-center rounded-md border bg-background">
+      <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
         <button
-          class="px-2.5 py-2 transition-colors"
-          :class="viewMode === 'grid' ? 'text-foreground bg-muted/40' : 'text-muted-foreground hover:text-foreground'"
+          type="button"
+          aria-label="Grid view"
+          :aria-pressed="viewMode === 'grid'"
+          class="inline-flex items-center px-2.5 py-1 rounded-full transition-colors"
+          :class="viewMode === 'grid' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
           @click="viewMode = 'grid'"
         >
-          <Icon name="lucide:layout-grid" class="w-4 h-4" />
+          <Icon name="lucide:layout-grid" class="w-3.5 h-3.5" />
         </button>
         <button
-          class="px-2.5 py-2 transition-colors"
-          :class="viewMode === 'list' ? 'text-foreground bg-muted/40' : 'text-muted-foreground hover:text-foreground'"
+          type="button"
+          aria-label="List view"
+          :aria-pressed="viewMode === 'list'"
+          class="inline-flex items-center px-2.5 py-1 rounded-full transition-colors"
+          :class="viewMode === 'list' ? 'glass-active-thumb relative text-foreground' : 'text-muted-foreground hover:text-foreground'"
           @click="viewMode = 'list'"
         >
-          <Icon name="lucide:list" class="w-4 h-4" />
+          <Icon name="lucide:list" class="w-3.5 h-3.5" />
         </button>
       </div>
-      <button
+      <span
         v-if="breadcrumbs.length > 1"
-        class="px-2.5 py-2 rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
-        @click="navigateUp"
+        class="inline-flex rounded-full transition-colors"
+        :class="upDropActive ? 'ring-2 ring-primary/50' : ''"
+        @dragover.prevent="upDropActive = true"
+        @dragleave="upDropActive = false"
+        @drop="upDropActive = false; onCrumbDrop($event, parentFolderId)"
       >
-        <Icon name="lucide:arrow-up" class="w-4 h-4" />
-      </button>
+        <UiActionButton
+          circle
+          icon="lucide:arrow-up"
+          title="Up one level (or drop here to move up)"
+          hide-label="always"
+          @click="navigateUp"
+        />
+      </span>
     </div>
 
     <!-- Upload progress -->
@@ -420,6 +684,25 @@ onMounted(async () => {
           class="h-full bg-primary rounded-full transition-all duration-300"
           :style="{ width: `${uploadProgress}%` }"
         />
+      </div>
+    </div>
+
+    <!-- Selection toolbar -->
+    <div
+      v-if="selectedCount > 0"
+      class="mb-4 flex items-center justify-between gap-3 rounded-full border border-border bg-muted/40 px-4 py-2"
+    >
+      <span class="text-sm font-medium">{{ selectedCount }} selected</span>
+      <div class="flex items-center gap-1">
+        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors" @click="downloadSelected">
+          <Icon name="lucide:download" class="w-3.5 h-3.5" /> Download
+        </button>
+        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors" @click="deleteSelected">
+          <Icon name="lucide:trash-2" class="w-3.5 h-3.5" /> Delete
+        </button>
+        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors" @click="clearSelection">
+          Clear
+        </button>
       </div>
     </div>
 
@@ -519,6 +802,21 @@ onMounted(async () => {
                 <p class="text-xs font-medium truncate flex-1">{{ getFileName(file) }}</p>
                 <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 shrink-0">
                   <button
+                    class="p-0.5 transition-colors"
+                    :class="copiedFileId === file.id ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'"
+                    :title="copiedFileId === file.id ? 'Link copied' : 'Copy link'"
+                    @click.stop="copyFileLink(file)"
+                  >
+                    <Icon :name="copiedFileId === file.id ? 'lucide:check' : 'lucide:link'" class="w-3 h-3" />
+                  </button>
+                  <button
+                    class="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Download"
+                    @click.stop="downloadFile(file)"
+                  >
+                    <Icon name="lucide:download" class="w-3 h-3" />
+                  </button>
+                  <button
                     class="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
                     title="Rename"
                     @click.stop="startRename(file, 'file')"
@@ -547,120 +845,16 @@ onMounted(async () => {
     <!-- ═══════════ LIST VIEW ═══════════ -->
     <template v-else>
       <!-- Table header -->
-      <div class="hidden md:grid grid-cols-[1fr_100px_120px_80px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border/40 mb-1">
-        <span>Name</span>
+      <div class="hidden md:grid grid-cols-[1fr_120px_120px_96px] gap-4 pr-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border/40 mb-1">
+        <span class="pl-[52px]">Name</span>
         <span>Size</span>
         <span>Modified</span>
         <span></span>
       </div>
 
-      <!-- Folders -->
-      <div
-        v-for="folder in filteredFolders"
-        :key="folder.id"
-        class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
-        @click="navigateToFolder(folder.id, folder.name)"
-      >
-        <div class="flex items-center gap-3">
-          <Icon name="lucide:folder" class="w-5 h-5 text-warning shrink-0" />
-          <span class="text-sm font-medium truncate">{{ folder.name }}</span>
-        </div>
-        <span class="text-xs text-muted-foreground hidden md:block">—</span>
-        <span class="text-xs text-muted-foreground hidden md:block">—</span>
-        <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            @click.stop="startRename(folder, 'folder')"
-          >
-            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-          </button>
-          <button
-            class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-            @click.stop="handleDeleteFolder(folder)"
-          >
-            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Files (virtualized for large lists) -->
-      <VirtualList
-        v-if="filteredFiles.length > 50"
-        :items="filteredFiles"
-        :estimate-size="52"
-        class="max-h-[calc(100vh-280px)]"
-      >
-        <template #item="{ item: file }">
-          <div
-            class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
-            @click="openFile(file)"
-          >
-            <div class="flex items-center gap-3">
-              <img
-                v-if="isImage(file.type)"
-                :src="getThumbnailUrl(file.id)"
-                class="w-8 h-8 rounded object-cover shrink-0"
-                loading="lazy"
-              />
-              <Icon v-else :name="getFileIcon(file.type)" :class="[getFileIconColor(file.type), 'w-5 h-5 shrink-0']" />
-              <span class="text-sm truncate">{{ getFileName(file) }}</span>
-            </div>
-            <span class="text-xs text-muted-foreground hidden md:block">{{ formatFileSize(file.filesize) }}</span>
-            <span class="text-xs text-muted-foreground hidden md:block">{{ formatDate(file.modified_on || file.uploaded_on) }}</span>
-            <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                @click.stop="startRename(file, 'file')"
-              >
-                <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-              </button>
-              <button
-                class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                @click.stop="handleDeleteFile(file)"
-              >
-                <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </template>
-      </VirtualList>
-
-      <!-- Files (standard rendering for small lists) -->
-      <template v-else>
-        <div
-          v-for="file in filteredFiles"
-          :key="file.id"
-          class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
-          @click="openFile(file)"
-        >
-          <div class="flex items-center gap-3">
-            <img
-              v-if="isImage(file.type)"
-              :src="getThumbnailUrl(file.id)"
-              class="w-8 h-8 rounded object-cover shrink-0"
-              loading="lazy"
-            />
-            <Icon v-else :name="getFileIcon(file.type)" :class="[getFileIconColor(file.type), 'w-5 h-5 shrink-0']" />
-            <span class="text-sm truncate">{{ getFileName(file) }}</span>
-          </div>
-          <span class="text-xs text-muted-foreground hidden md:block">{{ formatFileSize(file.filesize) }}</span>
-          <span class="text-xs text-muted-foreground hidden md:block">{{ formatDate(file.modified_on || file.uploaded_on) }}</span>
-          <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              @click.stop="startRename(file, 'file')"
-            >
-              <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-            </button>
-            <button
-              class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-              @click.stop="handleDeleteFile(file)"
-            >
-              <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </template>
+      <!-- Recursive rows: expand-in-list, drag-to-move, multi-select, folder size -->
+      <FilesListNode v-for="folder in filteredFolders" :key="'f' + folder.id" :item="folder" kind="folder" :depth="0" />
+      <FilesListNode v-for="file in filteredFiles" :key="'x' + file.id" :item="file" kind="file" :depth="0" />
     </template>
 
     <!-- ═══════════ MODALS ═══════════ -->
@@ -717,6 +911,47 @@ onMounted(async () => {
               </Button>
             </div>
           </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Delete Folder Modal — the user authorizes what happens to the contents -->
+    <Teleport to="body">
+      <div
+        v-if="deleteFolderTarget"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="deleteFolderTarget = null"
+      >
+        <div class="ios-card shadow-xl w-full max-w-md mx-4 p-6">
+          <h2 class="font-semibold mb-1">Delete "{{ deleteFolderTarget.name }}"</h2>
+          <p class="text-sm text-muted-foreground mb-5">What should happen to the files and folders inside?</p>
+          <div class="flex flex-col gap-2">
+            <button
+              class="text-left rounded-xl border border-border hover:border-primary/40 hover:bg-muted/30 px-4 py-3 transition-colors disabled:opacity-50"
+              :disabled="deletingFolder"
+              @click="confirmDeleteFolder('keep')"
+            >
+              <div class="flex items-center gap-2 text-sm font-medium">
+                <Icon name="lucide:folder-input" class="w-4 h-4 text-primary" />
+                Keep the files — move them to the root
+              </div>
+              <p class="text-xs text-muted-foreground mt-1 ml-6">Contents move to your organization's top-level Files folder; nothing is deleted.</p>
+            </button>
+            <button
+              class="text-left rounded-xl border border-destructive/30 hover:border-destructive/60 hover:bg-destructive/10 px-4 py-3 transition-colors disabled:opacity-50"
+              :disabled="deletingFolder"
+              @click="confirmDeleteFolder('contents')"
+            >
+              <div class="flex items-center gap-2 text-sm font-medium text-destructive">
+                <Icon name="lucide:trash-2" class="w-4 h-4" />
+                Delete the folder and everything inside
+              </div>
+              <p class="text-xs text-muted-foreground mt-1 ml-6">Permanently removes the folder, its subfolders, and all files within. This can't be undone.</p>
+            </button>
+          </div>
+          <div class="flex justify-end mt-5">
+            <Button type="button" variant="outline" size="sm" :disabled="deletingFolder" @click="deleteFolderTarget = null">Cancel</Button>
+          </div>
         </div>
       </div>
     </Teleport>
