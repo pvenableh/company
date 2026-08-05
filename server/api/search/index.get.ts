@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
   const directus = getTypedDirectus();
   const org = { organization: { _in: orgIds } };
 
-  const [clients, contacts, leads, projects, tickets, proposals] = await Promise.all([
+  const [clients, contacts, leads, projects, tickets, proposals, pitches, contracts, tasks, invoices, touchpoints] = await Promise.all([
     directus.request(readItems('clients', {
       filter: { _and: [org, icontains(['name', 'billing_name'], q)] },
       fields: ['id', 'name'], limit: PER_GROUP, sort: ['name'],
@@ -65,6 +65,28 @@ export default defineEventHandler(async (event) => {
     directus.request(readItems('proposals', {
       filter: { _and: [org, icontains(['title'], q)] },
       fields: ['id', 'title', 'proposal_status'], limit: PER_GROUP, sort: ['-date_created'],
+    })).catch(() => []),
+    directus.request(readItems('pitch_pages', {
+      filter: { _and: [org, icontains(['title', 'client_name'], q)] },
+      fields: ['id', 'title', 'status'], limit: PER_GROUP, sort: ['-date_created'],
+    })).catch(() => []),
+    directus.request(readItems('contracts', {
+      filter: { _and: [org, icontains(['title', 'signed_by_name'], q)] },
+      fields: ['id', 'title', 'contract_status'], limit: PER_GROUP, sort: ['-date_created'],
+    })).catch(() => []),
+    directus.request(readItems('tasks', {
+      // tasks scope on organization_id (not the organization m2o the others use)
+      filter: { _and: [{ organization_id: { _in: orgIds } }, icontains(['title'], q)] },
+      fields: ['id', 'title', 'status'], limit: PER_GROUP, sort: ['-date_created'],
+    })).catch(() => []),
+    directus.request(readItems('invoices', {
+      // invoices have no direct org field — scope through the client's organization
+      filter: { _and: [{ client: { organization: { _in: orgIds } } }, icontains(['billing_name', 'note'], q)] },
+      fields: ['id', 'billing_name', 'status'], limit: PER_GROUP, sort: ['-date_created'],
+    })).catch(() => []),
+    directus.request(readItems('touchpoints', {
+      filter: { _and: [org, icontains(['summary', 'note'], q)] },
+      fields: ['id', 'summary', 'client', 'lead'], limit: PER_GROUP, sort: ['-date_created'],
     })).catch(() => []),
   ]) as any[][];
 
@@ -102,6 +124,34 @@ export default defineEventHandler(async (event) => {
     {
       key: 'proposals', label: 'Proposals', icon: 'lucide:file-text',
       items: (proposals || []).map((p) => ({ id: p.id, name: p.title || 'Untitled proposal', description: p.proposal_status ? `Proposal · ${p.proposal_status}` : 'Proposal', to: `/proposals/${p.id}` })),
+    },
+    {
+      // No per-pitch route — pitches are managed in the Pursuits > Pitches lens.
+      key: 'pitches', label: 'Pitches', icon: 'lucide:sparkles',
+      items: (pitches || []).map((p) => ({ id: p.id, name: p.title || p.client_name || 'Untitled pitch', description: p.status ? `Pitch · ${p.status}` : 'Pitch', to: '/apps/clients?view=pursuits&lens=pitches' })),
+    },
+    {
+      key: 'contracts', label: 'Contracts', icon: 'lucide:file-signature',
+      items: (contracts || []).map((c) => ({ id: c.id, name: c.title || 'Untitled contract', description: c.contract_status ? `Contract · ${c.contract_status}` : 'Contract', to: `/contracts/${c.id}` })),
+    },
+    {
+      // Deep-links open the task slide-over on the Work app's Tasks floor.
+      key: 'tasks', label: 'Tasks', icon: 'lucide:check-square',
+      items: (tasks || []).map((t) => ({ id: t.id, name: t.title || 'Untitled task', description: t.status ? `Task · ${t.status}` : 'Task', to: `/apps/work?floor=tasks&slide=task:${t.id}` })),
+    },
+    {
+      key: 'invoices', label: 'Invoices', icon: 'lucide:receipt',
+      items: (invoices || []).map((i) => ({ id: i.id, name: i.billing_name || `Invoice ${i.id}`, description: i.status ? `Invoice · ${i.status}` : 'Invoice', to: `/invoices/${i.id}` })),
+    },
+    {
+      // Touchpoints have no detail route — land on the related client or lead.
+      key: 'touchpoints', label: 'Touchpoints', icon: 'lucide:message-circle',
+      items: (touchpoints || [])
+        .map((t) => {
+          const to = t.client ? `/clients/${t.client}` : t.lead ? `/leads/${t.lead}` : null;
+          return to ? { id: t.id, name: t.summary || 'Touchpoint', description: 'Touchpoint', to } : null;
+        })
+        .filter(Boolean) as Array<{ id: any; name: string; description: string; to: string }>,
     },
   ].filter((g) => g.items.length);
 
