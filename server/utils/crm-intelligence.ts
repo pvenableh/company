@@ -143,7 +143,13 @@ export async function getCRMContext(
 			filter: {
 				organization: { _eq: orgId },
 				status: { _in: ['published', 'draft'] },
-				converted_to_customer: { _neq: true },
+				// "not converted" = false OR unset. `_neq: true` alone drops NULL rows
+				// (SQL `!= true` doesn't match NULL), which zeroed out pipelines whose
+				// leads never had the flag explicitly set to false.
+				_or: [
+					{ converted_to_customer: { _eq: false } },
+					{ converted_to_customer: { _null: true } },
+				],
 			},
 			fields: ['id', 'status', 'priority', 'estimated_value', 'next_follow_up', 'source', 'date_created'],
 			limit: 100,
