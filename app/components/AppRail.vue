@@ -416,17 +416,16 @@ function chipMagnifyStyle(appId: string) {
 	}
 }
 
-/* Tablet + desktop, horizontal rails only (top / bottom): give chips
- * room to breathe so the row reads as a line-up of distinct iOS-style
- * tiles instead of a packed strip. Bumps both the rail-level gap
- * (between groups) and the per-group gap (between chips). Vertical
- * rails keep their tighter row-gap. */
+/* Tablet + desktop, horizontal rails only (top / bottom): give chips room
+ * to breathe (8px) so the row reads as distinct iOS-style tiles AND the
+ * cursor magnification has space to grow into. Both the between-groups
+ * gap (rail) and the per-chip gap (group) get 8px so every dock icon is
+ * evenly spaced. NOTE: the per-group override lives AFTER the base
+ * `.app-rail__group` rule (below) so it wins the source-order cascade —
+ * putting it here would be clobbered by that later base declaration. */
 @media (min-width: 768px) {
 	.app-rail--horizontal {
 		@apply px-4 py-2;
-		column-gap: 8px;
-	}
-	.app-rail--horizontal .app-rail__group {
 		column-gap: 8px;
 	}
 }
@@ -578,6 +577,15 @@ html.dark[data-rail-tint='on'] .app-rail--right {
 .app-rail--horizontal .app-rail__group {
 	@apply flex-row items-center;
 	column-gap: 2px;
+}
+
+/* Desktop: match the between-groups 8px so every chip is evenly spaced and the
+ * cursor magnification has room to grow into. Placed AFTER the base rule above
+ * so it wins the source-order cascade (media queries add no specificity). */
+@media (min-width: 768px) {
+	.app-rail--horizontal .app-rail__group {
+		column-gap: 8px;
+	}
 }
 
 .app-rail--vertical .app-rail__group--main,
