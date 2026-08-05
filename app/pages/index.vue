@@ -431,9 +431,7 @@ const showLeaderboard = computed(() => !!selectedTeam.value);
 // ── Command-center layout (per-user show/hide + drag-reorder) ──
 // Governs everything BELOW the pinned Priority Actions block.
 const layout = useDashboardLayout();
-const { editing: dashEditing, hiddenList, spanOf, labelOf, scrollOf, hideWidget, showWidget, moveBy } = layout;
-const toggleDashEditing = () => layout.toggleEditing();
-const resetDash = () => layout.reset();
+const { editing: dashEditing, hiddenList, spanOf, cycleSpan, labelOf, scrollOf, hideWidget, showWidget, moveBy } = layout;
 // Deterministic guards: a "visible" widget still renders nothing when its own
 // precondition is false (goals off, no team), which would leave an empty grid
 // cell — so filter those out of what the grid receives. setVisibleOrder keeps
@@ -520,10 +518,13 @@ const goTo = (route: string) => {
 							@click="onPresenceStartCalm"
 						>Earnest opened this — start calm instead</button>
 					</div>
-					<HomeModeToggle class="shrink-0" />
+					<div class="flex items-center gap-2 shrink-0">
+						<CommandCenterCustomizeButton />
+						<HomeModeToggle />
+					</div>
 				</div>
 
-				<!-- Greeting + Lens Toggle + Assistant Button (classic home only) -->
+				<!-- Greeting + Focus/Classic toggle + Customize (classic home only) -->
 				<div v-if="!isPresence" class="flex items-end justify-between gap-3 pt-6 sm:pt-8">
 					<div class="min-w-0">
 						<!-- Reserve a single-line slot for the greeting so the
@@ -538,15 +539,10 @@ const goTo = (route: string) => {
 						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
-						<!-- Focus / Classic home toggle (remembered per-user). -->
-						<HomeModeToggle class="hidden sm:inline-flex" />
-						<button
-							@click="openEarnestPanel()"
-							aria-label="Earnest"
-							class="flex items-center justify-center size-9 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 ios-press"
-						>
-							<EarnestIcon class="w-4 h-4" />
-						</button>
+						<!-- Customize + Focus/Classic toggle. (Earnest access lives in the
+						     top bar + dock, so the old greeting-row Earnest button is gone.) -->
+						<CommandCenterCustomizeButton />
+						<HomeModeToggle />
 					</div>
 				</div>
 
@@ -576,26 +572,9 @@ const goTo = (route: string) => {
                 <!-- Weekly check-in nudge — self-hides unless a personal goal is stale. -->
                 <GoalsCheckinTriggerPill v-if="goalsEnabled" @open="checkinOpen = true" />
 
-                <!-- ═══ Customizable widget grid — Priority Actions is the first widget now.
-                     Users show/hide + drag to reorder; layout persists per device
-                     (useDashboardLayout). Everything is customizable. -->
-                <div class="flex items-center justify-between gap-2 pt-1">
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                        @click="toggleDashEditing"
-                    >
-                        <EIcon :name="dashEditing ? 'i-heroicons-check' : 'i-heroicons-adjustments-horizontal'" class="w-3.5 h-3.5" />
-                        {{ dashEditing ? 'Done arranging' : 'Customize' }}
-                    </button>
-                    <button
-                        v-if="dashEditing"
-                        type="button"
-                        class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                        @click="resetDash"
-                    >Reset to default</button>
-                </div>
-
+                <!-- ═══ Customizable widget grid — Priority Actions is the first widget.
+                     Users show/hide + drag to reorder (Customize control lives up by
+                     the Focus/Classic toggle); layout persists per user. -->
                 <VueDraggable
                     :list="dragList"
                     item-key="id"
@@ -618,6 +597,7 @@ const goTo = (route: string) => {
                             @hide="hideWidget(element.id)"
                             @move-up="moveBy(element.id, -1)"
                             @move-down="moveBy(element.id, 1)"
+                            @cycle-span="cycleSpan(element.id)"
                         >
 						<div v-if="element.id === 'priority-actions'" class="space-y-4">
 							<div class="flex items-center gap-2">

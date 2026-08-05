@@ -66,6 +66,9 @@ const STORAGE_KEY = 'earnest-dashboard-layout-v1';
 // same layout without re-reading storage.
 const _order = ref<string[]>([...CATALOG_IDS]);
 const _hidden = ref<Set<string>>(new Set(DASHBOARD_WIDGETS.filter((w) => w.defaultHidden).map((w) => w.id)));
+// Per-widget column-span overrides (user-set width on large screens). Absent =
+// use the catalog default. Only 1|2|3 are valid.
+const _spans = ref<Record<string, 1 | 2 | 3>>({});
 const _editing = ref(false);
 let _loaded = false;
 // The user's `ai_preferences` row id, for the cross-device mirror. Shared with
@@ -81,19 +84,27 @@ function reconcileOrder(saved: string[]): string[] {
 	return [...known, ...missing];
 }
 
-// Apply a persisted { order, hidden } payload (from localStorage or Directus).
-function applyLayout(parsed: { order?: string[]; hidden?: string[] } | null | undefined): boolean {
+// Apply a persisted { order, hidden, spans } payload (localStorage or Directus).
+function applyLayout(parsed: { order?: string[]; hidden?: string[]; spans?: Record<string, number> } | null | undefined): boolean {
 	if (!parsed || typeof parsed !== 'object') return false;
 	let applied = false;
 	if (Array.isArray(parsed.order)) { _order.value = reconcileOrder(parsed.order); applied = true; }
 	if (Array.isArray(parsed.hidden)) { _hidden.value = new Set(parsed.hidden.filter((id) => CATALOG_IDS.includes(id))); applied = true; }
+	if (parsed.spans && typeof parsed.spans === 'object') {
+		const next: Record<string, 1 | 2 | 3> = {};
+		for (const [id, v] of Object.entries(parsed.spans)) {
+			if (CATALOG_IDS.includes(id) && (v === 1 || v === 2 || v === 3)) next[id] = v;
+		}
+		_spans.value = next;
+		applied = true;
+	}
 	return applied;
 }
 
 function persistLocal() {
 	if (import.meta.server) return;
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: _order.value, hidden: [..._hidden.value] }));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: _order.value, hidden: [..._hidden.value], spans: _spans.value }));
 	} catch { /* private mode / quota — layout just won't persist locally */ }
 }
 
@@ -109,7 +120,7 @@ export const useDashboardLayout = () => {
 		if (_saveTimer) clearTimeout(_saveTimer);
 		_saveTimer = setTimeout(async () => {
 			if (import.meta.server || !user.value?.id) return;
-			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value] } };
+			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value], spans: _spans.value } };
 			try {
 				if (_recordId) {
 					await prefItems.update(_recordId, payload);
@@ -172,9 +183,17 @@ export const useDashboardLayout = () => {
 
 	const isHidden = (id: string) => _hidden.value.has(id);
 	const isVisible = (id: string) => !_hidden.value.has(id);
-	const spanOf = (id: string) => SPAN_BY_ID.get(id) ?? 3;
+	// User override wins over the catalog default.
+	const spanOf = (id: string): 1 | 2 | 3 => _spans.value[id] ?? (SPAN_BY_ID.get(id) as 1 | 2 | 3) ?? 3;
 	const labelOf = (id: string) => LABEL_BY_ID.get(id) ?? id;
 	const scrollOf = (id: string) => SCROLL_IDS.has(id);
+
+	// Cycle a widget's width 1 → 2 → 3 → 1 (large screens). Persisted per user.
+	const cycleSpan = (id: string) => {
+		const next = ((spanOf(id) % 3) + 1) as 1 | 2 | 3;
+		_spans.value = { ..._spans.value, [id]: next };
+		commit();
+	};
 
 	const hideWidget = (id: string) => {
 		if (!_hidden.value.has(id)) {
@@ -216,6 +235,7 @@ export const useDashboardLayout = () => {
 	const reset = () => {
 		_order.value = [...CATALOG_IDS];
 		_hidden.value = new Set(DASHBOARD_WIDGETS.filter((w) => w.defaultHidden).map((w) => w.id));
+		_spans.value = {};
 		commit();
 	};
 
@@ -232,6 +252,7 @@ export const useDashboardLayout = () => {
 		isHidden,
 		isVisible,
 		spanOf,
+		cycleSpan,
 		labelOf,
 		scrollOf,
 		hideWidget,

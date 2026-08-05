@@ -100,7 +100,7 @@ function relTime(iso: string | null | undefined) {
 
 		<!-- Loading -->
 		<div v-if="loading" class="flex gap-3 overflow-hidden">
-			<div v-for="i in 4" :key="i" class="shrink-0 w-44 h-28 rounded-xl bg-muted animate-pulse" />
+			<div v-for="i in 4" :key="i" class="shrink-0 w-60 h-28 rounded-xl bg-muted animate-pulse" />
 		</div>
 
 		<!-- Empty -->
@@ -120,7 +120,7 @@ function relTime(iso: string | null | undefined) {
 				v-for="client in clients"
 				:key="client.id"
 				type="button"
-				class="shrink-0 w-44 rounded-xl border border-border bg-background hover:bg-muted/40 transition-colors p-3 text-left group"
+				class="shrink-0 w-60 rounded-xl border border-border bg-background hover:bg-muted/40 transition-colors p-3 text-left group"
 				@click="openClient(client.id)"
 			>
 				<div class="flex items-center gap-2 mb-2">

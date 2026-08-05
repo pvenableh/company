@@ -18,10 +18,20 @@ const props = defineProps<{
 	scroll?: boolean;
 }>();
 
-defineEmits<{ (e: 'hide'): void; (e: 'move-up'): void; (e: 'move-down'): void }>();
+defineEmits<{ (e: 'hide'): void; (e: 'move-up'): void; (e: 'move-down'): void; (e: 'cycle-span'): void }>();
 
 const spanClass = computed(() =>
 	props.span === 3 ? 'lg:col-span-3' : props.span === 2 ? 'lg:col-span-2' : 'lg:col-span-1',
+);
+
+// NOTE on "sticky short widgets": a grid item's sticky containing block is the
+// GRID, not its cell, so `position: sticky` bleeds a short widget past its row
+// into the rows below (verified in-browser). Per-row sticky would need each row
+// to be its own element, which is incompatible with this flat drag-reorder grid.
+// So short widgets just align to the top of their row (self-start) and any extra
+// row height is empty — no sticky.
+const outerClass = computed(() =>
+	[spanClass.value, props.editing ? 'relative' : '', 'self-start'].filter(Boolean).join(' '),
 );
 
 // Cap growth-prone widgets so rows stay even; disabled in edit mode so the whole
@@ -34,7 +44,7 @@ const contentClass = computed(() => {
 </script>
 
 <template>
-	<div :class="[spanClass, editing ? 'relative' : '']">
+	<div :class="outerClass">
 		<!-- Edit toolbar -->
 		<div
 			v-if="editing"
@@ -49,6 +59,17 @@ const contentClass = computed(() => {
 			</button>
 			<span class="text-[11px] font-semibold uppercase tracking-wide text-foreground/70 truncate">{{ label }}</span>
 			<div class="ml-auto flex items-center gap-0.5">
+				<!-- Width: cycle 1 → 2 → 3 columns (large screens). -->
+				<button
+					type="button"
+					class="flex items-center gap-0.5 justify-center h-6 px-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
+					:title="`Width: ${span ?? 1} column${(span ?? 1) > 1 ? 's' : ''} — click to change`"
+					aria-label="Change widget width"
+					@click="$emit('cycle-span')"
+				>
+					<EIcon name="i-heroicons-view-columns" class="w-4 h-4" />
+					<span class="text-[10px] font-semibold tabular-nums">{{ span ?? 1 }}</span>
+				</button>
 				<button
 					type="button"
 					class="flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 disabled:opacity-30 disabled:hover:bg-transparent"
