@@ -188,6 +188,8 @@ const leadCreateMenuItems = computed(() => [
 	{ label: 'Meeting', icon: 'lucide:video', onClick: () => openMeetingCreate({ leadId: lead.value?.id, leadData: lead.value, defaultVideo: true }) },
 	{ label: 'Proposal', icon: 'lucide:file-plus', onClick: () => openProposalCreate({ leadId: lead.value?.id }), separatorBefore: true },
 	{ label: 'Contract', icon: 'lucide:file-signature', onClick: () => openContractCreate({ leadId: lead.value?.id }) },
+	// allow-legacy-link — /pitches is a standalone deep-link receiver (gated pitch manager)
+	{ label: 'Pitch page', icon: 'lucide:sparkles', onClick: () => navigateTo(`/pitches?for=lead:${lead.value?.id}`) },
 ]);
 
 // Activity form

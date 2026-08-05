@@ -46,6 +46,12 @@ export default defineEventHandler(async (event) => {
   const title = fieldVal(parts, 'title');
   if (!title) throw createError({ statusCode: 400, message: 'title is required' });
   const clientName = fieldVal(parts, 'client_name') || null;
+  // Optional links to a real record (Pursuits merge). leads.id is an integer PK;
+  // clients/contacts are uuids. Blank → null.
+  const leadRaw = fieldVal(parts, 'lead');
+  const lead = leadRaw && /^\d+$/.test(leadRaw) ? Number(leadRaw) : null;
+  const client = fieldVal(parts, 'client') || null;
+  const contact = fieldVal(parts, 'contact') || null;
   const password = fieldVal(parts, 'password');
   const expiresRaw = fieldVal(parts, 'expires_at');
   const publish = fieldVal(parts, 'publish') === 'true';
@@ -113,6 +119,9 @@ export default defineEventHandler(async (event) => {
     organization,
     title,
     client_name: clientName,
+    lead,
+    client,
+    contact,
     token,
     html,
     status: publish ? 'published' : 'draft',

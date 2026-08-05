@@ -41,9 +41,24 @@ async function fetchProposals() {
 		filter, sort: ['-date_created'], limit: -1,
 	}).catch(() => [])) as any[];
 }
+// Gated pitch pages linked to this lead/client (Pursuits merge). Fetched via the
+// admin-token endpoint so pitch_pages stays unlistable to the browser.
+const pitches = ref<any[]>([]);
+async function fetchPitches() {
+	const query: Record<string, any> = props.leadId != null ? { lead: props.leadId } : (props.clientId ? { client: props.clientId } : null) as any;
+	if (!query) { pitches.value = []; return; }
+	try {
+		const r = await $fetch<{ data: any[] }>('/api/pitches/for', { query });
+		pitches.value = r.data || [];
+	} catch { pitches.value = []; }
+}
+const pitchStatusTone: Record<string, string> = {
+	published: 'text-success', draft: 'text-muted-foreground', revoked: 'text-destructive',
+};
+
 async function refresh() {
 	loading.value = true;
-	try { await Promise.all([fetchTouches(), fetchProposals()]); } finally { loading.value = false; }
+	try { await Promise.all([fetchTouches(), fetchProposals(), fetchPitches()]); } finally { loading.value = false; }
 }
 onMounted(refresh);
 watch(() => [props.leadId, props.clientId], refresh);
@@ -97,9 +112,29 @@ const fmtMoney = (n: number) => new Intl.NumberFormat('en-US', { style: 'currenc
 <template>
 	<div>
 		<div v-if="loading" class="py-8 text-center text-xs text-muted-foreground">Loading pursuit…</div>
-		<div v-else-if="!feed.length" class="py-8 text-center text-xs text-muted-foreground">No pursuit activity yet.</div>
 
-		<ol v-else class="relative pl-6">
+		<!-- Linked pitch pages (gated share links) for this pursuit -->
+		<div v-if="!loading && pitches.length" class="mb-4 rounded-xl border border-border/60 bg-muted/20 p-3">
+			<div class="flex items-center gap-1.5 mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+				<Icon name="lucide:sparkles" class="w-3 h-3" /> Pitch pages
+			</div>
+			<ul class="grid gap-1.5">
+				<li v-for="p in pitches" :key="p.id" class="flex items-center justify-between gap-2">
+					<a :href="p.url" target="_blank" rel="noopener" class="min-w-0 flex items-center gap-1.5 text-[13px] font-medium truncate hover:underline">
+						<Icon name="lucide:external-link" class="w-3 h-3 shrink-0 text-muted-foreground" />
+						<span class="truncate">{{ p.title }}</span>
+					</a>
+					<div class="flex items-center gap-2 shrink-0 text-[11px]">
+						<span class="uppercase tracking-wide font-semibold" :class="pitchStatusTone[p.status] || 'text-muted-foreground'">{{ p.status }}</span>
+						<span class="text-muted-foreground inline-flex items-center gap-0.5"><Icon name="lucide:eye" class="w-3 h-3" />{{ p.view_count }}</span>
+					</div>
+				</li>
+			</ul>
+		</div>
+
+		<div v-if="!loading && !feed.length && !pitches.length" class="py-8 text-center text-xs text-muted-foreground">No pursuit activity yet.</div>
+
+		<ol v-if="!loading && feed.length" class="relative pl-6">
 			<span class="absolute left-[7px] top-1 bottom-1 w-px bg-border" aria-hidden="true" />
 			<li v-for="ev in feed" :key="ev.id" class="relative pb-4 last:pb-0">
 				<!-- Proposal event -->

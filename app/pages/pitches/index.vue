@@ -9,6 +9,11 @@
  */
 definePageMeta({ middleware: ['auth'] })
 
+interface LinkedRef {
+  type: 'client' | 'lead' | 'contact'
+  label: string
+  to: string
+}
 interface PitchRow {
   id: string
   title: string
@@ -20,6 +25,7 @@ interface PitchRow {
   last_viewed_at: string | null
   date_created: string
   has_password: boolean
+  linked: LinkedRef | null
   url: string
 }
 
@@ -33,10 +39,29 @@ const showForm = ref(false)
 const form = reactive({
   title: '',
   client_name: '',
+  // Optional link to a real record, encoded as "<type>:<id>" (e.g. "client:uuid",
+  // "lead:42", "contact:uuid"). Empty = link to nobody (client_name fallback).
+  link: '',
   password: '',
   expires_at: '',
   publish: true,
 })
+
+// Pickable records for the "For" selector, grouped by type.
+type LinkOption = { id: string | number; label: string }
+const linkOptions = ref<{ clients: LinkOption[]; leads: LinkOption[]; contacts: LinkOption[] }>({
+  clients: [], leads: [], contacts: [],
+})
+async function loadLinkOptions() {
+  if (!selectedOrg.value) { linkOptions.value = { clients: [], leads: [], contacts: [] }; return }
+  try {
+    linkOptions.value = await $fetch('/api/pitches/link-options', {
+      query: { organization: selectedOrg.value },
+    })
+  } catch {
+    linkOptions.value = { clients: [], leads: [], contacts: [] }
+  }
+}
 const htmlFile = ref<File | null>(null)
 const assetFiles = ref<File[]>([])
 const submitting = ref(false)
@@ -81,6 +106,12 @@ async function submit() {
     fd.append('organization', String(selectedOrg.value))
     fd.append('title', form.title.trim())
     fd.append('client_name', form.client_name.trim())
+    // Decode the "For" selection into the matching FK field.
+    if (form.link) {
+      const [type, ...rest] = form.link.split(':')
+      const id = rest.join(':')
+      if (type === 'client' || type === 'lead' || type === 'contact') fd.append(type, id)
+    }
     fd.append('password', form.password)
     fd.append('expires_at', form.expires_at)
     fd.append('publish', String(form.publish))
@@ -90,7 +121,7 @@ async function submit() {
     const res = await $fetch<{ url: string }>('/api/pitches', { method: 'POST', body: fd })
     justCreated.value = { title: form.title.trim(), url: res.url }
     // reset
-    Object.assign(form, { title: '', client_name: '', password: '', expires_at: '', publish: true })
+    Object.assign(form, { title: '', client_name: '', link: '', password: '', expires_at: '', publish: true })
     htmlFile.value = null
     assetFiles.value = []
     showForm.value = false
@@ -125,8 +156,22 @@ function isExpired(row: PitchRow) {
   return row.expires_at ? Date.now() > new Date(row.expires_at).getTime() : false
 }
 
-watch(selectedOrg, load)
-onMounted(load)
+watch(selectedOrg, () => { load(); loadLinkOptions() })
+// Fetch pickable records the first time the form is opened.
+watch(showForm, (open) => { if (open && !linkOptions.value.clients.length && !linkOptions.value.leads.length && !linkOptions.value.contacts.length) loadLinkOptions() })
+
+// Deep-link prefill: /pitches?for=client:<id> (from a lead/client's "+ New"
+// menu) opens the create form pre-linked to that record.
+const route = useRoute()
+onMounted(() => {
+  load()
+  loadLinkOptions()
+  const forParam = route.query.for
+  if (typeof forParam === 'string' && /^(client|lead|contact):.+/.test(forParam)) {
+    form.link = forParam
+    showForm.value = true
+  }
+})
 </script>
 
 <template>
@@ -178,11 +223,28 @@ onMounted(load)
             class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
         </label>
         <label class="grid gap-1.5">
-          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Client (optional)</span>
-          <input v-model="form.client_name" type="text" placeholder="Myles Restaurant Group"
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">For (optional)</span>
+          <select v-model="form.link"
             class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+            <option value="">Not linked — just a name</option>
+            <optgroup v-if="linkOptions.clients.length" label="Clients">
+              <option v-for="o in linkOptions.clients" :key="`c-${o.id}`" :value="`client:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+            <optgroup v-if="linkOptions.leads.length" label="Leads / opportunities">
+              <option v-for="o in linkOptions.leads" :key="`l-${o.id}`" :value="`lead:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+            <optgroup v-if="linkOptions.contacts.length" label="Contacts">
+              <option v-for="o in linkOptions.contacts" :key="`p-${o.id}`" :value="`contact:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+          </select>
         </label>
       </div>
+
+      <label v-if="!form.link" class="grid gap-1.5">
+        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Or type a client name (optional)</span>
+        <input v-model="form.client_name" type="text" placeholder="Myles Restaurant Group"
+          class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+      </label>
 
       <div class="grid gap-4 sm:grid-cols-2">
         <label class="grid gap-1.5">
@@ -246,7 +308,11 @@ onMounted(load)
             <span v-if="isExpired(row)" class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-500">expired</span>
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span v-if="row.client_name">{{ row.client_name }}</span>
+            <NuxtLink v-if="row.linked" :to="row.linked.to" class="inline-flex items-center gap-1 font-medium text-foreground hover:underline">
+              <Icon :name="row.linked.type === 'client' ? 'lucide:building-2' : row.linked.type === 'lead' ? 'lucide:target' : 'lucide:user'" class="h-3 w-3" />
+              {{ row.linked.label }}
+            </NuxtLink>
+            <span v-else-if="row.client_name">{{ row.client_name }}</span>
             <span class="inline-flex items-center gap-1"><Icon name="lucide:eye" class="h-3 w-3" />{{ row.view_count }}</span>
             <span v-if="row.has_password" class="inline-flex items-center gap-1"><Icon name="lucide:lock" class="h-3 w-3" />password</span>
             <span v-if="row.expires_at" class="inline-flex items-center gap-1"><Icon name="lucide:clock" class="h-3 w-3" />{{ new Date(row.expires_at).toLocaleDateString() }}</span>
