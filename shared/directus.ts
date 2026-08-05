@@ -3357,6 +3357,10 @@ export interface Organization {
 	trial_ends_at?: string | null;
 	/** @description What the owner said they want from Earnest at signup. Feeds AI context. Optional. */
 	expectations?: string | null;
+	/** @description Cached total stored file bytes (self-healed by recompute). */
+	storage_used_bytes?: number | null;
+	/** @description Extra storage purchased via add-on, added to the plan allotment. */
+	storage_extra_bytes?: number | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3715,6 +3719,35 @@ export interface PhoneSetting {
 	organization?: Organization | string | null;
 	business_hours?: BusinessHour[] | string[];
 	call_routes?: CallRoute[] | string[];
+}
+
+export interface PitchPage {
+	/** @primaryKey */
+	id: number;
+	status?: 'draft' | 'published' | 'revoked' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description Internal name, e.g. "Myles Restaurant Group — Private Events" @required */
+	title: string;
+	/** @description Prospective client this pitch is for */
+	client_name?: string | null;
+	/** @description Human-friendly slug (optional; token is the real capability) */
+	slug?: string | null;
+	/** @description Unguessable share capability — used in the public /p/<token> URL */
+	token?: string | null;
+	/** @description The full standalone HTML document, served byte-for-byte to the client. */
+	html?: string | null;
+	/** @description scrypt hash of the optional access password */
+	password_hash?: string | null;
+	/** @description After this the link stops working (null = never expires) */
+	expires_at?: string | null;
+	view_count?: number | null;
+	last_viewed_at?: string | null;
+	/** @required */
+	organization: Organization | string;
 }
 
 export interface PlatformReversal {
@@ -5898,6 +5931,7 @@ export interface Schema {
 	people: People[];
 	people_organizations: PeopleOrganization[];
 	phone_settings: PhoneSetting[];
+	pitch_pages: PitchPage[];
 	platform_reversals: PlatformReversal[];
 	portfolio: Portfolio[];
 	portfolio_before_and_afters: PortfolioBeforeAndAfter[];
@@ -6170,6 +6204,7 @@ export enum CollectionNames {
 	people = 'people',
 	people_organizations = 'people_organizations',
 	phone_settings = 'phone_settings',
+	pitch_pages = 'pitch_pages',
 	platform_reversals = 'platform_reversals',
 	portfolio = 'portfolio',
 	portfolio_before_and_afters = 'portfolio_before_and_afters',
