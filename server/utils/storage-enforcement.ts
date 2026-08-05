@@ -112,9 +112,9 @@ export async function addOrgStorageUsage(organizationId: string, deltaBytes: num
  * Note: this is network-heavy against a remote Directus — call it on demand,
  * not eagerly for every folder.
  */
-export async function sumFolderSubtree(rootFolder: string): Promise<number> {
+/** All folder ids under `rootFolder` (inclusive), via level-order BFS. */
+export async function getFolderSubtreeIds(rootFolder: string): Promise<string[]> {
   const directus = getTypedDirectus();
-
   const subtree: string[] = [rootFolder];
   let frontier: string[] = [rootFolder];
   while (frontier.length) {
@@ -126,6 +126,11 @@ export async function sumFolderSubtree(rootFolder: string): Promise<number> {
     subtree.push(...ids);
     frontier = ids;
   }
+  return subtree;
+}
+
+export async function sumFolderSubtree(rootFolder: string): Promise<number> {
+  const subtree = await getFolderSubtreeIds(rootFolder);
 
   // Aggregate sum via raw fetch — item commands on core directus_* collections
   // are unreliable through the SDK. Chunk the folder id list for the querystring.

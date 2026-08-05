@@ -66,6 +66,9 @@ const renameName = ref('');
 const renameSaving = ref(false);
 const deleteFolderTarget = ref<any | null>(null);
 const deletingFolder = ref(false);
+const optimizeTarget = ref<any | null>(null);
+const optimizing = ref(false);
+const optimizeResult = ref<{ optimized: boolean; before: number; after: number; type: string } | null>(null);
 
 // ── Fetch data ───────────────────────────────────────────────────────────────
 async function fetchContents() {
@@ -160,6 +163,11 @@ function isImage(type: string): boolean {
   return type?.startsWith('image/') || false;
 }
 
+// Raster formats the optimizer can re-encode (mirrors server image-optimize.ts).
+function isOptimizable(type: string): boolean {
+  return ['image/jpeg', 'image/png', 'image/webp', 'image/tiff', 'image/avif'].includes((type || '').toLowerCase());
+}
+
 function getThumbnailUrl(fileId: string): string {
   return `${config.public.directusUrl}/assets/${fileId}?width=200&height=200&fit=cover&quality=80`;
 }
@@ -201,6 +209,81 @@ async function downloadFiles(items: any[]) {
   for (const f of items) {
     downloadFile(f);
     await new Promise((r) => setTimeout(r, 250)); // let each download register
+  }
+}
+
+// Per-file optimize: opens a dialog where the user picks email-safe (default) or
+// WebP (smaller, opt-in with an email warning).
+function handleOptimizeFile(file: any) {
+  optimizeTarget.value = file;
+  optimizeResult.value = null;
+}
+
+async function confirmOptimize(format: 'auto' | 'webp') {
+  const file = optimizeTarget.value;
+  if (!file) return;
+  optimizing.value = true;
+  try {
+    optimizeResult.value = await $fetch('/api/directus/files/optimize', {
+      method: 'POST',
+      body: { organization: selectedOrg.value, fileId: file.id, format },
+    });
+    bump.value++;
+    await fetchContents();
+    await loadStorage(false);
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || 'Could not optimize that file.';
+    optimizeTarget.value = null;
+  } finally {
+    optimizing.value = false;
+  }
+}
+
+// ── Library optimize sweep (email-safe, batched) ─────────────────────────────
+const sweepOpen = ref(false);
+const sweeping = ref(false);
+const sweepFinished = ref(false);
+const sweepProcessed = ref(0);
+const sweepReclaimed = ref(0);
+
+function openSweep() {
+  sweepOpen.value = true;
+  sweeping.value = false;
+  sweepFinished.value = false;
+  sweepProcessed.value = 0;
+  sweepReclaimed.value = 0;
+}
+
+async function runSweep() {
+  if (!selectedOrg.value || sweeping.value) return;
+  sweeping.value = true;
+  sweepFinished.value = false;
+  sweepProcessed.value = 0;
+  sweepReclaimed.value = 0;
+  try {
+    let done = false;
+    let offset = 0;
+    let guard = 0;
+    while (!done && guard++ < 2000) {
+      const r = await $fetch<{ processed: number; reclaimedBytes: number; nextOffset: number; done: boolean }>(
+        '/api/directus/files/optimize-sweep',
+        { method: 'POST', body: { organization: selectedOrg.value, offset, limit: 5 } },
+      );
+      sweepProcessed.value += r.processed;
+      sweepReclaimed.value += r.reclaimedBytes;
+      offset = r.nextOffset;
+      done = r.done;
+      if (r.processed === 0) break;
+    }
+    sweepFinished.value = true;
+    bump.value++;
+    await fetchContents();
+    await loadStorage(false);
+  } catch (err: any) {
+    uploadError.value = err?.data?.message || 'Could not optimize the library.';
+    sweepOpen.value = false;
+  } finally {
+    sweeping.value = false;
   }
 }
 
@@ -468,9 +551,12 @@ provide<FilesContext>('filesCtx', {
   bump,
   toggleSelect,
   openFile,
+  openFolder: (folder) => navigateToFolder(folder.id, folder.name),
   download: downloadFile,
   copyLink: copyFileLink,
   copiedId: copiedFileId,
+  optimize: handleOptimizeFile,
+  isOptimizable,
   rename: (item, kind) => startRename(item, kind),
   remove: (item, kind) => (kind === 'folder' ? handleDeleteFolder(item) : handleDeleteFile(item)),
   move: moveItem,
@@ -581,6 +667,10 @@ watch(viewMode, (v) => {
             />
           </div>
         </div>
+        <Button variant="outline" size="sm" title="Optimize all images to reclaim space" @click="openSweep">
+          <Icon name="lucide:wand-sparkles" class="w-4 h-4 sm:mr-1" />
+          <span class="hidden sm:inline">Optimize</span>
+        </Button>
         <Button variant="outline" size="sm" @click="showNewFolder = true">
           <Icon name="lucide:folder-plus" class="w-4 h-4 mr-1" />
           New Folder
@@ -810,6 +900,14 @@ watch(viewMode, (v) => {
                     <Icon :name="copiedFileId === file.id ? 'lucide:check' : 'lucide:link'" class="w-3 h-3" />
                   </button>
                   <button
+                    v-if="isOptimizable(file.type)"
+                    class="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Optimize"
+                    @click.stop="handleOptimizeFile(file)"
+                  >
+                    <Icon name="lucide:wand-sparkles" class="w-3 h-3" />
+                  </button>
+                  <button
                     class="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
                     title="Download"
                     @click.stop="downloadFile(file)"
@@ -952,6 +1050,115 @@ watch(viewMode, (v) => {
           <div class="flex justify-end mt-5">
             <Button type="button" variant="outline" size="sm" :disabled="deletingFolder" @click="deleteFolderTarget = null">Cancel</Button>
           </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Optimize File Modal — email-safe default, WebP opt-in with a warning -->
+    <Teleport to="body">
+      <div
+        v-if="optimizeTarget"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="!optimizing && (optimizeTarget = null)"
+      >
+        <div class="ios-card shadow-xl w-full max-w-md mx-4 p-6">
+          <h2 class="font-semibold mb-1">Optimize "{{ getFileName(optimizeTarget) }}"</h2>
+
+          <template v-if="!optimizeResult">
+            <p class="text-sm text-muted-foreground mb-5">Shrink this image to save storage. Choose a format:</p>
+            <div class="flex flex-col gap-2">
+              <button
+                class="text-left rounded-xl border border-border hover:border-primary/40 hover:bg-muted/30 px-4 py-3 transition-colors disabled:opacity-50"
+                :disabled="optimizing"
+                @click="confirmOptimize('auto')"
+              >
+                <div class="flex items-center gap-2 text-sm font-medium">
+                  <Icon name="lucide:circle-check-big" class="w-4 h-4 text-primary" />
+                  Optimize for web &amp; email
+                </div>
+                <p class="text-xs text-muted-foreground mt-1 ml-6">JPEG/PNG — displays everywhere, including Outlook and Gmail. Recommended.</p>
+              </button>
+              <button
+                class="text-left rounded-xl border border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/10 px-4 py-3 transition-colors disabled:opacity-50"
+                :disabled="optimizing"
+                @click="confirmOptimize('webp')"
+              >
+                <div class="flex items-center gap-2 text-sm font-medium">
+                  <Icon name="lucide:zap" class="w-4 h-4 text-amber-500" />
+                  Convert to WebP (smallest)
+                </div>
+                <p class="text-xs text-muted-foreground mt-1 ml-6">
+                  Smaller files, but <span class="font-medium text-amber-600 dark:text-amber-400">WebP doesn't display in Outlook or Gmail email</span>. Use for web only.
+                </p>
+              </button>
+            </div>
+            <div v-if="optimizing" class="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" /> Optimizing…
+            </div>
+            <div class="flex justify-end mt-5">
+              <Button type="button" variant="outline" size="sm" :disabled="optimizing" @click="optimizeTarget = null">Cancel</Button>
+            </div>
+          </template>
+
+          <template v-else>
+            <div v-if="optimizeResult.optimized" class="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 mb-4">
+              <p class="text-sm font-medium">Saved {{ formatFileSize(optimizeResult.before - optimizeResult.after) }}</p>
+              <p class="text-xs text-muted-foreground mt-1">
+                {{ formatFileSize(optimizeResult.before) }} → {{ formatFileSize(optimizeResult.after) }}
+                · now {{ optimizeResult.type.replace('image/', '').toUpperCase() }}
+              </p>
+            </div>
+            <p v-else class="text-sm text-muted-foreground mb-4">This file is already as small as it can get — nothing changed.</p>
+            <div class="flex justify-end">
+              <Button type="button" size="sm" @click="optimizeTarget = null">Done</Button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Optimize Library (sweep) Modal -->
+    <Teleport to="body">
+      <div
+        v-if="sweepOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="!sweeping && (sweepOpen = false)"
+      >
+        <div class="ios-card shadow-xl w-full max-w-md mx-4 p-6">
+          <h2 class="font-semibold mb-1">Optimize library</h2>
+
+          <template v-if="!sweeping && !sweepFinished">
+            <p class="text-sm text-muted-foreground mb-5">
+              Re-encodes every image in your files to email-safe <span class="font-medium text-foreground">JPEG/PNG</span> to reclaim storage.
+              WebP isn't used, so optimized images still display in Outlook and Gmail. Originals are replaced in place —
+              existing links keep working. This can take a while for large libraries.
+            </p>
+            <div class="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" @click="sweepOpen = false">Cancel</Button>
+              <Button type="button" size="sm" @click="runSweep">
+                <Icon name="lucide:wand-sparkles" class="w-4 h-4 mr-1" /> Optimize all
+              </Button>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="flex items-center gap-2 mb-3">
+              <Icon v-if="sweeping" name="lucide:loader-2" class="w-4 h-4 animate-spin text-primary" />
+              <Icon v-else name="lucide:circle-check-big" class="w-4 h-4 text-emerald-500" />
+              <p class="text-sm font-medium">
+                {{ sweeping ? 'Optimizing…' : 'Done' }}
+              </p>
+            </div>
+            <div class="rounded-xl bg-muted/40 px-4 py-3 text-sm">
+              <p>{{ sweepProcessed }} image{{ sweepProcessed === 1 ? '' : 's' }} processed</p>
+              <p class="text-muted-foreground mt-0.5">Reclaimed {{ formatFileSize(sweepReclaimed) || '0 B' }}</p>
+            </div>
+            <div class="flex justify-end mt-5">
+              <Button type="button" size="sm" :disabled="sweeping" @click="sweepOpen = false">
+                {{ sweeping ? 'Please wait…' : 'Close' }}
+              </Button>
+            </div>
+          </template>
         </div>
       </div>
     </Teleport>

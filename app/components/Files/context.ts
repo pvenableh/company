@@ -14,10 +14,14 @@ export interface FilesContext {
 
   toggleSelect: (kind: 'file' | 'folder', item: any) => void
   openFile: (file: any) => void
+  /** Drill into a folder (change the current folder / breadcrumb). */
+  openFolder: (folder: any) => void
   download: (file: any) => void
   copyLink: (file: any) => void
   /** id of the file whose link was just copied (for transient "copied" UI). */
   copiedId: Ref<string | null>
+  optimize: (file: any) => void
+  isOptimizable: (type: string) => boolean
   rename: (item: any, kind: 'file' | 'folder') => void
   remove: (item: any, kind: 'file' | 'folder') => void
   move: (kind: 'file' | 'folder', id: string, targetFolderId: string | null) => Promise<void>

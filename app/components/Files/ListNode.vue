@@ -92,7 +92,7 @@ async function onDrop(e: DragEvent) {
       @dragover="onDragOver"
       @dragleave="dragOver = false"
       @drop="onDrop"
-      @click="kind === 'folder' ? toggleExpand() : ctx.openFile(item)"
+      @click="kind === 'folder' ? ctx.openFolder(item) : ctx.openFile(item)"
     >
       <div class="flex items-center gap-2 min-w-0" :style="indentStyle">
         <!-- select -->
@@ -140,6 +140,14 @@ async function onDrop(e: DragEvent) {
           @click.stop="ctx.copyLink(item)"
         >
           <Icon :name="ctx.copiedId.value === item.id ? 'lucide:check' : 'lucide:link'" class="w-3.5 h-3.5" />
+        </button>
+        <button
+          v-if="kind === 'file' && ctx.isOptimizable(item.type)"
+          class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          title="Optimize"
+          @click.stop="ctx.optimize(item)"
+        >
+          <Icon name="lucide:wand-sparkles" class="w-3.5 h-3.5" />
         </button>
         <button v-if="kind === 'file'" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Download" @click.stop="ctx.download(item)">
           <Icon name="lucide:download" class="w-3.5 h-3.5" />
