@@ -17,7 +17,8 @@
  * flagged as a bracketed placeholder for the user to fill in.
  */
 
-import { readItem, createItem } from '@directus/sdk';
+import { readItem, createItem, updateItem } from '@directus/sdk';
+import { ensurePursuitLead } from './pursuit-wrap';
 import type { LLMProvider } from './llm/types';
 import { logAiAction } from './ai-actions';
 import { newEntryId } from '~~/shared/blocks/normalize';
@@ -296,10 +297,28 @@ export async function persistDraftDocuments(
         total_value: gen.total_value,
         valid_until: gen.valid_until,
         lead: input.leadId ?? null,
+        client: input.clientId ?? null,
         contact: input.contactId ?? null,
       } as any),
     ) as any;
     proposalId = created?.id ?? null;
+
+    // Auto-wrap (Pursuits merge): a lead-less draft with a contact/client gets a
+    // lightweight pursuit so it lands on the Opportunities board. Best-effort.
+    if (proposalId && !input.leadId && (input.contactId || input.clientId)) {
+      try {
+        const leadId = await ensurePursuitLead(directus, {
+          organization: input.organizationId,
+          contact: input.contactId,
+          client: input.clientId,
+          status: 'draft',
+          value: gen.total_value,
+        });
+        if (leadId != null) await directus.request(updateItem('proposals', proposalId, { lead: leadId } as any));
+      } catch (err) {
+        console.warn('[generate-documents] pursuit auto-wrap failed (non-blocking):', err);
+      }
+    }
   }
 
   if (input.targets.includes('contract') && gen.contractBlocks.length) {
