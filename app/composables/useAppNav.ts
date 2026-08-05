@@ -70,8 +70,7 @@ const FLOORS: Partial<Record<AppId, AppFloor[]>> = {
 	clients: [
 		{ key: 'clients', label: 'Clients', icon: 'lucide:building-2' },
 		{ key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
-		{ key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
-		{ key: 'pipeline', label: 'Pipeline', icon: 'lucide:target' },
+		{ key: 'pursuits', label: 'Pursuits', icon: 'lucide:target' },
 		{ key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
 		{ key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
 	],

@@ -20,11 +20,13 @@ const config = useRuntimeConfig();
 // simple list/table for clients/contacts/partners, dashboard-shaped for
 // Card Desk and Intelligence. The page wrapper stays the same; the body
 // switches via v-if/v-else-if blocks below.
-type ViewKey = 'clients' | 'contacts' | 'leads' | 'pipeline' | 'carddesk' | 'intelligence';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'leads', 'pipeline', 'carddesk', 'intelligence'];
+type ViewKey = 'clients' | 'contacts' | 'pursuits' | 'carddesk' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'pursuits', 'carddesk', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
+  // Legacy ?view=leads / ?view=pipeline fold into the merged Pursuits tab.
+  if (v === 'leads' || v === 'pipeline') return 'pursuits';
   if (typeof v === 'string' && VIEW_KEYS.includes(v as ViewKey)) return v as ViewKey;
   // Contacts-scoped filters in the URL imply Contacts view — keeps marketing's
   // Segments shortcuts and any deep-linked filter URL landing on the right tab.
@@ -55,11 +57,24 @@ const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntellige
 const { getLeads, getLeadStats } = useLeads();
 const { isOrgManagerOrAbove, canCreate, canDelete } = useOrgRole();
 
-const leadViewCookie = useCookie('leadView', { default: () => 'board' });
-const leadActiveView = ref(leadViewCookie.value || 'board');
-watch(leadActiveView, (val) => { leadViewCookie.value = val; });
-const leadViewOptions = [
-  { value: 'board', label: 'Board', icon: 'lucide:columns-3' },
+// ── Pursuits lens ──────────────────────────────────────────────────────────
+// The merged Leads + Pipeline tab. One funnel, three lenses:
+//   opportunities → the lead pursuit board (relationship stages, New → Won)
+//   proposals     → the proposal pursuit board (documents in flight)
+//   grid          → filterable lead cards
+// Legacy deep-links seed the matching lens: ?view=leads → opportunities,
+// ?view=pipeline → proposals.
+type PursuitLens = 'opportunities' | 'proposals' | 'grid';
+const pursuitLensCookie = useCookie<PursuitLens>('pursuitLens', { default: () => 'opportunities' });
+const initialLens: PursuitLens =
+  route.query.view === 'pipeline' ? 'proposals'
+  : route.query.view === 'leads' ? 'opportunities'
+  : (pursuitLensCookie.value || 'opportunities');
+const pursuitLens = ref<PursuitLens>(initialLens);
+watch(pursuitLens, (val) => { pursuitLensCookie.value = val; });
+const pursuitLensOptions: Array<{ value: PursuitLens; label: string; icon: string }> = [
+  { value: 'opportunities', label: 'Opportunities', icon: 'lucide:target' },
+  { value: 'proposals', label: 'Proposals', icon: 'lucide:file-text' },
   { value: 'grid', label: 'Grid', icon: 'lucide:layout-grid' },
 ];
 
@@ -529,7 +544,7 @@ watch(view, (next) => {
     // Single-field query; empty perms yield an empty Set — fire-and-forget.
     fetchCardDeskPromotedIds().then((set) => { cardDeskContactIds.value = set; });
   }
-  if (next === 'leads' && !leadsLoaded) {
+  if (next === 'pursuits' && !leadsLoaded) {
     leadsLoaded = true;
     fetchLeadsData();
   }
@@ -552,7 +567,7 @@ watch(view, (next) => {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Contact
         </Button>
-        <TooltipProvider v-if="view === 'leads' && isOrgManagerOrAbove" :delay-duration="200">
+        <TooltipProvider v-if="view === 'pursuits' && isOrgManagerOrAbove" :delay-duration="200">
           <Tooltip>
             <TooltipTrigger as-child>
               <Button variant="outline" size="sm" @click="automationsSlide.open('_')">
@@ -898,37 +913,56 @@ watch(view, (next) => {
            contact connection detail lives on /contacts/[id]. The Contacts
            tab's category=partner filter is the everyday distinct-people view. -->
 
-      <!-- ── Leads view ───────────────────────────────────────────────── -->
-      <!-- Lifted in from the standalone /leads page. Stats hero + Board/Grid
-           toggle + filters. /leads/[id] and /leads/automations stay as their
-           own routes; this tab is just the list. -->
-      <template v-else-if="view === 'leads'">
+      <!-- ── Pursuits view (Leads + Pipeline merged) ─────────────────────
+           One funnel at two zoom levels. Opportunities = the relationship/
+           lead board (New → Won). Proposals = the documents in flight for
+           those opportunities AND existing clients. Grid = filterable lead
+           cards. Legacy ?view=leads / ?view=pipeline deep-link straight in
+           and preselect the matching lens (see initialLens). /leads/[id] and
+           /leads/automations stay as their own routes. -->
+      <template v-else-if="view === 'pursuits'">
 
-        <!-- Board | Grid toggle (universal pill style) -->
-        <div class="mb-6 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
-          <button
-            v-for="opt in leadViewOptions"
-            :key="opt.value"
-            type="button"
-            class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-            :class="leadActiveView === opt.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-            @click="leadActiveView = opt.value"
-          >
-            <Icon :name="opt.icon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
-            {{ opt.label }}
-          </button>
+        <!-- What is this? one-line framing so the two lenses read as one thing -->
+        <div class="mb-5 rounded-2xl border border-border bg-card/50 px-4 py-3">
+          <p class="text-sm font-medium">Your sales funnel — first contact to signed deal.</p>
+          <p class="text-xs text-muted-foreground mt-0.5 leading-snug">
+            <span class="text-foreground/80 font-medium">Opportunities</span> are the people you're courting (New → Qualified → Won).
+            <span class="text-foreground/80 font-medium">Proposals</span> are the documents you've sent them — for a new lead or an existing client. Same pipeline, two views.
+          </p>
         </div>
 
-        <div v-show="leadActiveView === 'board'">
+        <!-- Lens toggle + contextual action -->
+        <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+            <button
+              v-for="opt in pursuitLensOptions"
+              :key="opt.value"
+              type="button"
+              class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+              :class="pursuitLens === opt.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+              @click="pursuitLens = opt.value"
+            >
+              <Icon :name="opt.icon" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+              {{ opt.label }}
+            </button>
+          </div>
+          <UiActionButton v-if="pursuitLens === 'grid'" icon="lucide:plus" @click="showLeadForm = true">
+            New Lead
+          </UiActionButton>
+        </div>
+
+        <!-- Opportunities lens = lead pursuit board (relationship stages) -->
+        <div v-show="pursuitLens === 'opportunities'">
           <LeadsPipelineBoard />
         </div>
 
-        <div v-show="leadActiveView !== 'board'">
-          <div class="flex justify-end mb-3">
-            <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
-              New Lead
-            </UiActionButton>
-          </div>
+        <!-- Proposals lens = proposal pursuit board (for leads AND clients) -->
+        <div v-show="pursuitLens === 'proposals'">
+          <MoneyProposalPipeline />
+        </div>
+
+        <!-- Grid lens = filterable lead cards -->
+        <div v-show="pursuitLens === 'grid'">
           <LeadsLeadFilters
             v-model:search="leadSearch"
             v-model:stage="leadStageFilter"
@@ -949,8 +983,8 @@ watch(view, (next) => {
           </div>
           <div v-else class="text-center py-20">
             <EIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p class="text-muted-foreground">No leads found</p>
-            <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms will appear here</p>
+            <p class="text-muted-foreground">No opportunities yet</p>
+            <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms land here — or add one manually.</p>
             <div class="mt-4">
               <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
                 New Lead
@@ -959,20 +993,12 @@ watch(view, (next) => {
           </div>
         </div>
 
-        <!-- Manual lead creation (Grid view) -->
+        <!-- Manual lead creation -->
         <LeadsFormModal
           v-model="showLeadForm"
           :organization-id="selectedOrg"
           @created="handleLeadCreated"
         />
-      </template>
-
-      <!-- ── Pipeline view (proposal pursuit board) ───────────────────────
-           The sales pipeline lives here in People now (moved out of Money,
-           which keeps only the read-only Forecast floor). Portfolio-wide
-           board of every proposal in flight for leads AND clients. -->
-      <template v-else-if="view === 'pipeline'">
-        <MoneyProposalPipeline />
       </template>
 
       <!-- ── Card Desk view ───────────────────────────────────────────── -->
