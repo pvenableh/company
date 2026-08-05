@@ -74,7 +74,7 @@ const fmtMoney = (n: number) => `$${Math.round(Number(n) || 0).toLocaleString()}
 			</div>
 			<div>
 				<p class="text-sm font-semibold text-foreground tabular-nums">{{ fmtMoney(metrics.outstandingAmount) }}</p>
-				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding</p>
+				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Overdue</p>
 			</div>
 		</div>
 	</div>
