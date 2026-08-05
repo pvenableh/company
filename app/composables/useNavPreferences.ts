@@ -41,7 +41,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Scheduler', type: ['header', 'footer', 'drawer'], to: '/scheduler', icon: 'i-heroicons-calendar-date-range', color: 'bg-amber-500', description: 'Book meetings', section: 'secondary', featureKey: 'appointments' },
 	{ name: 'Tasks', type: ['drawer'], to: '/tasks', icon: 'i-heroicons-clipboard-document-check', color: 'bg-blue-500', description: 'Manage tasks', section: 'secondary', featureKey: 'tasks' },
 	{ name: 'Files', type: ['header', 'footer', 'drawer'], to: '/files', icon: 'i-heroicons-folder-open', color: 'bg-sky-500', description: 'File manager', section: 'primary' },
-	{ name: 'Pitch Pages', type: ['header', 'footer', 'drawer'], to: '/pitches', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-amber-400 to-yellow-600', description: 'Gated pitch links', section: 'primary', featureKey: 'proposals' },
+	// Pitch Pages folded into People → Pursuits → Pitches (2026-08-05); no longer a standalone app.
 	// ── Everything below starts HIDDEN from sidebar — accessible via Command Center grid + Cmd+K ──
 	{ name: 'Tickets', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/tickets', icon: 'i-heroicons-queue-list', color: 'bg-indigo-500', description: 'Support tickets', section: 'secondary', featureKey: 'tickets' },
 	{ name: 'Teams', type: ['drawer'], to: '/apps/organization?floor=settings&slide=teams:_', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },

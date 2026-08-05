@@ -939,8 +939,7 @@ const clientCreateMenuItems = computed(() => [
 	{ label: 'Invoice', icon: 'lucide:file-text', onClick: () => openInvoiceCreate({ client: props.clientId }), separatorBefore: true },
 	{ label: 'Proposal', icon: 'lucide:file-plus', onClick: () => openProposalCreate() },
 	{ label: 'Contract', icon: 'lucide:file-signature', onClick: () => openContractCreate() },
-	// allow-legacy-link — /pitches is a standalone deep-link receiver (gated pitch manager)
-	{ label: 'Pitch page', icon: 'lucide:sparkles', onClick: () => navigateTo(`/pitches?for=client:${props.clientId}`) },
+	{ label: 'Pitch page', icon: 'lucide:sparkles', onClick: () => navigateTo(`/apps/clients?view=pursuits&lens=pitches&for=client:${props.clientId}`) },
 	{ label: 'Contact', icon: 'lucide:user-plus', onClick: () => openContactCreate({ clientId: props.clientId }), separatorBefore: true },
 ]);
 

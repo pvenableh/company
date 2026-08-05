@@ -58,23 +58,40 @@ const { getLeads, getLeadStats } = useLeads();
 const { isOrgManagerOrAbove, canCreate, canDelete } = useOrgRole();
 
 // ── Pursuits lens ──────────────────────────────────────────────────────────
-// The merged Leads + Pipeline tab. One funnel, three lenses:
+// The merged Leads + Pipeline tab. One funnel, four lenses:
 //   opportunities → the lead pursuit board (relationship stages, New → Won)
 //   proposals     → the proposal pursuit board (documents in flight)
+//   pitches       → gated pitch-page manager (folded in from the old /pitches app)
 //   grid          → filterable lead cards
-// Legacy deep-links seed the matching lens: ?view=leads → opportunities,
-// ?view=pipeline → proposals.
-type PursuitLens = 'opportunities' | 'proposals' | 'grid';
+// Deep-links seed the lens: ?lens=<key> (canonical), or the legacy
+// ?view=leads → opportunities / ?view=pipeline → proposals.
+type PursuitLens = 'opportunities' | 'proposals' | 'pitches' | 'grid';
+const PURSUIT_LENSES: PursuitLens[] = ['opportunities', 'proposals', 'pitches', 'grid'];
 const pursuitLensCookie = useCookie<PursuitLens>('pursuitLens', { default: () => 'opportunities' });
-const initialLens: PursuitLens =
-  route.query.view === 'pipeline' ? 'proposals'
-  : route.query.view === 'leads' ? 'opportunities'
-  : (pursuitLensCookie.value || 'opportunities');
+const initialLens: PursuitLens = (() => {
+  const l = route.query.lens;
+  if (typeof l === 'string' && (PURSUIT_LENSES as string[]).includes(l)) return l as PursuitLens;
+  if (route.query.view === 'pipeline') return 'proposals';
+  if (route.query.view === 'leads') return 'opportunities';
+  return pursuitLensCookie.value || 'opportunities';
+})();
 const pursuitLens = ref<PursuitLens>(initialLens);
 watch(pursuitLens, (val) => { pursuitLensCookie.value = val; });
+// Directional left/right slide between lenses, matching the app's floor
+// transitions (same helper the top-level view segments use).
+const lensTransition = useDirectionalFloorTransition(PURSUIT_LENSES, pursuitLens);
+// Same-route deep-links (e.g. a client's "+ New → Pitch page" pushing
+// ?lens=pitches without remounting the page) still switch the lens.
+watch(() => route.query.lens, (l) => {
+  if (typeof l === 'string' && (PURSUIT_LENSES as string[]).includes(l)) {
+    if (view.value !== 'pursuits') view.value = 'pursuits';
+    pursuitLens.value = l as PursuitLens;
+  }
+});
 const pursuitLensOptions: Array<{ value: PursuitLens; label: string; icon: string }> = [
   { value: 'opportunities', label: 'Opportunities', icon: 'lucide:target' },
   { value: 'proposals', label: 'Proposals', icon: 'lucide:file-text' },
+  { value: 'pitches', label: 'Pitches', icon: 'lucide:sparkles' },
   { value: 'grid', label: 'Grid', icon: 'lucide:layout-grid' },
 ];
 
@@ -927,7 +944,7 @@ watch(view, (next) => {
           <p class="text-sm font-medium">Your sales funnel — first contact to signed deal.</p>
           <p class="text-xs text-muted-foreground mt-0.5 leading-snug">
             <span class="text-foreground/80 font-medium">Opportunities</span> are the people you're courting (New → Qualified → Won).
-            <span class="text-foreground/80 font-medium">Proposals</span> are the documents you've sent them — for a new lead or an existing client. Same pipeline, two views.
+            <span class="text-foreground/80 font-medium">Proposals</span> are the documents you've sent them, and <span class="text-foreground/80 font-medium">Pitches</span> are the gated share links — all for one lead or client.
           </p>
         </div>
 
@@ -951,47 +968,51 @@ watch(view, (next) => {
           </UiActionButton>
         </div>
 
-        <!-- Opportunities lens = lead pursuit board (relationship stages) -->
-        <div v-show="pursuitLens === 'opportunities'">
-          <LeadsPipelineBoard />
-        </div>
+        <!-- Lenses slide left/right, matching the app's floor transitions. -->
+        <Transition :name="lensTransition" mode="out-in">
+          <div :key="pursuitLens">
+            <!-- Opportunities lens = lead pursuit board (relationship stages) -->
+            <LeadsPipelineBoard v-if="pursuitLens === 'opportunities'" />
 
-        <!-- Proposals lens = proposal pursuit board (for leads AND clients) -->
-        <div v-show="pursuitLens === 'proposals'">
-          <MoneyProposalPipeline />
-        </div>
+            <!-- Proposals lens = proposal pursuit board (for leads AND clients) -->
+            <MoneyProposalPipeline v-else-if="pursuitLens === 'proposals'" />
 
-        <!-- Grid lens = filterable lead cards -->
-        <div v-show="pursuitLens === 'grid'">
-          <LeadsLeadFilters
-            v-model:search="leadSearch"
-            v-model:stage="leadStageFilter"
-            v-model:priority="leadPriorityFilter"
-            class="mb-4"
-            @clear="fetchLeadsData"
-          />
-          <div v-if="leadsLoading" class="flex items-center justify-center py-20">
-            <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-          <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <LeadsLeadCard
-              v-for="lead in allLeads"
-              :key="lead.id"
-              :lead="lead"
-              @click="openLead"
-            />
-          </div>
-          <div v-else class="text-center py-20">
-            <EIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p class="text-muted-foreground">No opportunities yet</p>
-            <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms land here — or add one manually.</p>
-            <div class="mt-4">
-              <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
-                New Lead
-              </UiActionButton>
+            <!-- Pitches lens = gated pitch-page manager (folded in from /pitches) -->
+            <PitchesManager v-else-if="pursuitLens === 'pitches'" />
+
+            <!-- Grid lens = filterable lead cards -->
+            <div v-else>
+              <LeadsLeadFilters
+                v-model:search="leadSearch"
+                v-model:stage="leadStageFilter"
+                v-model:priority="leadPriorityFilter"
+                class="mb-4"
+                @clear="fetchLeadsData"
+              />
+              <div v-if="leadsLoading" class="flex items-center justify-center py-20">
+                <EIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+              <div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <LeadsLeadCard
+                  v-for="lead in allLeads"
+                  :key="lead.id"
+                  :lead="lead"
+                  @click="openLead"
+                />
+              </div>
+              <div v-else class="text-center py-20">
+                <EIcon name="i-heroicons-inbox" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p class="text-muted-foreground">No opportunities yet</p>
+                <p class="text-xs text-muted-foreground/70 mt-1">Leads from your website forms land here — or add one manually.</p>
+                <div class="mt-4">
+                  <UiActionButton icon="lucide:plus" @click="showLeadForm = true">
+                    New Lead
+                  </UiActionButton>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </Transition>
 
         <!-- Manual lead creation -->
         <LeadsFormModal
