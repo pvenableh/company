@@ -693,15 +693,28 @@ const documentsLibrarySlide = useAppSlideOver('documents_library');
 const eventCategoriesSlide = useAppSlideOver('event-categories');
 const socialAccountsSlide = useAppSlideOver('social-accounts');
 const accountSubscriptionSlide = useAppSlideOver('account-subscription');
-const settingsTiles = computed(() => [
-  // Teams tile drops out when the org has Teams disabled.
-  ...(teamsEnabled.value
-    ? [{ label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') }]
-    : []),
-  { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
-  { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
-  { label: 'Event categories', desc: 'Colored labels for events on the project timeline', icon: 'lucide:tags', onClick: () => eventCategoriesSlide.open('_') },
-  { label: 'Refer an agency', desc: 'Share your link — you both earn bonus credits on their paid plan', icon: 'lucide:gift', to: '/organization/refer' },
+// Admin tooling, grouped so the settings floor reads as sections rather than one
+// grab-bag grid. Access = who can do what; Content & templates = the reusable
+// building blocks. "Refer an agency" moved OUT to its own accent card below —
+// it's an opportunity, not a config row.
+const settingsGroups = computed(() => [
+  {
+    heading: 'Access',
+    tiles: [
+      // Teams tile drops out when the org has Teams disabled.
+      ...(teamsEnabled.value
+        ? [{ label: 'Teams', desc: 'Group members for permissions and assignment', icon: 'lucide:user-cog', onClick: () => teamsSlide.open('_') }]
+        : []),
+      { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', icon: 'lucide:shield-check', onClick: () => rolesSlide.open('_') },
+    ],
+  },
+  {
+    heading: 'Content & templates',
+    tiles: [
+      { label: 'Documents library', desc: 'Reusable blocks + service offerings the proposal builder draws from', icon: 'lucide:blocks', onClick: () => documentsLibrarySlide.open('blocks') },
+      { label: 'Event categories', desc: 'Colored labels for events on the project timeline', icon: 'lucide:tags', onClick: () => eventCategoriesSlide.open('_') },
+    ],
+  },
 ]);
 
 // Document theme studio — applied to invoices, proposals, contracts. Inline
@@ -730,30 +743,8 @@ async function saveDocumentStudio(payload: { theme: string; accent: string; conf
   }
 }
 
-// Goals feature toggle — mirrors the control in the Overview editor, surfaced
-// here in Settings where admins actually look for it. `goals_enabled !== false`
-// counts as on (see useGoalsEnabled), so an unset org reads as enabled.
-const savingGoals = ref(false);
-const goalsEnabled = computed(() => org.value?.goals_enabled !== false);
-async function saveGoalsEnabled(next: boolean) {
-  if (!org.value?.id || savingGoals.value) return;
-  savingGoals.value = true;
-  try {
-    await organizationItems.update(org.value.id, { goals_enabled: next });
-    toast.add({
-      title: next ? 'Goals enabled' : 'Goals hidden',
-      description: next
-        ? 'Goals are visible to everyone in this organization.'
-        : 'Goals are hidden across this organization.',
-      color: 'green',
-    });
-    await fetchOrganizationDetails();
-  } catch (error: any) {
-    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update goals setting', color: 'red' });
-  } finally {
-    savingGoals.value = false;
-  }
-}
+// Goals now lives solely in the Features card (AppsOrganizationFeatureTogglesCard,
+// alongside Weather + Teams) — the former standalone toggle here was a duplicate.
 
 const isArchived = computed(() => !!org.value?.archived_at);
 
@@ -1421,15 +1412,15 @@ function onClientInvited() {
       <!-- ── Settings floor ───────────────────────────────────────────── -->
       <template v-else-if="floor === 'settings'">
         <div class="space-y-5">
-          <!-- Admin tooling tiles -->
-          <div>
+          <!-- Admin tooling, grouped into sections (Access / Content & templates). -->
+          <div v-for="group in settingsGroups" :key="group.heading">
             <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
-              Admin tooling
+              {{ group.heading }}
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <component
                 :is="tile.to ? 'NuxtLink' : 'button'"
-                v-for="tile in settingsTiles"
+                v-for="tile in group.tiles"
                 :key="tile.label"
                 :to="tile.to"
                 :type="tile.to ? undefined : 'button'"
@@ -1446,52 +1437,39 @@ function onClientInvited() {
                 <Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/50 shrink-0 mt-1" />
               </component>
             </div>
+
+            <!-- Document theme belongs with Content & templates — it styles every
+                 invoice, proposal, and contract you send. -->
+            <div v-if="group.heading === 'Content & templates' && canManageOrg && org" class="ios-card p-5 mt-3">
+              <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+                Document theme
+              </h3>
+              <p class="text-xs text-muted-foreground mb-4">
+                Style every invoice, proposal, and contract you send — preview updates live.
+              </p>
+              <DocumentsDocumentThemeStudio
+                :theme="org.document_theme || 'classic'"
+                :accent="org.document_accent || '#1f2937'"
+                :config="(org as any).document_theme_config || null"
+                :saving="savingDocTheme"
+                @save="saveDocumentStudio"
+              />
+            </div>
           </div>
 
-          <!-- Org-wide feature flags (Goals / Weather / Teams). Moved here from
-               the Overview editor so they're discoverable as feature toggles. -->
+          <!-- Features — org-wide switches (Goals / Weather / Teams). Single
+               source of truth; the former duplicate Goals card was removed. -->
           <AppsOrganizationFeatureTogglesCard :can-manage="canManageOrg" />
 
-          <!-- Document theme — applied to every invoice, proposal, and
-               contract. Inlined here so users never have to leave the apps
-               shell to swap themes or accent color. -->
-          <div v-if="canManageOrg && org" class="ios-card p-5">
-            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
-              Document theme
-            </h3>
-            <p class="text-xs text-muted-foreground mb-4">
-              Style every invoice, proposal, and contract you send — preview updates live.
-            </p>
-            <DocumentsDocumentThemeStudio
-              :theme="org.document_theme || 'classic'"
-              :accent="org.document_accent || '#1f2937'"
-              :config="(org as any).document_theme_config || null"
-              :saving="savingDocTheme"
-              @save="saveDocumentStudio"
-            />
-          </div>
-
-          <!-- Features — org-wide feature switches. Goals lives here (not just
-               in the Overview editor) so admins find it where they look. -->
-          <div v-if="canManageOrg && org" class="ios-card p-5">
+          <!-- Grow — referral is an opportunity, not a config row, so it gets its
+               own accent card (the real ReferralCard with copy-link + rewards)
+               instead of a plain admin tile. -->
+          <div v-if="canManageOrg">
             <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
-              Features
+              Grow
             </h3>
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <p class="text-sm font-medium">Goals</p>
-                <p class="text-xs text-muted-foreground mt-0.5">
-                  {{ goalsEnabled
-                    ? 'Goals are visible to everyone in this organization.'
-                    : 'Goals are hidden across this organization — nav, cards, and dashboard widgets.' }}
-                </p>
-              </div>
-              <EToggle
-                :model-value="goalsEnabled"
-                :disabled="savingGoals"
-                class="mt-0.5 shrink-0"
-                @update:model-value="saveGoalsEnabled"
-              />
+            <div class="rounded-2xl ring-2 ring-primary/40 bg-gradient-to-br from-primary/10 via-transparent to-transparent overflow-hidden">
+              <OrganizationReferralCard />
             </div>
           </div>
 
