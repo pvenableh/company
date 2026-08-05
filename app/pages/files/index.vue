@@ -189,9 +189,18 @@ function getFileName(file: any): string {
   return file.title || file.filename_download || 'Untitled';
 }
 
+// Open the asset in a NEW tab so the Earnest app is preserved. An anchor click
+// with target=_blank is more reliable than window.open (which some popup
+// blockers force into the same tab / suppress).
 function openFile(file: any) {
   const url = `${config.public.directusUrl}/assets/${file.id}`;
-  window.open(url, '_blank');
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // Force-download via Directus's ?download (sets Content-Disposition: attachment).
