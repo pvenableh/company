@@ -56,14 +56,19 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create FormData for Directus SDK with the (possibly) optimized bytes.
+    // IMPORTANT: metadata fields (folder, title, …) MUST be appended BEFORE the
+    // `file` part — Directus/busboy ignores any field that arrives after the
+    // file stream, which silently dropped `folder` and orphaned uploads at the
+    // Directus root.
     const uploadFormData = new FormData();
     const blob = new Blob([new Uint8Array(optimized.bytes)], { type: optimized.type });
-    uploadFormData.append("file", blob, optimized.filename);
 
     if (metadata.title) uploadFormData.append("title", metadata.title);
     if (metadata.description) uploadFormData.append("description", metadata.description);
     if (metadata.folder) uploadFormData.append("folder", metadata.folder);
     if (metadata.tags) uploadFormData.append("tags", JSON.stringify(metadata.tags));
+
+    uploadFormData.append("file", blob, optimized.filename);
 
     // Upload using SDK — withAuthRetry refreshes + retries once on a rejected token.
     const result = await withAuthRetry(event, (directus) => directus.request(uploadFiles(uploadFormData)));

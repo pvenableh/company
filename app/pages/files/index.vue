@@ -27,8 +27,27 @@ const uploadProgress = ref(0);
 const uploadError = ref<string | null>(null);
 
 // ── Storage usage meter ──────────────────────────────────────────────────────
-const { selectedOrg } = useOrganization();
+const { selectedOrg, currentOrg } = useOrganization();
 const storage = ref<{ usedBytes: number; limitBytes: number | null } | null>(null);
+
+// Default the browser to the org's ROOT folder. Safe to call repeatedly; only
+// acts while still on the unresolved default (nothing navigated to yet). This
+// matters because getOrgFolderId() returns null until the org record loads —
+// without it, an upload while unresolved would drop the file at the Directus
+// root (folder=null), outside the org's tree.
+function ensureOrgRoot() {
+  if (currentFolderId.value) return;
+  const orgFolderId = getOrgFolderId();
+  if (!orgFolderId) return;
+  currentFolderId.value = orgFolderId;
+  breadcrumbs.value = [{ id: orgFolderId, name: currentOrg.value?.name || 'Files' }];
+}
+
+// The folder an upload should land in: the folder being viewed, else the org
+// root — NEVER the global Directus root, which would orphan the file.
+function uploadFolderTarget(): string | undefined {
+  return currentFolderId.value || getOrgFolderId() || undefined;
+}
 
 async function loadStorage(recompute = false) {
   if (!selectedOrg.value) return;
@@ -347,7 +366,7 @@ async function handleFileUpload(event: Event) {
     const total = uploadFiles.length;
     for (let i = 0; i < total; i++) {
       await uploadFile(uploadFiles[i], {
-        folder: currentFolderId.value || undefined,
+        folder: uploadFolderTarget(),
         organization: selectedOrg.value || undefined,
       });
       uploadProgress.value = Math.round(((i + 1) / total) * 100);
@@ -391,7 +410,7 @@ async function onDrop(e: DragEvent) {
     const total = droppedFiles.length;
     for (let i = 0; i < total; i++) {
       await uploadFile(droppedFiles[i], {
-        folder: currentFolderId.value || undefined,
+        folder: uploadFolderTarget(),
         organization: selectedOrg.value || undefined,
       });
       uploadProgress.value = Math.round(((i + 1) / total) * 100);
@@ -598,15 +617,21 @@ onMounted(async () => {
   const saved = localStorage.getItem(viewModeKey.value);
   if (saved === 'grid' || saved === 'list') viewMode.value = saved;
 
-  // Default to the current org's folder tree
-  const orgFolderId = getOrgFolderId();
-  if (orgFolderId) {
-    currentFolderId.value = orgFolderId;
-    const { currentOrg } = useOrganization();
-    breadcrumbs.value = [{ id: orgFolderId, name: currentOrg.value?.name || 'Files' }];
-  }
+  // Default to the current org's folder tree (falls back gracefully if the org
+  // record hasn't loaded yet — the watcher below re-runs once it has).
+  ensureOrgRoot();
   await fetchContents();
   await loadStorage();
+});
+
+// The org record can resolve AFTER mount (init race). When its root folder
+// becomes available and we're still on the unresolved default, snap to it so
+// the view — and any upload — targets the org tree, not the Directus root.
+watch(getOrgFolderId, (orgFolderId) => {
+  if (orgFolderId && !currentFolderId.value) {
+    ensureOrgRoot();
+    fetchContents();
+  }
 });
 
 // Refresh the storage meter when the active org changes.
