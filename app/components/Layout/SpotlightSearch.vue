@@ -10,7 +10,7 @@
 							ref="inputRef"
 							v-model="query"
 							type="text"
-							placeholder="Search apps..."
+							placeholder="Search apps, clients, records…"
 							class="spotlight-input"
 							@keydown.escape="close"
 							@keydown.enter="selectHighlighted"
@@ -22,41 +22,38 @@
 
 					<!-- Results -->
 					<div v-if="results.length" class="spotlight-results">
-						<template v-for="(link, i) in results" :key="link.to">
-							<!-- Section divider before the first "other" link -->
-							<div
-								v-if="otherStartIndex !== -1 && i === otherStartIndex"
-								class="spotlight-section"
-							>
-								<span>Other apps</span>
-								<span class="text-muted-foreground/50">Hidden from sidebar</span>
+						<template v-for="(item, i) in results" :key="item.kind + ':' + item.to">
+							<!-- Section header whenever the group changes (Apps, Clients, …) -->
+							<div v-if="i === 0 || item.section !== results[i - 1].section" class="spotlight-section">
+								<span>{{ item.section }}</span>
 							</div>
 							<button
 								class="spotlight-result"
 								:class="{ 'spotlight-result--active': i === highlightIndex }"
-								@click="navigate(link)"
+								@click="navigate(item)"
 								@mouseenter="highlightIndex = i"
 							>
 								<EIcon
-									:name="link.icon"
+									:name="item.icon"
 									class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground"
 								/>
 								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium text-foreground">{{ link.name }}</div>
-									<div class="text-xs text-muted-foreground truncate">{{ link.description }}</div>
+									<div class="text-sm font-medium text-foreground">{{ item.name }}</div>
+									<div class="text-xs text-muted-foreground truncate">{{ item.description }}</div>
 								</div>
 							</button>
 						</template>
+						<div v-if="searching" class="spotlight-searching">Searching records…</div>
 					</div>
 
 					<!-- Empty State -->
-					<div v-else-if="query.length > 0" class="spotlight-empty">
-						<p class="text-sm text-muted-foreground">No apps found</p>
+					<div v-else-if="query.length >= 2" class="spotlight-empty">
+						<p class="text-sm text-muted-foreground">{{ searching ? 'Searching…' : 'No matches found' }}</p>
 					</div>
 
 					<!-- Hint -->
 					<div v-else class="spotlight-empty">
-						<p class="text-xs text-muted-foreground">Type to search all apps</p>
+						<p class="text-xs text-muted-foreground">{{ query.length === 1 ? 'Keep typing…' : 'Search apps and org records' }}</p>
 					</div>
 				</div>
 			</div>
@@ -65,6 +62,8 @@
 </template>
 
 <script setup lang="ts">
+import { useDebounceFn } from '@vueuse/core';
+
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
@@ -83,30 +82,51 @@ const orderedLinks = computed(() => {
 	return { inHat, others };
 });
 
-const results = computed(() => {
+// Unified result item — an app-nav destination OR an org record hit.
+type ResultItem = { kind: 'app' | 'entity'; section: string; to: string; name: string; description: string; icon: string };
+
+// ── Org-wide entity search (records: clients, contacts, leads, …) ───────────
+// Debounced call to /api/search; app-nav matches stay local + instant.
+type EntityGroup = { key: string; label: string; icon: string; items: Array<{ id: string | number; name: string; description: string; to: string }> };
+const entityGroups = ref<EntityGroup[]>([]);
+const searching = ref(false);
+const runEntitySearch = useDebounceFn(async (q: string) => {
+	if (q.length < 2) { entityGroups.value = []; searching.value = false; return; }
+	searching.value = true;
+	try {
+		const r = await $fetch<{ groups: EntityGroup[] }>('/api/search', { query: { q } });
+		entityGroups.value = r.groups || [];
+	} catch {
+		entityGroups.value = [];
+	} finally {
+		searching.value = false;
+	}
+}, 220);
+
+const results = computed<ResultItem[]>(() => {
 	const { inHat, others } = orderedLinks.value;
 	const q = query.value.trim().toLowerCase();
 	const matches = (l: { name: string; description: string }) =>
 		!q || l.name.toLowerCase().includes(q) || l.description.toLowerCase().includes(q);
-	return [...inHat.filter(matches), ...others.filter(matches)];
+	const appItems: ResultItem[] = [...inHat.filter(matches), ...others.filter(matches)].map((l) => ({
+		kind: 'app', section: 'Apps', to: l.to, name: l.name, description: l.description, icon: l.icon,
+	}));
+	const entityItems: ResultItem[] = entityGroups.value.flatMap((g) =>
+		g.items.map((it) => ({ kind: 'entity', section: g.label, to: it.to, name: it.name, description: it.description, icon: g.icon })),
+	);
+	return [...appItems, ...entityItems];
 });
 
-// Index where "Other apps" starts (-1 = no divider)
-const otherStartIndex = computed(() => {
-	const visibleSet = new Set(visibleLinks.value.map(l => l.to));
-	const idx = results.value.findIndex(l => !visibleSet.has(l.to));
-	// Only render the divider if there's at least one in-hat result above it
-	return idx > 0 ? idx : -1;
-});
-
-watch(() => query.value, () => {
+watch(() => query.value, (q) => {
 	highlightIndex.value = 0;
+	runEntitySearch(q.trim());
 });
 
 watch(() => props.open, async (isOpen) => {
 	if (isOpen) {
 		query.value = '';
 		highlightIndex.value = 0;
+		entityGroups.value = [];
 		await nextTick();
 		inputRef.value?.focus();
 	}
@@ -226,6 +246,12 @@ const moveUp = () => {
 .spotlight-result:hover,
 .spotlight-result--active {
 	background: hsl(var(--muted) / 0.5);
+}
+
+.spotlight-searching {
+	padding: 8px 12px 4px;
+	font-size: 11px;
+	color: hsl(var(--muted-foreground) / 0.7);
 }
 
 .spotlight-empty {
