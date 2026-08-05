@@ -33,6 +33,8 @@ export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
 	// ── Work (top) ──
 	{ id: 'priority-actions', label: 'Priority Actions', span: 2 },
 	{ id: 'quick-tasks', label: 'Quick Tasks', span: 1, scroll: true },
+	// Sits directly under Quick Tasks by default — a glance at the sales pipeline.
+	{ id: 'pursuits', label: 'Pursuits', span: 1, scroll: true },
 	{ id: 'active-work', label: 'Active Clients & Projects', span: 3 },
 	{ id: 'suggestions', label: 'More Suggestions', span: 3 },
 	// Project Briefs + Channels share a row (2 + 1) on large screens.

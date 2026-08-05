@@ -758,6 +758,7 @@ const goTo = (route: string) => {
 							</div>
 						</div>
                             <CommandCenterQuickTasksWidget v-else-if="element.id === 'quick-tasks'" />
+                            <CommandCenterPursuitsWidget v-else-if="element.id === 'pursuits'" />
                             <!-- Earnest Score + its 30-day trend, stacked in one column. -->
                             <div v-else-if="element.id === 'earnest-score'" class="space-y-4">
                                 <EarnestScoreWidget
