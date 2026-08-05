@@ -30,3 +30,6 @@ oauth-walkthrough-*.mp4
 .claude/worktrees/
 .claude/settings.local.json
 .claude/plans/
+
+# Local scratch/preview files (never committed)
+public/_scratch/

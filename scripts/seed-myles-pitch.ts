@@ -9,8 +9,7 @@
  */
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { rewriteAssetSrc, selfHostGoogleFonts } from '../server/utils/pitch-ingest';
 import { hashPitchPassword } from '../server/utils/pitch-access';
 
@@ -48,7 +47,9 @@ async function uploadFile(bytes: Buffer, filename: string, type: string, folder:
 }
 
 async function main() {
-  let html = readFileSync(join(homedir(), 'Downloads', 'myles-private-events-v14.html'), 'utf8');
+  // The built pitch (real Camila photos + looping video bgs + GSAP) lives in the
+  // repo next to this script, so seeding is portable (no machine-specific path).
+  let html = readFileSync(fileURLToPath(new URL('./myles-private-events.html', import.meta.url)), 'utf8');
 
   const pitchesFolder = await findOrCreateFolder('Pitches', HUE_ROOT_FOLDER);
   const folder = pitchesFolder ? await findOrCreateFolder(TITLE.slice(0, 60), pitchesFolder) : null;
