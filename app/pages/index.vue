@@ -431,7 +431,7 @@ const showLeaderboard = computed(() => !!selectedTeam.value);
 // ── Command-center layout (per-user show/hide + drag-reorder) ──
 // Governs everything BELOW the pinned Priority Actions block.
 const layout = useDashboardLayout();
-const { editing: dashEditing, hiddenList, spanOf, cycleSpan, labelOf, scrollOf, hideWidget, showWidget, moveBy } = layout;
+const { editing: dashEditing, hiddenList, spanOf, cycleSpan, rowSpanOf, cycleRowSpan, labelOf, scrollOf, hideWidget, showWidget, moveBy } = layout;
 // Deterministic guards: a "visible" widget still renders nothing when its own
 // precondition is false (goals off, no team), which would leave an empty grid
 // cell — so filter those out of what the grid receives. setVisibleOrder keeps
@@ -590,6 +590,7 @@ const goTo = (route: string) => {
                             :widget-id="element.id"
                             :label="labelOf(element.id)"
                             :span="spanOf(element.id)"
+                            :row-span="rowSpanOf(element.id)"
                             :scroll="scrollOf(element.id)"
                             :editing="dashEditing"
                             :first="index === 0"
@@ -598,6 +599,7 @@ const goTo = (route: string) => {
                             @move-up="moveBy(element.id, -1)"
                             @move-down="moveBy(element.id, 1)"
                             @cycle-span="cycleSpan(element.id)"
+                            @cycle-row-span="cycleRowSpan(element.id)"
                         >
 						<div v-if="element.id === 'priority-actions'" class="space-y-4">
 							<div class="flex items-center gap-2">

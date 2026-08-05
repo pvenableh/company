@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
 					'related_contact.first_name', 'related_contact.last_name', 'related_contact.company',
 				],
 				sort: ['-date_created'],
-				limit: 4,
+				limit: 2,
 			}),
 		)
 		.then((rows: any[]) =>
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
 					'contact.first_name', 'contact.last_name',
 				],
 				sort: ['-date_created'],
-				limit: 4,
+				limit: 2,
 			}),
 		)
 		.then((rows: any[]) =>
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
 					'contact.first_name', 'contact.last_name',
 				],
 				sort: ['-date_created'],
-				limit: 4,
+				limit: 2,
 			}),
 		)
 		.then((rows: any[]) =>

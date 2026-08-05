@@ -11,6 +11,7 @@ const props = defineProps<{
 	widgetId: string;
 	label: string;
 	span?: 1 | 2 | 3;
+	rowSpan?: 1 | 2;
 	editing?: boolean;
 	first?: boolean;
 	last?: boolean;
@@ -18,11 +19,14 @@ const props = defineProps<{
 	scroll?: boolean;
 }>();
 
-defineEmits<{ (e: 'hide'): void; (e: 'move-up'): void; (e: 'move-down'): void; (e: 'cycle-span'): void }>();
+defineEmits<{ (e: 'hide'): void; (e: 'move-up'): void; (e: 'move-down'): void; (e: 'cycle-span'): void; (e: 'cycle-row-span'): void }>();
 
 const spanClass = computed(() =>
 	props.span === 3 ? 'lg:col-span-3' : props.span === 2 ? 'lg:col-span-2' : 'lg:col-span-1',
 );
+// A 2-row anchor spans two grid rows so short single-column widgets stack beside
+// it. Only applied on lg (the grid is single-column below that).
+const rowSpanClass = computed(() => (props.rowSpan === 2 ? 'lg:row-span-2' : ''));
 
 // NOTE on "sticky short widgets": a grid item's sticky containing block is the
 // GRID, not its cell, so `position: sticky` bleeds a short widget past its row
@@ -31,7 +35,7 @@ const spanClass = computed(() =>
 // So short widgets just align to the top of their row (self-start) and any extra
 // row height is empty — no sticky.
 const outerClass = computed(() =>
-	[spanClass.value, props.editing ? 'relative' : '', 'self-start'].filter(Boolean).join(' '),
+	[spanClass.value, rowSpanClass.value, props.editing ? 'relative' : '', 'self-start'].filter(Boolean).join(' '),
 );
 
 // Cap growth-prone widgets so rows stay even; disabled in edit mode so the whole
@@ -69,6 +73,18 @@ const contentClass = computed(() => {
 				>
 					<EIcon name="i-heroicons-view-columns" class="w-4 h-4" />
 					<span class="text-[10px] font-semibold tabular-nums">{{ span ?? 1 }}</span>
+				</button>
+				<!-- Height: cycle 1 → 2 rows (large screens). A 2-row anchor lets two
+				     short widgets stack beside it. -->
+				<button
+					type="button"
+					class="flex items-center gap-0.5 justify-center h-6 px-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60"
+					:title="`Height: ${rowSpan ?? 1} row${(rowSpan ?? 1) > 1 ? 's' : ''} — click to change`"
+					aria-label="Change widget height"
+					@click="$emit('cycle-row-span')"
+				>
+					<EIcon name="i-heroicons-bars-3-bottom-left" class="w-4 h-4 rotate-90" />
+					<span class="text-[10px] font-semibold tabular-nums">{{ rowSpan ?? 1 }}</span>
 				</button>
 				<button
 					type="button"

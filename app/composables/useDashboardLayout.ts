@@ -16,6 +16,12 @@ export interface DashboardWidgetDef {
 	label: string;
 	/** Grid columns on lg (the grid is lg:grid-cols-3). Defaults to 3 (full width). */
 	span?: 1 | 2 | 3;
+	/**
+	 * Grid ROWS on lg. Defaults to 1. A tall anchor widget (row-span 2) lets two
+	 * short single-column widgets stack beside it — e.g. Priority Actions holding
+	 * the left while Quick Tasks + Pursuits stack in the right column.
+	 */
+	rowSpan?: 1 | 2;
 	/** Hidden by default until the user opts in from the Customize tray. */
 	defaultHidden?: boolean;
 	/** Cap the widget height and scroll its overflow so it can't stretch a row. */
@@ -31,7 +37,9 @@ export interface DashboardWidgetDef {
 // customizable — Priority Actions is a normal widget now, not a pinned block.
 export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
 	// ── Work (top) ──
-	{ id: 'priority-actions', label: 'Priority Actions', span: 2 },
+	// Priority Actions anchors the left as a 2×2 block so Quick Tasks + Pursuits
+	// stack in the right column beside it (the grid is grid-flow-row-dense).
+	{ id: 'priority-actions', label: 'Priority Actions', span: 2, rowSpan: 2 },
 	{ id: 'quick-tasks', label: 'Quick Tasks', span: 1, scroll: true },
 	// Sits directly under Quick Tasks by default — a glance at the sales pipeline.
 	{ id: 'pursuits', label: 'Pursuits', span: 1, scroll: true },
@@ -60,9 +68,18 @@ export const DASHBOARD_WIDGETS: DashboardWidgetDef[] = [
 
 const CATALOG_IDS = DASHBOARD_WIDGETS.map((w) => w.id);
 const SPAN_BY_ID = new Map(DASHBOARD_WIDGETS.map((w) => [w.id, w.span ?? 3]));
+const ROWSPAN_BY_ID = new Map(DASHBOARD_WIDGETS.map((w) => [w.id, w.rowSpan ?? 1]));
 const LABEL_BY_ID = new Map(DASHBOARD_WIDGETS.map((w) => [w.id, w.label]));
 const SCROLL_IDS = new Set(DASHBOARD_WIDGETS.filter((w) => w.scroll).map((w) => w.id));
 const STORAGE_KEY = 'earnest-dashboard-layout-v1';
+// Layout schema version. Bump when a saved layout needs a one-time migration.
+// v1 → v2: reposition widgets that shipped AFTER v1 and were appended to the end
+// of already-saved layouts, so they land beside their catalog neighbour instead
+// (e.g. Pursuits under Quick Tasks rather than dumped at the bottom).
+const LAYOUT_VERSION = 2;
+// Widgets introduced since v1. On upgrade we lift these out of a saved order so
+// reconcileOrder re-inserts them at their catalog slot.
+const REPOSITION_ON_UPGRADE = new Set(['pursuits']);
 
 // Module-level shared state so every consumer (page + customize panel) sees the
 // same layout without re-reading storage.
@@ -71,26 +88,61 @@ const _hidden = ref<Set<string>>(new Set(DASHBOARD_WIDGETS.filter((w) => w.defau
 // Per-widget column-span overrides (user-set width on large screens). Absent =
 // use the catalog default. Only 1|2|3 are valid.
 const _spans = ref<Record<string, 1 | 2 | 3>>({});
+// Per-widget row-span overrides (user-set height on large screens). Absent = use
+// the catalog default. Only 1|2 are valid.
+const _rowSpans = ref<Record<string, 1 | 2>>({});
 const _editing = ref(false);
 let _loaded = false;
+// Set by applyLayout when a version migration repositioned a widget, so the
+// caller re-persists the upgraded order (and stamps the new version).
+let _migrated = false;
 // The user's `ai_preferences` row id, for the cross-device mirror. Shared with
 // useAIPreferences' own copy in spirit; we track our own since it isn't exported.
 let _recordId: number | null = null;
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Reconcile a saved id list against the current catalog: keep known ids in their
-// saved order, drop stale ones, append any new catalog ids at the end.
+// saved order, drop stale/duplicate ones, and slot any new catalog ids in beside
+// their catalog neighbour (the id that precedes them in the catalog) rather than
+// dumping them at the end — so a freshly shipped widget appears where its default
+// slot is, even for a user who already has a saved layout.
 function reconcileOrder(saved: string[]): string[] {
-	const known = saved.filter((id) => CATALOG_IDS.includes(id));
-	const missing = CATALOG_IDS.filter((id) => !known.includes(id));
-	return [...known, ...missing];
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const id of saved) {
+		if (CATALOG_IDS.includes(id) && !seen.has(id)) { seen.add(id); result.push(id); }
+	}
+	// Insert missing ids in catalog order; each lands right after the nearest
+	// earlier catalog id already placed (chaining through ids inserted this pass).
+	for (const id of CATALOG_IDS) {
+		if (result.includes(id)) continue;
+		const catIdx = CATALOG_IDS.indexOf(id);
+		let insertAt = result.length;
+		for (let i = catIdx - 1; i >= 0; i--) {
+			const pos = result.indexOf(CATALOG_IDS[i]!);
+			if (pos !== -1) { insertAt = pos + 1; break; }
+		}
+		result.splice(insertAt, 0, id);
+	}
+	return result;
 }
 
-// Apply a persisted { order, hidden, spans } payload (localStorage or Directus).
-function applyLayout(parsed: { order?: string[]; hidden?: string[]; spans?: Record<string, number> } | null | undefined): boolean {
+// Apply a persisted { order, hidden, spans, rowSpans } payload (localStorage or Directus).
+function applyLayout(parsed: { v?: number; order?: string[]; hidden?: string[]; spans?: Record<string, number>; rowSpans?: Record<string, number> } | null | undefined): boolean {
 	if (!parsed || typeof parsed !== 'object') return false;
 	let applied = false;
-	if (Array.isArray(parsed.order)) { _order.value = reconcileOrder(parsed.order); applied = true; }
+	if (Array.isArray(parsed.order)) {
+		let ord = parsed.order;
+		// One-time upgrade: strip widgets added since the saved version so
+		// reconcileOrder re-inserts them beside their catalog neighbour (they were
+		// appended to the end under the old version). Hidden + spans are untouched.
+		if ((parsed.v ?? 1) < LAYOUT_VERSION) {
+			ord = ord.filter((id) => !REPOSITION_ON_UPGRADE.has(id));
+			_migrated = true;
+		}
+		_order.value = reconcileOrder(ord);
+		applied = true;
+	}
 	if (Array.isArray(parsed.hidden)) { _hidden.value = new Set(parsed.hidden.filter((id) => CATALOG_IDS.includes(id))); applied = true; }
 	if (parsed.spans && typeof parsed.spans === 'object') {
 		const next: Record<string, 1 | 2 | 3> = {};
@@ -100,13 +152,21 @@ function applyLayout(parsed: { order?: string[]; hidden?: string[]; spans?: Reco
 		_spans.value = next;
 		applied = true;
 	}
+	if (parsed.rowSpans && typeof parsed.rowSpans === 'object') {
+		const next: Record<string, 1 | 2> = {};
+		for (const [id, v] of Object.entries(parsed.rowSpans)) {
+			if (CATALOG_IDS.includes(id) && (v === 1 || v === 2)) next[id] = v;
+		}
+		_rowSpans.value = next;
+		applied = true;
+	}
 	return applied;
 }
 
 function persistLocal() {
 	if (import.meta.server) return;
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: _order.value, hidden: [..._hidden.value], spans: _spans.value }));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: LAYOUT_VERSION, order: _order.value, hidden: [..._hidden.value], spans: _spans.value, rowSpans: _rowSpans.value }));
 	} catch { /* private mode / quota — layout just won't persist locally */ }
 }
 
@@ -122,7 +182,7 @@ export const useDashboardLayout = () => {
 		if (_saveTimer) clearTimeout(_saveTimer);
 		_saveTimer = setTimeout(async () => {
 			if (import.meta.server || !user.value?.id) return;
-			const payload = { dashboard_layout: { order: _order.value, hidden: [..._hidden.value], spans: _spans.value } };
+			const payload = { dashboard_layout: { v: LAYOUT_VERSION, order: _order.value, hidden: [..._hidden.value], spans: _spans.value, rowSpans: _rowSpans.value } };
 			try {
 				if (_recordId) {
 					await prefItems.update(_recordId, payload);
@@ -159,7 +219,12 @@ export const useDashboardLayout = () => {
 			}) as any[];
 			if (rows?.[0]) {
 				_recordId = rows[0].id;
-				if (applyLayout(rows[0].dashboard_layout)) persistLocal(); // refresh local cache
+				if (applyLayout(rows[0].dashboard_layout)) {
+						persistLocal(); // refresh local cache
+						// A version migration repositioned a widget — write the upgraded
+						// order back so the server stops handing us the stale layout.
+						if (_migrated) { _migrated = false; saveToDirectus(); }
+					}
 			}
 		} catch (err) {
 			console.warn('[useDashboardLayout] Could not sync layout from Directus:', err);
@@ -174,6 +239,8 @@ export const useDashboardLayout = () => {
 				const raw = localStorage.getItem(STORAGE_KEY);
 				if (raw) applyLayout(JSON.parse(raw));
 			} catch { /* fall back to defaults */ }
+			// A version migration repositioned a widget on read — persist the upgrade.
+			if (_migrated) { _migrated = false; commit(); }
 		}
 		// Always attempt a background cross-device sync (cheap, cached row).
 		void syncFromDirectus();
@@ -187,6 +254,7 @@ export const useDashboardLayout = () => {
 	const isVisible = (id: string) => !_hidden.value.has(id);
 	// User override wins over the catalog default.
 	const spanOf = (id: string): 1 | 2 | 3 => _spans.value[id] ?? (SPAN_BY_ID.get(id) as 1 | 2 | 3) ?? 3;
+	const rowSpanOf = (id: string): 1 | 2 => _rowSpans.value[id] ?? (ROWSPAN_BY_ID.get(id) as 1 | 2) ?? 1;
 	const labelOf = (id: string) => LABEL_BY_ID.get(id) ?? id;
 	const scrollOf = (id: string) => SCROLL_IDS.has(id);
 
@@ -194,6 +262,14 @@ export const useDashboardLayout = () => {
 	const cycleSpan = (id: string) => {
 		const next = ((spanOf(id) % 3) + 1) as 1 | 2 | 3;
 		_spans.value = { ..._spans.value, [id]: next };
+		commit();
+	};
+
+	// Cycle a widget's height 1 → 2 → 1 rows (large screens). A 2-row anchor lets
+	// two short widgets stack beside it. Persisted per user.
+	const cycleRowSpan = (id: string) => {
+		const next = (rowSpanOf(id) === 2 ? 1 : 2) as 1 | 2;
+		_rowSpans.value = { ..._rowSpans.value, [id]: next };
 		commit();
 	};
 
@@ -238,6 +314,7 @@ export const useDashboardLayout = () => {
 		_order.value = [...CATALOG_IDS];
 		_hidden.value = new Set(DASHBOARD_WIDGETS.filter((w) => w.defaultHidden).map((w) => w.id));
 		_spans.value = {};
+		_rowSpans.value = {};
 		commit();
 	};
 
@@ -255,6 +332,8 @@ export const useDashboardLayout = () => {
 		isVisible,
 		spanOf,
 		cycleSpan,
+		rowSpanOf,
+		cycleRowSpan,
 		labelOf,
 		scrollOf,
 		hideWidget,
