@@ -353,6 +353,24 @@ footer{background:var(--black);border-top:1px solid var(--hair);padding:86px 0 5
 .band.graded .img video{filter:grayscale(.5) contrast(1.14) brightness(.78) saturate(.9);}
 .hero .img[data-parallax],.band .img[data-parallax]{will-change:transform;top:-10%;bottom:-10%;height:auto;}
 @media (prefers-reduced-motion:reduce){.hero .img[data-parallax],.band .img[data-parallax]{top:0;bottom:0;}}
+
+/* --- phone/tablet optimization --- */
+/* svh = the SMALL viewport height, so the hero isn't clipped behind mobile
+   browser chrome (address bar). Falls back to the base 100vh where unsupported. */
+.hero{min-height:100svh;}
+@media(max-width:900px){ .band{min-height:70svh;} }
+/* Small phones: the long italic hero line can overflow at the base 40px floor —
+   let it size down, and tighten the venue pills + hero stats. */
+@media(max-width:560px){
+  .hero .stmt{font-size:clamp(30px,8.6vw,60px);}
+  .hero .sub{margin-top:26px;}
+  .stmt{font-size:clamp(26px,7.2vw,46px);}
+  .band .stmt{max-width:100%;}
+  .spec{margin-top:40px;} .spec div{padding-right:16px;margin-right:16px;}
+  .oval.venue{padding:11px 22px;letter-spacing:.2em;}
+  .oval.brand{padding:11px 24px;letter-spacing:.18em;font-size:9px;}
+  .btn{padding:16px 26px;} .cta{gap:10px;}
+}
 </style>
 </head>
 <body>
@@ -395,7 +413,7 @@ footer{background:var(--black);border-top:1px solid var(--hair);padding:86px 0 5
 
 <!-- HERO -->
 <header class="hero" id="hero">
-  <div class="img" data-parallax><video class="bgvid" autoplay muted loop playsinline preload="auto" poster="https://admin.earnest.guru/assets/9d8f6f64-a55a-491a-8cf4-fb12950ded92?width=1800&quality=82&format=webp&fit=cover" aria-label="Prime Private walkthrough" fetchpriority="high" src="https://admin.earnest.guru/assets/0d24303b-ed92-444d-99f2-1db1b781e1f2"></video></div>
+  <div class="img" data-parallax><video class="bgvid" muted loop playsinline preload="none" poster="https://admin.earnest.guru/assets/9d8f6f64-a55a-491a-8cf4-fb12950ded92?width=1800&quality=82&format=webp&fit=cover" aria-label="Prime Private walkthrough" src="https://admin.earnest.guru/assets/0d24303b-ed92-444d-99f2-1db1b781e1f2"></video></div>
   <div class="wrap">
     <div class="lin"><div class="oval brand">. Myles . Restaurant . Group .</div></div>
     <h1 class="stmt lin">Three doors<br>on Ocean Drive.<em><br>Fifteen to three hundred.</em></h1>
@@ -435,7 +453,7 @@ footer{background:var(--black);border-top:1px solid var(--hair);padding:86px 0 5
 
 <!-- BAND: PRIME PRIVATE -->
 <section class="band" id="band-private" style="padding:0;">
-  <div class="img" data-parallax><video class="bgvid" autoplay muted loop playsinline preload="none" poster="https://admin.earnest.guru/assets/45cb443c-32cf-43ad-aa3c-6321ee5b1aa6?width=1800&quality=82&format=webp&fit=cover" aria-label="The onyx bar" src="https://admin.earnest.guru/assets/7ce87e44-50e7-4378-a1e8-8d747f4fff32"></video></div>
+  <div class="img" data-parallax><video class="bgvid" muted loop playsinline preload="none" poster="https://admin.earnest.guru/assets/45cb443c-32cf-43ad-aa3c-6321ee5b1aa6?width=1800&quality=82&format=webp&fit=cover" aria-label="The onyx bar" src="https://admin.earnest.guru/assets/7ce87e44-50e7-4378-a1e8-8d747f4fff32"></video></div>
   <div class="slotlabel">Onyx bar — full bleed</div>
   <div class="wrap">
     <div class="rv">
@@ -462,7 +480,7 @@ footer{background:var(--black);border-top:1px solid var(--hair);padding:86px 0 5
     </div>
     <div class="rv">
       <div class="vidwrap">
-        <video autoplay muted loop playsinline preload="metadata" aria-label="Walkthrough of Prime Private">
+        <video muted loop playsinline preload="none" poster="https://admin.earnest.guru/assets/01220a0c-f815-472b-a334-bdb0492636c9?width=1000&quality=82&format=webp&fit=cover" aria-label="Walkthrough of Prime Private">
           <source src="https://admin.earnest.guru/assets/0d24303b-ed92-444d-99f2-1db1b781e1f2" type="video/mp4">
         </video>
         <div class="vlab"><i></i>Walkthrough</div>
@@ -1031,46 +1049,50 @@ if('IntersectionObserver' in window){
 </script>
 <script>
 (function(){
-  // Background videos: muted+autoplay+playsinline is allowed, but some browsers
-  // defer it. Nudge play on load, when scrolled into view, and on first gesture;
-  // pause offscreen to save bandwidth.
-  var vids=[].slice.call(document.querySelectorAll('.hero .img video,.band .img video'));
-  function play(v){var p=v.play();if(p&&p.catch)p.catch(function(){});}
-  vids.forEach(play);
+  // Videos are muted/loop/playsinline with preload="none" and NO autoplay, so
+  // nothing downloads until we call play(). On phones and for reduced-motion we
+  // never do — the poster carries each band, so mobile pays zero video bytes.
+  var phone = matchMedia('(max-width: 700px)').matches;
+  var reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var noVideo = phone || reduce;
+  var vids=[].slice.call(document.querySelectorAll('video'));
+  function play(v){if(noVideo)return;var p=v.play();if(p&&p.catch)p.catch(function(){});}
+  var hero=document.querySelector('.hero video');
+  if(hero)play(hero); // above the fold
   if('IntersectionObserver' in window){
+    // Play each video as it scrolls in, pause it when it leaves (saves bandwidth
+    // + battery). On phones play() is a no-op, so this just idles.
     var vio=new IntersectionObserver(function(es){es.forEach(function(e){
       if(e.isIntersecting)play(e.target);else e.target.pause();});},{threshold:.15});
     vids.forEach(function(v){vio.observe(v);});
-  }
-  ['touchstart','pointerdown','keydown'].forEach(function(evt){
-    window.addEventListener(evt,function once(){vids.forEach(play);
-      window.removeEventListener(evt,once);},{once:true,passive:true});
-  });
+  }else if(!noVideo){vids.forEach(play);}
+  if(!noVideo){ ['pointerdown','keydown'].forEach(function(evt){
+    window.addEventListener(evt,function once(){if(hero)play(hero);
+      window.removeEventListener(evt,once);},{once:true,passive:true}); }); }
 
   if(!window.gsap||!window.ScrollTrigger)return;
-  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return; // reveals + stills stay
+  if(reduce)return; // reveals + static posters stay
   gsap.registerPlugin(ScrollTrigger);
+  var mm = gsap.matchMedia();
 
-  // Parallax: band + hero media drifts slower than the scroll for depth.
-  gsap.utils.toArray('[data-parallax]').forEach(function(el){
-    gsap.fromTo(el,{yPercent:-10},{yPercent:10,ease:'none',
-      scrollTrigger:{trigger:el.parentNode,start:'top bottom',end:'bottom top',scrub:true}});
+  // Parallax + hero settle-scale — TABLET AND UP only. Phones get clean static
+  // posters (no scroll-linked transforms = smoother, cheaper). matchMedia
+  // auto-creates/reverts these as the viewport crosses the breakpoint.
+  mm.add('(min-width: 700px)', function(){
+    gsap.utils.toArray('[data-parallax]').forEach(function(el){
+      gsap.fromTo(el,{yPercent:-10},{yPercent:10,ease:'none',
+        scrollTrigger:{trigger:el.parentNode,start:'top bottom',end:'bottom top',scrub:true}});
+    });
+    var hv=document.querySelector('.hero .img video');
+    if(hv)gsap.fromTo(hv,{scale:1.06},{scale:1.2,ease:'none',
+      scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:true}});
   });
 
-  // Hero video: slow settle-scale as you leave the hero.
-  var hv=document.querySelector('.hero .img video');
-  if(hv)gsap.fromTo(hv,{scale:1.06},{scale:1.2,ease:'none',
-    scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:true}});
-
-  // Sticky venue bands (desktop only): pin each band so its media + statement
-  // HOLD for ~0.6 of a screen as you scroll in, then release. pinSpacing:true
-  // reserves the space (no overlap); the parallax above keeps the media drifting
-  // during the hold so it never feels frozen. refreshPriority makes the pins
-  // measure first, so the parallax start/end account for the added pin space.
-  // gsap.matchMedia scopes this to wide screens (pins can jank on mobile) and
-  // auto-reverts when the query stops matching. Statement reveals stay owned by
-  // the existing IntersectionObserver (.rv) — we don't touch them here.
-  var mm = gsap.matchMedia();
+  // Sticky venue bands — DESKTOP only (pins can jank on touch). Each band's media
+  // + statement HOLD for ~0.6 of a screen, then release. pinSpacing reserves the
+  // space (no overlap); refreshPriority makes pins measure before the parallax so
+  // its start/end account for the added space. Statement reveals stay owned by
+  // the existing IntersectionObserver (.rv) — untouched here.
   mm.add('(min-width: 900px)', function(){
     ['#band-private','#band-112','#band-italian'].forEach(function(sel){
       var band=document.querySelector(sel); if(!band)return;
