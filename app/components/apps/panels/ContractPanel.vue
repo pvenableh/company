@@ -49,6 +49,26 @@ const fullPageHref = computed(() => {
 const statusLabel = computed(() => (contract.value as any)?.contract_status || null);
 const clientName = computed(() => (contract.value as any)?.client?.name || null);
 
+// Contract → Project: create the project (+ seed events from the scope phases),
+// back-link the contract, and open the new project in-shell.
+const workProjectSlide = useAppSlideOver('work-project');
+const converting = ref(false);
+const alreadyLinked = computed(() => !!(contract.value as any)?.project);
+async function createProjectFromContract() {
+  const cid = contract.value?.id;
+  if (!cid || converting.value) return;
+  converting.value = true;
+  try {
+    const res = await $fetch<{ projectId: string }>(`/api/projects/from-contract/${cid}`, { method: 'POST' });
+    if (contract.value) (contract.value as any).project = res.projectId;
+    if (res.projectId) workProjectSlide.open(String(res.projectId));
+  } catch (err: any) {
+    console.error('[contract→project] failed:', err?.data?.message || err?.message);
+  } finally {
+    converting.value = false;
+  }
+}
+
 onBeforeUnmount(() => {
   if (entityId.value === String(props.id)) resetEntityContext();
 });
@@ -62,6 +82,16 @@ onBeforeUnmount(() => {
     @close="$emit('close')"
   >
     <template v-if="!isCreate" #actions>
+      <button
+        v-if="!alreadyLinked"
+        :disabled="converting"
+        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+        title="Create a project from this contract (seeds milestones from the scope)"
+        @click="createProjectFromContract"
+      >
+        <Icon :name="converting ? 'lucide:loader-2' : 'lucide:folder-plus'" :class="['w-3 h-3', converting && 'animate-spin']" />
+        {{ converting ? 'Creating…' : 'Create project' }}
+      </button>
       <NuxtLink
         :to="fullPageHref"
         class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"

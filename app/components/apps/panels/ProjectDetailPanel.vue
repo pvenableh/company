@@ -28,6 +28,14 @@ function onLoaded(p: any) {
 	setEntity('project', String(p.id), p.title || 'Project');
 }
 
+// Project → Invoice: open the invoice create seeded with this project + client.
+const { openCreate: openInvoiceCreate } = useCreatePanel('invoice');
+function createInvoiceFromProject() {
+	const p = project.value;
+	if (!p) return;
+	openInvoiceCreate({ client: p.client?.id ?? p.client ?? null, projects: [String(p.id)] });
+}
+
 // Drop the entity context on close, but only if it still points at us.
 onBeforeUnmount(() => {
 	if (entityId.value === String(props.id)) resetEntityContext();
@@ -37,6 +45,14 @@ onBeforeUnmount(() => {
 <template>
 	<AppSlideOverShell :title="project?.title || 'Project'" @close="$emit('close')">
 		<template v-if="project" #actions>
+			<button
+				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold border border-border hover:bg-muted active:scale-95 transition-all"
+				title="Create an invoice for this project"
+				@click="createInvoiceFromProject"
+			>
+				<Icon name="lucide:receipt" class="w-3.5 h-3.5" />
+				Invoice
+			</button>
 			<NuxtLink
 				:to="`/apps/work/projects/${project.id}`"
 				class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all"
