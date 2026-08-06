@@ -21,6 +21,10 @@
 					<option value="terms">Terms</option>
 					<option value="nda">NDA</option>
 					<option value="cover">Cover</option>
+					<option value="company">Company / About us</option>
+					<option value="experience">Experience</option>
+					<option value="insurance">Insurance</option>
+					<option value="credentials">Credentials</option>
 					<option value="other">Other</option>
 				</select>
 			</div>

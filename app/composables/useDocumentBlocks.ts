@@ -20,6 +20,10 @@ export type BlockCategory =
   | 'terms'
   | 'nda'
   | 'cover'
+  | 'company'
+  | 'experience'
+  | 'insurance'
+  | 'credentials'
   | 'other';
 
 export type BlockAppliesTo = _BlockAppliesTo;

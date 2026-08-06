@@ -266,6 +266,10 @@ const BLOCK_CATEGORIES: Array<{ value: 'all' | BlockCategory; label: string }> =
 	{ value: 'terms', label: 'Terms' },
 	{ value: 'nda', label: 'NDA' },
 	{ value: 'cover', label: 'Cover' },
+	{ value: 'company', label: 'Company' },
+	{ value: 'experience', label: 'Experience' },
+	{ value: 'insurance', label: 'Insurance' },
+	{ value: 'credentials', label: 'Credentials' },
 	{ value: 'other', label: 'Other' },
 ];
 

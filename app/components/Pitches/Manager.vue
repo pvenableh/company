@@ -276,6 +276,15 @@ async function submit() {
   }
 }
 
+// ── Pitch → Proposal ─────────────────────────────────────────────────────────
+// From a pitch comes a proposal: open the proposal create slide-over, seeded
+// with the pitch's lead when it links one (they share the Pursuit's record).
+const { openCreate: openProposalCreate } = useCreatePanel('proposal')
+function createProposalFromPitch(row: PitchRow) {
+  const leadId = row.linked?.value?.startsWith('lead:') ? Number(row.linked.value.slice(5)) : null
+  openProposalCreate({ leadId })
+}
+
 // ── Prototype build brief (Claude Code) ─────────────────────────────────────
 const brief = reactive({ open: false, pitch: null as number | null, link: '', title: '' })
 function openBrief(row: PitchRow) {
@@ -608,6 +617,9 @@ onMounted(() => {
             class="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs">
             <Icon name="lucide:external-link" class="h-3 w-3" /> Open
           </a>
+          <button class="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs" @click="createProposalFromPitch(row)" title="Create a proposal from this pitch">
+            <Icon name="lucide:file-text" class="h-3 w-3" /> Proposal
+          </button>
           <button class="inline-flex items-center gap-1 rounded-full border border-primary/40 px-3 py-1.5 text-xs text-primary" @click="openBrief(row)">
             <Icon name="lucide:terminal" class="h-3 w-3" /> Build brief
           </button>
