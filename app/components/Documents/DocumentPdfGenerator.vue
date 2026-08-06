@@ -7,6 +7,13 @@
  *
  * jspdf and html2canvas are loaded lazily inside generatePDF so SSR
  * (vite-node) never tries to evaluate the minified ES bundles.
+ *
+ * Pagination: the captured canvas is often taller than one letter page.
+ * We slice it into letter-height (11in − margins) strips and addPage()
+ * per strip, so a multi-page proposal/contract/invoice flows across pages
+ * instead of being squashed onto one. Any block the composer flagged with
+ * a page break (`.doc__block--page-break`, e.g. the cover) forces a cut at
+ * its bottom edge so those boundaries always start a fresh page.
  */
 
 const props = defineProps<{
@@ -68,6 +75,19 @@ async function generatePDF() {
 
 		document.body.appendChild(clone);
 		try {
+			// Before rasterizing, capture the vertical position of every
+			// explicit page break so we can force a page cut there. These are
+			// the blocks the composer flagged with `page_break_after` (and the
+			// cover), rendered as `.doc__block--page-break`. We cut AFTER each
+			// such block's bottom edge. Offsets are in CSS px relative to the
+			// clone's top; they get scaled into canvas px below.
+			const cloneTop = clone.getBoundingClientRect().top;
+			const forcedBreaksCss = Array.from(
+				clone.querySelectorAll<HTMLElement>('.doc__block--page-break'),
+			)
+				.map((b) => b.getBoundingClientRect().bottom - cloneTop)
+				.filter((y) => y > 0);
+
 			const canvas = await html2canvas(clone, {
 				scale: 2,
 				logging: false,
@@ -81,10 +101,63 @@ async function generatePDF() {
 
 			const pdf = new jsPDF({ format: 'letter', unit: 'in', compress: true });
 			const pageWidth = 8.5;
+			const pageHeight = 11;
 			const margin = 0.5;
 			const availableWidth = pageWidth - 2 * margin;
-			const imgHeight = (canvas.height * availableWidth) / canvas.width;
-			pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', margin, margin, availableWidth, imgHeight, '', 'FAST');
+			const availableHeight = pageHeight - 2 * margin;
+
+			// Ratio between rasterized canvas px and the clone's layout px,
+			// used to translate CSS-px break offsets into canvas space.
+			const pxRatio = canvas.width / clone.offsetWidth;
+			// One letter page's worth of content, in canvas px.
+			const pagePx = Math.floor((availableHeight * canvas.width) / availableWidth);
+			// Forced cut points in canvas px — sorted, de-duped, in-bounds.
+			const forcedBreaks = Array.from(
+				new Set(forcedBreaksCss.map((y) => Math.round(y * pxRatio))),
+			)
+				.filter((y) => y > 0 && y < canvas.height)
+				.sort((a, b) => a - b);
+
+			// Reusable scratch canvas we blit each page slice onto.
+			const slice = document.createElement('canvas');
+			const sctx = slice.getContext('2d');
+
+			let top = 0;
+			let first = true;
+			// Guard against pathological loops (0-height slices).
+			let guard = 0;
+			while (top < canvas.height && guard++ < 1000) {
+				// A page is at most `pagePx` tall, but a forced break falling
+				// inside this window ends the page early so a flagged boundary
+				// always starts fresh on the next page.
+				let bottom = Math.min(top + pagePx, canvas.height);
+				const nextBreak = forcedBreaks.find((y) => y > top && y < bottom);
+				if (nextBreak) bottom = nextBreak;
+				const sliceHeight = bottom - top;
+				if (sliceHeight <= 0) break;
+
+				slice.width = canvas.width;
+				slice.height = sliceHeight;
+				if (sctx) {
+					sctx.fillStyle = bg;
+					sctx.fillRect(0, 0, slice.width, slice.height);
+					sctx.drawImage(
+						canvas,
+						0, top, canvas.width, sliceHeight, // source rect
+						0, 0, canvas.width, sliceHeight, // dest rect
+					);
+				}
+
+				const imgHeight = (sliceHeight * availableWidth) / canvas.width;
+				if (!first) pdf.addPage();
+				pdf.addImage(
+					slice.toDataURL('image/png', 1.0),
+					'PNG', margin, margin, availableWidth, imgHeight, '', 'FAST',
+				);
+				first = false;
+				top = bottom;
+			}
+
 			pdf.save(`${props.filename}.pdf`);
 		} finally {
 			if (clone.parentNode) clone.parentNode.removeChild(clone);
