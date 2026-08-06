@@ -16,20 +16,21 @@ import { fetchOrgBrand } from '~~/server/utils/email-send';
 import { renderDigestBodyHtml } from '~~/server/utils/motivational-digest-email';
 import { composeDigestCopy } from '~~/server/utils/motivational-digest-ai';
 import type { DigestPayload } from '~~/server/utils/motivational-digest';
-import type { DigestTone } from '~~/shared/digest';
+import { normalizeDigestStyle, type DigestTone } from '~~/shared/digest';
 
-function samplePayload(tone: DigestTone): DigestPayload {
+function samplePayload(tone: DigestTone, style: DigestPayload['style']): DigestPayload {
 	return {
 		userId: 'sample',
 		orgId: 'sample',
 		orgName: 'Acme Studio',
 		tone,
+		style,
 		wins: { tasksDone: 4, ticketsClosed: 2, sampleTitle: 'Ship the homepage hero', any: true },
 		score: { currentScore: 78, level: 4, levelTitle: 'Devoted', streak: 6, daysActiveThisWeek: 4, totalEp: 1240 },
 		suggestions: [
-			{ title: 'Follow up: Northwind rebrand proposal', description: 'Sent 16 days ago with no reply — a nudge often closes it', priority: 'high' },
-			{ title: 'Send invoice for May retainer', description: '$4,500 ready to bill', priority: 'high' },
-			{ title: 'Reply to Jordan on the launch banner', description: 'Waiting since yesterday', priority: 'medium' },
+			{ title: 'Finish the launch banner copy', description: 'Due today', priority: 'urgent', entityType: 'task', entityId: '1042' },
+			{ title: 'Reply to Jordan on the support ticket', description: 'Waiting since yesterday', priority: 'high', entityType: 'ticket', entityId: '318' },
+			{ title: 'Review the homepage hero task', description: 'Blocking the rest of the sprint', priority: 'medium', entityType: 'task', entityId: '1055' },
 		],
 		sections: {
 			tasks: { dueSoon: 3, overdue: 1 },
@@ -57,9 +58,10 @@ export default defineEventHandler(async (event) => {
 
 	const q = getQuery(event);
 	const tone = (['motivational', 'forward', 'wins'].includes(String(q.tone)) ? q.tone : 'forward') as DigestTone;
+	const style = normalizeDigestStyle(q.style);
 	const org = q.org ? await fetchOrgBrand(String(q.org)) : null;
 
-	const payload = samplePayload(tone);
+	const payload = samplePayload(tone, style);
 	// ?ai=1 exercises the LLM-written intro (needs NUXT_LLM_API_KEY; falls back to
 	// the template copy on any failure).
 	const introOverride = (q.ai === '1' || q.ai === 'true') ? await composeDigestCopy(payload, 'Camila') : null;

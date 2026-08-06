@@ -124,8 +124,8 @@ export type ResponseVerbosity = 'concise' | 'regular';
 // ── Digest Cadence (per-PROJECT AI briefs) ──
 export type DigestCadence = 'daily' | 'weekly' | 'off';
 
-import type { DigestCadence as MotivationalDigestCadence } from '~~/shared/digest';
-import { DEFAULT_DIGEST_CADENCE, DEFAULT_DIGEST_HOUR, DEFAULT_DIGEST_SECTIONS } from '~~/shared/digest';
+import type { DigestCadence as MotivationalDigestCadence, DigestStyle } from '~~/shared/digest';
+import { DEFAULT_DIGEST_CADENCE, DEFAULT_DIGEST_HOUR, DEFAULT_DIGEST_SECTIONS, DEFAULT_DIGEST_STYLE, normalizeDigestStyle } from '~~/shared/digest';
 
 const STORAGE_KEY = 'ai-tray-preferences';
 const VERBOSITY_KEY = 'ai-response-verbosity';
@@ -140,6 +140,7 @@ const _mdEnabled = ref(false);
 const _mdCadence = ref<MotivationalDigestCadence>(DEFAULT_DIGEST_CADENCE);
 const _mdHour = ref<number>(DEFAULT_DIGEST_HOUR);
 const _mdSections = ref<string[]>([...DEFAULT_DIGEST_SECTIONS]);
+const _mdStyle = ref<DigestStyle>(DEFAULT_DIGEST_STYLE);
 let _prefRecordId: number | null = null;
 let _directusSynced = false;
 
@@ -181,7 +182,7 @@ export const useAIPreferences = () => {
 		if (import.meta.server || !user.value?.id) return;
 		try {
 			const records = await prefItems.list({
-				fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'digest_cadence', 'motivational_digest_enabled', 'motivational_digest_cadence', 'motivational_digest_hour', 'motivational_digest_sections'],
+				fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'digest_cadence', 'motivational_digest_enabled', 'motivational_digest_cadence', 'motivational_digest_hour', 'motivational_digest_sections', 'motivational_digest_style'],
 				filter: { user: { _eq: user.value.id } },
 				limit: 1,
 			}) as any[];
@@ -214,6 +215,7 @@ export const useAIPreferences = () => {
 				if (['daily', 'weekdays', 'weekly', 'off'].includes(records[0].motivational_digest_cadence)) _mdCadence.value = records[0].motivational_digest_cadence;
 				if (Number.isFinite(records[0].motivational_digest_hour)) _mdHour.value = Number(records[0].motivational_digest_hour);
 				if (Array.isArray(records[0].motivational_digest_sections)) _mdSections.value = records[0].motivational_digest_sections;
+				if (records[0].motivational_digest_style) _mdStyle.value = normalizeDigestStyle(records[0].motivational_digest_style);
 			}
 			_directusSynced = true;
 		} catch (err) {
@@ -262,6 +264,7 @@ export const useAIPreferences = () => {
 				motivational_digest_cadence: _mdCadence.value,
 				motivational_digest_hour: _mdHour.value,
 				motivational_digest_sections: _mdSections.value,
+				motivational_digest_style: _mdStyle.value,
 			};
 			try {
 				if (_prefRecordId) {
@@ -345,6 +348,10 @@ export const useAIPreferences = () => {
 		set: (v: number) => { _mdHour.value = Math.max(0, Math.min(23, Number(v) || 0)); saveDigestToDirectus(); },
 	});
 	const motivationalDigestSections = computed(() => _mdSections.value);
+	const motivationalDigestStyle = computed({
+		get: () => _mdStyle.value,
+		set: (v: DigestStyle) => { _mdStyle.value = normalizeDigestStyle(v); saveDigestToDirectus(); },
+	});
 	const toggleDigestSection = (key: string) => {
 		const set = new Set(_mdSections.value);
 		if (set.has(key)) set.delete(key); else set.add(key);
@@ -402,6 +409,7 @@ export const useAIPreferences = () => {
 			_mdCadence.value = DEFAULT_DIGEST_CADENCE;
 			_mdHour.value = DEFAULT_DIGEST_HOUR;
 			_mdSections.value = [...DEFAULT_DIGEST_SECTIONS];
+			_mdStyle.value = DEFAULT_DIGEST_STYLE;
 			_verbosity.value = 'regular';
 			return;
 		}
@@ -424,6 +432,7 @@ export const useAIPreferences = () => {
 		motivationalDigestCadence,
 		motivationalDigestHour,
 		motivationalDigestSections,
+		motivationalDigestStyle,
 		toggleDigestSection,
 		isDigestSectionOn,
 		responseVerbosity: readonly(responseVerbosity),

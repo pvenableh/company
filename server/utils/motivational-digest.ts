@@ -17,6 +17,7 @@ import { readItems } from '@directus/sdk';
 import { collectRecentWins, collectPersonalAgenda } from './personal-agenda';
 import { proposalPursuitState as _pps } from '~~/shared/proposals';
 import { levelTitle } from './earnestScoreUser';
+import { type DigestStyle, DEFAULT_DIGEST_STYLE, normalizeDigestStyle } from '~~/shared/digest';
 
 export interface DigestSuggestion {
 	title: string;
@@ -31,6 +32,8 @@ export interface DigestPayload {
 	orgId: string;
 	orgName: string | null;
 	tone: 'motivational' | 'forward' | 'wins';
+	/** How the email is framed — see DigestStyle. Renderer branches on this. */
+	style: DigestStyle;
 	wins: { tasksDone: number; ticketsClosed: number; sampleTitle: string | null; any: boolean };
 	/** Earnest score snapshot for the scoreboard hero (null when no record yet). */
 	score: {
@@ -90,6 +93,7 @@ export async function buildDigestPayload(opts: {
 	orgName?: string | null;
 	tone: 'motivational' | 'forward' | 'wins';
 	sections: string[];
+	style?: DigestStyle;
 	now?: Date;
 }): Promise<DigestPayload> {
 	const { directus, userId, orgId, tone } = opts;
@@ -101,6 +105,7 @@ export async function buildDigestPayload(opts: {
 		orgId,
 		orgName: opts.orgName ?? null,
 		tone,
+		style: normalizeDigestStyle(opts.style ?? DEFAULT_DIGEST_STYLE),
 		wins: { tasksDone: 0, ticketsClosed: 0, sampleTitle: null, any: false },
 		score: null,
 		suggestions: [],

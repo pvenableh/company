@@ -14,6 +14,33 @@ export type DigestCadence = 'daily' | 'weekdays' | 'weekly' | 'off';
 /** Tone the email leans into, derived from the local weekday. */
 export type DigestTone = 'motivational' | 'forward' | 'wins';
 
+/**
+ * How the digest is framed:
+ *   - 'overview' — the motivational summary: wins, scoreboard, and per-section
+ *     rollups (the original digest).
+ *   - 'actions'  — task-first: a single prioritized, deep-linked checklist of
+ *     what to do today, with the rollups demoted to a compact footer.
+ */
+export type DigestStyle = 'overview' | 'actions';
+
+export interface DigestStyleDef {
+	key: DigestStyle;
+	label: string;
+	description: string;
+}
+
+/** The two framings a user can pick between in Account → Notifications. */
+export const DIGEST_STYLES: DigestStyleDef[] = [
+	{ key: 'overview', label: 'Overview', description: 'A motivational summary — wins, momentum, and where everything stands.' },
+	{ key: 'actions', label: 'Action list', description: 'A prioritized checklist of what to tackle today, each linking straight to the item.' },
+];
+
+export const DEFAULT_DIGEST_STYLE: DigestStyle = 'overview';
+
+export function normalizeDigestStyle(v: unknown): DigestStyle {
+	return v === 'actions' ? 'actions' : 'overview';
+}
+
 export interface DigestSectionDef {
 	key: string;
 	label: string;

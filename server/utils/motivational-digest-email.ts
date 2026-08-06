@@ -40,6 +40,33 @@ function toneIntro(payload: DigestPayload, firstName: string): { subject: string
 	};
 }
 
+// Action-list framing — leaner and verb-forward. Keeps a light weekday nod
+// (fresh-week Monday, wrap-up Friday) without the motivational scaffolding.
+function actionIntro(payload: DigestPayload, firstName: string): { subject: string; heading: string; lead: string } {
+	const name = firstName || 'there';
+	const count = payload.suggestions.length + derivedActionCount(payload);
+	const tally = count ? `${count} thing${count === 1 ? '' : 's'} worth doing` : 'a clear slate';
+	if (payload.tone === 'motivational') {
+		return { subject: `Your Monday action list ✅`, heading: 'Today’s action list', lead: `Fresh week, ${name} — here's ${tally}, in priority order. Knock out the top one first.` };
+	}
+	if (payload.tone === 'wins') {
+		return { subject: `Close out the week ✅`, heading: 'Before you clock out', lead: `Almost there, ${name}. Here's ${tally} to tie a bow on the week.` };
+	}
+	return { subject: `Your action list for today ✅`, heading: 'Today’s action list', lead: `Morning, ${name} — here's ${tally}, in priority order.` };
+}
+
+// Count only, so actionIntro can tally without rebuilding the rows (which need
+// appUrl). Mirrors the conditions in derivedActions.
+function derivedActionCount(p: DigestPayload): number {
+	const s = p.sections;
+	let n = 0;
+	if (s.contracts?.awaitingSignature) n++;
+	if (s.invoices?.overdueCount) n++;
+	if (s.proposals?.cold) n++;
+	if (s.crm?.leads?.overdueFollowUps) n++;
+	return n;
+}
+
 // ── Inline lucide icons (the same glyphs the Earnest app uses) ──────────────
 // Bodies lifted verbatim from @iconify-json/lucide; they use currentColor, so
 // the wrapper's `color` sets the stroke. Inline SVG renders in Apple Mail, Gmail,
@@ -77,6 +104,27 @@ function table(rows: string[]): string {
 	return `<table style="width:100%;border-collapse:collapse">${rows.join('')}</table>`;
 }
 
+// Deep-link straight to a SPECIFIC entity via the slide-over stack convention
+// (`?slide=type:id`, consumed by useAppSlideOverStack). Only the entity kinds
+// the personal agenda emits today (task, ticket) map to a slide; anything else
+// returns null and the caller falls back to a plain (unlinked) row.
+function entityHref(appUrl: string, entityType?: string, entityId?: string): string | null {
+	if (!entityType || !entityId) return null;
+	const id = encodeURIComponent(entityId);
+	switch (entityType) {
+		case 'task': return `${appUrl}${APP_ROUTES.tasks}&slide=task:${id}`;
+		case 'ticket': return `${appUrl}${APP_ROUTES.tickets}&slide=ticket:${id}`;
+		default: return null;
+	}
+}
+
+// The trailing ↗ open-link, shared by stat rows and checklist rows. Kept as a
+// separate glyph (not a wrapped title) so mail clients don't auto-style the
+// title text brand-blue/underlined.
+function openArrow(href: string): string {
+	return ` <a href="${href}" title="Open in Earnest" style="display:inline-block;padding:1px 5px;color:#b3aca4;text-decoration:none;font-size:13px;line-height:1">↗</a>`;
+}
+
 // ── Motivational blocks ──────────────────────────────────────────────────────
 
 function winsBlock(p: DigestPayload): string {
@@ -88,12 +136,85 @@ function winsBlock(p: DigestPayload): string {
 	return iconCard(ICONS.wins, 'Recent wins', `<p style="margin:0">You wrapped up ${bits.join(' and ')}${sample}. Momentum looks good on you.</p>`);
 }
 
-function suggestionsBlock(p: DigestPayload): string {
+function suggestionsBlock(p: DigestPayload, appUrl: string): string {
 	if (!p.suggestions.length) return '';
 	const items = p.suggestions
-		.map((s) => `<li style="margin:0 0 6px 0"><strong>${escapeHtml(s.title)}</strong>${s.description ? ` — <span style="color:#6b6560">${escapeHtml(s.description)}</span>` : ''}</li>`)
+		.map((s) => {
+			const href = entityHref(appUrl, s.entityType, s.entityId);
+			const link = href ? openArrow(href) : '';
+			return `<li style="margin:0 0 6px 0"><strong>${escapeHtml(s.title)}</strong>${link}${s.description ? ` — <span style="color:#6b6560">${escapeHtml(s.description)}</span>` : ''}</li>`;
+		})
 		.join('');
 	return iconCard(ICONS.suggestions, 'Suggested next moves', `<ul style="margin:0;padding-left:18px">${items}</ul>`);
+}
+
+// ── Action-list mode ─────────────────────────────────────────────────────────
+// A verb-first checklist. Rows come from two sources: the per-item personal
+// agenda (tasks/tickets, deep-linked to the exact item) and section-level
+// alerts synthesised into a single "do this" line (contracts to sign, invoices
+// to chase, cold proposals, overdue lead follow-ups) linked to the app section.
+
+interface ActionRow { html: string; href: string | null }
+
+function derivedActions(p: DigestPayload, appUrl: string): ActionRow[] {
+	const s = p.sections;
+	const href = (path: string) => `${appUrl}${path}`;
+	const out: ActionRow[] = [];
+	if (s.contracts?.awaitingSignature) {
+		const n = s.contracts.awaitingSignature;
+		out.push({ html: `Chase <strong>${n}</strong> contract${n === 1 ? '' : 's'} awaiting signature`, href: href(APP_ROUTES.contracts) });
+	}
+	if (s.invoices?.overdueCount) {
+		out.push({ html: `Chase <strong>${usd(s.invoices.overdueAmount)}</strong> across <strong>${s.invoices.overdueCount}</strong> overdue invoice${s.invoices.overdueCount === 1 ? '' : 's'}`, href: href(APP_ROUTES.invoices) });
+	}
+	if (s.proposals?.cold) {
+		const n = s.proposals.cold;
+		out.push({ html: `Follow up on <strong>${n}</strong> proposal${n === 1 ? '' : 's'} that ${n === 1 ? 'has' : 'have'} gone quiet`, href: href(APP_ROUTES.proposals) });
+	}
+	if (s.crm?.leads?.overdueFollowUps) {
+		const n = s.crm.leads.overdueFollowUps;
+		out.push({ html: `Reconnect on <strong>${n}</strong> overdue lead follow-up${n === 1 ? '' : 's'}`, href: href(APP_ROUTES.leads) });
+	}
+	return out;
+}
+
+function checklistRow(html: string, href: string | null): string {
+	const link = href ? openArrow(href) : '';
+	return `<tr>
+		<td style="width:20px;padding:6px 0;vertical-align:top;color:#c9c3bb;font-size:15px;line-height:1.4">☐</td>
+		<td style="padding:6px 0;color:#141210;font-size:14px;line-height:1.45">${html}${link}</td>
+	</tr>`;
+}
+
+function actionChecklistBlock(p: DigestPayload, appUrl: string): string {
+	const rows: string[] = [];
+	// Per-item agenda first (already priority-sorted upstream), each deep-linked.
+	for (const s of p.suggestions) {
+		const href = entityHref(appUrl, s.entityType, s.entityId);
+		const desc = s.description ? ` <span style="color:#8a837c">— ${escapeHtml(s.description)}</span>` : '';
+		rows.push(checklistRow(`<strong>${escapeHtml(s.title)}</strong>${desc}`, href));
+	}
+	// Then the money/people alerts, framed as concrete moves.
+	for (const a of derivedActions(p, appUrl)) rows.push(checklistRow(a.html, a.href));
+	if (!rows.length) return '';
+	return iconCard(ICONS.suggestions, 'Your action list', `<table style="width:100%;border-collapse:collapse">${rows.join('')}</table>`);
+}
+
+// Compact one-line rollup that rides beneath the checklist in action mode, so
+// the numbers are still a tap away without competing with the to-dos. Respects
+// the sections the user opted into (payload.sections only holds computed ones).
+function statsFooterBlock(p: DigestPayload, appUrl: string): string {
+	const s = p.sections;
+	const bits: string[] = [];
+	if (s.projects?.active) bits.push(`${s.projects.active} active project${s.projects.active === 1 ? '' : 's'}`);
+	if (s.tasks?.dueSoon) bits.push(`${s.tasks.dueSoon} task${s.tasks.dueSoon === 1 ? '' : 's'} due soon`);
+	if (s.tickets?.open) bits.push(`${s.tickets.open} open ticket${s.tickets.open === 1 ? '' : 's'}`);
+	if (s.invoices?.outstanding) bits.push(`${usd(s.invoices.outstanding)} unpaid`);
+	if (s.proposals?.liveCount) bits.push(`${usd(s.proposals.liveValue)} out for review`);
+	if (!bits.length) return '';
+	return `<div style="margin:0 0 16px 0;padding:12px 16px;background:#faf9f7;border:1px solid #eeeeee;border-radius:12px">
+		<p style="margin:0;font-size:12px;line-height:1.5;color:#8a837c"><a href="${appUrl}" style="color:#8a837c;text-decoration:none">By the numbers:</a> ${bits.join(' &nbsp;·&nbsp; ')}</p>
+	</div>`;
 }
 
 // ── App-shaped blocks (Work · People · Money · Marketing) ────────────────────
@@ -176,9 +297,7 @@ function statRow(label: string, value: string, href?: string): string {
 	// don't auto-style it (underline / brand-blue). The link carries generous
 	// padding so it's an easy tap target. (Email-safe text arrow; icon fonts
 	// don't render in mail clients.)
-	const link = href
-		? ` <a href="${href}" title="Open in Earnest" style="display:inline-block;padding:1px 5px;color:#b3aca4;text-decoration:none;font-size:13px;line-height:1">↗</a>`
-		: '';
+	const link = href ? openArrow(href) : '';
 	return `<tr>
 		<td style="padding:6px 0;vertical-align:top;white-space:nowrap;width:112px"><span style="color:#8a837c;font-size:12px;text-transform:uppercase;letter-spacing:0.4px">${escapeHtml(label)}</span>${link}</td>
 		<td style="padding:6px 0;color:#141210;font-size:14px">${value}</td>
@@ -233,29 +352,54 @@ function scoreboardBlock(p: DigestPayload): string {
  * deterministic template copy when supplied.
  */
 export function renderDigestBodyHtml(payload: DigestPayload, firstName: string, appUrl = 'https://app.earnest.guru', introOverride?: DigestCopy | null): { subject: string; heading: string; bodyHtml: string; text: string } {
-	const intro = introOverride || toneIntro(payload, firstName);
-	const body = [
-		// intro.lead is model- or template-generated text → escape once here (it
-		// lands in raw {{{bodyHtml}}}). firstName is passed raw and escaped in the
-		// same pass, so there's no double-escaping.
-		`<p style="margin:0 0 16px 0">${escapeHtml(intro.lead)}</p>`,
-		scoreboardBlock(payload),
-		winsBlock(payload),
-		suggestionsBlock(payload),
-		workBlock(payload, appUrl),
-		peopleBlock(payload, appUrl),
-		moneyBlock(payload, appUrl),
-		marketingBlock(payload, appUrl),
-	].filter(Boolean).join('');
+	const isActions = payload.style === 'actions';
+	const intro = introOverride || (isActions ? actionIntro(payload, firstName) : toneIntro(payload, firstName));
+
+	// intro.lead is model- or template-generated text → escape once here (it
+	// lands in raw {{{bodyHtml}}}). firstName is passed raw and escaped in the
+	// same pass, so there's no double-escaping.
+	const leadHtml = `<p style="margin:0 0 16px 0">${escapeHtml(intro.lead)}</p>`;
+
+	// Action mode leads with the checklist and demotes the rollups to a one-line
+	// footer; overview mode is the original motivational layout.
+	const blocks = isActions
+		? [
+			leadHtml,
+			actionChecklistBlock(payload, appUrl),
+			statsFooterBlock(payload, appUrl),
+			winsBlock(payload),
+		]
+		: [
+			leadHtml,
+			scoreboardBlock(payload),
+			winsBlock(payload),
+			suggestionsBlock(payload, appUrl),
+			workBlock(payload, appUrl),
+			peopleBlock(payload, appUrl),
+			moneyBlock(payload, appUrl),
+			marketingBlock(payload, appUrl),
+		];
+	const body = blocks.filter(Boolean).join('');
 
 	// Plain-text fallback — screen readers + text-only clients.
 	const textParts: string[] = [intro.lead, ''];
-	if (payload.wins.any) textParts.push(`Recent wins: ${payload.wins.tasksDone} tasks done, ${payload.wins.ticketsClosed} tickets closed.`);
-	if (payload.suggestions.length) {
-		textParts.push('', 'Suggested next moves:');
+	if (isActions) {
+		textParts.push('Your action list:');
 		payload.suggestions.forEach((s) => textParts.push(`- ${s.title}${s.description ? ` — ${s.description}` : ''}`));
+		derivedActions(payload, appUrl).forEach((a) => textParts.push(`- ${stripTags(a.html)}`));
+	} else {
+		if (payload.wins.any) textParts.push(`Recent wins: ${payload.wins.tasksDone} tasks done, ${payload.wins.ticketsClosed} tickets closed.`);
+		if (payload.suggestions.length) {
+			textParts.push('', 'Suggested next moves:');
+			payload.suggestions.forEach((s) => textParts.push(`- ${s.title}${s.description ? ` — ${s.description}` : ''}`));
+		}
 	}
 	return { subject: intro.subject, heading: intro.heading, bodyHtml: body, text: textParts.join('\n') };
+}
+
+/** Strip the small amount of inline markup we put in derived-action html for the plain-text leg. */
+function stripTags(html: string): string {
+	return html.replace(/<[^>]+>/g, '');
 }
 
 export async function sendMotivationalDigest(params: {

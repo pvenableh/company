@@ -73,6 +73,20 @@ async function main() {
 		schema: { is_nullable: true },
 	});
 
+	await addField('motivational_digest_style', {
+		type: 'string',
+		meta: {
+			interface: 'select-dropdown',
+			options: { choices: [
+				{ text: 'Overview (summary)', value: 'overview' },
+				{ text: 'Action list (task-first)', value: 'actions' },
+			] },
+			note: 'How the digest is framed: motivational summary vs. a prioritized action checklist.',
+			width: 'half',
+		},
+		schema: { default_value: 'overview', is_nullable: true },
+	});
+
 	console.log('\nDone. Run `pnpm generate:types` to refresh shared/directus.ts.');
 }
 main().catch((e) => { console.error('Fatal:', e); process.exit(1); });

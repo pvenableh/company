@@ -26,7 +26,9 @@ import {
 	DEFAULT_DIGEST_CADENCE,
 	DEFAULT_DIGEST_HOUR,
 	DEFAULT_DIGEST_SECTIONS,
+	normalizeDigestStyle,
 	type DigestCadence,
+	type DigestStyle,
 } from '~~/shared/digest';
 
 interface PrefRow {
@@ -36,6 +38,7 @@ interface PrefRow {
 	motivational_digest_cadence?: string | null;
 	motivational_digest_hour?: number | null;
 	motivational_digest_sections?: string[] | null;
+	motivational_digest_style?: string | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -70,13 +73,13 @@ export default defineEventHandler(async (event) => {
 	const prefs = await directus.request(
 		readItems('ai_preferences' as any, {
 			filter: { motivational_digest_enabled: { _eq: true } } as any,
-			fields: ['user', 'organization', 'motivational_digest_enabled', 'motivational_digest_cadence', 'motivational_digest_hour', 'motivational_digest_sections'] as any,
+			fields: ['user', 'organization', 'motivational_digest_enabled', 'motivational_digest_cadence', 'motivational_digest_hour', 'motivational_digest_sections', 'motivational_digest_style'] as any,
 			limit: -1,
 		}),
 	).catch((e: any) => { console.warn('[cron/motivational-digest] pref read failed:', e?.message); return []; }) as PrefRow[];
 
 	// Resolve which subscribers are due right now (in their own timezone).
-	const due: Array<{ userId: string; orgId: string | null; cadence: DigestCadence; sections: string[]; tone: 'motivational' | 'forward' | 'wins' }> = [];
+	const due: Array<{ userId: string; orgId: string | null; cadence: DigestCadence; sections: string[]; style: DigestStyle; tone: 'motivational' | 'forward' | 'wins' }> = [];
 	const userIds = new Set<string>();
 	for (const p of prefs) {
 		const userId = typeof p.user === 'object' ? p.user?.id : p.user;
@@ -112,7 +115,8 @@ export default defineEventHandler(async (event) => {
 		const sections = Array.isArray(p.motivational_digest_sections) && p.motivational_digest_sections.length
 			? p.motivational_digest_sections
 			: DEFAULT_DIGEST_SECTIONS;
-		due.push({ userId, orgId, cadence, sections, tone });
+		const style = normalizeDigestStyle(p.motivational_digest_style);
+		due.push({ userId, orgId, cadence, sections, style, tone });
 	}
 
 	const dateKey = now.toISOString().slice(0, 10);
@@ -138,7 +142,7 @@ export default defineEventHandler(async (event) => {
 			if (useWorker && queue) {
 				await queue.add('motivational-digest', {
 					type: 'motivational-digest',
-					userId: d.userId, organizationId: d.orgId, tone: d.tone, sections: d.sections, digestDate: dateKey,
+					userId: d.userId, organizationId: d.orgId, tone: d.tone, sections: d.sections, style: d.style, digestDate: dateKey,
 				}, { jobId: `motivational-digest-${d.userId}-${dateKey}` });
 				enqueued++;
 				notes.push({ userId: d.userId, result: 'enqueued' });
@@ -146,7 +150,7 @@ export default defineEventHandler(async (event) => {
 			}
 
 			const u = userById.get(d.userId);
-			const payload = await buildDigestPayload({ directus, userId: d.userId, orgId: d.orgId, tone: d.tone, sections: d.sections, now });
+			const payload = await buildDigestPayload({ directus, userId: d.userId, orgId: d.orgId, tone: d.tone, sections: d.sections, style: d.style, now });
 			if (!payload.hasContent) { skipped++; notes.push({ userId: d.userId, result: 'no-content' }); return; }
 			const res = await sendMotivationalDigest({ to: u.email, firstName: u.first_name, payload, orgId: d.orgId, appUrl, ai: aiEnabled });
 			if (res.sent) { sent++; notes.push({ userId: d.userId, result: 'sent' }); }
