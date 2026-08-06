@@ -17,8 +17,18 @@ const props = withDefaults(defineProps<{
   entityId?: string | null;
   /** Show the status filter chips (turns the org-wide feed into a review queue). */
   showFilters?: boolean;
+  /** Pin the feed to a single status (e.g. 'pending'). Overrides the chip filter
+   *  and is what the Director surface uses to show just the live proposals. */
+  status?: string | null;
+  /** Render nothing (no skeleton, no empty state) when there are no rows — for
+   *  embedding in a surface that should stay silent until Earnest has something. */
+  hideWhenEmpty?: boolean;
+  /** Scope the feed to a single Director plan (matches ai_actions.session_id).
+   *  Used to render just the steps a "Draft a plan" turn produced. */
+  planId?: string | null;
 }>(), {
   showFilters: false,
+  hideWhenEmpty: false,
 });
 
 const toast = useToast();
@@ -58,7 +68,9 @@ async function load() {
         ...(props.entityType && props.entityId
           ? { entityType: props.entityType, entityId: props.entityId }
           : {}),
-        ...(statusFilter.value ? { status: statusFilter.value } : {}),
+        // A pinned `status` prop wins over the interactive chip filter.
+        ...(props.status ? { status: props.status } : (statusFilter.value ? { status: statusFilter.value } : {})),
+        ...(props.planId ? { planId: props.planId } : {}),
       },
     });
     actions.value = res?.actions || [];
@@ -75,6 +87,8 @@ async function load() {
 onMounted(load);
 watch(organizationId, load);
 watch(() => [props.entityType, props.entityId], load);
+watch(() => props.status, load);
+watch(() => props.planId, load);
 watch(statusFilter, load);
 
 // ── Approve / reject (optimistic, with rollback per iOS reactive-CRUD policy) ──
@@ -453,7 +467,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="space-y-3">
+    <div v-if="loading && !hideWhenEmpty" class="space-y-3">
       <div v-for="n in 4" :key="n" class="flex items-start gap-3">
         <div class="w-7 h-7 rounded-full bg-muted animate-pulse shrink-0" />
         <div class="flex-1 space-y-1.5">
@@ -469,7 +483,7 @@ function artifactLinks(a: any): Array<{ label: string; open: () => void }> {
     </div>
 
     <!-- Empty -->
-    <div v-else-if="!actions.length" class="text-center py-10">
+    <div v-else-if="!actions.length && !loading && !hideWhenEmpty" class="text-center py-10">
       <EIcon name="lucide:sparkles" class="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
       <p class="text-sm text-muted-foreground">No AI activity yet</p>
       <p class="text-[11px] text-muted-foreground/70 mt-0.5">Actions Earnest takes will show up here.</p>

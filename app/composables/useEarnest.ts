@@ -4,7 +4,7 @@
  * There is ONE Earnest, now at TWO altitudes:
  *   - 'rest' — collapsed. On the home route this is the calm PresenceHome hero;
  *              elsewhere it's the ambient presence dot / launcher in the top bar.
- *              No overlay. (Contextual, *inline* Earnest — e.g. EntityEarnestCard,
+ *              No overlay. (Contextual, *inline* Earnest — e.g. the DirectorLayer,
  *              the generative canvases — is its own embedded surface and doesn't
  *              live here; it escalates INTO Focus when the user leans in.)
  *   - 'full' — the full-screen Focus surface (calm "one honest thing" register,

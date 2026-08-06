@@ -418,7 +418,7 @@ if (!props.compact) {
       </div>
 
       <ClientOnly>
-        <AIProactiveNotices v-if="doc?.id" :entity-type="type" :entity-id="String(doc.id)" />
+        <DirectorLayer v-if="doc?.id" :entity-type="type" :entity-id="String(doc.id)" />
       </ClientOnly>
 
       <!-- Activity drawer (toggle, not a mode) -->

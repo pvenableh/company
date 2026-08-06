@@ -3,7 +3,7 @@
  *
  * The docked panel has been RETIRED. These exports are kept so every existing
  * caller (entity detail pages via useEntityPageContext, the presence home, the
- * meeting room, EntityEarnestCard's prompt pills) keeps working — but they now
+ * meeting room, DirectorLayer's prompt pills) keeps working — but they now
  * open Earnest's full-screen Focus surface instead of a side panel. `panelOpen`
  * therefore tracks the 'full' size; there is no separate 'dock' state anymore.
  */

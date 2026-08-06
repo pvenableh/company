@@ -1260,13 +1260,16 @@ watch(() => props.clientId, () => {
 						</div>
 					</div>
 
-					<!-- Earnest, focused on THIS client: scoped prompts. The Convene
-					     button is hidden here — the identity strip above owns it. -->
-					<AppsEntityEarnestCard
+					<!-- The unified Director surface, focused on THIS client: scoped
+					     prompts, advisory notices, and any live proposals — one
+					     consistent affordance. Convene is hidden here; the identity
+					     strip above owns it. -->
+					<DirectorLayer
 						entity-type="client"
 						:entity-id="String(client.id)"
 						:label="client.name || 'this client'"
-						hide-convene
+						heading
+						show-prompts
 					/>
 					<!-- Live pulse: Timeline of the client's work (projects/tickets/
 					     tasks) and the Touchpoints comms log, folded into one tabbed

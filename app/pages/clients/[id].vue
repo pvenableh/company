@@ -515,7 +515,7 @@ onUnmounted(() => clearEntity());
 
       <!-- AI Notices -->
       <ClientOnly>
-        <AIProactiveNotices entity-type="client" :entity-id="client.id" />
+        <DirectorLayer entity-type="client" :entity-id="client.id" />
       </ClientOnly>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -247,7 +247,7 @@ onUnmounted(() => clearEntity());
 
       <!-- AI Notices -->
       <ClientOnly>
-        <AIProactiveNotices v-if="team?.id" entity-type="team" :entity-id="String(team.id)" />
+        <DirectorLayer v-if="team?.id" entity-type="team" :entity-id="String(team.id)" />
       </ClientOnly>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

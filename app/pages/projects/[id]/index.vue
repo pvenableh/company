@@ -630,7 +630,7 @@ const formatCurrency = (amount) => {
 					<div class="space-y-6 mb-6">
 						<!-- AI Notices -->
 						<ClientOnly>
-							<AIProactiveNotices v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
+							<DirectorLayer v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
 						</ClientOnly>
 
 						<!-- Stats Row -->

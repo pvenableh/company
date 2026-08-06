@@ -768,7 +768,7 @@ if (!props.compact) {
 
       <!-- AI Notices -->
       <ClientOnly>
-        <AIProactiveNotices v-if="invoice?.id" entity-type="invoice" :entity-id="String(invoice.id)" />
+        <DirectorLayer v-if="invoice?.id" entity-type="invoice" :entity-id="String(invoice.id)" />
       </ClientOnly>
 
       <!-- Inline-editable details -->

@@ -58,7 +58,7 @@
 
 		<!-- AI Notices -->
 		<ClientOnly>
-			<AIProactiveNotices entity-type="ticket" :entity-id="String(localElement.id)" />
+			<DirectorLayer entity-type="ticket" :entity-id="String(localElement.id)" />
 		</ClientOnly>
 
 		<!-- Tabs -->

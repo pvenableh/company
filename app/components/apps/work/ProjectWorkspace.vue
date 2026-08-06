@@ -1340,14 +1340,17 @@ watch(() => props.projectId, () => {
 							@click="activeTab = 'contacts'"
 						>View all →</button>
 					</div>
-					<!-- Earnest, focused on THIS project: scoped prompts + a Boardroom
-					     convene, so opening a project surfaces work + next moves. -->
-					<AppsEntityEarnestCard
+					<!-- The unified Director surface, focused on THIS project: scoped
+					     prompts (incl. "draft a timeline"), advisory notices, and any
+					     live proposals. Convene is hidden here; the identity strip
+					     above owns it. -->
+					<DirectorLayer
 						v-if="project.id"
 						entity-type="project"
 						:entity-id="String(project.id)"
 						:label="project.title || 'this project'"
-						hide-convene
+						heading
+						show-prompts
 					/>
 
 					<!-- Live pulse: Timeline, Touchpoints, and Activity as one tabbed

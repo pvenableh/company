@@ -47,6 +47,9 @@
 						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
 					<div class="apps-shell__chrome-right">
+							<ClientOnly>
+								<DirectorTrustBar v-if="user" />
+							</ClientOnly>
 						<!-- THE single launcher for Earnest — the "E." mark, so it
 						     unmistakably reads as Earnest (not a generic aperture). Tap to
 						     open Focus; reachable from every page. The HITL pending-actions

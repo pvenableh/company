@@ -566,7 +566,7 @@ function openContactPivot() {
 			<div :class="compact ? 'px-4 pb-4 space-y-4' : ''">
 				<!-- AI Notices (page mode only — entity context not set in compact) -->
 				<ClientOnly v-if="!compact">
-					<AIProactiveNotices v-if="lead?.id" entity-type="lead" :entity-id="String(lead.id)" />
+					<DirectorLayer v-if="lead?.id" entity-type="lead" :entity-id="String(lead.id)" />
 				</ClientOnly>
 
 				<!-- Pipeline Stage Timeline -->
