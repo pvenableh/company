@@ -32,14 +32,19 @@ function fmtDate(d: string | null | undefined) {
 
 const entries = computed<DocumentBlockEntry[]>(() => normalizeEntries(props.blocks));
 
-// Detect a cover block: the FIRST entry with `page_break_after: true`.
-// Legacy heuristic preserved until the `cover` primitive ships and rows
-// are converted. When detected, render that block with the special
-// full-page layout that uses the parent's cover context (logo, title,
-// recipient, dates) instead of the block's heading + body.
+// Provide the cover context (logo, recipient, dates) down to any block
+// that wants it — the `cover` block Renderer injects this to fall back to
+// the document's real logo/recipient when its own payload leaves them blank.
+provide('docCoverContext', computed(() => props.cover || null));
+
+// Detect a LEGACY cover: the FIRST entry is a rich_text with
+// `page_break_after: true`. This heuristic predates the `cover` primitive;
+// rows authored before it get the special full-page layout that pulls from
+// the parent's cover context. A real `cover` typed block is NOT hijacked
+// here — it renders through its own component in the normal loop.
 const hasCover = computed(() => {
 	const list = entries.value;
-	return list.length > 0 && !!list[0].page_break_after;
+	return list.length > 0 && list[0].type === 'rich_text' && !!list[0].page_break_after;
 });
 
 const coverBodyHtml = computed(() => {
