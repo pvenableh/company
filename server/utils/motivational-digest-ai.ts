@@ -22,9 +22,15 @@ export interface DigestCopy {
 /** A compact, factual digest of the payload — numbers only, for the model to frame. */
 function summarize(p: DigestPayload): string {
 	const lines: string[] = [];
-	if (p.score) lines.push(`Earnest score ${p.score.currentScore} (${p.score.levelTitle}), ${p.score.streak}-day streak, ${p.score.daysActiveThisWeek} active days this week.`);
-	if (p.wins.any) lines.push(`Recent wins: ${p.wins.tasksDone} tasks done, ${p.wins.ticketsClosed} tickets closed${p.wins.sampleTitle ? `, e.g. "${p.wins.sampleTitle}"` : ''}.`);
-	if (p.suggestions.length) lines.push(`Top suggested actions: ${p.suggestions.slice(0, 3).map((s) => s.title).join('; ')}.`);
+	const isActions = p.style === 'actions';
+	// In action mode the opener frames a to-do list, so lead with the actual
+	// tasks (all of them, in priority order) and demote the score/wins framing.
+	if (isActions && p.suggestions.length) {
+		lines.push(`Top priorities to tackle today (in order): ${p.suggestions.map((s) => s.title).join('; ')}.`);
+	}
+	if (p.score && !isActions) lines.push(`Earnest score ${p.score.currentScore} (${p.score.levelTitle}), ${p.score.streak}-day streak, ${p.score.daysActiveThisWeek} active days this week.`);
+	if (p.wins.any && !isActions) lines.push(`Recent wins: ${p.wins.tasksDone} tasks done, ${p.wins.ticketsClosed} tickets closed${p.wins.sampleTitle ? `, e.g. "${p.wins.sampleTitle}"` : ''}.`);
+	if (p.suggestions.length && !isActions) lines.push(`Top suggested actions: ${p.suggestions.slice(0, 3).map((s) => s.title).join('; ')}.`);
 	const s = p.sections;
 	if (s.projects?.active || s.tasks || s.tickets) lines.push(`Work: ${s.projects?.active ?? 0} active projects, ${s.tasks ? `${s.tasks.overdue} overdue + ${s.tasks.dueSoon} due-soon tasks` : 'no task data'}, ${s.tickets?.open ?? 0} open tickets.`);
 	if (s.clients || s.crm) lines.push(`People: ${s.clients?.total ?? 0} clients${s.crm?.leads ? `, ${s.crm.leads.open} open leads worth $${s.crm.leads.pipelineValue}` : ''}${s.crm?.leads?.overdueFollowUps ? ` (${s.crm.leads.overdueFollowUps} follow-ups overdue)` : ''}${s.feedback ? `, ${s.feedback.csatCount} client ratings avg ${s.feedback.csatAvg}` : ''}.`);
@@ -58,6 +64,11 @@ const TONE_GUIDE: Record<string, string> = {
 	forward: 'A weekday morning — calm and forward-looking; help them see their next move.',
 };
 
+// Action-list style overrides the celebratory pull of TONE_GUIDE: the body is a
+// prioritized checklist, so the opener must be crisp and forward, not a recap.
+const ACTION_STYLE_GUIDE =
+	'IMPORTANT — this is an ACTION-LIST digest: the body below your opener is a prioritized checklist of concrete things to do today. Write a crisp, practical, action-forward opener that orients them to their top priorities and nudges them to start on the first one. Do NOT celebrate, recap wins, or mention the score — keep it forward-looking. The subject should read like a to-do list for the day (e.g. "Your action list for today").';
+
 /**
  * Compose the digest's subject/heading/lead with the LLM. Returns null on any
  * failure so the caller keeps the deterministic template copy.
@@ -66,16 +77,18 @@ export async function composeDigestCopy(payload: DigestPayload, firstName: strin
 	try {
 		const provider = getLLMProvider();
 		const name = (firstName || '').trim() || 'there';
+		const isActions = payload.style === 'actions';
 
 		const system = [
 			EARNEST_VOICE_CHARTER,
 			'',
-			'You are Earnest, writing ONLY the opening of a short daily/weekly digest email for one person on an agency team.',
+			`You are Earnest, writing ONLY the opening of a short daily/weekly ${isActions ? 'action-list' : 'summary'} digest email for one person on an agency team.`,
 			'You are given the real, already-computed numbers. Frame them warmly and honestly — never invent, inflate, or restate figures the data does not contain. The email body already lists every number and link; your job is the human opener, not a data dump.',
 			`Tone for today: ${TONE_GUIDE[payload.tone] || TONE_GUIDE.forward}`,
+			...(isActions ? ['', ACTION_STYLE_GUIDE] : []),
 			'',
 			'Return ONLY a JSON object, no prose around it:',
-			'{"subject": "<=8 words, may include one tasteful emoji", "heading": "<=6 words", "lead": "1-2 warm sentences, second person, addressed to the person by first name"}',
+			`{"subject": "<=8 words, may include one tasteful emoji", "heading": "<=6 words", "lead": "1-2 ${isActions ? 'crisp, action-forward' : 'warm'} sentences, second person, addressed to the person by first name"}`,
 			'The lead must not list more than one specific number; save the rest for the cards below it.',
 		].join('\n');
 
