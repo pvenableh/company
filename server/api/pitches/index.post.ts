@@ -50,6 +50,8 @@ export default defineEventHandler(async (event) => {
     html: Buffer.from(htmlPart.data).toString('utf8'),
     client_name: fieldVal(parts, 'client_name') || null,
     links: { lead, client: fieldVal(parts, 'client') || null, contact: fieldVal(parts, 'contact') || null },
+    kind: fieldVal(parts, 'kind') === 'prototype' ? 'prototype' : 'pitch',
+    proposal: fieldVal(parts, 'proposal') || null,
     password: fieldVal(parts, 'password') || null,
     expires_at: fieldVal(parts, 'expires_at') || null,
     publish: fieldVal(parts, 'publish') === 'true',

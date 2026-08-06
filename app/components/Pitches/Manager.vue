@@ -23,6 +23,8 @@ interface PitchRow {
   client_name: string | null
   token: string
   status: 'draft' | 'published' | 'revoked'
+  kind: 'pitch' | 'prototype'
+  proposal: string | null
   expires_at: string | null
   view_count: number
   last_viewed_at: string | null
@@ -48,6 +50,8 @@ const form = reactive({
   // Optional link to a real record, encoded as "<type>:<id>" (e.g. "client:uuid",
   // "lead:42", "contact:uuid"). Empty = link to nobody (client_name fallback).
   link: '',
+  kind: 'pitch' as 'pitch' | 'prototype',
+  proposal: '',
   password: '',
   expires_at: '',
   publish: true,
@@ -55,17 +59,14 @@ const form = reactive({
 
 // Pickable records for the "For" selector, grouped by type.
 type LinkOption = { id: string | number; label: string }
-const linkOptions = ref<{ clients: LinkOption[]; leads: LinkOption[]; contacts: LinkOption[] }>({
-  clients: [], leads: [], contacts: [],
-})
+const emptyLinkOptions = () => ({ clients: [] as LinkOption[], leads: [] as LinkOption[], contacts: [] as LinkOption[], proposals: [] as LinkOption[] })
+const linkOptions = ref(emptyLinkOptions())
 async function loadLinkOptions() {
-  if (!selectedOrg.value) { linkOptions.value = { clients: [], leads: [], contacts: [] }; return }
+  if (!selectedOrg.value) { linkOptions.value = emptyLinkOptions(); return }
   try {
-    linkOptions.value = await $fetch('/api/pitches/link-options', {
-      query: { organization: selectedOrg.value },
-    })
+    linkOptions.value = { ...emptyLinkOptions(), ...(await $fetch('/api/pitches/link-options', { query: { organization: selectedOrg.value } })) }
   } catch {
-    linkOptions.value = { clients: [], leads: [], contacts: [] }
+    linkOptions.value = emptyLinkOptions()
   }
 }
 const htmlFile = ref<File | null>(null)
@@ -83,6 +84,7 @@ const genForm = reactive({
   link: '',
   title: '',
   brief: '',
+  proposal: '',
   password: '',
   expires_at: '',
   settings: {
@@ -120,6 +122,7 @@ async function generate() {
         brief: genForm.brief.trim() || undefined,
         title: genForm.title.trim() || undefined,
         settings: { mode: genForm.settings.mode, accent: genForm.settings.accent, font: genForm.settings.font, titleStyle: genForm.settings.titleStyle },
+        proposal: genForm.proposal || null,
         password: genForm.password || null,
         expires_at: genForm.expires_at || null,
       },
@@ -163,7 +166,7 @@ function onAssetsPick(e: Event) {
 }
 
 function resetForm() {
-  Object.assign(form, { title: '', client_name: '', link: '', password: '', expires_at: '', publish: true })
+  Object.assign(form, { title: '', client_name: '', link: '', kind: 'pitch', proposal: '', password: '', expires_at: '', publish: true })
   htmlFile.value = null
   assetFiles.value = []
   formError.value = null
@@ -187,6 +190,8 @@ function startEdit(row: PitchRow) {
     title: row.title,
     client_name: row.client_name || '',
     link: row.linked?.value || '',
+    kind: row.kind || 'pitch',
+    proposal: row.proposal || '',
     password: '',
     expires_at: row.expires_at ? row.expires_at.slice(0, 10) : '',
     publish: true,
@@ -221,6 +226,8 @@ async function submitEdit() {
       title: form.title.trim(),
       client_name: form.link ? null : form.client_name.trim(),
       lead, client, contact,
+      kind: form.kind,
+      proposal: form.proposal || null,
       expires_at: form.expires_at || null,
     }
     // Blank password on edit = leave unchanged (only send when the user typed one).
@@ -254,6 +261,8 @@ async function submit() {
       const id = rest.join(':')
       if (type === 'client' || type === 'lead' || type === 'contact') fd.append(type, id)
     }
+    fd.append('kind', form.kind)
+    if (form.proposal) fd.append('proposal', form.proposal)
     fd.append('password', form.password)
     fd.append('expires_at', form.expires_at)
     fd.append('publish', String(form.publish))
@@ -264,7 +273,7 @@ async function submit() {
     justCreated.value = { title: form.title.trim(), url: res.url }
     justCreatedDraft.value = !form.publish
     // reset
-    Object.assign(form, { title: '', client_name: '', link: '', password: '', expires_at: '', publish: true })
+    Object.assign(form, { title: '', client_name: '', link: '', kind: 'pitch', proposal: '', password: '', expires_at: '', publish: true })
     htmlFile.value = null
     assetFiles.value = []
     showForm.value = false
@@ -293,6 +302,12 @@ function openBrief(row: PitchRow) {
   brief.title = row.title || ''
   brief.open = true
 }
+
+// Pitch vs prototype: filter tabs + open a linked proposal.
+const kindFilter = ref<'all' | 'pitch' | 'prototype'>('all')
+const filteredRows = computed(() => kindFilter.value === 'all' ? rows.value : rows.value.filter((r) => (r.kind || 'pitch') === kindFilter.value))
+const hasPrototypes = computed(() => rows.value.some((r) => r.kind === 'prototype'))
+const proposalSlide = useAppSlideOver('proposal')
 
 const copiedToken = ref<string | null>(null)
 async function copyLink(row: { token: string; url: string }) {
@@ -438,6 +453,15 @@ onMounted(() => {
           class="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40"></textarea>
       </label>
 
+      <label v-if="linkOptions.proposals.length" class="grid gap-1.5">
+        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Related proposal (optional)</span>
+        <select v-model="genForm.proposal"
+          class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+          <option value="">None</option>
+          <option v-for="o in linkOptions.proposals" :key="o.id" :value="String(o.id)">{{ o.label }}</option>
+        </select>
+      </label>
+
       <!-- Look & feel -->
       <div class="grid gap-3 rounded-xl border border-border/60 bg-background/50 p-4 sm:grid-cols-4">
         <label class="grid gap-1.5">
@@ -531,6 +555,27 @@ onMounted(() => {
           class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
       </label>
 
+      <!-- Kind + linked proposal -->
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kind</span>
+          <div class="inline-flex rounded-full border border-border p-0.5 text-sm">
+            <button v-for="k in (['pitch','prototype'] as const)" :key="k" type="button"
+              class="flex-1 rounded-full px-3 py-1.5 capitalize transition-colors"
+              :class="form.kind === k ? 'bg-foreground text-background font-medium' : 'text-muted-foreground'"
+              @click="form.kind = k">{{ k }}</button>
+          </div>
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Related proposal (optional)</span>
+          <select v-model="form.proposal"
+            class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+            <option value="">None</option>
+            <option v-for="o in linkOptions.proposals" :key="o.id" :value="String(o.id)">{{ o.label }}</option>
+          </select>
+        </label>
+      </div>
+
       <div v-if="!isEditing" class="grid gap-4 sm:grid-cols-2">
         <label class="grid gap-1.5">
           <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pitch file (.html)</span>
@@ -584,12 +629,23 @@ onMounted(() => {
       <Icon name="lucide:sparkles" class="mx-auto h-8 w-8 text-muted-foreground/60" />
       <p class="mt-3 text-sm text-muted-foreground">No pitches yet. Create one to get a shareable link.</p>
     </div>
-    <ul v-else class="grid gap-3">
-      <li v-for="row in rows" :key="row.id"
+    <!-- Kind filter (only once a prototype exists) -->
+    <div v-if="!loading && rows.length && hasPrototypes" class="mb-3 inline-flex rounded-full border border-border p-0.5 text-xs">
+      <button v-for="k in (['all','pitch','prototype'] as const)" :key="k"
+        class="rounded-full px-3 py-1 capitalize transition-colors"
+        :class="kindFilter === k ? 'bg-foreground text-background font-medium' : 'text-muted-foreground hover:text-foreground'"
+        @click="kindFilter = k">{{ k === 'all' ? 'All' : k + 's' }}</button>
+    </div>
+
+    <ul v-if="!loading && rows.length" class="grid gap-3">
+      <li v-for="row in filteredRows" :key="row.id"
         class="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
             <span class="truncate font-medium text-foreground">{{ row.title }}</span>
+            <span v-if="row.kind === 'prototype'" class="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-500">
+              <Icon name="lucide:terminal" class="h-2.5 w-2.5" /> Prototype
+            </span>
             <span class="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide" :class="statusClass(row.status)">
               {{ row.status }}
             </span>
@@ -601,6 +657,9 @@ onMounted(() => {
               {{ row.linked.label }}
             </NuxtLink>
             <span v-else-if="row.client_name">{{ row.client_name }}</span>
+            <button v-if="row.proposal" type="button" class="inline-flex items-center gap-1 text-primary hover:underline" title="Open linked proposal" @click="proposalSlide.open(String(row.proposal))">
+              <Icon name="lucide:file-text" class="h-3 w-3" /> Proposal
+            </button>
             <span class="inline-flex items-center gap-1"><Icon name="lucide:eye" class="h-3 w-3" />{{ row.view_count }}</span>
             <span v-if="row.has_password" class="inline-flex items-center gap-1"><Icon name="lucide:lock" class="h-3 w-3" />password</span>
             <span v-if="row.expires_at" class="inline-flex items-center gap-1"><Icon name="lucide:clock" class="h-3 w-3" />{{ new Date(row.expires_at).toLocaleDateString() }}</span>

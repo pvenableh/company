@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     readItems('pitch_pages', {
       filter: { organization: { _eq: organization } },
       fields: [
-        'id', 'title', 'client_name', 'token', 'status',
+        'id', 'title', 'client_name', 'token', 'status', 'kind', 'proposal',
         'expires_at', 'view_count', 'last_viewed_at', 'date_created',
         'password_hash', // fetched only to derive has_password; stripped below
         // Linked record (Pursuits merge) — resolve a display label + deep link.
@@ -60,6 +60,8 @@ export default defineEventHandler(async (event) => {
       client_name: r.client_name,
       token: r.token,
       status: r.status,
+      kind: r.kind || 'pitch',
+      proposal: r.proposal || null,
       expires_at: r.expires_at,
       view_count: r.view_count ?? 0,
       last_viewed_at: r.last_viewed_at,

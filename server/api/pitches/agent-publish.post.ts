@@ -48,6 +48,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<{
     organization?: string; html?: string; title?: string; client_name?: string | null;
     links?: { lead?: number | null; client?: string | null; contact?: string | null };
+    kind?: 'pitch' | 'prototype'; proposal?: string | null;
     password?: string | null; expires_at?: string | null;
   }>(event);
 
@@ -67,6 +68,8 @@ export default defineEventHandler(async (event) => {
     title,
     html: body.html,
     links: body.links,
+    kind: body.kind === 'prototype' ? 'prototype' : 'pitch',
+    proposal: body.proposal ?? null,
     client_name: body.client_name ?? null,
     password: body.password ?? null,
     expires_at: body.expires_at ?? null,

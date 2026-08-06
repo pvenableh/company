@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   const directus = getServerDirectus();
 
-  const [clients, leads, contacts] = await Promise.all([
+  const [clients, leads, contacts, proposals] = await Promise.all([
     directus.request(readItems('clients', {
       filter: { organization: { _eq: organization } },
       fields: ['id', 'name'],
@@ -41,6 +41,12 @@ export default defineEventHandler(async (event) => {
       sort: ['first_name'],
       limit: LIMIT,
     })) as Promise<any[]>,
+    directus.request(readItems('proposals', {
+      filter: { organization: { _eq: organization } },
+      fields: ['id', 'title', 'total_value'],
+      sort: ['-date_created'],
+      limit: LIMIT,
+    })).catch(() => []) as Promise<any[]>,
   ]);
 
   const fullName = (f?: string | null, l?: string | null) => `${f || ''} ${l || ''}`.trim();
@@ -57,5 +63,8 @@ export default defineEventHandler(async (event) => {
       const name = fullName(c.first_name, c.last_name) || 'Unnamed contact';
       return { id: c.id, label: c.company ? `${name} · ${c.company}` : name };
     }),
+    proposals: (proposals || [])
+      .filter((p) => p.title)
+      .map((p) => ({ id: p.id, label: p.title })),
   };
 });

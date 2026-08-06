@@ -39,6 +39,10 @@ export interface PublishPitchInput {
   expires_at?: string | null;
   /** false → status 'draft' (the AI path passes false so it's reviewed first). */
   publish?: boolean;
+  /** 'pitch' (default) or 'prototype' — a bespoke built page, same serve path. */
+  kind?: 'pitch' | 'prototype';
+  /** Linked proposal id (the proposal this pitch/prototype supports). */
+  proposal?: string | null;
   /** Local files referenced by the HTML (video/images/etc). The AI path passes none. */
   assets?: PublishPitchAsset[];
 }
@@ -65,6 +69,7 @@ export async function publishPitch(input: PublishPitchInput): Promise<PublishPit
   const {
     organization, userId, title, links,
     client_name = null, password = null, expires_at = null, publish = false, assets = [],
+    kind, proposal = null,
   } = input;
   let html = input.html;
 
@@ -128,6 +133,8 @@ export async function publishPitch(input: PublishPitchInput): Promise<PublishPit
     lead: links?.lead ?? null,
     client: links?.client ?? null,
     contact: links?.contact ?? null,
+    ...(kind ? { kind } : {}), // else DB default 'pitch'
+    proposal,
     token,
     html,
     status: publish ? 'published' : 'draft',

@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
     status?: string; expires_at?: string | null; password?: string | null;
     title?: string; client_name?: string | null;
     lead?: number | string | null; client?: string | null; contact?: string | null;
+    kind?: string; proposal?: string | null;
   }>(event);
 
   const directus = getServerDirectus();
@@ -48,6 +49,8 @@ export default defineEventHandler(async (event) => {
   if (body.lead !== undefined) patch.lead = body.lead === null || body.lead === '' ? null : Number(body.lead);
   if (body.client !== undefined) patch.client = body.client || null;
   if (body.contact !== undefined) patch.contact = body.contact || null;
+  if (body.kind === 'pitch' || body.kind === 'prototype') patch.kind = body.kind;
+  if (body.proposal !== undefined) patch.proposal = body.proposal || null;
 
   if (!Object.keys(patch).length) throw createError({ statusCode: 400, message: 'Nothing to update' });
 

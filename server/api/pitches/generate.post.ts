@@ -63,6 +63,7 @@ export default defineEventHandler(async (event) => {
     brief?: string;
     title?: string;
     settings?: Partial<PitchSettings>;
+    proposal?: string | null;
     password?: string | null;
     expires_at?: string | null;
   }>(event);
@@ -176,6 +177,8 @@ export default defineEventHandler(async (event) => {
   const result = await publishPitch({
     organization, userId, title, html,
     links: { lead, client, contact },
+    kind: 'pitch', // AI-generated positioning page
+    proposal: body?.proposal || null,
     client_name: content.client_name || targetName || null,
     password: body?.password || null,
     expires_at: body?.expires_at || null,
