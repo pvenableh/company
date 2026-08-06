@@ -111,6 +111,7 @@ export function useProposals() {
         'organization.document_theme',
         'organization.document_accent',
         'organization.document_theme_config',
+        'organization.document_page_template',
         'lead.id',
         'lead.status',
         'lead.stage',

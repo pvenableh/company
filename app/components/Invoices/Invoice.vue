@@ -30,6 +30,10 @@ const sellerLogoUrl = computed(() => {
 	if (!id) return null;
 	return `${config.public.directusUrl}/assets/${id}?key=medium-contain`;
 });
+
+// Document accent + page-template come off the seller (bill_to) org record.
+const docAccent = computed(() => props.invoice?.bill_to?.document_accent || null);
+const docPageTemplate = computed(() => props.invoice?.bill_to?.document_page_template || null);
 </script>
 <template>
 	<DocumentsDocumentShell :seller="invoice.bill_to" wrapper-class="invoice px-6 pt-12 pb-16 w-full">
@@ -62,6 +66,9 @@ const sellerLogoUrl = computed(() => {
 					<DocumentsDocumentPdfGenerator
 						:filename="invoice.invoice_code || 'invoice'"
 						selector=".doc-shell.invoice"
+						:accent="docAccent"
+						:page-template="docPageTemplate"
+						:logo-url="sellerLogoUrl"
 						data-pdf-strip
 					/>
 				</ClientOnly>

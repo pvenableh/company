@@ -25,7 +25,7 @@ onMounted(async () => {
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
 				'organization.plan', 'organization.whitelabel', 'organization.active_addons',
-				'organization.document_theme', 'organization.document_accent',
+				'organization.document_theme', 'organization.document_accent', 'organization.document_page_template',
 				'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
 		});
@@ -131,6 +131,9 @@ function formatTotal(n: number | null | undefined) {
 							<DocumentsDocumentPdfGenerator
 								:filename="(proposal.title || 'proposal').replace(/\\s+/g, '-')"
 								selector=".doc-shell.proposal-doc"
+								:accent="proposal.organization?.document_accent"
+								:page-template="proposal.organization?.document_page_template"
+								:logo-url="seller?.logoUrl"
 								data-pdf-strip
 							/>
 						</ClientOnly>

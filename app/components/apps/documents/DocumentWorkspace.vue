@@ -439,6 +439,9 @@ if (!props.compact) {
                 <DocumentsDocumentPdfGenerator
                   :filename="(doc.title || type).replace(/\s+/g, '-')"
                   selector=".doc-shell.proposal-doc"
+                  :accent="doc.organization?.document_accent"
+                  :page-template="doc.organization?.document_page_template"
+                  :logo-url="seller?.logoUrl"
                   data-pdf-strip
                 />
               </ClientOnly>

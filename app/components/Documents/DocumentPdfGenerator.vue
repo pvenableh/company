@@ -14,18 +14,65 @@
  * instead of being squashed onto one. Any block the composer flagged with
  * a page break (`.doc__block--page-break`, e.g. the cover) forces a cut at
  * its bottom edge so those boundaries always start a fresh page.
+ *
+ * Running page chrome: when a `pageTemplate` is passed (and enabled), a
+ * header (logo + right text) and footer (left text + "page N of M") are
+ * drawn onto every page as a real text/vector layer — reserving top/bottom
+ * bands so content never overlaps. The cover/title page is skipped so it
+ * stays clean.
  */
+import { resolvePageTemplate, type DocumentPageTemplate } from '~/composables/useDocumentTheme';
 
 const props = defineProps<{
 	/** CSS selector for the doc-shell wrapper to capture. */
 	selector?: string;
 	/** Filename for the saved PDF (without `.pdf`). */
 	filename: string;
-	/** Optional accent color for buttons inside the PDF render. */
+	/** Optional accent color — tints the page number in the running footer. */
 	accent?: string | null;
+	/** Running header/footer/page-number config. Chrome is off unless enabled. */
+	pageTemplate?: DocumentPageTemplate | Record<string, any> | null;
+	/** Org logo URL for the running header (loaded CORS-safe at export time). */
+	logoUrl?: string | null;
 }>();
 
 const isGenerating = ref(false);
+
+/** Parse a #rrggbb / #rgb color into [r,g,b]; fall back to a muted gray. */
+function hexToRgb(hex: string | null | undefined): [number, number, number] {
+	const fallback: [number, number, number] = [120, 120, 120];
+	if (!hex) return fallback;
+	let h = hex.trim().replace('#', '');
+	if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+	if (h.length !== 6) return fallback;
+	const n = parseInt(h, 16);
+	if (Number.isNaN(n)) return fallback;
+	return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Load an image URL into a data URL (+ natural dimensions), or null on failure. */
+async function loadImageDataUrl(url: string): Promise<{ dataUrl: string; w: number; h: number } | null> {
+	try {
+		const res = await fetch(url, { mode: 'cors' });
+		if (!res.ok) return null;
+		const blob = await res.blob();
+		const dataUrl = await new Promise<string>((resolve, reject) => {
+			const fr = new FileReader();
+			fr.onload = () => resolve(fr.result as string);
+			fr.onerror = reject;
+			fr.readAsDataURL(blob);
+		});
+		const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+			img.onerror = reject;
+			img.src = dataUrl;
+		});
+		return { dataUrl, ...dims };
+	} catch {
+		return null;
+	}
+}
 
 async function generatePDF() {
 	if (isGenerating.value) return;
@@ -73,20 +120,29 @@ async function generatePDF() {
 			box-shadow: none;
 		`;
 
+		// Resolve the running page-chrome config up front.
+		const tpl = resolvePageTemplate(props.pageTemplate);
+		const hasHeader = tpl.enabled && (tpl.show_logo && !!props.logoUrl || !!tpl.header_text);
+		const hasFooter = tpl.enabled && (!!tpl.footer_text || tpl.show_page_numbers);
+		// Load the header logo (CORS-safe data URL) before rasterizing.
+		const logo = tpl.enabled && tpl.show_logo && props.logoUrl
+			? await loadImageDataUrl(props.logoUrl)
+			: null;
+
 		document.body.appendChild(clone);
 		try {
-			// Before rasterizing, capture the vertical position of every
-			// explicit page break so we can force a page cut there. These are
-			// the blocks the composer flagged with `page_break_after` (and the
-			// cover), rendered as `.doc__block--page-break`. We cut AFTER each
-			// such block's bottom edge. Offsets are in CSS px relative to the
-			// clone's top; they get scaled into canvas px below.
+			// Before rasterizing, capture the vertical position of every explicit
+			// page break (so we can force a page cut there) and the cover's bottom
+			// (so we can skip running chrome on the title page). Offsets are in CSS
+			// px relative to the clone's top; scaled to canvas px after capture.
 			const cloneTop = clone.getBoundingClientRect().top;
 			const forcedBreaksCss = Array.from(
 				clone.querySelectorAll<HTMLElement>('.doc__block--page-break'),
 			)
 				.map((b) => b.getBoundingClientRect().bottom - cloneTop)
 				.filter((y) => y > 0);
+			const coverEl = clone.querySelector<HTMLElement>('.doc-cover-block, .doc__cover');
+			const coverBottomCss = coverEl ? coverEl.getBoundingClientRect().bottom - cloneTop : 0;
 
 			const canvas = await html2canvas(clone, {
 				scale: 2,
@@ -104,13 +160,18 @@ async function generatePDF() {
 			const pageHeight = 11;
 			const margin = 0.5;
 			const availableWidth = pageWidth - 2 * margin;
-			const availableHeight = pageHeight - 2 * margin;
 
-			// Ratio between rasterized canvas px and the clone's layout px,
-			// used to translate CSS-px break offsets into canvas space.
+			// Reserve top/bottom bands for the running chrome (0 when disabled).
+			const headerBand = hasHeader ? 0.5 : 0;
+			const footerBand = hasFooter ? 0.4 : 0;
+			const contentHeight = pageHeight - 2 * margin - headerBand - footerBand;
+
+			// Ratio between rasterized canvas px and the clone's layout px, used to
+			// translate the CSS-px break/cover offsets into canvas space.
 			const pxRatio = canvas.width / clone.offsetWidth;
-			// One letter page's worth of content, in canvas px.
-			const pagePx = Math.floor((availableHeight * canvas.width) / availableWidth);
+			// One content-area's worth of the canvas, in canvas px.
+			const pagePx = Math.floor((contentHeight * canvas.width) / availableWidth);
+			const coverBottomPx = coverBottomCss * pxRatio;
 			// Forced cut points in canvas px — sorted, de-duped, in-bounds.
 			const forcedBreaks = Array.from(
 				new Set(forcedBreaksCss.map((y) => Math.round(y * pxRatio))),
@@ -118,45 +179,93 @@ async function generatePDF() {
 				.filter((y) => y > 0 && y < canvas.height)
 				.sort((a, b) => a - b);
 
-			// Reusable scratch canvas we blit each page slice onto.
-			const slice = document.createElement('canvas');
-			const sctx = slice.getContext('2d');
-
+			// First pass: compute the slice ranges (so we know the total page
+			// count M before drawing "page N of M").
+			const slices: { top: number; bottom: number; isCover: boolean }[] = [];
 			let top = 0;
-			let first = true;
-			// Guard against pathological loops (0-height slices).
 			let guard = 0;
 			while (top < canvas.height && guard++ < 1000) {
-				// A page is at most `pagePx` tall, but a forced break falling
-				// inside this window ends the page early so a flagged boundary
-				// always starts fresh on the next page.
 				let bottom = Math.min(top + pagePx, canvas.height);
 				const nextBreak = forcedBreaks.find((y) => y > top && y < bottom);
 				if (nextBreak) bottom = nextBreak;
-				const sliceHeight = bottom - top;
-				if (sliceHeight <= 0) break;
+				if (bottom - top <= 0) break;
+				// A page is a cover page when its content lies within the cover band.
+				const isCover = coverBottomPx > 0 && top < coverBottomPx - 1;
+				slices.push({ top, bottom, isCover });
+				top = bottom;
+			}
 
-				slice.width = canvas.width;
-				slice.height = sliceHeight;
+			const [ar, ag, ab] = hexToRgb(props.accent);
+			const scratch = document.createElement('canvas');
+			const sctx = scratch.getContext('2d');
+			const total = slices.length;
+
+			slices.forEach((slice, i) => {
+				const sliceHeight = slice.bottom - slice.top;
+				scratch.width = canvas.width;
+				scratch.height = sliceHeight;
 				if (sctx) {
 					sctx.fillStyle = bg;
-					sctx.fillRect(0, 0, slice.width, slice.height);
+					sctx.fillRect(0, 0, scratch.width, scratch.height);
 					sctx.drawImage(
 						canvas,
-						0, top, canvas.width, sliceHeight, // source rect
+						0, slice.top, canvas.width, sliceHeight, // source rect
 						0, 0, canvas.width, sliceHeight, // dest rect
 					);
 				}
 
 				const imgHeight = (sliceHeight * availableWidth) / canvas.width;
-				if (!first) pdf.addPage();
+				if (i > 0) pdf.addPage();
+
+				// The cover page stays clean (no chrome) and sits at the top margin;
+				// body pages inset below the reserved header band.
+				const chrome = tpl.enabled && !slice.isCover;
+				const imgTop = chrome ? margin + headerBand : margin;
 				pdf.addImage(
-					slice.toDataURL('image/png', 1.0),
-					'PNG', margin, margin, availableWidth, imgHeight, '', 'FAST',
+					scratch.toDataURL('image/png', 1.0),
+					'PNG', margin, imgTop, availableWidth, imgHeight, '', 'FAST',
 				);
-				first = false;
-				top = bottom;
-			}
+
+				if (!chrome) return;
+
+				// ── Running header ───────────────────────────────────────────────
+				if (hasHeader) {
+					if (logo) {
+						const logoH = 0.26;
+						const logoW = Math.min(1.6, (logo.w / logo.h) * logoH);
+						pdf.addImage(logo.dataUrl, 'PNG', margin, margin, logoW, logoH, '', 'FAST');
+					}
+					if (tpl.header_text) {
+						pdf.setFont('helvetica', 'normal');
+						pdf.setFontSize(8);
+						pdf.setTextColor(110, 110, 110);
+						pdf.text(tpl.header_text, pageWidth - margin, margin + 0.16, { align: 'right' });
+					}
+				}
+
+				// ── Running footer ───────────────────────────────────────────────
+				if (hasFooter) {
+					const footY = pageHeight - margin - 0.12;
+					if (tpl.footer_text) {
+						pdf.setFont('helvetica', 'normal');
+						pdf.setFontSize(7);
+						pdf.setTextColor(140, 140, 140);
+						pdf.text(tpl.footer_text, margin, footY, { align: 'left' });
+					}
+					if (tpl.show_page_numbers) {
+						const n = i + 1;
+						const label = tpl.page_number_format === 'n'
+							? `${n}`
+							: tpl.page_number_format === 'n_dash_m'
+								? `${n}–${total}`
+								: `${n} of ${total}`;
+						pdf.setFont('helvetica', 'normal');
+						pdf.setFontSize(7);
+						pdf.setTextColor(ar, ag, ab);
+						pdf.text(label, pageWidth - margin, footY, { align: 'right' });
+					}
+				}
+			});
 
 			pdf.save(`${props.filename}.pdf`);
 		} finally {

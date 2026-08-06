@@ -60,10 +60,58 @@ export interface DocumentThemeConfig {
 	cardRadius?: number;
 }
 
+/**
+ * Running page-chrome for PDF export — a header + footer + page numbers drawn
+ * onto EVERY exported page (the cover/title page is skipped). Reproduces the
+ * classic proposal frame (logo top, contact line + "N of M" bottom). Disabled
+ * by default so existing documents export exactly as before.
+ */
+export interface DocumentPageTemplate {
+	/** Master switch. When false the PDF exports with no running chrome. */
+	enabled?: boolean;
+	/** Show the org logo at the top-left of every page. */
+	show_logo?: boolean;
+	/** Right-aligned header line, e.g. "NY / MIAMI · huestudios.com". */
+	header_text?: string | null;
+	/** Left-aligned footer line, e.g. the studio's address + contact. */
+	footer_text?: string | null;
+	/** Draw a page number in the footer. */
+	show_page_numbers?: boolean;
+	/** Page-number style: "2 of 10" | "2–10" | "2". */
+	page_number_format?: 'n_of_m' | 'n_dash_m' | 'n';
+}
+
 export interface DocumentThemeSource {
 	document_theme?: string | null;
 	document_accent?: string | null;
 	document_theme_config?: DocumentThemeConfig | Record<string, any> | null;
+	document_page_template?: DocumentPageTemplate | Record<string, any> | null;
+}
+
+/** Sensible defaults — chrome OFF, so the field being absent is a no-op. */
+export const DEFAULT_PAGE_TEMPLATE: Required<DocumentPageTemplate> = {
+	enabled: false,
+	show_logo: true,
+	header_text: '',
+	footer_text: '',
+	show_page_numbers: true,
+	page_number_format: 'n_of_m',
+};
+
+/** Normalize a stored (possibly partial / null) page template with defaults. */
+export function resolvePageTemplate(
+	source: DocumentPageTemplate | Record<string, any> | null | undefined,
+): Required<DocumentPageTemplate> {
+	if (!source || typeof source !== 'object') return { ...DEFAULT_PAGE_TEMPLATE };
+	const s = source as DocumentPageTemplate;
+	return {
+		enabled: s.enabled ?? DEFAULT_PAGE_TEMPLATE.enabled,
+		show_logo: s.show_logo ?? DEFAULT_PAGE_TEMPLATE.show_logo,
+		header_text: s.header_text ?? DEFAULT_PAGE_TEMPLATE.header_text,
+		footer_text: s.footer_text ?? DEFAULT_PAGE_TEMPLATE.footer_text,
+		show_page_numbers: s.show_page_numbers ?? DEFAULT_PAGE_TEMPLATE.show_page_numbers,
+		page_number_format: s.page_number_format ?? DEFAULT_PAGE_TEMPLATE.page_number_format,
+	};
 }
 
 const VALID_THEMES: DocumentTheme[] = ['classic', 'editorial', 'mono'];

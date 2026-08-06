@@ -743,6 +743,23 @@ async function saveDocumentStudio(payload: { theme: string; accent: string; conf
   }
 }
 
+// Page template — running header/footer + page numbers on exported PDFs.
+// Persisted alongside the theme on the org record.
+const savingPageTpl = ref(false);
+async function saveDocumentPageTemplate(payload: Record<string, any>) {
+  if (!org.value?.id || savingPageTpl.value) return;
+  savingPageTpl.value = true;
+  try {
+    await organizationItems.update(org.value.id, { document_page_template: payload });
+    toast.add({ title: 'Page template saved', description: 'Applied to exported invoices, proposals, and contracts.', color: 'green' });
+    await fetchOrganizationDetails();
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to save page template', color: 'red' });
+  } finally {
+    savingPageTpl.value = false;
+  }
+}
+
 // Goals now lives solely in the Features card (AppsOrganizationFeatureTogglesCard,
 // alongside Weather + Teams) — the former standalone toggle here was a duplicate.
 
@@ -1453,6 +1470,13 @@ function onClientInvited() {
                 :config="(org as any).document_theme_config || null"
                 :saving="savingDocTheme"
                 @save="saveDocumentStudio"
+              />
+              <DocumentsDocumentPageTemplateCard
+                :model-template="(org as any).document_page_template || null"
+                :logo-url="orgLogoUrl"
+                :accent="org.document_accent || '#1f2937'"
+                :saving="savingPageTpl"
+                @save="saveDocumentPageTemplate"
               />
             </div>
           </div>

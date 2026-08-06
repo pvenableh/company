@@ -44,7 +44,7 @@ export function useContracts() {
         'organization.id', 'organization.name', 'organization.logo',
         'organization.address', 'organization.phone', 'organization.email', 'organization.website',
         'organization.plan', 'organization.whitelabel', 'organization.active_addons',
-        'organization.document_theme', 'organization.document_accent', 'organization.document_theme_config',
+        'organization.document_theme', 'organization.document_accent', 'organization.document_theme_config', 'organization.document_page_template',
         'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.phone', 'contact.company',
         'lead.id', 'lead.status',
         'proposal.id', 'proposal.title',
