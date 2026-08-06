@@ -15,31 +15,15 @@ export type DigestCadence = 'daily' | 'weekdays' | 'weekly' | 'off';
 export type DigestTone = 'motivational' | 'forward' | 'wins';
 
 /**
- * How the digest is framed:
- *   - 'overview' — the motivational summary: wins, scoreboard, and per-section
- *     rollups (the original digest).
- *   - 'actions'  — task-first: a single prioritized, deep-linked checklist of
- *     what to do today, with the rollups demoted to a compact footer.
+ * The action list is a content block like any other (see DIGEST_SECTIONS'
+ * `actions` key), so users compose it into the email freely. Separately, this
+ * flag controls FRAMING: when on (and the action-list block is included), the
+ * checklist leads the email, the scoreboard is dropped, and the per-section
+ * rollups demote to a one-line "By the numbers" footer — the lean, task-first
+ * shape. The AI opener also switches to action-forward copy. When off, the
+ * action list is just another card within the motivational summary.
  */
-export type DigestStyle = 'overview' | 'actions';
-
-export interface DigestStyleDef {
-	key: DigestStyle;
-	label: string;
-	description: string;
-}
-
-/** The two framings a user can pick between in Account → Notifications. */
-export const DIGEST_STYLES: DigestStyleDef[] = [
-	{ key: 'overview', label: 'Overview', description: 'A motivational summary — wins, momentum, and where everything stands.' },
-	{ key: 'actions', label: 'Action list', description: 'A prioritized checklist of what to tackle today, each linking straight to the item.' },
-];
-
-export const DEFAULT_DIGEST_STYLE: DigestStyle = 'overview';
-
-export function normalizeDigestStyle(v: unknown): DigestStyle {
-	return v === 'actions' ? 'actions' : 'overview';
-}
+export const DEFAULT_DIGEST_LEAD_WITH_ACTIONS = false;
 
 export interface DigestSectionDef {
 	key: string;
@@ -54,7 +38,7 @@ export interface DigestSectionDef {
  */
 export const DIGEST_SECTIONS: DigestSectionDef[] = [
 	{ key: 'wins', label: 'Recent wins', description: 'What you got done — a pat on the back to start the day' },
-	{ key: 'suggestions', label: 'Suggested actions', description: 'A short, prioritized list of what to tackle next' },
+	{ key: 'actions', label: 'Action list', description: 'Your prioritized to-dos — tasks, tickets, and cross-area actions, each linking to the item' },
 	{ key: 'work', label: 'Work', description: 'Projects, tasks, and tickets' },
 	{ key: 'people', label: 'People', description: 'Clients, leads, pipeline, and CardDesk' },
 	{ key: 'money', label: 'Money', description: 'Proposals, contracts, invoices, and collections' },
@@ -64,7 +48,7 @@ export const DIGEST_SECTIONS: DigestSectionDef[] = [
 export const DIGEST_SECTION_KEYS = DIGEST_SECTIONS.map((s) => s.key);
 
 /** Sensible defaults for a brand-new subscriber — everything on. */
-export const DEFAULT_DIGEST_SECTIONS = ['wins', 'suggestions', 'work', 'people', 'money', 'marketing'];
+export const DEFAULT_DIGEST_SECTIONS = ['wins', 'actions', 'work', 'people', 'money', 'marketing'];
 export const DEFAULT_DIGEST_HOUR = 7; // 7am local — "before the day starts"
 export const DEFAULT_DIGEST_CADENCE: DigestCadence = 'weekdays';
 

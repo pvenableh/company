@@ -9,14 +9,14 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
 import { Switch } from '@/components/ui/switch';
-import { DIGEST_SECTIONS, DIGEST_STYLES, CADENCE_LABELS, formatHour12 } from '~~/shared/digest';
+import { DIGEST_SECTIONS, CADENCE_LABELS, formatHour12 } from '~~/shared/digest';
 
 const { selectedOrg } = useOrganization();
 const {
 	motivationalDigestEnabled,
 	motivationalDigestCadence,
 	motivationalDigestHour,
-	motivationalDigestStyle,
+	motivationalDigestLeadWithActions,
 	toggleDigestSection,
 	isDigestSectionOn,
 } = useAIPreferences();
@@ -24,11 +24,10 @@ const {
 const digestCadenceOptions = Object.entries(CADENCE_LABELS);
 const digestHours = Array.from({ length: 24 }, (_, h) => ({ value: h, label: formatHour12(h) }));
 const digestSections = DIGEST_SECTIONS;
-const digestStyles = DIGEST_STYLES;
 
-// The section pickers only shape the "Overview" framing; the action list is
-// assembled from your live agenda, so we hide them when Action list is chosen.
-const isActionsStyle = computed(() => motivationalDigestStyle.value === 'actions');
+// "Lead with my action list" only means something when the action-list block is
+// actually included, so the framing switch only shows when that chip is on.
+const actionsIncluded = computed(() => isDigestSectionOn('actions'));
 
 const testingDigest = ref(false);
 async function sendTestDigest() {
@@ -65,33 +64,6 @@ async function sendTestDigest() {
 		</div>
 
 		<template v-if="motivationalDigestEnabled">
-			<div>
-				<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Style</div>
-				<div class="grid grid-cols-2 gap-2">
-					<button
-						v-for="opt in digestStyles"
-						:key="opt.key"
-						type="button"
-						class="text-left rounded-2xl border p-3 transition-colors"
-						:class="motivationalDigestStyle === opt.key
-							? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
-							: 'border-input bg-background hover:border-primary/30'"
-						@click="motivationalDigestStyle = opt.key"
-					>
-						<div class="flex items-center gap-1.5">
-							<span
-								class="size-3.5 rounded-full border shrink-0 grid place-items-center"
-								:class="motivationalDigestStyle === opt.key ? 'border-primary' : 'border-muted-foreground/40'"
-							>
-								<span v-if="motivationalDigestStyle === opt.key" class="size-1.5 rounded-full bg-primary" />
-							</span>
-							<span class="text-xs font-medium">{{ opt.label }}</span>
-						</div>
-						<p class="text-[11px] text-muted-foreground mt-1 leading-snug">{{ opt.description }}</p>
-					</button>
-				</div>
-			</div>
-
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">How often</div>
@@ -115,7 +87,7 @@ async function sendTestDigest() {
 				</div>
 			</div>
 
-			<div v-if="!isActionsStyle">
+			<div>
 				<div class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">What to include</div>
 				<div class="flex flex-wrap gap-1.5">
 					<button
@@ -132,11 +104,23 @@ async function sendTestDigest() {
 					</button>
 				</div>
 			</div>
-			<p class="text-[10px] text-muted-foreground">
-				{{ isActionsStyle
-					? 'Pulled live from your agenda each morning — highest-priority items first, each linking straight to the task.'
-					: 'Friday leans into wins; Monday into a fresh-week lift.' }}
-			</p>
+
+			<!-- Framing: only meaningful when the action-list block is included. -->
+			<div v-if="actionsIncluded" class="flex items-start justify-between gap-3 rounded-2xl border border-input bg-background p-3">
+				<div class="min-w-0">
+					<p class="text-xs font-medium">Lead with my action list</p>
+					<p class="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+						Put the checklist up top and keep it lean — drops the scoreboard and shrinks the rest to a one-line summary.
+					</p>
+				</div>
+				<Switch
+					:model-value="motivationalDigestLeadWithActions"
+					class="mt-0.5 shrink-0"
+					@update:model-value="motivationalDigestLeadWithActions = $event"
+				/>
+			</div>
+
+			<p class="text-[10px] text-muted-foreground">Friday leans into wins; Monday into a fresh-week lift.</p>
 		</template>
 
 		<!-- Self-test: emails your real digest now, bypassing the schedule. -->

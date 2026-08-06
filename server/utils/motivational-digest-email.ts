@@ -136,19 +136,7 @@ function winsBlock(p: DigestPayload): string {
 	return iconCard(ICONS.wins, 'Recent wins', `<p style="margin:0">You wrapped up ${bits.join(' and ')}${sample}. Momentum looks good on you.</p>`);
 }
 
-function suggestionsBlock(p: DigestPayload, appUrl: string): string {
-	if (!p.suggestions.length) return '';
-	const items = p.suggestions
-		.map((s) => {
-			const href = entityHref(appUrl, s.entityType, s.entityId);
-			const link = href ? openArrow(href) : '';
-			return `<li style="margin:0 0 6px 0"><strong>${escapeHtml(s.title)}</strong>${link}${s.description ? ` — <span style="color:#6b6560">${escapeHtml(s.description)}</span>` : ''}</li>`;
-		})
-		.join('');
-	return iconCard(ICONS.suggestions, 'Suggested next moves', `<ul style="margin:0;padding-left:18px">${items}</ul>`);
-}
-
-// ── Action-list mode ─────────────────────────────────────────────────────────
+// ── Action-list block ────────────────────────────────────────────────────────
 // A verb-first checklist. Rows come from two sources: the per-item personal
 // agenda (tasks/tickets, deep-linked to the exact item) and section-level
 // alerts synthesised into a single "do this" line (contracts to sign, invoices
@@ -352,47 +340,40 @@ function scoreboardBlock(p: DigestPayload): string {
  * deterministic template copy when supplied.
  */
 export function renderDigestBodyHtml(payload: DigestPayload, firstName: string, appUrl = 'https://app.earnest.guru', introOverride?: DigestCopy | null): { subject: string; heading: string; bodyHtml: string; text: string } {
-	const isActions = payload.style === 'actions';
-	const intro = introOverride || (isActions ? actionIntro(payload, firstName) : toneIntro(payload, firstName));
+	const enabled = new Set(payload.enabledSections);
+	const actionsOn = enabled.has('actions');
+	const lean = payload.lean; // = actionsOn && leadWithActions
+	const intro = introOverride || (lean ? actionIntro(payload, firstName) : toneIntro(payload, firstName));
 
 	// intro.lead is model- or template-generated text → escape once here (it
 	// lands in raw {{{bodyHtml}}}). firstName is passed raw and escaped in the
 	// same pass, so there's no double-escaping.
 	const leadHtml = `<p style="margin:0 0 16px 0">${escapeHtml(intro.lead)}</p>`;
 
-	// Action mode leads with the checklist and demotes the rollups to a one-line
-	// footer; overview mode is the original motivational layout.
-	const blocks = isActions
-		? [
-			leadHtml,
-			actionChecklistBlock(payload, appUrl),
-			statsFooterBlock(payload, appUrl),
-			winsBlock(payload),
-		]
-		: [
-			leadHtml,
-			scoreboardBlock(payload),
-			winsBlock(payload),
-			suggestionsBlock(payload, appUrl),
-			workBlock(payload, appUrl),
-			peopleBlock(payload, appUrl),
-			moneyBlock(payload, appUrl),
-			marketingBlock(payload, appUrl),
-		];
+	// One email, composed from the blocks the user opted into. The action list is
+	// just another block — UNLESS "lead with it" is on, which flips to the lean,
+	// task-first shape: checklist first, no scoreboard, rollups → footer.
+	const actionB = actionsOn ? actionChecklistBlock(payload, appUrl) : '';
+	const winsB = enabled.has('wins') ? winsBlock(payload) : '';
+	const workB = enabled.has('work') ? workBlock(payload, appUrl) : '';
+	const peopleB = enabled.has('people') ? peopleBlock(payload, appUrl) : '';
+	const moneyB = enabled.has('money') ? moneyBlock(payload, appUrl) : '';
+	const marketingB = enabled.has('marketing') ? marketingBlock(payload, appUrl) : '';
+
+	const blocks = lean
+		? [leadHtml, actionB, statsFooterBlock(payload, appUrl), winsB]
+		: [leadHtml, scoreboardBlock(payload), winsB, actionB, workB, peopleB, moneyB, marketingB];
 	const body = blocks.filter(Boolean).join('');
 
 	// Plain-text fallback — screen readers + text-only clients.
 	const textParts: string[] = [intro.lead, ''];
-	if (isActions) {
+	if (!lean && payload.wins.any && enabled.has('wins')) {
+		textParts.push(`Recent wins: ${payload.wins.tasksDone} tasks done, ${payload.wins.ticketsClosed} tickets closed.`, '');
+	}
+	if (actionsOn && (payload.suggestions.length || derivedActionCount(payload))) {
 		textParts.push('Your action list:');
 		payload.suggestions.forEach((s) => textParts.push(`- ${s.title}${s.description ? ` — ${s.description}` : ''}`));
 		derivedActions(payload, appUrl).forEach((a) => textParts.push(`- ${stripTags(a.html)}`));
-	} else {
-		if (payload.wins.any) textParts.push(`Recent wins: ${payload.wins.tasksDone} tasks done, ${payload.wins.ticketsClosed} tickets closed.`);
-		if (payload.suggestions.length) {
-			textParts.push('', 'Suggested next moves:');
-			payload.suggestions.forEach((s) => textParts.push(`- ${s.title}${s.description ? ` — ${s.description}` : ''}`));
-		}
 	}
 	return { subject: intro.subject, heading: intro.heading, bodyHtml: body, text: textParts.join('\n') };
 }

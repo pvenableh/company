@@ -22,9 +22,10 @@ export interface DigestCopy {
 /** A compact, factual digest of the payload — numbers only, for the model to frame. */
 function summarize(p: DigestPayload): string {
 	const lines: string[] = [];
-	const isActions = p.style === 'actions';
-	// In action mode the opener frames a to-do list, so lead with the actual
-	// tasks (all of them, in priority order) and demote the score/wins framing.
+	const isActions = p.lean;
+	// When leading with the action list, the opener frames a to-do list, so lead
+	// with the actual tasks (all of them, in priority order) and demote the
+	// score/wins framing.
 	if (isActions && p.suggestions.length) {
 		lines.push(`Top priorities to tackle today (in order): ${p.suggestions.map((s) => s.title).join('; ')}.`);
 	}
@@ -77,7 +78,7 @@ export async function composeDigestCopy(payload: DigestPayload, firstName: strin
 	try {
 		const provider = getLLMProvider();
 		const name = (firstName || '').trim() || 'there';
-		const isActions = payload.style === 'actions';
+		const isActions = payload.lean;
 
 		const system = [
 			EARNEST_VOICE_CHARTER,

@@ -17,7 +17,6 @@ import { readItems } from '@directus/sdk';
 import { collectRecentWins, collectPersonalAgenda } from './personal-agenda';
 import { proposalPursuitState as _pps } from '~~/shared/proposals';
 import { levelTitle } from './earnestScoreUser';
-import { type DigestStyle, DEFAULT_DIGEST_STYLE, normalizeDigestStyle } from '~~/shared/digest';
 
 export interface DigestSuggestion {
 	title: string;
@@ -32,8 +31,12 @@ export interface DigestPayload {
 	orgId: string;
 	orgName: string | null;
 	tone: 'motivational' | 'forward' | 'wins';
-	/** How the email is framed — see DigestStyle. Renderer branches on this. */
-	style: DigestStyle;
+	/** The content blocks the user opted into (renderer gates DISPLAY on these). */
+	enabledSections: string[];
+	/** User asked to lead with the action list (raw preference). */
+	leadWithActions: boolean;
+	/** Derived: lead-with-actions AND the action-list block is included → lean, task-first shape. */
+	lean: boolean;
 	wins: { tasksDone: number; ticketsClosed: number; sampleTitle: string | null; any: boolean };
 	/** Earnest score snapshot for the scoreboard hero (null when no record yet). */
 	score: {
@@ -93,19 +96,28 @@ export async function buildDigestPayload(opts: {
 	orgName?: string | null;
 	tone: 'motivational' | 'forward' | 'wins';
 	sections: string[];
-	style?: DigestStyle;
+	leadWithActions?: boolean;
 	now?: Date;
 }): Promise<DigestPayload> {
 	const { directus, userId, orgId, tone } = opts;
 	const now = opts.now || new Date();
 	const want = new Set(opts.sections);
 
+	// The action list surfaces cross-area to-dos (contracts to sign, invoices to
+	// chase, cold proposals, overdue lead follow-ups) and a numbers footer, so
+	// when it's included we COMPUTE those areas even if their summary cards are
+	// toggled off. DISPLAY stays gated on enabledSections in the renderer.
+	if (want.has('actions')) { want.add('work'); want.add('people'); want.add('money'); }
+
+	const actionsOn = new Set(opts.sections).has('actions');
 	const payload: DigestPayload = {
 		userId,
 		orgId,
 		orgName: opts.orgName ?? null,
 		tone,
-		style: normalizeDigestStyle(opts.style ?? DEFAULT_DIGEST_STYLE),
+		enabledSections: [...opts.sections],
+		leadWithActions: !!opts.leadWithActions,
+		lean: actionsOn && !!opts.leadWithActions,
 		wins: { tasksDone: 0, ticketsClosed: 0, sampleTitle: null, any: false },
 		score: null,
 		suggestions: [],
@@ -133,13 +145,13 @@ export async function buildDigestPayload(opts: {
 		}
 	} catch { /* score is non-critical */ }
 
-	// Wins + suggestions lean on the existing personal-agenda helpers.
+	// Wins + the action agenda lean on the existing personal-agenda helpers.
 	if (want.has('wins')) {
 		try {
 			payload.wins = await collectRecentWins(directus, orgId, userId, now);
 		} catch { /* keep zeros */ }
 	}
-	if (want.has('suggestions')) {
+	if (want.has('actions')) {
 		try {
 			const agenda = await collectPersonalAgenda(directus, orgId, userId, now);
 			payload.suggestions = flattenSuggestions(agenda);

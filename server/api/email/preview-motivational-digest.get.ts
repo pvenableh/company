@@ -16,15 +16,18 @@ import { fetchOrgBrand } from '~~/server/utils/email-send';
 import { renderDigestBodyHtml } from '~~/server/utils/motivational-digest-email';
 import { composeDigestCopy } from '~~/server/utils/motivational-digest-ai';
 import type { DigestPayload } from '~~/server/utils/motivational-digest';
-import { normalizeDigestStyle, type DigestTone } from '~~/shared/digest';
+import { DEFAULT_DIGEST_SECTIONS, type DigestTone } from '~~/shared/digest';
 
-function samplePayload(tone: DigestTone, style: DigestPayload['style']): DigestPayload {
+function samplePayload(tone: DigestTone, leadWithActions: boolean): DigestPayload {
+	const enabledSections = [...DEFAULT_DIGEST_SECTIONS]; // includes 'actions'
 	return {
 		userId: 'sample',
 		orgId: 'sample',
 		orgName: 'Acme Studio',
 		tone,
-		style,
+		enabledSections,
+		leadWithActions,
+		lean: leadWithActions && enabledSections.includes('actions'),
 		wins: { tasksDone: 4, ticketsClosed: 2, sampleTitle: 'Ship the homepage hero', any: true },
 		score: { currentScore: 78, level: 4, levelTitle: 'Devoted', streak: 6, daysActiveThisWeek: 4, totalEp: 1240 },
 		suggestions: [
@@ -58,10 +61,11 @@ export default defineEventHandler(async (event) => {
 
 	const q = getQuery(event);
 	const tone = (['motivational', 'forward', 'wins'].includes(String(q.tone)) ? q.tone : 'forward') as DigestTone;
-	const style = normalizeDigestStyle(q.style);
+	// ?lead=1 (or ?style=actions, kept as an alias) → lead with the action list.
+	const leadWithActions = q.lead === '1' || q.lead === 'true' || q.style === 'actions';
 	const org = q.org ? await fetchOrgBrand(String(q.org)) : null;
 
-	const payload = samplePayload(tone, style);
+	const payload = samplePayload(tone, leadWithActions);
 	// ?ai=1 exercises the LLM-written intro (needs NUXT_LLM_API_KEY; falls back to
 	// the template copy on any failure).
 	const introOverride = (q.ai === '1' || q.ai === 'true') ? await composeDigestCopy(payload, 'Camila') : null;

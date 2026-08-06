@@ -73,18 +73,13 @@ async function main() {
 		schema: { is_nullable: true },
 	});
 
-	await addField('motivational_digest_style', {
-		type: 'string',
-		meta: {
-			interface: 'select-dropdown',
-			options: { choices: [
-				{ text: 'Overview (summary)', value: 'overview' },
-				{ text: 'Action list (task-first)', value: 'actions' },
-			] },
-			note: 'How the digest is framed: motivational summary vs. a prioritized action checklist.',
-			width: 'half',
-		},
-		schema: { default_value: 'overview', is_nullable: true },
+	// Framing flag: when on (and the 'actions' section is included), the email
+	// leads with the action checklist and demotes the rollups. The action list
+	// itself is a content block toggled via motivational_digest_sections.
+	await addField('motivational_digest_lead_with_actions', {
+		type: 'boolean',
+		meta: { interface: 'boolean', note: 'Lead the digest with the action list (lean, task-first framing).', width: 'half' },
+		schema: { default_value: false, is_nullable: true },
 	});
 
 	console.log('\nDone. Run `pnpm generate:types` to refresh shared/directus.ts.');

@@ -17,7 +17,7 @@
 import { readUsers, readItems } from '@directus/sdk';
 import { buildDigestPayload } from '~~/server/utils/motivational-digest';
 import { sendMotivationalDigest } from '~~/server/utils/motivational-digest-email';
-import { DEFAULT_DIGEST_SECTIONS, digestTone, localHourAndDay, normalizeDigestStyle, type DigestTone } from '~~/shared/digest';
+import { DEFAULT_DIGEST_SECTIONS, digestTone, localHourAndDay, type DigestTone } from '~~/shared/digest';
 
 export default defineEventHandler(async (event) => {
 	const session = await requireUserSession(event);
@@ -55,23 +55,25 @@ export default defineEventHandler(async (event) => {
 	const tone: DigestTone = ['motivational', 'forward', 'wins'].includes(body?.tone)
 		? body.tone
 		: digestTone(localHourAndDay(now, me.timezone).weekday);
-	const sections = Array.isArray(body?.sections) && body.sections.length ? body.sections : DEFAULT_DIGEST_SECTIONS;
+	// Sections + lead-with-actions: explicit body overrides win (preview any
+	// shape), else the caller's saved preferences, else the defaults.
+	const prefRows = (await directus
+		.request(readItems('ai_preferences' as any, {
+			filter: { user: { _eq: userId } } as any,
+			fields: ['motivational_digest_sections', 'motivational_digest_lead_with_actions'] as any,
+			limit: 1,
+		}))
+		.catch(() => [])) as any[];
+	const pref = prefRows[0] || {};
 
-	// Style: explicit body override wins (so you can preview either framing),
-	// else the caller's saved preference, else the overview default.
-	let style = normalizeDigestStyle(body?.style);
-	if (body?.style === undefined) {
-		const prefRows = (await directus
-			.request(readItems('ai_preferences' as any, {
-				filter: { user: { _eq: userId } } as any,
-				fields: ['motivational_digest_style'] as any,
-				limit: 1,
-			}))
-			.catch(() => [])) as any[];
-		style = normalizeDigestStyle(prefRows[0]?.motivational_digest_style);
-	}
+	const sections = Array.isArray(body?.sections) && body.sections.length
+		? body.sections
+		: (Array.isArray(pref.motivational_digest_sections) && pref.motivational_digest_sections.length ? pref.motivational_digest_sections : DEFAULT_DIGEST_SECTIONS);
+	const leadWithActions = body?.leadWithActions !== undefined
+		? (body.leadWithActions === true || body.leadWithActions === 'true')
+		: !!pref.motivational_digest_lead_with_actions;
 
-	const payload = await buildDigestPayload({ directus, userId, orgId, tone, sections, style, now });
+	const payload = await buildDigestPayload({ directus, userId, orgId, tone, sections, leadWithActions, now });
 	if (!payload.hasContent) {
 		return { ok: false, reason: 'Nothing to report for this org right now — try the layout preview at /api/email/preview-motivational-digest.' };
 	}
@@ -82,6 +84,6 @@ export default defineEventHandler(async (event) => {
 
 	const res = await sendMotivationalDigest({ to: me.email, firstName: me.first_name, payload, orgId, appUrl, ai });
 	return res.sent
-		? { ok: true, to: me.email, tone, style, ai, message: `Test ${style === 'actions' ? 'action-list' : 'overview'} digest sent to ${me.email}${ai ? ' (AI copy)' : ''}.` }
+		? { ok: true, to: me.email, tone, leadWithActions: payload.lean, ai, message: `Test ${payload.lean ? 'action-led' : 'summary'} digest sent to ${me.email}${ai ? ' (AI copy)' : ''}.` }
 		: { ok: false, reason: res.reason || 'Send failed.' };
 });
