@@ -73,6 +73,68 @@ const assetFiles = ref<File[]>([])
 const submitting = ref(false)
 const formError = ref<string | null>(null)
 const justCreated = ref<{ title: string; url: string } | null>(null)
+// True when justCreated came from the AI generator (a DRAFT to review) rather
+// than a published upload — flips the confirmation copy.
+const justCreatedDraft = ref(false)
+
+// ── Generate-with-Earnest state ──────────────────────────────────────────────
+const showGenerate = ref(false)
+const genForm = reactive({
+  link: '',
+  title: '',
+  brief: '',
+  password: '',
+  expires_at: '',
+  settings: {
+    mode: 'dark' as 'dark' | 'light',
+    accent: '#c8963e',
+    font: 'serif' as 'serif' | 'sans',
+    titleStyle: 'editorial' as 'editorial' | 'bold' | 'minimal',
+  },
+})
+const generating = ref(false)
+const genError = ref<string | null>(null)
+const genStage = ref('')
+
+function openGenerate() {
+  showForm.value = false
+  genError.value = null
+  showGenerate.value = true
+  ensureLinkOptions()
+}
+function closeGenerate() { showGenerate.value = false; genError.value = null }
+
+async function generate() {
+  genError.value = null
+  if (!selectedOrg.value) { genError.value = 'Select an organization first.'; return }
+  generating.value = true
+  const stages = ['Studying the brand & history…', 'Writing the pitch…', 'Composing the page…']
+  let si = 0; genStage.value = stages[0]
+  const iv = setInterval(() => { si = Math.min(si + 1, stages.length - 1); genStage.value = stages[si] }, 2600)
+  try {
+    const res = await $fetch<{ url: string; title: string; status: string }>('/api/pitches/generate', {
+      method: 'POST',
+      body: {
+        organization: String(selectedOrg.value),
+        link: genForm.link || null,
+        brief: genForm.brief.trim() || undefined,
+        title: genForm.title.trim() || undefined,
+        settings: { mode: genForm.settings.mode, accent: genForm.settings.accent, font: genForm.settings.font, titleStyle: genForm.settings.titleStyle },
+        password: genForm.password || null,
+        expires_at: genForm.expires_at || null,
+      },
+    })
+    justCreated.value = { title: res.title, url: res.url }
+    justCreatedDraft.value = true
+    showGenerate.value = false
+    Object.assign(genForm, { link: '', title: '', brief: '', password: '', expires_at: '' })
+    await load()
+  } catch (err: any) {
+    genError.value = err?.data?.message || (err?.data?.data?.sellSheet ? 'You’ve reached your AI token limit.' : 'Could not generate the pitch.')
+  } finally {
+    clearInterval(iv); generating.value = false; genStage.value = ''
+  }
+}
 
 const origin = computed(() => (import.meta.client ? window.location.origin : ''))
 function fullUrl(u: string) { return `${origin.value}${u}` }
@@ -200,6 +262,7 @@ async function submit() {
 
     const res = await $fetch<{ url: string }>('/api/pitches', { method: 'POST', body: fd })
     justCreated.value = { title: form.title.trim(), url: res.url }
+    justCreatedDraft.value = !form.publish
     // reset
     Object.assign(form, { title: '', client_name: '', link: '', password: '', expires_at: '', publish: true })
     htmlFile.value = null
@@ -211,6 +274,15 @@ async function submit() {
   } finally {
     submitting.value = false
   }
+}
+
+// ── Prototype build brief (Claude Code) ─────────────────────────────────────
+const brief = reactive({ open: false, pitch: null as number | null, link: '', title: '' })
+function openBrief(row: PitchRow) {
+  brief.pitch = Number(row.id)
+  brief.link = row.linked?.value || ''
+  brief.title = row.title || ''
+  brief.open = true
 }
 
 const copiedToken = ref<string | null>(null)
@@ -269,13 +341,22 @@ onMounted(() => {
           Publish a bespoke pitch behind a private link — with an optional password and expiry.
         </p>
       </div>
-      <button
-        class="inline-flex shrink-0 items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
-        @click="showForm ? closeForm() : openCreate()"
-      >
-        <Icon :name="showForm ? 'lucide:x' : 'lucide:plus'" class="h-4 w-4" />
-        {{ showForm ? 'Close' : 'New pitch' }}
-      </button>
+      <div class="flex shrink-0 items-center gap-2">
+        <button
+          class="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+          @click="showGenerate ? closeGenerate() : openGenerate()"
+        >
+          <Icon :name="showGenerate ? 'lucide:x' : 'lucide:sparkles'" class="h-4 w-4" />
+          {{ showGenerate ? 'Close' : 'Generate with Earnest' }}
+        </button>
+        <button
+          class="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
+          @click="showForm ? closeForm() : openCreate()"
+        >
+          <Icon :name="showForm ? 'lucide:x' : 'lucide:plus'" class="h-4 w-4" />
+          {{ showForm ? 'Close' : 'New pitch' }}
+        </button>
+      </div>
     </div>
 
     <!-- Just-created confirmation -->
@@ -284,16 +365,123 @@ onMounted(() => {
       class="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3"
     >
       <div class="min-w-0">
-        <p class="text-sm font-medium text-foreground">“{{ justCreated.title }}” is live.</p>
-        <p class="truncate text-xs text-muted-foreground">{{ fullUrl(justCreated.url) }}</p>
+        <p class="text-sm font-medium text-foreground">
+          <template v-if="justCreatedDraft">“{{ justCreated.title }}” — draft ready to review.</template>
+          <template v-else>“{{ justCreated.title }}” is live.</template>
+        </p>
+        <p class="truncate text-xs text-muted-foreground">
+          <template v-if="justCreatedDraft">Preview it, then publish from the list below before sharing · </template>{{ fullUrl(justCreated.url) }}
+        </p>
       </div>
-      <button
-        class="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs"
-        @click="copyLink({ token: 'new', url: justCreated!.url })"
-      >
-        {{ copiedToken === 'new' ? 'Copied' : 'Copy link' }}
-      </button>
+      <div class="flex shrink-0 items-center gap-2">
+        <a :href="justCreated.url" target="_blank" rel="noopener"
+          class="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-muted">Preview</a>
+        <button
+          class="rounded-full border border-border px-3 py-1.5 text-xs"
+          @click="copyLink({ token: 'new', url: justCreated!.url })"
+        >
+          {{ copiedToken === 'new' ? 'Copied' : 'Copy link' }}
+        </button>
+      </div>
     </div>
+
+    <!-- Generate with Earnest -->
+    <form
+      v-if="showGenerate"
+      class="mb-8 grid gap-4 rounded-2xl border border-primary/30 bg-primary/[0.04] p-5"
+      @submit.prevent="generate"
+    >
+      <div class="flex items-center gap-2">
+        <Icon name="lucide:sparkles" class="h-4 w-4 text-primary" />
+        <p class="text-xs font-medium uppercase tracking-wide text-primary">Generate a pitch with Earnest</p>
+      </div>
+      <p class="-mt-2 text-xs text-muted-foreground">
+        Earnest drafts an on-brand pitch using your positioning and this client's context + history. You review it before sharing.
+      </p>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pitch to</span>
+          <select v-model="genForm.link"
+            class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+            <option value="">Choose a client, lead, or contact…</option>
+            <optgroup v-if="linkOptions.clients.length" label="Clients">
+              <option v-for="o in linkOptions.clients" :key="`gc-${o.id}`" :value="`client:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+            <optgroup v-if="linkOptions.leads.length" label="Leads / opportunities">
+              <option v-for="o in linkOptions.leads" :key="`gl-${o.id}`" :value="`lead:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+            <optgroup v-if="linkOptions.contacts.length" label="Contacts">
+              <option v-for="o in linkOptions.contacts" :key="`gp-${o.id}`" :value="`contact:${o.id}`">{{ o.label }}</option>
+            </optgroup>
+          </select>
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title (optional)</span>
+          <input v-model="genForm.title" type="text" placeholder="Auto-titled if left blank"
+            class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+        </label>
+      </div>
+
+      <label class="grid gap-1.5">
+        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">What should this pitch emphasise? (optional)</span>
+        <textarea v-model="genForm.brief" rows="3" placeholder="e.g. Lead with our hospitality branding work; they're opening a second location on Ocean Drive."
+          class="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40"></textarea>
+      </label>
+
+      <!-- Look & feel -->
+      <div class="grid gap-3 rounded-xl border border-border/60 bg-background/50 p-4 sm:grid-cols-4">
+        <label class="grid gap-1.5">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Mode</span>
+          <select v-model="genForm.settings.mode" class="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Accent</span>
+          <input v-model="genForm.settings.accent" type="color" class="h-9 w-full cursor-pointer rounded-lg border border-border bg-background">
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Type</span>
+          <select v-model="genForm.settings.font" class="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none">
+            <option value="serif">Serif</option>
+            <option value="sans">Sans</option>
+          </select>
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Title style</span>
+          <select v-model="genForm.settings.titleStyle" class="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none">
+            <option value="editorial">Editorial</option>
+            <option value="bold">Bold</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Password (optional)</span>
+          <input v-model="genForm.password" type="text" autocomplete="off" placeholder="Leave blank for no password"
+            class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+        </label>
+        <label class="grid gap-1.5">
+          <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Expires (optional)</span>
+          <input v-model="genForm.expires_at" type="date"
+            class="rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground/40">
+        </label>
+      </div>
+
+      <p v-if="genError" class="text-sm text-rose-500">{{ genError }}</p>
+      <div class="flex items-center gap-3">
+        <button type="submit" :disabled="generating"
+          class="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60">
+          <Icon :name="generating ? 'lucide:loader-2' : 'lucide:sparkles'" :class="['h-4 w-4', generating && 'animate-spin']" />
+          {{ generating ? 'Generating…' : 'Generate draft' }}
+        </button>
+        <span v-if="generating && genStage" class="text-xs text-muted-foreground">{{ genStage }}</span>
+      </div>
+    </form>
 
     <!-- Create form -->
     <form
@@ -420,6 +608,9 @@ onMounted(() => {
             class="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs">
             <Icon name="lucide:external-link" class="h-3 w-3" /> Open
           </a>
+          <button class="inline-flex items-center gap-1 rounded-full border border-primary/40 px-3 py-1.5 text-xs text-primary" @click="openBrief(row)">
+            <Icon name="lucide:terminal" class="h-3 w-3" /> Build brief
+          </button>
           <button v-if="row.status !== 'revoked'" class="rounded-full border border-rose-500/40 px-3 py-1.5 text-xs text-rose-500" @click="setStatus(row, 'revoked')">
             Revoke
           </button>
@@ -429,5 +620,15 @@ onMounted(() => {
         </div>
       </li>
     </ul>
+
+    <PrototypeBriefsBriefStudio
+      v-if="selectedOrg"
+      v-model:open="brief.open"
+      :organization="String(selectedOrg)"
+      source="pitch"
+      :pitch="brief.pitch"
+      :link="brief.link || null"
+      :seed-title="brief.title || null"
+    />
   </div>
 </template>

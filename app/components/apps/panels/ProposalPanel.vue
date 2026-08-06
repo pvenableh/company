@@ -55,6 +55,21 @@ const heroSubtitle = computed(() => {
   return name || p.organization?.name || null;
 });
 
+// Prototype build brief (Claude Code) from this proposal.
+const briefOpen = ref(false);
+const orgId = computed<string | null>(() => (proposal.value?.organization?.id || proposal.value?.organization || null) as any);
+const briefLink = computed<string | null>(() => {
+  const p = proposal.value as any;
+  if (!p) return null;
+  const cid = p.client?.id ?? p.client;
+  const lid = p.lead?.id ?? p.lead;
+  const ctid = p.contact?.id ?? p.contact;
+  if (cid) return `client:${cid}`;
+  if (lid) return `lead:${lid}`;
+  if (ctid) return `contact:${ctid}`;
+  return null;
+});
+
 // Drop the entity context when the slide-over closes — but only if it's
 // still pointing at us (a panel pushed on top may have taken over).
 onBeforeUnmount(() => {
@@ -70,6 +85,15 @@ onBeforeUnmount(() => {
     @close="$emit('close')"
   >
     <template v-if="!isCreate" #actions>
+      <button
+        v-if="orgId"
+        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+        title="Generate a Claude Code prototype brief"
+        @click="briefOpen = true"
+      >
+        <Icon name="lucide:terminal" class="w-3 h-3" />
+        Build brief
+      </button>
       <NuxtLink
         :to="fullPageHref"
         class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -113,6 +137,16 @@ onBeforeUnmount(() => {
       compact
       @loaded="onLoaded"
       @back="$emit('close')"
+    />
+
+    <PrototypeBriefsBriefStudio
+      v-if="orgId"
+      v-model:open="briefOpen"
+      :organization="String(orgId)"
+      source="proposal"
+      :proposal="String(id)"
+      :link="briefLink"
+      :seed-title="proposal?.title || null"
     />
   </AppSlideOverShell>
 </template>
