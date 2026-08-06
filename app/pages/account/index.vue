@@ -227,7 +227,7 @@
 
 					<div class="mt-5 flex justify-end">
 						<button
-							class="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+							class="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
 							@click="handleSavePrefs"
 						>
 							Save Preferences

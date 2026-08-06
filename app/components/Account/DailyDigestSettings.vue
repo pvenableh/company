@@ -8,6 +8,7 @@
 -->
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
+import { Switch } from '@/components/ui/switch';
 import { DIGEST_SECTIONS, CADENCE_LABELS, formatHour12 } from '~~/shared/digest';
 
 const { selectedOrg } = useOrganization();
