@@ -1062,12 +1062,21 @@ if('IntersectionObserver' in window){
   if(hv)gsap.fromTo(hv,{scale:1.06},{scale:1.2,ease:'none',
     scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:true}});
 
-  // Band statement: a quick rise as each venue band enters — layers over the
-  // existing IO reveal for a touch more motion without any layout risk.
-  gsap.utils.toArray('.band .wrap .rv, .band .wrap').forEach(function(el){
-    if(!el.closest('.band'))return;
-    gsap.from(el,{y:44,autoAlpha:0,duration:1,ease:'power3.out',
-      scrollTrigger:{trigger:el.closest('.band'),start:'top 70%',once:true}});
+  // Sticky venue bands (desktop only): pin each band so its media + statement
+  // HOLD for ~0.6 of a screen as you scroll in, then release. pinSpacing:true
+  // reserves the space (no overlap); the parallax above keeps the media drifting
+  // during the hold so it never feels frozen. refreshPriority makes the pins
+  // measure first, so the parallax start/end account for the added pin space.
+  // gsap.matchMedia scopes this to wide screens (pins can jank on mobile) and
+  // auto-reverts when the query stops matching. Statement reveals stay owned by
+  // the existing IntersectionObserver (.rv) — we don't touch them here.
+  var mm = gsap.matchMedia();
+  mm.add('(min-width: 900px)', function(){
+    ['#band-private','#band-112','#band-italian'].forEach(function(sel){
+      var band=document.querySelector(sel); if(!band)return;
+      ScrollTrigger.create({trigger:band,start:'top top',end:'+=60%',
+        pin:true,pinSpacing:true,anticipatePin:1,refreshPriority:1});
+    });
   });
 
   ScrollTrigger.refresh();
