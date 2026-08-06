@@ -134,7 +134,7 @@ export async function publishPitch(input: PublishPitchInput): Promise<PublishPit
     password_hash: password ? hashPitchPassword(password) : null,
     expires_at: expires_at ? new Date(expires_at).toISOString() : null,
     view_count: 0,
-    user_created: userId,
+    user_created: userId || null,
   };
   const created = (await directus.request(createItem('pitch_pages', record as any))) as any;
 

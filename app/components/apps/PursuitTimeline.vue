@@ -56,9 +56,30 @@ const pitchStatusTone: Record<string, string> = {
 	published: 'text-success', draft: 'text-muted-foreground', revoked: 'text-destructive',
 };
 
+// Downstream lifecycle: contracts (lead/client), projects + invoices (client).
+const contractItems = useDirectusItems('contracts');
+const projectItems = useDirectusItems('projects');
+const invoiceItems = useDirectusItems('invoices');
+const contracts = ref<any[]>([]);
+const projects = ref<any[]>([]);
+const invoices = ref<any[]>([]);
+async function fetchContracts() {
+	const filter: any = props.leadId != null ? { lead: { _eq: props.leadId } } : (props.clientId ? { client: { _eq: props.clientId } } : null);
+	if (!filter) { contracts.value = []; return; }
+	contracts.value = (await contractItems.list({ fields: ['id', 'title', 'total_value', 'contract_status', 'date_created', 'date_sent', 'signed_at'], filter, sort: ['-date_created'], limit: -1 }).catch(() => [])) as any[];
+}
+async function fetchProjects() {
+	if (!props.clientId) { projects.value = []; return; } // projects link to a client, not a lead
+	projects.value = (await projectItems.list({ fields: ['id', 'title', 'status', 'contract_value', 'date_created', 'start_date'], filter: { client: { _eq: props.clientId } }, sort: ['-date_created'], limit: -1 }).catch(() => [])) as any[];
+}
+async function fetchInvoices() {
+	if (!props.clientId) { invoices.value = []; return; }
+	invoices.value = (await invoiceItems.list({ fields: ['id', 'invoice_code', 'status', 'total_amount', 'invoice_date', 'date_created'], filter: { client: { _eq: props.clientId } }, sort: ['-date_created'], limit: -1 }).catch(() => [])) as any[];
+}
+
 async function refresh() {
 	loading.value = true;
-	try { await Promise.all([fetchTouches(), fetchProposals(), fetchPitches()]); } finally { loading.value = false; }
+	try { await Promise.all([fetchTouches(), fetchProposals(), fetchPitches(), fetchContracts(), fetchProjects(), fetchInvoices()]); } finally { loading.value = false; }
 }
 onMounted(refresh);
 watch(() => [props.leadId, props.clientId], refresh);
@@ -101,10 +122,31 @@ const feed = computed(() => {
 			state, isCold, daysOut,
 		};
 	});
-	return [...touches, ...props_].sort((a, b) => b.at - a.at);
+	const contractState = (s: string) => s === 'signed' ? 'won' : (s === 'declined' || s === 'cancelled' || s === 'expired') ? 'lost' : s === 'sent' ? 'sent' : 'draft';
+	const contracts_ = contracts.value.map((c) => ({
+		kind: 'contract' as const,
+		at: c.signed_at ? new Date(c.signed_at).getTime() : c.date_sent ? new Date(c.date_sent).getTime() : (c.date_created ? new Date(c.date_created).getTime() : 0),
+		id: `c-${c.id}`, cid: c.id, title: c.title || 'Contract', value: Number(c.total_value) || 0,
+		state: contractState(c.contract_status), status: c.contract_status || '',
+	}));
+	const projects_ = projects.value.map((p) => ({
+		kind: 'project' as const,
+		at: p.start_date ? new Date(p.start_date).getTime() : (p.date_created ? new Date(p.date_created).getTime() : 0),
+		id: `pr-${p.id}`, prid: p.id, title: p.title || 'Project', value: Number(p.contract_value) || 0, status: p.status || '',
+	}));
+	const invoices_ = invoices.value.map((iv) => ({
+		kind: 'invoice' as const,
+		at: iv.invoice_date ? new Date(iv.invoice_date).getTime() : (iv.date_created ? new Date(iv.date_created).getTime() : 0),
+		id: `inv-${iv.id}`, invid: iv.id, title: iv.invoice_code || 'Invoice', value: Number(iv.total_amount) || 0,
+		state: iv.status === 'paid' ? 'won' : iv.status === 'archived' ? 'lost' : 'sent', status: iv.status || '',
+	}));
+	return [...touches, ...props_, ...contracts_, ...projects_, ...invoices_].sort((a, b) => b.at - a.at);
 });
 
 const proposalSlide = useAppSlideOver('proposal');
+const contractSlide = useAppSlideOver('contract');
+const workProjectSlide = useAppSlideOver('work-project');
+const invoiceSlide = useAppSlideOver('invoice');
 const fmtDate = (ms: number) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
 const fmtMoney = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0);
 </script>
@@ -150,6 +192,54 @@ const fmtMoney = (n: number) => new Intl.NumberFormat('en-US', { style: 'currenc
 						<div class="flex items-center gap-2 mt-0.5">
 							<span class="text-[10px] uppercase tracking-wide font-semibold" :class="stateText[ev.state]">{{ ev.state }}</span>
 							<span v-if="ev.isCold" class="text-[10px] text-warning">· {{ ev.daysOut }}d silent</span>
+							<span class="text-[11px] text-muted-foreground ml-auto">{{ fmtDate(ev.at) }}</span>
+						</div>
+					</button>
+				</template>
+				<!-- Contract event -->
+				<template v-else-if="ev.kind === 'contract'">
+					<span class="absolute -left-[22px] top-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-background" :class="stateColor[ev.state]">
+						<Icon name="lucide:file-signature" class="w-2.5 h-2.5 text-white" />
+					</span>
+					<button type="button" class="w-full text-left rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2" @click="contractSlide.open(String(ev.cid))">
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-[13px] font-medium truncate">{{ ev.title }}</span>
+							<span v-if="ev.value" class="text-[12px] font-semibold tabular-nums shrink-0">{{ fmtMoney(ev.value) }}</span>
+						</div>
+						<div class="flex items-center gap-2 mt-0.5">
+							<span class="text-[10px] uppercase tracking-wide font-semibold" :class="stateText[ev.state]">{{ ev.status || 'contract' }}</span>
+							<span class="text-[11px] text-muted-foreground ml-auto">{{ fmtDate(ev.at) }}</span>
+						</div>
+					</button>
+				</template>
+				<!-- Project event -->
+				<template v-else-if="ev.kind === 'project'">
+					<span class="absolute -left-[22px] top-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
+						<Icon name="lucide:folder" class="w-2.5 h-2.5 text-white" />
+					</span>
+					<button type="button" class="w-full text-left rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2" @click="workProjectSlide.open(String(ev.prid))">
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-[13px] font-medium truncate">{{ ev.title }}</span>
+							<span v-if="ev.value" class="text-[12px] font-semibold tabular-nums shrink-0">{{ fmtMoney(ev.value) }}</span>
+						</div>
+						<div class="flex items-center gap-2 mt-0.5">
+							<span class="text-[10px] uppercase tracking-wide font-semibold text-primary">{{ ev.status || 'project' }}</span>
+							<span class="text-[11px] text-muted-foreground ml-auto">{{ fmtDate(ev.at) }}</span>
+						</div>
+					</button>
+				</template>
+				<!-- Invoice event -->
+				<template v-else-if="ev.kind === 'invoice'">
+					<span class="absolute -left-[22px] top-0.5 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-background" :class="stateColor[ev.state]">
+						<Icon name="lucide:receipt" class="w-2.5 h-2.5 text-white" />
+					</span>
+					<button type="button" class="w-full text-left rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2" @click="invoiceSlide.open(String(ev.invid))">
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-[13px] font-medium truncate">{{ ev.title }}</span>
+							<span v-if="ev.value" class="text-[12px] font-semibold tabular-nums shrink-0">{{ fmtMoney(ev.value) }}</span>
+						</div>
+						<div class="flex items-center gap-2 mt-0.5">
+							<span class="text-[10px] uppercase tracking-wide font-semibold" :class="stateText[ev.state]">{{ ev.status || 'invoice' }}</span>
 							<span class="text-[11px] text-muted-foreground ml-auto">{{ fmtDate(ev.at) }}</span>
 						</div>
 					</button>

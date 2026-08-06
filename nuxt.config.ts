@@ -322,6 +322,10 @@ export default defineNuxtConfig({
 		// Early-access welcome-email webhook secret (Directus Flow → /api/early-access/welcome)
 		earlyAccessWebhookSecret: process.env.EARLY_ACCESS_WEBHOOK_SECRET || '',
 
+		// Machine secret for the agent pitch-publish endpoint (Claude Code / Earnest AI
+		// POSTing a pitch → /api/pitches/agent-publish). Rotatable, fail-closed if unset.
+		pitchAgentSecret: process.env.PITCH_AGENT_SECRET || '',
+
 		// Web Push (VAPID)
 		vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
 		vapidSubject: process.env.VAPID_SUBJECT || 'mailto:hello@earnest.guru',
