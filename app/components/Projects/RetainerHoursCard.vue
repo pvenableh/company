@@ -20,6 +20,24 @@
 			</span>
 			<span v-else>{{ formatHours(hoursAllocated - hoursUsed) }} left</span>
 		</p>
+
+		<button
+			v-if="canBill"
+			type="button"
+			class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+			title="Generate an invoice for this retainer period"
+			@click.stop="billOpen = true"
+		>
+			<Icon name="lucide:receipt" class="w-3 h-3" /> Bill this period
+		</button>
+
+		<ProjectsRetainerInvoiceModal
+			v-model:open="billOpen"
+			:project="project"
+			:hours-used="hoursUsed"
+			:hours-allocated="hoursAllocated"
+			:period-label="periodLabel"
+		/>
 	</div>
 </template>
 
@@ -44,6 +62,13 @@ const barColor = computed(() => {
 	if (isOver.value) return 'bg-destructive';
 	if (pct.value >= 80) return 'bg-amber-500';
 	return 'bg-emerald-500';
+});
+
+// "Bill this period" — only when a rate + allocation are set to invoice against.
+const billOpen = ref(false);
+const canBill = computed(() => {
+	const pr: any = props.project || {};
+	return (Number(pr.retainer_hourly_rate) || 0) > 0 && (Number(pr.retainer_hours_per_period) || 0) > 0;
 });
 
 function formatHours(hours: number): string {
