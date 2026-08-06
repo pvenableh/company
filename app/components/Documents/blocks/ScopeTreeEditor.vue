@@ -221,6 +221,15 @@ function removeDeliverable(path: number[], idx: number) {
 // ─── Drag and drop (HTML5) ───────────────────────────────────────────────
 const dragPath = ref<number[] | null>(null);
 
+// Only allow a card drag when the ⋮⋮ handle is grabbed — otherwise selecting
+// text in a heading/summary input would start a card drag (a real footgun).
+const dragArmed = ref(false);
+function armDrag() {
+	dragArmed.value = true;
+	const off = () => { dragArmed.value = false; window.removeEventListener('pointerup', off); };
+	window.addEventListener('pointerup', off);
+}
+
 function onDragStart(e: DragEvent, path: number[]) {
 	dragPath.value = path;
 	e.dataTransfer?.setData('text/plain', path.join('-'));
@@ -446,14 +455,15 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 			v-for="(phase, pIdx) in payload.phases"
 			:key="phase.id"
 			class="scope-card"
-			:draggable="true"
+			:draggable="dragArmed"
 			@dragstart="onDragStart($event, [pIdx])"
+			@dragend="dragArmed = false"
 			@dragover="onDragOver"
 			@drop="onDrop($event, [pIdx])"
 		>
 			<!-- Phase header -->
 			<div class="flex items-center gap-2 p-3 border-b border-border">
-				<div class="cursor-grab text-muted-foreground/50 select-none" title="Drag to reorder / Drop on another phase to nest">⋮⋮</div>
+				<div class="cursor-grab active:cursor-grabbing text-muted-foreground/50 select-none" title="Drag to reorder / Drop on another phase to nest" @pointerdown="armDrag">⋮⋮</div>
 				<input
 					:value="phase.heading"
 					placeholder="Phase heading"
@@ -624,13 +634,14 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocClick));
 						v-for="(child, cIdx) in phase.children"
 						:key="child.id"
 						class="scope-card scope-card--child"
-						:draggable="true"
+						:draggable="dragArmed"
 						@dragstart.stop="onDragStart($event, [pIdx, cIdx])"
+						@dragend.stop="dragArmed = false"
 						@dragover="onDragOver"
 						@drop.stop="onDrop($event, [pIdx, cIdx])"
 					>
 						<div class="flex items-center gap-2 p-2 border-b border-border">
-							<div class="cursor-grab text-muted-foreground/50 select-none">⋮⋮</div>
+							<div class="cursor-grab active:cursor-grabbing text-muted-foreground/50 select-none" @pointerdown="armDrag">⋮⋮</div>
 							<input
 								:value="child.heading"
 								placeholder="Sub-phase heading"

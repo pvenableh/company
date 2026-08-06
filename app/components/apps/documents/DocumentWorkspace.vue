@@ -87,16 +87,26 @@ async function fetchData() {
 function onBlocksChange(next: any[]) {
   blocks.value = next;
   blocksDirty.value = true;
+  scheduleAutosave();
 }
 
-async function saveBlocks() {
+// Debounced autosave so block edits are never lost to a navigation. Fires ~1.4s
+// after the last change; the manual Save button still forces an instant save.
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleAutosave() {
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => { if (blocksDirty.value && !savingBlocks.value) void saveBlocks(true); }, 1400);
+}
+
+async function saveBlocks(silent = false) {
   if (!doc.value?.id || savingBlocks.value) return;
+  if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
   savingBlocks.value = true;
   try {
     await docItems.update(doc.value.id, { blocks: blocks.value });
     doc.value = { ...doc.value, blocks: [...blocks.value] };
     blocksDirty.value = false;
-    toast.add({ title: 'Saved', color: 'green' });
+    if (!silent) toast.add({ title: 'Saved', color: 'green' });
   } catch (err: any) {
     toast.add({ title: 'Failed to save', description: err.message, color: 'red' });
   } finally {
@@ -110,6 +120,7 @@ function onEarnestApply(entries: any[]) {
   blocks.value = entries;
   blocksDirty.value = true;
   showEarnestDraft.value = false;
+  scheduleAutosave();
 }
 
 /* ── Primary action: convert (proposal) / send-for-signature (contract) ── */
@@ -294,7 +305,21 @@ if (!props.compact) {
 }
 
 onMounted(fetchData);
-watch(() => props.documentId, () => { doc.value = null; showActivity.value = false; fetchData(); });
+// Flush any pending edits before switching documents (slide-over stack) so a
+// dirty doc is never silently discarded when documentId changes.
+watch(() => props.documentId, async () => {
+  if (blocksDirty.value) await saveBlocks(true).catch(() => {});
+  doc.value = null; showActivity.value = false; fetchData();
+});
+
+// Belt-and-suspenders against data loss: warn on tab close, and flush on unmount.
+function beforeUnloadGuard(e: BeforeUnloadEvent) { if (blocksDirty.value) { e.preventDefault(); e.returnValue = ''; } }
+onMounted(() => { if (import.meta.client) window.addEventListener('beforeunload', beforeUnloadGuard); });
+onBeforeUnmount(() => {
+  if (import.meta.client) window.removeEventListener('beforeunload', beforeUnloadGuard);
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  if (blocksDirty.value && !savingBlocks.value) void saveBlocks(true);
+});
 
 if (!props.compact) {
   watch(doc, (d) => { if (d) setEntity(props.type, String(d.id), d.title || (isProposal.value ? 'Proposal' : 'Contract')); }, { immediate: true });
@@ -337,7 +362,7 @@ if (!props.compact) {
             v-if="blocksDirty"
             class="inline-flex items-center gap-1 h-7 px-3 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
             :disabled="savingBlocks"
-            @click="saveBlocks"
+            @click="saveBlocks()"
           >
             <EIcon :name="savingBlocks ? 'lucide:loader-2' : 'lucide:save'" class="w-3.5 h-3.5" :class="savingBlocks ? 'animate-spin' : ''" />
             Save

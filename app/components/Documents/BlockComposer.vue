@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
+// vuedraggable's component is the DEFAULT export (a named `VueDraggable` import
+// resolves to undefined). SortableJS under the hood gives touch DnD for free.
+import VueDraggable from 'vuedraggable';
 import type { DocumentBlock, BlockAppliesTo } from '~/composables/useDocumentBlocks';
 import { getBlockType, listBlockTypes } from '~~/shared/blocks/registry';
 import type { BlockTypeDescriptor } from '~~/shared/blocks/registry';
@@ -110,6 +113,14 @@ function moveDown(idx: number) {
 	entries.value = next;
 }
 
+// Drag-to-reorder mirror. vuedraggable mutates `dragList` in place during a
+// drag; on drop we commit the new order through the entries setter. Kept in
+// sync with the source of truth so edits/adds/removes reflect immediately.
+// The up/down buttons remain as a keyboard/a11y fallback.
+const dragList = ref<DocumentBlockEntry[]>([]);
+watch(entries, (v) => { dragList.value = v.slice(); }, { immediate: true });
+function onReorder() { entries.value = dragList.value.slice(); }
+
 async function saveToLibrary(idx: number) {
 	const entry = entries.value[idx];
 	if (entry.library_ref) {
@@ -202,15 +213,28 @@ function typeLabel(type: string): string {
 
 <template>
 	<div class="space-y-3">
-		<TransitionGroup name="block-list" tag="div" class="space-y-3">
-			<div
-				v-for="(entry, idx) in entries"
-				:key="entry.id"
-				class="ios-card p-4 space-y-2 group"
-			>
+		<VueDraggable
+			:list="dragList"
+			item-key="id"
+			handle=".block-drag-handle"
+			:animation="180"
+			ghost-class="block-ghost"
+			class="space-y-3"
+			@end="onReorder"
+		>
+			<template #item="{ element: entry, index: idx }">
+			<div class="ios-card p-4 space-y-2 group">
 				<!-- Toolbar -->
 				<div class="flex items-center justify-between gap-2">
 					<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+						<button
+							type="button"
+							class="block-drag-handle px-1 py-0.5 rounded hover:bg-muted cursor-grab active:cursor-grabbing text-muted-foreground/70"
+							title="Drag to reorder"
+							aria-label="Drag to reorder"
+						>
+							<EIcon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
+						</button>
 						<button
 							class="px-1.5 py-0.5 rounded hover:bg-muted disabled:opacity-30"
 							:disabled="idx === 0"
@@ -294,7 +318,8 @@ function typeLabel(type: string): string {
 					<p class="text-[10px] uppercase tracking-wider text-primary/70 text-center">↓ Page break ↓</p>
 				</div>
 			</div>
-		</TransitionGroup>
+			</template>
+		</VueDraggable>
 
 		<!-- Empty state -->
 		<div v-if="entries.length === 0" class="ios-card p-8 text-center">
@@ -369,17 +394,10 @@ function typeLabel(type: string): string {
 </template>
 
 <style scoped>
-.block-list-move,
-.block-list-enter-active,
-.block-list-leave-active {
-	transition: all 0.25s ease;
-}
-.block-list-enter-from,
-.block-list-leave-to {
-	opacity: 0;
-	transform: translateY(8px);
-}
-.block-list-leave-active {
-	position: absolute;
+/* The drop placeholder shown while dragging a block — a clear insertion target. */
+.block-ghost {
+	opacity: 0.5;
+	border: 1px dashed hsl(var(--primary));
+	background: hsl(var(--primary) / 0.06);
 }
 </style>
