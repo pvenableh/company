@@ -365,15 +365,21 @@ const backdropStyle = computed(() => ({
 </script>
 
 <template>
-  <Teleport to="body">
+  <!-- Gate the Teleport itself on `mounted` (not just its children). A bare
+       <Teleport to="body"> still emits teleport anchor markup during SSR even
+       when its children are v-if'd out; the client (mounted=false) renders
+       nothing there, producing a hydration node mismatch that cascades up the
+       tree and blanks the whole page (seen on the Organization landing — the
+       only surface that renders an AppBottomSheet in its initial markup).
+       `mounted` is only ever set true client-side (onMounted/watch), so with
+       the guard the sheet contributes no SSR output and hydrates cleanly. -->
+  <Teleport v-if="mounted" to="body">
     <div
-      v-if="mounted"
       class="app-bottom-sheet__backdrop"
       :style="backdropStyle"
       @mousedown="onBackdropClick"
     />
     <div
-      v-if="mounted"
       ref="sheetEl"
       class="app-bottom-sheet"
       :class="{ 'app-bottom-sheet--dragging': dragging }"
