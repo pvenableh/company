@@ -618,6 +618,14 @@ export default defineNuxtConfig({
 		// No X-Frame-Options is sent today; set frame-ancestors explicitly so
 		// framing stays allowed by intent and survives any future global CSP.
 		'/book/**': { headers: { 'Content-Security-Policy': 'frame-ancestors *' } },
+		// The Organization app is an auth-gated settings surface whose data is
+		// fetched entirely client-side (fetchMembers/teams/roles run in onMounted).
+		// SSR therefore adds no first-paint benefit and its render path is fragile
+		// (a composable-after-await during SSR blanks the whole page — see the
+		// hoisting note in apps/organization/index.vue). Render it client-side so a
+		// full reload behaves like the in-app navigation that already works. No SEO
+		// cost — it sits behind auth.
+		'/apps/organization': { ssr: false },
 	},
 
 	nitro: {
