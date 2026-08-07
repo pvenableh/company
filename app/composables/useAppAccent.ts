@@ -897,6 +897,12 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents(DEFAULT_APP_P
  * helper, never re-derive the prefix list in components.
  */
 export function appIdForPath(path: string): AppId | null {
+	// Tolerate a full path with a query/hash (callers like useEarnestAwareness
+	// pass route.fullPath so a `?section=goals` stays detectable upstream). The
+	// segment lookup below reads seg[1], which would otherwise become
+	// "organization?floor=members" and miss APP_META — dropping the whole app to
+	// a generic scope on any /apps/<id>?floor=… route.
+	path = path.split(/[?#]/)[0] || path;
 	if (path.startsWith('/account')) return 'account';
 	if (path.startsWith('/boardroom')) return 'director';
 	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
