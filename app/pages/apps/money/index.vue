@@ -965,6 +965,9 @@ const headerAction = computed(() => {
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Money sections" />
 
       <AppIntroCard app-id="money" />
+      <!-- Scope-mode Director surface: plan this area + the org-wide approval
+           queue, so the director experience reaches app-landing pages too. -->
+      <DirectorLayer heading org-proposals />
       <GoalsRelatedGoalsCard :categories="['revenue', 'retention']" title="Goals in this lens" />
 
       <Transition :name="floorTransition" mode="out-in">

@@ -604,6 +604,9 @@ watch(view, (next) => {
       <AppFloorStrip v-model="view" :items="segments" aria-label="Clients sections" />
 
       <AppIntroCard app-id="clients" />
+      <!-- Scope-mode Director surface: plan this area + the org-wide approval
+           queue, so the director experience reaches app-landing pages too. -->
+      <DirectorLayer heading org-proposals />
       <GoalsRelatedGoalsCard :categories="['growth', 'retention']" title="Goals in this lens" />
 
       <Transition :name="floorTransition" mode="out-in">

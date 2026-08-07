@@ -33,6 +33,9 @@ const props = withDefaults(defineProps<{
 	showPlan?: boolean;
 	/** Show the live pending-proposal queue (self-hides when empty). */
 	showProposals?: boolean;
+	/** Non-entity scope mode: surface the org-wide pending proposals (self-hides
+	 *  when empty). Lets the review queue appear on app-landing pages. */
+	orgProposals?: boolean;
 	variant?: 'inline' | 'ambient';
 }>(), {
 	heading: false,
@@ -40,6 +43,7 @@ const props = withDefaults(defineProps<{
 	showConvene: false,
 	showPlan: true,
 	showProposals: true,
+	orgProposals: false,
 	variant: 'inline',
 });
 
@@ -56,6 +60,7 @@ const {
 	hasNotices,
 	actionType,
 	entityLabel,
+	scopeName,
 	suggestedPrompts,
 	ask,
 	convene,
@@ -67,6 +72,10 @@ const {
 	planIntro,
 	planStepCount,
 } = useDirectorLayer(scope);
+
+// Shared org-wide pending count — gates the scope-mode "waiting for approval"
+// header so it never orphans above an empty list.
+const { pendingCount } = useAiPendingActions();
 
 // ── Advisory notices (deterministic, no LLM) ──────────────────────────────────
 const { visibleNotices, fetchNotices, dismissNotice } = useAINotices();
@@ -95,13 +104,16 @@ function onNoticeAction(n: any) {
 	if (n.actionRoute) router.push(n.actionRoute);
 }
 
-// The header/prompts card is worth rendering only if it would carry something.
-const showFocusCard = computed(() => (props.heading || props.showPrompts) && (hasEntity.value || props.showPrompts));
+// The header/prompts card renders when asked for a heading (entity OR scope) or
+// an entity prompt wall. Scope mode (no entity) still shows so "Draft a plan"
+// for the current area is reachable.
+const showFocusCard = computed(() => props.heading || (props.showPrompts && hasEntity.value));
 // The whole surface renders only when it has real content to show.
 const showAny = computed(() =>
 	showFocusCard.value
 	|| visibleNotices.value.length > 0
 	|| (props.showProposals && hasEntity.value)
+	|| (props.orgProposals && pendingCount.value > 0)
 	|| !!activePlanId.value || planning.value || !!planError.value,
 );
 </script>
@@ -113,9 +125,12 @@ const showAny = computed(() =>
 			<div v-if="heading" class="flex items-center justify-between gap-3 mb-3 flex-wrap">
 				<div class="flex items-center gap-2 min-w-0">
 					<EarnestPresenceMark :height="16" class="text-foreground/80 shrink-0" />
-					<p class="text-sm font-medium truncate">
+					<p v-if="hasEntity" class="text-sm font-medium truncate">
 						Earnest is focused on
 						<span class="text-primary">{{ entityLabel || 'your work' }}</span>
+					</p>
+					<p v-else class="text-sm font-medium truncate">
+						Have Earnest plan <span class="text-primary">{{ scopeName }}</span>
 					</p>
 				</div>
 				<div v-if="showPlan || (showConvene && hasEntity)" class="flex items-center gap-2 shrink-0">
@@ -136,7 +151,7 @@ const showAny = computed(() =>
 					</Button>
 				</div>
 			</div>
-			<div v-if="showPrompts" class="flex flex-wrap gap-2">
+			<div v-if="showPrompts && hasEntity" class="flex flex-wrap gap-2">
 				<button
 					v-for="(p, i) in suggestedPrompts"
 					:key="p"
@@ -230,5 +245,15 @@ const showAny = computed(() =>
 			status="pending"
 			hide-when-empty
 		/>
+
+		<!-- Scope mode: the org-wide pending queue, so anything awaiting approval
+		     is visible from an app-landing page too. Self-hides when empty. -->
+		<div v-if="orgProposals && !hasEntity && pendingCount > 0">
+			<div class="flex items-center gap-1.5 mb-2">
+				<EarnestIcon class="w-3.5 h-3.5 text-primary" />
+				<span class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Waiting for your approval</span>
+			</div>
+			<AiActivityList status="pending" hide-when-empty />
+		</div>
 	</section>
 </template>

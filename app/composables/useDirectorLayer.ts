@@ -50,6 +50,25 @@ const NOTICE_TYPES = new Set([
 	'client', 'project', 'invoice', 'lead', 'proposal', 'contact', 'ticket', 'team',
 ]);
 
+/** Awareness scope → the Director planner's agenda subject (for scope-level,
+ *  non-entity "Draft a plan"). Scopes with no clean subject plan org-wide. */
+const SCOPE_SUBJECT: Record<string, string> = {
+	money: 'money',
+	work: 'projects',
+	people: 'clients',
+};
+
+/** Awareness scope → a human label for the compact scope surface. */
+const SCOPE_NAME: Record<string, string> = {
+	dashboard: 'your business',
+	people: 'People',
+	work: 'Work',
+	money: 'Money',
+	marketing: 'Marketing',
+	organization: 'the organization',
+	goals: 'your goals',
+};
+
 export interface DirectorLayerScope {
 	entityType?: string | null;
 	entityId?: string | null;
@@ -96,6 +115,10 @@ export function useDirectorLayer(scope?: MaybeRefOrGetter<DirectorLayerScope | u
 
 	/** Suggested prompts, already entity/scope-aware. Project gets a lead
 	 *  "draft a timeline" step, mirroring the retired EntityEarnestCard. */
+	/** Non-entity scope helpers — drive the compact "plan this area" surface. */
+	const scopeSubject = computed(() => (hasEntity.value ? null : (SCOPE_SUBJECT[awareness.scope.value] ?? null)));
+	const scopeName = computed(() => SCOPE_NAME[awareness.scope.value] ?? 'your work');
+
 	const suggestedPrompts = computed<string[]>(() => {
 		const base = awareness.suggestedPrompts.value ?? [];
 		if (resolved.value.entityType === 'project') {
@@ -149,6 +172,10 @@ export function useDirectorLayer(scope?: MaybeRefOrGetter<DirectorLayerScope | u
 			if (hasEntity.value && actionType.value) {
 				body.entityType = actionType.value;
 				body.entityId = String(resolved.value.entityId);
+			} else if (scopeSubject.value) {
+				// Non-entity scope → plan that area of the business (money/projects/
+				// clients). No subject → the org-wide plan.
+				body.subject = scopeSubject.value;
 			}
 			const res = await $fetch<{ planId: string; intro: string; stepCount: number }>(
 				'/api/ai/director/plan',
@@ -184,6 +211,8 @@ export function useDirectorLayer(scope?: MaybeRefOrGetter<DirectorLayerScope | u
 		entityLabel: computed(() => resolved.value.label),
 		focus: awareness.focus,
 		scope: awareness.scope,
+		scopeSubject,
+		scopeName,
 		entityReadable: awareness.entityReadable,
 		// prompts + actions
 		suggestedPrompts,

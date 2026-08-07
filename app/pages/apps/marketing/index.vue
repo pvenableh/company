@@ -873,6 +873,9 @@ const scopeLabel = computed(() => {
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Marketing sections" />
 
       <AppIntroCard app-id="marketing" />
+      <!-- Scope-mode Director surface: plan this area + the org-wide approval
+           queue, so the director experience reaches app-landing pages too. -->
+      <DirectorLayer heading org-proposals />
       <GoalsRelatedGoalsCard :categories="['growth']" title="Goals in this lens" />
 
       <Transition :name="floorTransition" mode="out-in">
