@@ -119,6 +119,13 @@ const showAny = computed(() =>
 </script>
 
 <template>
+	<!-- Client-only: this surface is driven entirely by client-side state
+	     (notices fetch, HITL pending count, the per-user autonomy tier from
+	     /users/me). Rendering it during SSR produces a server/client divergence
+	     that, on SSR-heavy pages like the Organization landing, cascades into a
+	     hydration mismatch that blanks sibling components. Same reason the
+	     DirectorTrustBar is wrapped in <ClientOnly> in the shell. -->
+	<ClientOnly>
 	<section v-if="showAny" class="director-layer space-y-3" :class="variant === 'inline' ? 'mb-4' : ''">
 		<!-- Focus header + Convene + prompt chips (supersedes EntityEarnestCard) -->
 		<div v-if="showFocusCard" class="ios-card p-4">
@@ -256,4 +263,5 @@ const showAny = computed(() =>
 			<AiActivityList status="pending" hide-when-empty />
 		</div>
 	</section>
+	</ClientOnly>
 </template>
